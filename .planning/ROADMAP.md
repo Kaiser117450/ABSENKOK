@@ -29,6 +29,13 @@ Plans:
 ### Phase 2: Kiosk Scan Cycle Edge Cases
 **Goal:** Kiosk handles forgot-clock-out, midnight transitions, and 24h outlets correctly.
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Fix 24h shift cycle: replace isSameDay with 24h window query in kiosk_scan_screen.dart _loadLastAttendance
+- [ ] 02-02-PLAN.md — Add belumPulang status to Rekap Harian: enum variant, detection logic, amber tile rendering
+- [ ] 02-03-PLAN.md — Admin dashboard Open Shifts widget: _loadOpenShifts, _manualPulang, _buildOpenShiftsWidget
+
 **Tasks:**
 1. Refactor last-scan logic in `kiosk_idle_screen.dart`: check last log for employee within 24h window (not just "today")
 2. Implement 24h safety net: if last masuk > 24h ago with no pulang → next scan = masuk regardless
