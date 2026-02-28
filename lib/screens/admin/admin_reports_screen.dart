@@ -411,6 +411,22 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       if (!hasMasukScan && hasSakit) dayStatus = DailySummaryStatus.sakit;
       if (!hasMasukScan && hasIzin) dayStatus = DailySummaryStatus.izin;
 
+      // Detect "belum pulang" — has masuk but no pulang, and it is a past date.
+      // Guard: do NOT apply for today (employee may still be working).
+      final groupDate = DateTime.tryParse(datePart);
+      final today = DateTime.now();
+      final isToday = groupDate != null &&
+          groupDate.year == today.year &&
+          groupDate.month == today.month &&
+          groupDate.day == today.day;
+
+      if (!isToday &&
+          dayStatus == DailySummaryStatus.normal &&
+          firstMasuk != null &&
+          lastPulang == null) {
+        dayStatus = DailySummaryStatus.belumPulang;
+      }
+
       String? dayNotes;
       if (dayStatus != DailySummaryStatus.normal) {
         dayNotes = rows
@@ -765,7 +781,7 @@ class _ReportRow {
 
 /// Status of a daily attendance summary entry.
 /// Used to select the correct rendering path in _DailySummaryTile.
-enum DailySummaryStatus { normal, sakit, izin }
+enum DailySummaryStatus { normal, sakit, izin, belumPulang }
 
 class _DailySummary {
   final String dateLabel; // "YYYY-MM-DD"
