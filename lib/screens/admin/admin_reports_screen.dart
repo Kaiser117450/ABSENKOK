@@ -400,6 +400,29 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         if (workDuration.isNegative) workDuration = raw;
       }
 
+      // Detect sakit/izin-only days (per REQ-M1-01).
+      // Rule: if NO masuk scan exists AND sakit or izin scan exists → badge mode.
+      // If masuk exists alongside sakit/izin (data error) → show normal 4-cell view.
+      final hasMasukScan = rows.any((r) => r.log.type == AttendanceType.masuk);
+      final hasSakit = rows.any((r) => r.log.type == AttendanceType.sakit);
+      final hasIzin = rows.any((r) => r.log.type == AttendanceType.izin);
+
+      DailySummaryStatus dayStatus = DailySummaryStatus.normal;
+      if (!hasMasukScan && hasSakit) dayStatus = DailySummaryStatus.sakit;
+      if (!hasMasukScan && hasIzin) dayStatus = DailySummaryStatus.izin;
+
+      String? dayNotes;
+      if (dayStatus != DailySummaryStatus.normal) {
+        dayNotes = rows
+            .firstWhere(
+              (r) =>
+                  r.log.type == AttendanceType.sakit ||
+                  r.log.type == AttendanceType.izin,
+            )
+            .log
+            .notes;
+      }
+
       summaries.add(_DailySummary(
         dateLabel: datePart,
         employee: employee,
@@ -409,6 +432,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         workDuration: workDuration,
         totalBreak: totalBreak,
         scanCount: rows.length,
+        status: dayStatus,
+        statusNotes: dayNotes,
       ));
     });
 
@@ -738,6 +763,10 @@ class _ReportRow {
   }
 }
 
+/// Status of a daily attendance summary entry.
+/// Used to select the correct rendering path in _DailySummaryTile.
+enum DailySummaryStatus { normal, sakit, izin }
+
 class _DailySummary {
   final String dateLabel; // "YYYY-MM-DD"
   final Employee? employee;
@@ -747,6 +776,8 @@ class _DailySummary {
   final Duration? workDuration;
   final Duration totalBreak;
   final int scanCount;
+  final DailySummaryStatus status;   // normal/sakit/izin — controls tile rendering
+  final String? statusNotes;         // from attendance_logs.notes — shown below badge
 
   const _DailySummary({
     required this.dateLabel,
@@ -757,6 +788,8 @@ class _DailySummary {
     required this.workDuration,
     required this.totalBreak,
     required this.scanCount,
+    required this.status,
+    this.statusNotes,
   });
 }
 
@@ -930,6 +963,56 @@ class _DailySummaryTile extends StatelessWidget {
     return '${h}j ${m}m';
   }
 
+  Widget _buildStatusBadge() {
+    final isSakit = summary.status == DailySummaryStatus.sakit;
+    final color = isSakit ? const Color(0xFFDC2626) : const Color(0xFF2563EB);
+    final emoji = isSakit ? '🤒' : '📋';
+    final label = isSakit ? 'Sakit' : 'Izin';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withOpacity(0.30)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (summary.statusNotes != null && summary.statusNotes!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                summary.statusNotes!,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final empName = summary.employee?.name ?? '-';
@@ -1026,56 +1109,60 @@ class _DailySummaryTile extends StatelessWidget {
           // Divider
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
 
-          // Duration info row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            child: Row(
-              children: [
-                // Masuk
-                _InfoCell(
-                  icon: Icons.login_rounded,
-                  label: 'Masuk',
-                  value: _hm(summary.firstMasuk),
-                  color: AppColors.success,
-                  flex: 2,
-                ),
-                const SizedBox(width: 8),
+          // Conditional: badge for sakit/izin, 4-cell row for normal days
+          if (summary.status == DailySummaryStatus.sakit ||
+              summary.status == DailySummaryStatus.izin)
+            _buildStatusBadge()
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Row(
+                children: [
+                  // Masuk
+                  _InfoCell(
+                    icon: Icons.login_rounded,
+                    label: 'Masuk',
+                    value: _hm(summary.firstMasuk),
+                    color: AppColors.success,
+                    flex: 2,
+                  ),
+                  const SizedBox(width: 8),
 
-                // Pulang
-                _InfoCell(
-                  icon: Icons.logout_rounded,
-                  label: 'Pulang',
-                  value: _hm(summary.lastPulang),
-                  color: hasPulang ? AppColors.danger : AppColors.textMuted,
-                  flex: 2,
-                ),
-                const SizedBox(width: 8),
+                  // Pulang
+                  _InfoCell(
+                    icon: Icons.logout_rounded,
+                    label: 'Pulang',
+                    value: _hm(summary.lastPulang),
+                    color: hasPulang ? AppColors.danger : AppColors.textMuted,
+                    flex: 2,
+                  ),
+                  const SizedBox(width: 8),
 
-                // Durasi kerja
-                _InfoCell(
-                  icon: Icons.timelapse_rounded,
-                  label: 'Kerja',
-                  value: hasWork && hasPulang
-                      ? _durationStr(summary.workDuration)
-                      : '-',
-                  color: AppColors.primary,
-                  flex: 2,
-                ),
-                const SizedBox(width: 8),
+                  // Durasi kerja
+                  _InfoCell(
+                    icon: Icons.timelapse_rounded,
+                    label: 'Kerja',
+                    value: hasWork && hasPulang
+                        ? _durationStr(summary.workDuration)
+                        : '-',
+                    color: AppColors.primary,
+                    flex: 2,
+                  ),
+                  const SizedBox(width: 8),
 
-                // Durasi istirahat
-                _InfoCell(
-                  icon: Icons.coffee_rounded,
-                  label: 'Istirahat',
-                  value: summary.totalBreak.inMinutes > 0
-                      ? _durationStr(summary.totalBreak)
-                      : '-',
-                  color: const Color(0xFFF59E0B),
-                  flex: 2,
-                ),
-              ],
+                  // Durasi istirahat
+                  _InfoCell(
+                    icon: Icons.coffee_rounded,
+                    label: 'Istirahat',
+                    value: summary.totalBreak.inMinutes > 0
+                        ? _durationStr(summary.totalBreak)
+                        : '-',
+                    color: const Color(0xFFF59E0B),
+                    flex: 2,
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
