@@ -980,10 +980,25 @@ class _DailySummaryTile extends StatelessWidget {
   }
 
   Widget _buildStatusBadge() {
-    final isSakit = summary.status == DailySummaryStatus.sakit;
-    final color = isSakit ? const Color(0xFFDC2626) : const Color(0xFF2563EB);
-    final emoji = isSakit ? '🤒' : '📋';
-    final label = isSakit ? 'Sakit' : 'Izin';
+    final Color color;
+    final String emoji;
+    final String label;
+
+    if (summary.status == DailySummaryStatus.sakit) {
+      color = const Color(0xFFDC2626);
+      emoji = '🤒';
+      label = 'Sakit';
+    } else if (summary.status == DailySummaryStatus.izin) {
+      color = const Color(0xFF2563EB);
+      emoji = '📋';
+      label = 'Izin';
+    } else {
+      // belumPulang — amber/orange indicator
+      assert(summary.status == DailySummaryStatus.belumPulang);
+      color = const Color(0xFFD97706);
+      emoji = '⚠️';
+      label = 'Belum Pulang';
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -1145,13 +1160,52 @@ class _DailySummaryTile extends StatelessWidget {
                   const SizedBox(width: 8),
 
                   // Pulang
-                  _InfoCell(
-                    icon: Icons.logout_rounded,
-                    label: 'Pulang',
-                    value: _hm(summary.lastPulang),
-                    color: hasPulang ? AppColors.danger : AppColors.textMuted,
-                    flex: 2,
-                  ),
+                  if (summary.status == DailySummaryStatus.belumPulang)
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.logout_rounded, size: 12,
+                                  color: Color(0xFFD97706)),
+                              const SizedBox(width: 4),
+                              Text('Pulang',
+                                  style: TextStyle(fontSize: 10,
+                                      color: AppColors.textSecondary)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                  color: const Color(0xFFD97706)
+                                      .withOpacity(0.35)),
+                            ),
+                            child: const Text('Belum\nPulang',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFD97706),
+                                  height: 1.3,
+                                )),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    _InfoCell(
+                      icon: Icons.logout_rounded,
+                      label: 'Pulang',
+                      value: _hm(summary.lastPulang),
+                      color: hasPulang ? AppColors.danger : AppColors.textMuted,
+                      flex: 2,
+                    ),
                   const SizedBox(width: 8),
 
                   // Durasi kerja
