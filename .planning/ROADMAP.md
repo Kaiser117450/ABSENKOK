@@ -32,7 +32,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Fix 24h shift cycle: replace isSameDay with 24h window query in kiosk_scan_screen.dart _loadLastAttendance
+- [x] 02-01-PLAN.md — Fix 24h shift cycle: replace isSameDay with 24h window query in kiosk_scan_screen.dart _loadLastAttendance (DONE: 83cc48d)
 - [ ] 02-02-PLAN.md — Add belumPulang status to Rekap Harian: enum variant, detection logic, amber tile rendering
 - [ ] 02-03-PLAN.md — Admin dashboard Open Shifts widget: _loadOpenShifts, _manualPulang, _buildOpenShiftsWidget
 
