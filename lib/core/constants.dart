@@ -21,4 +21,9 @@ class AppConstants {
   static const int scanTransitionDelayMs = 600;
   static const int toastDurationMs = 1800;
   static const int cacheFastPathDelayMs = 300;
+
+  // Kiosk background animation timings
+  static const int kioskBgGradientDurationSec = 20;
+  static const int kioskBreatheDurationSec = 8;
+  static const int kioskShimmerDurationSec = 15;
 }
