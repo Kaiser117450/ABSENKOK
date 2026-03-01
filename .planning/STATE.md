@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T16:32:24.485Z"
+last_updated: "2026-03-01T21:18:48Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # STATE.md â€” Project Memory
 
 ## Current Status
 - **Active Milestone:** M1 â€” Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 3 IN PROGRESS - Plan 03 complete
+- **Active Phase:** Phase 6 IN PROGRESS - Plan 01 complete
 - **Last Updated:** 2026-03-01
-- **Last Session:** Completed 03-overlay-pill-implementation-03-PLAN.md
+- **Last Session:** Completed 06-01-PLAN.md
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -32,9 +32,10 @@ progress:
 - [x] **Phase 3 Plan 01 COMPLETE** â€” Overlay payload contract model + tests (`OverlayPillState`, legacy fallback, v1 serializer)
 - [x] **Phase 3 Plan 02 COMPLETE** â€” Idempotent overlay controller API + typed service payload updates in `kiosk_background_service.dart`
 - [x] **Phase 3 Plan 03 COMPLETE** - Overlay isolate typed state-machine + premium compact pill UI + widget coverage (`overlay_task.dart`, `overlay_pill_widget_test.dart`)
+- [x] **Phase 6 Plan 01 COMPLETE** - Dark kiosk idle screen with 3-layer ambient background (gradient, glow, shimmer) using CustomPainter
 
 ## What's Next
-Phase 3 Plan 04: Wire app lifecycle/background visibility + permission hardening around the upgraded overlay pill.
+Phase 6 Plan 02: Additional NFC idle screen visual enhancements.
 
 ## âš ï¸ Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
@@ -65,6 +66,7 @@ Phase 3 Plan 04: Wire app lifecycle/background visibility + permission hardening
 
 18. **Overlay idle/event contract in UI:** Overlay isolate now treats idle as persistent baseline and event as temporary mode with timer-driven revert, preserving tap expand/minimize independently. (Phase 3 Plan 03).
 19. **Overlay verification strategy:** Added stream-injected widget tests for idle/event/toggle/legacy/readability paths so overlay behavior is CI-testable without Android overlay runtime. (Phase 3 Plan 03).
+20. **Kiosk dark palette isolation:** Pre-defined all static opacity Color variants as AppColors constants (kioskNfc*) to avoid per-frame allocations in CustomPainter paint(). Used withValues() over deprecated withOpacity(). (Phase 6 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -83,6 +85,7 @@ Phase 3 Plan 04: Wire app lifecycle/background visibility + permission hardening
 | 03-overlay-pill-implementation | 01 | 11 min | 2 | 2 |
 | 03-overlay-pill-implementation | 02 | 5 min | 3 | 1 |
 | Phase 03-overlay-pill-implementation P03 | 17 min | 3 tasks | 2 files |
+| 06-nfc-idle-screen-visual-enhancement | 01 | 9min | 2 | 3 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
