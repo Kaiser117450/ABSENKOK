@@ -51,6 +51,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
 
   Timer? _clockTimer;
   Timer? _eventResetTimer;
+  Timer? _autoCollapseTimer;
   StreamSubscription<dynamic>? _dataSub;
   DateTime? _lastPayloadAt;
 
@@ -78,7 +79,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
       _applyIncomingState(incoming);
     });
 
-    Future<void>.delayed(widget.autoCollapseDelay, () {
+    _autoCollapseTimer = Timer(widget.autoCollapseDelay, () {
       if (mounted) {
         setState(() => _isExpanded = false);
       }
@@ -259,14 +260,16 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
   }
 
   Widget _switchTransition(Widget child, Animation<double> animation) {
+    final curved =
+        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
     final slide = Tween<Offset>(
       begin: const Offset(0, 0.12),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+    ).animate(curved);
     final scale = Tween<double>(
       begin: 0.98,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutBack));
+    ).animate(curved);
 
     return FadeTransition(
       opacity: animation,
@@ -284,6 +287,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
   void dispose() {
     _clockTimer?.cancel();
     _eventResetTimer?.cancel();
+    _autoCollapseTimer?.cancel();
     _dataSub?.cancel();
     super.dispose();
   }
@@ -347,9 +351,13 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
                 clipBehavior: Clip.antiAlias,
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutBack,
-                  switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: _switchTransition,
+                  layoutBuilder: (currentChild, previousChildren) {
+                    if (currentChild == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return currentChild;
+                  },
                   child: _isExpanded
                       ? _buildExpanded(style)
                       : _buildCollapsed(style),
