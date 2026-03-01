@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nfc_manager/nfc_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -53,13 +55,48 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   late final AnimationController _breatheCtrl;
   late final AnimationController _shimmerCtrl;
 
+  // Theme toggle: false = white (default), true = dark animated
+  bool _isDarkMode = false;
+  static const String _darkModeKey = 'kiosk_dark_mode';
+
   @override
   void initState() {
     super.initState();
     _initAnimations();
+    _loadDarkModePref();
     _checkNfcThenListen();
     _syncOnMount();
     _startBackgroundService();
+  }
+
+  Future<void> _loadDarkModePref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dark = prefs.getBool(_darkModeKey) ?? false;
+    if (mounted) {
+      setState(() => _isDarkMode = dark);
+      _syncBgAnimations();
+    }
+  }
+
+  Future<void> _toggleDarkMode() async {
+    final newVal = !_isDarkMode;
+    setState(() => _isDarkMode = newVal);
+    _syncBgAnimations();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_darkModeKey, newVal);
+  }
+
+  /// Start or stop background animation controllers based on dark mode.
+  void _syncBgAnimations() {
+    if (_isDarkMode) {
+      if (!_bgGradientCtrl.isAnimating) _bgGradientCtrl.repeat();
+      if (!_breatheCtrl.isAnimating) _breatheCtrl.repeat(reverse: true);
+      if (!_shimmerCtrl.isAnimating) _shimmerCtrl.repeat();
+    } else {
+      _bgGradientCtrl.stop();
+      _breatheCtrl.stop();
+      _shimmerCtrl.stop();
+    }
   }
 
   /// Start foreground service notification so kiosk is visible in notification bar.
@@ -229,15 +266,16 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
     _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
 
+    // Background animation controllers — started/stopped by _syncBgAnimations()
     _bgGradientCtrl = AnimationController(
       vsync: this, duration: Duration(seconds: AppConstants.kioskBgGradientDurationSec),
-    )..repeat();
+    );
     _breatheCtrl = AnimationController(
       vsync: this, duration: Duration(seconds: AppConstants.kioskBreatheDurationSec),
-    )..repeat(reverse: true);
+    );
     _shimmerCtrl = AnimationController(
       vsync: this, duration: Duration(seconds: AppConstants.kioskShimmerDurationSec),
-    )..repeat();
+    );
   }
 
   void _startNfcListener() {
@@ -644,36 +682,46 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   // Build
   // ---------------------------------------------------------------------------
 
+  // Convenience color getters based on current theme mode
+  Color get _bgColor => _isDarkMode ? AppColors.kioskDarkBase : Colors.white;
+  Color get _textPrimary => _isDarkMode ? AppColors.kioskTextPrimary : AppColors.textPrimary;
+  Color get _textSecondary => _isDarkMode ? AppColors.kioskTextSecondary : AppColors.textSecondary;
+  Color get _textMuted => _isDarkMode ? AppColors.kioskTextMuted : AppColors.textMuted;
+  Color get _surfaceDim => _isDarkMode ? AppColors.kioskSurfaceDim : AppColors.surfaceVariant;
+  Color get _dividerColor => _isDarkMode ? AppColors.kioskDivider : AppColors.divider;
+  Color get _nfcCircleBg => _isDarkMode ? AppColors.kioskSurfaceDim : AppColors.surfaceVariant;
+
   @override
   Widget build(BuildContext context) {
     final appState = ref.watch(appProvider);
     final session = appState.kioskSession;
     final pendingCount = appState.pendingCount;
     return Scaffold(
-      backgroundColor: AppColors.kioskDarkBase,
+      backgroundColor: _bgColor,
       body: Stack(
         children: [
-          // Layer 0: Animated background (repaints independently, no widget rebuild)
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_bgGradientCtrl, _breatheCtrl, _shimmerCtrl]),
-              builder: (context, _) => CustomPaint(
-                painter: _AmbientBackgroundPainter(
-                  gradientPhase: _bgGradientCtrl.value,
-                  breathePhase: _breatheCtrl.value,
-                  shimmerPhase: _shimmerCtrl.value,
+          // Layer 0: Animated background (only when dark mode)
+          if (_isDarkMode)
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: Listenable.merge([_bgGradientCtrl, _breatheCtrl, _shimmerCtrl]),
+                builder: (context, _) => CustomPaint(
+                  painter: _AmbientBackgroundPainter(
+                    gradientPhase: _bgGradientCtrl.value,
+                    breathePhase: _breatheCtrl.value,
+                    shimmerPhase: _shimmerCtrl.value,
+                  ),
                 ),
               ),
             ),
-          ),
-          // Layer 1: Existing UI content
+          // Layer 1: UI content
           FadeTransition(
             opacity: _fadeAnim,
             child: SafeArea(
               child: Column(
                 children: [
                   _buildHeader(session?.outletName, pendingCount),
-                  Divider(height: 1, thickness: 1, color: AppColors.kioskDivider),
+                  Divider(height: 1, thickness: 1, color: _dividerColor),
                   if (!_nfcAvailable) _buildNfcOffBanner(),
                   const SizedBox(height: 32),
                   _buildClock(),
@@ -699,20 +747,31 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       child: Row(
         children: [
-          // Brand
+          // Brand logo + title
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/logo_enakko.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 32,
+                        height: 32,
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.restaurant,
+                            color: AppColors.primary, size: 16),
+                      ),
                     ),
-                    child: const Icon(Icons.restaurant,
-                        color: AppColors.primary, size: 16),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -729,11 +788,11 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               if (outletName != null) ...[
                 const SizedBox(height: 2),
                 Padding(
-                  padding: const EdgeInsets.only(left: 30),
+                  padding: const EdgeInsets.only(left: 40),
                   child: Text(
                     outletName,
-                    style: const TextStyle(
-                      color: AppColors.kioskTextSecondary,
+                    style: TextStyle(
+                      color: _textSecondary,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -775,6 +834,27 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             const SizedBox(width: 8),
           ],
 
+          // Theme toggle button
+          GestureDetector(
+            onTap: _toggleDarkMode,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _isDarkMode ? AppColors.kioskSurfaceDim : AppColors.surfaceVariant,
+                shape: BoxShape.circle,
+                border: Border.all(color: _isDarkMode ? AppColors.kioskDivider : AppColors.border),
+              ),
+              child: Icon(
+                _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                size: 16,
+                color: _isDarkMode ? AppColors.kioskTextSecondary : AppColors.textSecondary,
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 6),
+
           // Logout gerai button — icon only
           GestureDetector(
             onTap: _confirmLogoutGerai,
@@ -782,7 +862,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0x26DC2626), // 15% danger on dark
+                color: const Color(0x26DC2626),
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0x40DC2626)),
               ),
@@ -800,12 +880,12 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.kioskSurfaceDim,
+                color: _surfaceDim,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.kioskDivider),
+                border: Border.all(color: _dividerColor),
               ),
-              child: const Icon(Icons.admin_panel_settings_outlined,
-                  size: 16, color: AppColors.kioskTextSecondary),
+              child: Icon(Icons.admin_panel_settings_outlined,
+                  size: 16, color: _textSecondary),
             ),
           ),
         ],
@@ -823,7 +903,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2010), // dark amber bg
+        color: _isDarkMode ? const Color(0xFF2A2010) : const Color(0xFFFEF3C7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: const Color(0xFFF59E0B).withOpacity(0.5),
@@ -886,7 +966,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   // ---------------------------------------------------------------------------
 
   Widget _buildClock() {
-    return const _DigitalClock();
+    return _DigitalClock(isDarkMode: _isDarkMode);
   }
 
   // ---------------------------------------------------------------------------
@@ -933,14 +1013,14 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Animated NFC rings
+        // Animated NFC rings with gradient ring painter
         SizedBox(
           width: 220,
           height: 220,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Outer pulsing ring — yellow accent
+              // Outer pulsing ring
               ScaleTransition(
                 scale: _pulseAnim,
                 child: Container(
@@ -949,55 +1029,65 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.kioskNfcRingOuter,
+                      color: _isDarkMode
+                          ? AppColors.kioskNfcRingOuter
+                          : AppColors.accent.withOpacity(0.15),
                       width: 1.5,
                     ),
                   ),
                 ),
               ),
 
-              // Middle ring — red brand
+              // Middle ring
               Container(
                 width: 170,
                 height: 170,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.kioskNfcRingMiddle,
+                    color: _isDarkMode
+                        ? AppColors.kioskNfcRingMiddle
+                        : AppColors.primary.withOpacity(0.10),
                     width: 1.5,
                   ),
                 ),
               ),
 
-              // Inner filled circle — dark surface with red icon
-              Container(
-                width: 128,
-                height: 128,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.kioskSurfaceDim,
-                  border: Border.all(
-                    color: AppColors.kioskNfcRingBorder,
-                    width: 2,
+              // Inner circle with gradient ring painter
+              SizedBox(
+                width: 136,
+                height: 136,
+                child: AnimatedBuilder(
+                  animation: _pulseAnim,
+                  builder: (context, child) => CustomPaint(
+                    painter: _GradientRingPainter(
+                      pulseValue: _pulseAnim.value - 1.0,
+                      isDarkMode: _isDarkMode,
+                    ),
+                    child: child,
                   ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.kioskNfcGlowRed,
-                      blurRadius: 24,
-                      spreadRadius: 4,
+                  child: Container(
+                    margin: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _nfcCircleBg,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isDarkMode
+                              ? AppColors.kioskNfcGlowRed
+                              : AppColors.primary.withOpacity(0.06),
+                          blurRadius: 24,
+                          spreadRadius: 4,
+                        ),
+                      ],
                     ),
-                    BoxShadow(
-                      color: AppColors.kioskNfcGlowAmber,
-                      blurRadius: 32,
-                      spreadRadius: 8,
+                    child: const Center(
+                      child: Icon(
+                        Icons.contactless_rounded,
+                        size: 56,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.contactless_rounded,
-                    size: 56,
-                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -1007,23 +1097,23 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
         const SizedBox(height: 28),
 
-        // Main instruction
-        const Text(
-          'Tempelkan Kartu',
+        // Main instruction — light weight for premium feel
+        Text(
+          'Tempelkan Kartu NFC',
           style: TextStyle(
             fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppColors.kioskTextPrimary,
-            letterSpacing: -0.3,
+            fontWeight: FontWeight.w300,
+            color: _textPrimary,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'di belakang perangkat ini',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.kioskTextSecondary,
+            fontWeight: FontWeight.w400,
+            color: _textMuted,
           ),
         ),
       ],
@@ -1047,9 +1137,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               Container(
                 width: 100,
                 height: 100,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.kioskSurfaceDim,
+                  color: _nfcCircleBg,
                 ),
                 child: const Center(
                   child: Icon(Icons.hourglass_top_rounded,
@@ -1107,9 +1197,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
         const SizedBox(height: 6),
         Text(
           subtitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            color: AppColors.kioskTextSecondary,
+            color: _textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -1144,10 +1234,10 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(height: 1, color: AppColors.kioskDivider),
+        Container(height: 1, color: _dividerColor),
         Container(
           width: double.infinity,
-          color: AppColors.kioskSurfaceDim,
+          color: _surfaceDim,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
           child: Row(
             children: [
@@ -1176,14 +1266,14 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.nfc_outlined,
-                  size: 16, color: AppColors.kioskTextMuted),
+              Icon(Icons.nfc_outlined,
+                  size: 16, color: _textMuted),
               const SizedBox(width: 4),
-              const Text(
+              Text(
                 'NFC',
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.kioskTextMuted,
+                  color: _textMuted,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -1197,7 +1287,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 }
 
 class _DigitalClock extends StatefulWidget {
-  const _DigitalClock();
+  final bool isDarkMode;
+  const _DigitalClock({this.isDarkMode = false});
 
   @override
   State<_DigitalClock> createState() => _DigitalClockState();
@@ -1258,26 +1349,33 @@ class _DigitalClockState extends State<_DigitalClock> {
 
   @override
   Widget build(BuildContext context) {
+    final timeColor = widget.isDarkMode
+        ? AppColors.kioskTextPrimary
+        : AppColors.textPrimary;
+    final dateColor = widget.isDarkMode
+        ? AppColors.kioskTextSecondary
+        : AppColors.textSecondary;
+
     return Column(
       children: [
         Text(
           _formattedTime,
-          style: const TextStyle(
-            fontSize: 58,
-            fontWeight: FontWeight.w800,
-            color: AppColors.kioskTextPrimary,
-            letterSpacing: -1.5,
+          style: GoogleFonts.robotoMono(
+            fontSize: 52,
+            fontWeight: FontWeight.w300,
+            color: timeColor,
+            letterSpacing: 2.0,
             height: 1,
           ),
         ),
         const SizedBox(height: 6),
         Text(
           _formattedDate,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: AppColors.kioskTextSecondary,
-            letterSpacing: 0.2,
+            color: dateColor,
+            letterSpacing: 0.3,
           ),
         ),
       ],
@@ -1591,6 +1689,51 @@ class _StepRow extends StatelessWidget {
       ],
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Gradient ring painter — SweepGradient stroke for premium NFC ring
+// ---------------------------------------------------------------------------
+class _GradientRingPainter extends CustomPainter {
+  final double pulseValue; // 0.0-0.16 range from _pulseAnim
+  final bool isDarkMode;
+
+  _GradientRingPainter({this.pulseValue = 0.0, this.isDarkMode = false});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+
+    // Gradient ring stroke (SweepGradient around the circle)
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..shader = const SweepGradient(
+        colors: [
+          Color(0xFFDC2626), // brand red
+          Color(0xFFF87171), // lighter red
+          Color(0xFFFCA5A5), // even lighter
+          Color(0xFFDC2626), // back to brand
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, ringPaint);
+
+    // Inner glow tied to pulse animation
+    if (pulseValue > 0) {
+      final glowOpacity = isDarkMode
+          ? 0.08 + (0.12 * (pulseValue / 0.16))
+          : 0.04 + (0.06 * (pulseValue / 0.16));
+      final glowPaint = Paint()
+        ..color = const Color(0xFFDC2626).withOpacity(glowOpacity)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+      canvas.drawCircle(center, radius * 0.7, glowPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GradientRingPainter old) =>
+      old.pulseValue != pulseValue || old.isDarkMode != isDarkMode;
 }
 
 // ---------------------------------------------------------------------------

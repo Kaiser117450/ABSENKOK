@@ -1,0 +1,101 @@
+name: absensi_enakko_flutter
+description: Sistem Absensi NFC Ayam Guling Enakko
+publish_to: 'none'
+version: 1.0.0+4004
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Backend
+  supabase_flutter: ^2.8.4
+
+  # NFC - Universal UID reader (e-KTP, e-Toll, Flazz, bank cards, semua jenis kartu)
+  nfc_manager: ^3.5.0
+
+  # SQLite offline queue
+  sqflite: ^2.4.1
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+  # Simple key-value storage for session data (replaced SecureStorage which causes ANR)
+  shared_preferences: ^2.3.3
+
+  # GPS best-effort
+  geolocator: ^13.0.2
+
+  # Network check before sync
+  connectivity_plus: ^6.1.4
+
+  # CSV export
+  share_plus: ^10.1.4
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Environment variables
+  flutter_dotenv: ^5.2.1
+
+  # HTTP for kiosk custom auth header injection
+  http: ^1.2.2
+
+  # UUID generation for local log IDs
+  uuid: ^4.5.1
+
+  # In-app Dynamic Island / pill toast notifications
+  toastification: ^2.3.0
+
+  # Confetti animation for success screen
+  confetti: ^0.8.0
+
+  # Background foreground service (NFC scan tanpa buka app)
+  flutter_foreground_task: ^8.14.0
+
+  # Local heads-up notifications (NFC scan alert dari background)
+  flutter_local_notifications: ^18.0.0
+
+  # System-wide floating overlay (Dynamic Island pill) — SYSTEM_ALERT_WINDOW
+  flutter_overlay_window: ^0.5.0
+
+  # Date formatting
+  intl: ^0.19.0
+
+  # Screenshot for export schedule
+  screenshot: ^3.0.0
+  
+  # PDF generation for schedule export
+  pdf: ^3.10.8
+  printing: ^5.13.4
+
+  cached_network_image: ^3.3.1
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FF0000"
+  adaptive_icon_foreground: "assets/icon.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/icon.png
+    - assets/images/
