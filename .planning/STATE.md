@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-01T16:10:45.000Z"
+last_updated: "2026-03-01T16:20:04.632Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** M1 — Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 3 IN PROGRESS — Plan 01 complete
+- **Active Phase:** Phase 3 IN PROGRESS — Plan 02 complete
 - **Last Updated:** 2026-03-01
-- **Last Session:** Completed 03-overlay-pill-implementation-01-PLAN.md
+- **Last Session:** Completed 03-overlay-pill-implementation-02-PLAN.md
 
 ## What's Done
 - [x] Codebase mapped → `.planning/codebase/` (7 documents, 1556 lines)
@@ -30,9 +30,10 @@ progress:
 - [x] **Phase 2 Plan 03 COMPLETE** — Admin dashboard Open Shifts widget + manual pulang dialog (admin_dashboard_screen.dart)
 - [x] **Phase 2 VERIFIED** — 12/12 must-haves pass; gap fix d554797 (belumPulang dayNotes guard)
 - [x] **Phase 3 Plan 01 COMPLETE** — Overlay payload contract model + tests (`OverlayPillState`, legacy fallback, v1 serializer)
+- [x] **Phase 3 Plan 02 COMPLETE** — Idempotent overlay controller API + typed service payload updates in `kiosk_background_service.dart`
 
 ## What's Next
-Phase 3 Plan 02: Integrate payload contract into overlay UI/service state transitions.
+Phase 3 Plan 03: Integrate overlay payload contract into `overlay_task.dart` UI state machine.
 
 ## ⚠️ Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
@@ -59,6 +60,8 @@ Phase 3 Plan 02: Integrate payload contract into overlay UI/service state transi
 13. **Manual pulang INSERT:** `is_backup: false` on admin-created pulang records — marks as legitimate correction, not offline sync artifact. (Phase 2 Plan 03).
 14. **Overlay payload contract isolation:** Keep `OverlayPillState` pure Dart (no Flutter/UI imports) so service isolate and overlay isolate share one contract safely. (Phase 3 Plan 01).
 15. **Migration decode strategy:** `fromRaw` parses JSON `v:1` first, then falls back to legacy `outlet|HH:mm` payload to avoid breaking existing senders during rollout. (Phase 3 Plan 01).
+16. **Overlay show contract:** `ensureOverlayVisible` now returns deterministic outcomes (`shown`, `permissionDenied`, `showFailed`) for caller-level handling. (Phase 3 Plan 02).
+17. **Typed overlay update path:** `start()` and `_rotateNotification()` now send `OverlayPillState.toWirePayload()` through controller methods instead of raw delimiter strings. (Phase 3 Plan 02).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian — sakit/izin shows 4 time cells [CRITICAL]~~ → FIXED Phase 1
@@ -75,6 +78,7 @@ Phase 3 Plan 02: Integrate payload contract into overlay UI/service state transi
 | 02-kiosk-scan-cycle-edge-cases | 02 | ~8min | 2 | 1 |
 | 02-kiosk-scan-cycle-edge-cases | 03 | ~20min | 2 | 1 |
 | 03-overlay-pill-implementation | 01 | 11 min | 2 | 2 |
+| 03-overlay-pill-implementation | 02 | 5 min | 3 | 1 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`

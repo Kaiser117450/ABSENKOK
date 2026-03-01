@@ -59,11 +59,11 @@ use the principle of live activity from grab in this website https://engineering
 ### Phase 3: Overlay Pill Implementation
 **Goal:** Persistent floating attendance pill overlay behaves like live activity when app is minimized/backgrounded.
 
-**Plan Progress:** 1/4 complete
+**Plan Progress:** 2/4 complete
 
 Plans:
 - [x] 03-01-PLAN.md — Overlay payload contract model + parser/serializer tests (DONE: 96afaab)
-- [ ] 03-02-PLAN.md
+- [x] 03-02-PLAN.md — Overlay controller idempotent show/update flow + typed service payload updates (DONE: 13bd1f5)
 - [ ] 03-03-PLAN.md
 - [ ] 03-04-PLAN.md
 
