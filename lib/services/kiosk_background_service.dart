@@ -140,7 +140,8 @@ class KioskBackgroundService {
     // Coba overlay juga (best-effort, bisa gagal di beberapa OEM)
     final idleOverlayState =
         _buildIdleOverlayState(outletName: session.outletName, at: DateTime.now());
-    await ensureOverlayVisible(idleOverlayState);
+    final overlayResult = await ensureOverlayVisible(idleOverlayState);
+    debugPrint('[BgService] start ensureOverlayVisible result=$overlayResult');
 
     // Start rotating notification timer (setiap 5 detik untuk live clock)
     _rotateTimer?.cancel();
@@ -314,11 +315,15 @@ class KioskBackgroundService {
     OverlayPillState state,
   ) async {
     if (!Platform.isAndroid) {
+      debugPrint(
+        '[BgService] ensureOverlayVisible result=showFailed reason=unsupported-platform',
+      );
       return OverlayShowResult.showFailed;
     }
     try {
       final granted = await FlutterOverlayWindow.isPermissionGranted();
       if (!granted) {
+        debugPrint('[BgService] ensureOverlayVisible result=permissionDenied');
         return OverlayShowResult.permissionDenied;
       }
 
@@ -338,12 +343,19 @@ class KioskBackgroundService {
 
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
+        debugPrint(
+          '[BgService] ensureOverlayVisible result=showFailed reason=inactive-after-show',
+        );
         return OverlayShowResult.showFailed;
       }
 
       await FlutterOverlayWindow.shareData(state.toWirePayload());
+      debugPrint(
+        '[BgService] ensureOverlayVisible result=shown mode=${state.mode.name} wasActive=$wasActive',
+      );
       return OverlayShowResult.shown;
     } catch (e) {
+      debugPrint('[BgService] ensureOverlayVisible result=showFailed error=$e');
       return OverlayShowResult.showFailed;
     }
   }
@@ -353,10 +365,14 @@ class KioskBackgroundService {
     try {
       final active = await FlutterOverlayWindow.isActive();
       if (!active) {
+        debugPrint('[BgService] updateOverlayState skipped=overlayInactive');
         return;
       }
       await FlutterOverlayWindow.shareData(state.toWirePayload());
-    } catch (_) {}
+      debugPrint('[BgService] updateOverlayState pushed mode=${state.mode.name}');
+    } catch (e) {
+      debugPrint('[BgService] updateOverlayState error=$e');
+    }
   }
 
   /// Hide the floating Dynamic Island pill overlay.
