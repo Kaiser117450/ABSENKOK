@@ -138,7 +138,9 @@ class KioskBackgroundService {
     await showLiveNotification(outletName: session.outletName);
 
     // Coba overlay juga (best-effort, bisa gagal di beberapa OEM)
-    await showOverlayPill(outletName: session.outletName);
+    final idleOverlayState =
+        _buildIdleOverlayState(outletName: session.outletName, at: DateTime.now());
+    await ensureOverlayVisible(idleOverlayState);
 
     // Start rotating notification timer (setiap 5 detik untuk live clock)
     _rotateTimer?.cancel();
@@ -408,11 +410,9 @@ class KioskBackgroundService {
     await updateLiveNotification(outletName: session.outletName, body: body);
 
     // Update floating overlay data (best-effort, may fail on some OEMs)
-    if (Platform.isAndroid) {
-      try {
-        await FlutterOverlayWindow.shareData('${session.outletName}|$timeStr');
-      } catch (_) {}
-    }
+    final idleOverlayState =
+        _buildIdleOverlayState(outletName: session.outletName, at: now);
+    await updateOverlayState(idleOverlayState);
   }
 
   static OverlayPillState _buildIdleOverlayState({
