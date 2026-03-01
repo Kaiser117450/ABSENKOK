@@ -205,37 +205,6 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
         state == AppLifecycleState.paused;
   }
 
-  void _showOverlayWarningToast(
-    OverlayShowResult result, {
-    required String source,
-  }) {
-    if (!mounted) return;
-
-    String? message;
-    if (result == OverlayShowResult.permissionDenied) {
-      message =
-          'Izin overlay belum aktif. Aktifkan agar indikator kiosk tampil.';
-    } else if (result == OverlayShowResult.showFailed) {
-      message = 'Overlay gagal tampil ($source). Coba buka ulang aplikasi.';
-    }
-
-    if (message == null) return;
-
-    toastification.show(
-      context: context,
-      alignment: Alignment.topCenter,
-      type: ToastificationType.warning,
-      style: ToastificationStyle.flat,
-      autoCloseDuration: const Duration(seconds: 3),
-      title: const Text(
-        'Peringatan Overlay',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      description: Text(message),
-      showProgressBar: false,
-    );
-  }
-
   Future<void> _applyLifecyclePolicy(AppLifecycleState state) async {
     if (!Platform.isAndroid) return;
 
@@ -247,10 +216,9 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
       await KioskBackgroundService.showLiveNotification(
         outletName: session.outletName,
       );
-      final result = await KioskBackgroundService.showOverlayPill(
+      await KioskBackgroundService.showOverlayPill(
         outletName: session.outletName,
       );
-      _showOverlayWarningToast(result, source: 'saat app di-background');
       return;
     }
 

@@ -65,11 +65,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       if (Platform.isAndroid) {
         await _requestOverlayPermission();
       }
-      final overlayResult = await KioskBackgroundService.start(session);
-      _showOverlayWarningToast(
-        overlayResult,
-        source: 'saat kiosk dimulai',
-      );
+      await KioskBackgroundService.start(session);
     } catch (e) {
       debugPrint('[KioskIdle] start background service error: $e');
     }
@@ -472,39 +468,6 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     );
   }
 
-  /// Toast "Halo, [Nama]! 👋" — dipakai di fast path maupun slow path.
-  void _showOverlayWarningToast(
-    OverlayShowResult result, {
-    required String source,
-  }) {
-    if (!mounted) return;
-
-    String? message;
-    if (result == OverlayShowResult.permissionDenied) {
-      message =
-          'Izin overlay belum aktif. Aktifkan agar indikator kiosk tampil.';
-    } else if (result == OverlayShowResult.showFailed) {
-      message =
-          'Overlay gagal tampil ($source). Coba lagi setelah beberapa detik.';
-    }
-
-    if (message == null) return;
-
-    toastification.show(
-      context: context,
-      alignment: Alignment.topCenter,
-      type: ToastificationType.warning,
-      style: ToastificationStyle.flat,
-      autoCloseDuration: const Duration(seconds: 3),
-      title: const Text(
-        'Peringatan Overlay',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      description: Text(message),
-      showProgressBar: false,
-    );
-  }
-
   /// Toast "Halo, [Nama]! 👋" dipakai di fast path maupun slow path.
   void _showEmployeeToast(String empName) {
     if (!mounted) return;
@@ -668,8 +631,6 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     final appState = ref.watch(appProvider);
     final session = appState.kioskSession;
     final pendingCount = appState.pendingCount;
-    final keepOverlayInForeground = appState.keepOverlayInForeground;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: FadeTransition(
@@ -681,8 +642,6 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               _buildHeader(session?.outletName, pendingCount),
 
               const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-
-              _buildForegroundOverlayToggle(keepOverlayInForeground),
 
               // ── NFC WARNING BANNER (hanya muncul jika NFC mati) ────────
               if (!_nfcAvailable) _buildNfcOffBanner(),
@@ -822,52 +781,6 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               child: const Icon(Icons.admin_panel_settings_outlined,
                   size: 16, color: AppColors.textSecondary),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildForegroundOverlayToggle(bool keepOverlayInForeground) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-      color: const Color(0xFFFAFAFA),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tampilkan overlay saat aplikasi aktif',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Jika aktif, pill tetap terlihat saat app terbuka.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Switch.adaptive(
-            value: keepOverlayInForeground,
-            onChanged: (value) async {
-              await ref
-                  .read(appProvider.notifier)
-                  .setKeepOverlayInForeground(value);
-            },
-            activeThumbColor: AppColors.primary,
-            activeTrackColor: AppColors.primary.withValues(alpha: 0.35),
           ),
         ],
       ),

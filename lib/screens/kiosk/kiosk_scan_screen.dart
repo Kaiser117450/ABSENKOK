@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:toastification/toastification.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -230,44 +229,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         expanded: true,
       );
 
-      final keepOverlayInForeground =
-          ref.read(appProvider).keepOverlayInForeground;
-      if (keepOverlayInForeground) {
-        final result = await KioskBackgroundService.ensureOverlayVisible(state);
-        _showOverlayWarningToast(result);
-      } else {
-        await KioskBackgroundService.updateOverlayState(state);
-      }
+      await KioskBackgroundService.updateOverlayState(state);
     } catch (e) {
       debugPrint('[KioskScan] push overlay event error: $e');
     }
-  }
-
-  void _showOverlayWarningToast(OverlayShowResult result) {
-    if (!mounted) return;
-
-    String? message;
-    if (result == OverlayShowResult.permissionDenied) {
-      message = 'Izin overlay belum aktif. Event absensi tidak ditampilkan.';
-    } else if (result == OverlayShowResult.showFailed) {
-      message = 'Overlay event gagal tampil. Coba lagi setelah beberapa detik.';
-    }
-
-    if (message == null) return;
-
-    toastification.show(
-      context: context,
-      alignment: Alignment.topCenter,
-      type: ToastificationType.warning,
-      style: ToastificationStyle.flat,
-      autoCloseDuration: const Duration(seconds: 3),
-      title: const Text(
-        'Peringatan Overlay',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      description: Text(message),
-      showProgressBar: false,
-    );
   }
 
   String _formatLocalTime(DateTime value) {

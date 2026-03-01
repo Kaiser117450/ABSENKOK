@@ -20,6 +20,8 @@ const String _kChannelId =
     'absensi_enakko_kiosk'; // used for scan notification channel
 const int _kOverlayWindowWidth = 380;
 const int _kOverlayWindowHeight = 96;
+const Duration _kOverlayActivationTimeout = Duration(milliseconds: 1600);
+const Duration _kOverlayActivationPoll = Duration(milliseconds: 120);
 
 enum OverlayShowResult { shown, permissionDenied, showFailed }
 
@@ -343,9 +345,8 @@ class KioskBackgroundService {
 
       final wasActive = await FlutterOverlayWindow.isActive();
       if (!wasActive) {
+        // Primary attempt: compact floating window sized around the pill.
         await FlutterOverlayWindow.showOverlay(
-          // Keep overlay window tight around the pill and pass touches to the
-          // underlying app outside this floating area.
           height: _kOverlayWindowHeight,
           width: _kOverlayWindowWidth,
           alignment: OverlayAlignment.topCenter,
@@ -354,10 +355,26 @@ class KioskBackgroundService {
           positionGravity: PositionGravity.none,
           startPosition: const OverlayPosition(0, 0),
         );
-        await Future.delayed(const Duration(milliseconds: 300));
+
+        var active = await _waitForOverlayActive();
+        if (!active) {
+          // OEM fallback: some devices reject compact sizing on first open.
+          debugPrint(
+            '[BgService] ensureOverlayVisible compact show not active, retrying with matchParent fallback',
+          );
+          await FlutterOverlayWindow.showOverlay(
+            height: WindowSize.matchParent,
+            width: WindowSize.matchParent,
+            alignment: OverlayAlignment.topCenter,
+            flag: OverlayFlag.focusPointer,
+            enableDrag: false,
+            positionGravity: PositionGravity.none,
+            startPosition: const OverlayPosition(0, 0),
+          );
+        }
       }
 
-      final active = await FlutterOverlayWindow.isActive();
+      final active = await _waitForOverlayActive();
       if (!active) {
         debugPrint(
           '[BgService] ensureOverlayVisible result=showFailed reason=inactive-after-show',
@@ -471,6 +488,17 @@ class KioskBackgroundService {
     final hour = value.hour.toString().padLeft(2, '0');
     final minute = value.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  static Future<bool> _waitForOverlayActive() async {
+    final deadline = DateTime.now().add(_kOverlayActivationTimeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (await FlutterOverlayWindow.isActive()) {
+        return true;
+      }
+      await Future.delayed(_kOverlayActivationPoll);
+    }
+    return FlutterOverlayWindow.isActive();
   }
 
   // ── Scan heads-up notification ────────────────────────────────────────────

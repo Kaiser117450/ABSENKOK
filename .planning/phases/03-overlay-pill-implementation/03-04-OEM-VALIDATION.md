@@ -36,8 +36,8 @@ Use at least 2 real devices with different OEM skins.
 | OVL-05 | Pill interaction works: tap pill toggles expanded/minimized without trapping global interaction | Yes | PENDING | PENDING |  |  |
 | OVL-06 | Readability on light foreground background (text/accent still readable) | Yes | PENDING | PENDING |  |  |
 | OVL-07 | Readability on dark foreground background (text/accent still readable) | Yes | PENDING | PENDING |  |  |
-| OVL-08 | Permission denied path shows guided re-enable dialog and warning toast | Yes | PENDING | PENDING |  |  |
-| OVL-09 | Overlay show/render failure path shows warning toast (or mark N/A with reason if not reproducible) | No | PENDING | PENDING |  |  |
+| OVL-08 | Permission denied path shows guided re-enable dialog (overlay is best-effort, no toast) | Yes | PENDING | PENDING |  |  |
+| OVL-09 | Overlay show/render failure silently logged to debugPrint (no user-facing toast per design) | No | PENDING | PENDING |  |  |
 | OVL-10 | Kiosk reset stops service + hides overlay (no stale floating UI remains) | Yes | PENDING | PENDING |  |  |
 
 ## Final Decision
