@@ -1,35 +1,35 @@
-# REQUIREMENTS.md — Absensi Enakko
+﻿# REQUIREMENTS.md â€” Absensi Enakko
 
 ## Scope
 This requirements document covers the next development cycle:
-bug fixes → live activity overlay → enhanced PDF reports → UI/UX polish → schedule system.
+bug fixes â†’ live activity overlay â†’ enhanced PDF reports â†’ UI/UX polish â†’ schedule system.
 
 ---
 
-## M1 — Bug Fix + Edge Case Handling
+## M1 â€” Bug Fix + Edge Case Handling
 
-### REQ-M1-01: Fix Rekap Harian — Sakit/Izin Status Display
+### REQ-M1-01: Fix Rekap Harian â€” Sakit/Izin Status Display
 **Priority:** Critical
 **What:** When an employee's only attendance for a day is `sakit` or `izin`, the daily
 summary tile must NOT show Masuk/Pulang/Kerja/Istirahat cells. Instead, show a clear
-status badge (🤒 Sakit / 📋 Izin) with the notes/reason field if available.
+status badge (ðŸ¤’ Sakit / ðŸ“‹ Izin) with the notes/reason field if available.
 
 **Acceptance:**
-- [ ] Day with only `sakit` scan → shows red "🤒 Sakit" badge, not 4 time cells
-- [ ] Day with only `izin` scan → shows blue "📋 Izin" badge, not 4 time cells
+- [ ] Day with only `sakit` scan â†’ shows red "ðŸ¤’ Sakit" badge, not 4 time cells
+- [ ] Day with only `izin` scan â†’ shows blue "ðŸ“‹ Izin" badge, not 4 time cells
 - [ ] Notes from `attendance_logs.notes` displayed below the badge
-- [ ] Days with mixed scans (masuk + sakit erroneously) → show masuk normally
+- [ ] Days with mixed scans (masuk + sakit erroneously) â†’ show masuk normally
 
 ---
 
-### REQ-M1-02: Fix Rekap Harian — --:-- from Pagination
+### REQ-M1-02: Fix Rekap Harian â€” --:-- from Pagination
 **Priority:** Critical
 **What:** Rekap Harian must compute summaries from the FULL dataset for the date range,
 not from a paginated slice. The per-scan tab keeps pagination (50 per page). The daily
 summary tab uses a separate unlimited fetch.
 
 **Acceptance:**
-- [ ] Selecting 7-day range with 14 employees → all employees appear in Rekap Harian with correct times
+- [ ] Selecting 7-day range with 14 employees â†’ all employees appear in Rekap Harian with correct times
 - [ ] No `--:--` on masuk for days where the employee definitely scanned in
 - [ ] Loading indicator shown while fetching complete dataset for Rekap Harian
 - [ ] Rekap Harian data independent from Per-Scan pagination state
@@ -43,11 +43,11 @@ the daily summary must group them together as one work session anchored to the m
 
 **Logic:**
 - If `pulang` time is before 12:00 (noon) of the day after `masuk`, attach pulang to masuk's day
-- This handles 22:00–06:00 and 20:00–04:00 type shifts
+- This handles 22:00â€“06:00 and 20:00â€“04:00 type shifts
 
 **Acceptance:**
-- [ ] Masuk at 22:00 Oct 15 + Pulang at 06:00 Oct 16 → shows as one Oct 15 entry with 8j kerja
-- [ ] Masuk at 08:00 Oct 15 + Pulang at 17:00 Oct 15 → unchanged (same-day)
+- [ ] Masuk at 22:00 Oct 15 + Pulang at 06:00 Oct 16 â†’ shows as one Oct 15 entry with 8j kerja
+- [ ] Masuk at 08:00 Oct 15 + Pulang at 17:00 Oct 15 â†’ unchanged (same-day)
 - [ ] Multiple cross-day sessions in same date range handled correctly
 
 ---
@@ -58,79 +58,84 @@ the daily summary must group them together as one work session anchored to the m
 - Admin dashboard flags these as "Belum Pulang" (did not clock out)
 - The kiosk does NOT auto-generate a fake pulang record
 - In Rekap Harian: show masuk time with "Belum Pulang" instead of `--:--` on pulang field
-- New day's kiosk session resets normally — employee must scan masuk again
+- New day's kiosk session resets normally â€” employee must scan masuk again
 
 **Acceptance:**
 - [ ] Employee with masuk+no pulang in Rekap Harian shows "Belum Pulang" badge (not --:--)
-- [ ] New calendar day → kiosk NFC scan starts fresh (no state carryover)
+- [ ] New calendar day â†’ kiosk NFC scan starts fresh (no state carryover)
 - [ ] Admin can see list of "open shifts" (employees who clocked in but not out yesterday)
 
 ---
 
 ### REQ-M1-05: 24-Hour Outlet Shift Cycle
 **Priority:** Medium
-**What:** Some outlets operate 24 hours. The NFC scan sequence (masuk → break → kembali → pulang)
+**What:** Some outlets operate 24 hours. The NFC scan sequence (masuk â†’ break â†’ kembali â†’ pulang)
 must NOT reset based on clock midnight. The reset trigger is:
 - When the PREVIOUS SHIFT's `pulang` has been recorded, OR
 - More than 24 hours since the last `masuk` (safety net)
 
 **Logic:** On NFC tap, check last attendance log for this employee at this outlet:
-- If no recent log (>24h) → force masuk regardless of time
-- If last log was `masuk` → offer break or pulang
-- If last log was `break` → offer kembali or pulang
-- If last log was `pulang` (or kembali after pulang) → new masuk cycle
+- If no recent log (>24h) â†’ force masuk regardless of time
+- If last log was `masuk` â†’ offer break or pulang
+- If last log was `break` â†’ offer kembali or pulang
+- If last log was `pulang` (or kembali after pulang) â†’ new masuk cycle
 
 **Acceptance:**
-- [x] Employee on 22:00–06:00 shift can scan pulang at 06:30 without kiosk resetting to masuk mid-shift
-- [x] After pulang recorded → next scan is always masuk (regardless of time)
+- [x] Employee on 22:00â€“06:00 shift can scan pulang at 06:30 without kiosk resetting to masuk mid-shift
+- [x] After pulang recorded â†’ next scan is always masuk (regardless of time)
 - [x] 24h safety net: if masuk > 24h ago with no pulang, next scan = masuk (prevents infinite open session)
 
-**Status: COMPLETE** — Implemented in Phase 2 Plan 01 (commit 83cc48d). `_loadLastAttendance` now uses `.gte('scanned_at', cutoff)` 24h window query instead of `isSameDay` check.
+**Status: COMPLETE** â€” Implemented in Phase 2 Plan 01 (commit 83cc48d). `_loadLastAttendance` now uses `.gte('scanned_at', cutoff)` 24h window query instead of `isSameDay` check.
 
 ---
 
-## M2 — Floating Pill Live Activity (Dynamic Island Style)
+## M2 â€” Floating Pill Live Activity (Dynamic Island Style)
 
-### REQ-M2-01: Floating Overlay Pill on Scan Success
+### REQ-M2-01: Persistent Live-Activity Overlay on Background/Minimize
 **Priority:** Critical (main feature)
-**What:** After a successful NFC scan, display a floating pill overlay that appears above
-ALL other apps and the kiosk UI. This uses `flutter_overlay_window` (already in project).
+**What:** When the app is minimized/backgrounded, display a persistent floating pill overlay
+above other apps (Dynamic-Island style). Existing scan-success notifications stay as-is; this
+requirement focuses on persistent live activity behavior.
 
-**Content:**
+**Content (persistent idle):**
 ```
-┌────────────────────────────────────────────────┐
-│  [Brand Logo]  Enakko · [Outlet Name]          │
-│  ✅ Budi Santoso — Masuk  ·  07:32             │
-└────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  [Brand Logo]  Enakko Â· [Outlet Name]          â”‚
+â”‚  [Type + Accent]  Â·  [Time HH:mm]              â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 **Status variants:**
-- Masuk → green left accent, ✅ icon
-- Istirahat → amber accent, ☕ icon
-- Kembali → blue accent, 🔄 icon
-- Pulang → gray/red accent, 🏠 icon
-- Sakit → red accent, 🤒 icon
+- Masuk â†’ green left accent, âœ… icon
+- Istirahat â†’ amber accent, â˜• icon
+- Kembali â†’ blue accent, ðŸ”„ icon
+- Pulang â†’ gray/red accent, ðŸ  icon
+- Sakit â†’ red accent, ðŸ¤’ icon
 
 **Behavior:**
-- Appears immediately after scan confirmation
-- Slides in from top with spring animation
-- Auto-dismisses after 3 seconds with fade-out
-- Does NOT block kiosk interactions while visible
-- Works above lock screen if device is in kiosk mode
+- Appears when app enters background/minimized state
+- Remains visible as persistent idle pill above other apps
+- Tap toggles expanded/minimized state
+- If event/temporary state is shown, it returns to persistent idle (no full dismiss)
+- Does NOT block interactions in the app currently in foreground
+- Overlay visibility while app is foregrounded is configurable (toggle)
+- Uses guided permission flow when SYSTEM_ALERT_WINDOW is missing
+- Shows toast warning if overlay fails to render/show
 
 **Acceptance:**
-- [ ] Pill appears within 300ms of scan success
-- [ ] Shows correct outlet name, employee name, type, and time
-- [ ] Auto-dismisses after 3 seconds
-- [ ] Slide-in + fade-out animation (smooth, < 400ms)
-- [ ] Visible above other apps (SYSTEM_ALERT_WINDOW)
-- [ ] Tapping pill dismisses it immediately
+- [x] Minimize/background app â†’ persistent pill appears above other apps
+- [x] Pill remains visible until explicitly hidden by user/app policy
+- [x] Tap toggles expanded/minimized correctly
+- [x] Type + accent + time are visible in persistent state
+- [x] Motion remains smooth for state transitions without full dismiss flicker
+- [x] Overlay permission denied â†’ guided re-enable flow shown
+- [x] Overlay show failure â†’ toast warning shown
 
 ---
 
 ### REQ-M2-02: Overlay UI Design (Luxury Pill)
 **Priority:** High
-**What:** The overlay must look premium — not a default notification. Dark pill (dark background,
+**What:** The overlay must look premium â€” not a default notification. Dark pill (dark background,
 white text) or glass-morphism style. Brand colors as accent only.
 
 **Design spec:**
@@ -143,14 +148,15 @@ white text) or glass-morphism style. Brand colors as accent only.
 - Brand micro-logo (24dp) on left
 
 **Acceptance:**
-- [ ] Pill is visually distinct from system notifications
-- [ ] Colors correctly reflect attendance type
-- [ ] Does not look like a standard Android notification
-- [ ] Readable on both light and dark kiosk backgrounds
+- [x] Pill is visually distinct from system notifications
+- [x] Colors correctly reflect attendance type
+- [x] Does not look like a standard Android notification
+- [x] Readable on both light and dark kiosk backgrounds
+- [x] Expanded and minimized variants both keep premium visual quality
 
 ---
 
-## M3 — PDF Export + Enhanced Reports
+## M3 â€” PDF Export + Enhanced Reports
 
 ### REQ-M3-01: PDF Export with Insights
 **Priority:** High
@@ -159,23 +165,23 @@ PDF generates a professional attendance report for the selected date range.
 
 **PDF Structure:**
 ```
-[Page 1 — Summary]
+[Page 1 â€” Summary]
   Brand header (logo + "Laporan Absensi" + date range)
 
-  INSIGHT CARDS (2×2 grid):
-  ┌──────────────┐ ┌──────────────┐
-  │ 📊 Total     │ │ ✅ Hadir     │
-  │ 248 hari     │ │ 91.2%        │
-  └──────────────┘ └──────────────┘
-  ┌──────────────┐ ┌──────────────┐
-  │ ⏱ Rata-rata  │ │ 🤒 Tidak     │
-  │ 8j 12m/hari  │ │ Hadir 22x    │
-  └──────────────┘ └──────────────┘
+  INSIGHT CARDS (2Ã—2 grid):
+  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  â”‚ ðŸ“Š Total     â”‚ â”‚ âœ… Hadir     â”‚
+  â”‚ 248 hari     â”‚ â”‚ 91.2%        â”‚
+  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+  â”‚ â± Rata-rata  â”‚ â”‚ ðŸ¤’ Tidak     â”‚
+  â”‚ 8j 12m/hari  â”‚ â”‚ Hadir 22x    â”‚
+  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
   Outlet: [selected outlet or "Semua Outlet"]
   Generated: [timestamp]
 
-[Page 2+ — Per-Employee Detail Table]
+[Page 2+ â€” Per-Employee Detail Table]
   Columns: Nama | Total Hadir | Avg Masuk | Avg Pulang | Total Kerja | Sakit | Terlambat
   Alternating row colors for readability
   Footer: page number
@@ -197,15 +203,15 @@ PDF generates a professional attendance report for the selected date range.
 Rekap Harian summary as CSV too, and indicate which tab is active when user taps export.
 
 **Acceptance:**
-- [ ] "Export CSV" on Per-Scan tab → exports scan list (existing behavior, unchanged)
-- [ ] "Export CSV" on Rekap Harian tab → exports one row per employee-day with computed fields
+- [ ] "Export CSV" on Per-Scan tab â†’ exports scan list (existing behavior, unchanged)
+- [ ] "Export CSV" on Rekap Harian tab â†’ exports one row per employee-day with computed fields
 - [ ] Rekap Harian CSV columns: Nama, Outlet, Tanggal, Masuk, Pulang, Durasi Kerja, Istirahat, Status
 
 ---
 
-## M4 — UI/UX Polish
+## M4 â€” UI/UX Polish
 
-### REQ-M4-01: NFC Idle Screen — Ambient Background Animation
+### REQ-M4-01: NFC Idle Screen â€” Ambient Background Animation
 **Priority:** High
 **What:** The kiosk idle screen currently has a pulse animation on the NFC ring but the
 background is static. Add a subtle ambient background animation that:
@@ -214,7 +220,7 @@ background is static. Add a subtle ambient background animation that:
 - Suggests technology / connectivity
 - Works at 24/7 without performance degradation
 
-**Approach:** Layered gradient mesh that slowly shifts positions (10–20s cycle).
+**Approach:** Layered gradient mesh that slowly shifts positions (10â€“20s cycle).
 Subtle radial glow that breathes (scale + opacity). NO particles (too much CPU for kiosk).
 
 **Acceptance:**
@@ -233,7 +239,7 @@ Enakko brand logo asset.
 **Acceptance:**
 - [ ] `assets/images/logo_enakko.png` (or .svg) loaded from assets
 - [ ] Logo visible and correct on idle screen header
-- [ ] Proper sizing: ~100×40dp, aspect ratio maintained
+- [ ] Proper sizing: ~100Ã—40dp, aspect ratio maintained
 
 ---
 
@@ -256,17 +262,17 @@ Enakko brand logo asset.
 
 ---
 
-## M5 — Schedule System + Advanced Features
+## M5 â€” Schedule System + Advanced Features
 
 ### REQ-M5-01: Fix Schedule Persistence to Supabase
 **Priority:** High
-**What:** The schedule system writes to SQLite only — `schedules` and `schedule_entries`
+**What:** The schedule system writes to SQLite only â€” `schedules` and `schedule_entries`
 tables in Supabase have 0 rows. Fix the schedule creation flow to write to Supabase.
 
 **Acceptance:**
-- [ ] Creating a schedule → inserts row in `schedules` table
-- [ ] Adding employee assignments → inserts rows in `schedule_entries`
-- [ ] Fetching schedules → reads from Supabase with offline SQLite fallback
+- [ ] Creating a schedule â†’ inserts row in `schedules` table
+- [ ] Adding employee assignments â†’ inserts rows in `schedule_entries`
+- [ ] Fetching schedules â†’ reads from Supabase with offline SQLite fallback
 - [ ] Schedule visible in admin across devices (not just one device)
 
 ---
@@ -275,7 +281,7 @@ tables in Supabase have 0 rows. Fix the schedule creation flow to write to Supab
 **Priority:** Medium
 **What:** The current `shift_scheduler_screen.dart` layout has UX issues. Redesign for clarity:
 - Week-view grid: employees on Y-axis, days on X-axis
-- Tap a cell → assign shift (Pagi/Sore/Malam/Libur)
+- Tap a cell â†’ assign shift (Pagi/Sore/Malam/Libur)
 - Color-coded by shift type
 - Bulk assign: select multiple employees, click "Assign Pagi This Week"
 
@@ -294,22 +300,22 @@ tables in Supabase have 0 rows. Fix the schedule creation flow to write to Supab
 
 **Acceptance:**
 - [ ] Dashboard shows count of "open shifts" from yesterday
-- [ ] Tap → see list of employees with open shifts
+- [ ] Tap â†’ see list of employees with open shifts
 - [ ] Admin can manually close the shift with notes
 
 ---
 
-### REQ-M5-04: Sakit/Izin — Direct Input by Kepala Gerai (No Approval Step)
+### REQ-M5-04: Sakit/Izin â€” Direct Input by Kepala Gerai (No Approval Step)
 **Priority:** Medium
 **What:** Kepala Gerai langsung bisa memasukkan status sakit/izin untuk karyawan pada
-hari tertentu — **tanpa perlu approval**. Kepala Gerai adalah authority-nya sendiri.
+hari tertentu â€” **tanpa perlu approval**. Kepala Gerai adalah authority-nya sendiri.
 
 **Flow:**
-- Di layar admin (atau dari kiosk admin mode) → pilih karyawan + tanggal + sakit/izin + catatan
+- Di layar admin (atau dari kiosk admin mode) â†’ pilih karyawan + tanggal + sakit/izin + catatan
 - Langsung insert `attendance_log` dengan type `sakit` atau `izin` + notes
 - Tampil di Rekap Harian sebagai badge status (bukan 4 kolom waktu)
 
-**Note:** `time_off_requests` table diabaikan untuk flow ini — terlalu kompleks untuk kebutuhan aktual.
+**Note:** `time_off_requests` table diabaikan untuk flow ini â€” terlalu kompleks untuk kebutuhan aktual.
 
 **Acceptance:**
 - [ ] Kepala gerai bisa set sakit/izin dari admin panel in < 3 tap
@@ -325,50 +331,50 @@ hari tertentu — **tanpa perlu approval**. Kepala Gerai adalah authority-nya se
 **What:** Setiap karyawan bisa diberikan badge khusus (border custom + emoji) yang tampil
 sebagai cincin berwarna di foto profil mereka. Badge membuat karyawan merasa diapresiasi.
 
-**Database:** ✅ Sudah dimigrasikan ke Supabase
+**Database:** âœ… Sudah dimigrasikan ke Supabase
 ```sql
-badges table       — id, name, description, emoji, border_color, border_color2, border_style
-employees.active_badge_id — FK ke badges
+badges table       â€” id, name, description, emoji, border_color, border_color2, border_style
+employees.active_badge_id â€” FK ke badges
 ```
 
 **Default badges yang sudah ada di DB:**
 | Badge | Emoji | Border |
 |-------|-------|--------|
-| Employee of the Month | 🏆 | Gold gradient |
-| Star Performer | ⭐ | Purple gradient |
-| Hadir Sempurna | 💯 | Green gradient |
-| Team Captain | 👑 | Red glow |
-| Veteran | 🎖️ | Gray solid |
+| Employee of the Month | ðŸ† | Gold gradient |
+| Star Performer | â­ | Purple gradient |
+| Hadir Sempurna | ðŸ’¯ | Green gradient |
+| Team Captain | ðŸ‘‘ | Red glow |
+| Veteran | ðŸŽ–ï¸ | Gray solid |
 
-**Badge Display — Tampil di:**
-1. **Kiosk scan success screen** — foto karyawan dengan ring berwarna + emoji badge di pojok kanan bawah avatar
-2. **Admin employee list** — avatar dengan ring tipis (2px) berwarna badge
-3. **Rekap Harian tile** — avatar kecil dengan ring badge
-4. **Floating pill overlay** — emoji badge setelah nama karyawan
-5. **PDF report** — badge name tercantum di kolom tabel
+**Badge Display â€” Tampil di:**
+1. **Kiosk scan success screen** â€” foto karyawan dengan ring berwarna + emoji badge di pojok kanan bawah avatar
+2. **Admin employee list** â€” avatar dengan ring tipis (2px) berwarna badge
+3. **Rekap Harian tile** â€” avatar kecil dengan ring badge
+4. **Floating pill overlay** â€” emoji badge setelah nama karyawan
+5. **PDF report** â€” badge name tercantum di kolom tabel
 
-**Admin Flow — Assign Badge:**
+**Admin Flow â€” Assign Badge:**
 - Admin/Kepala Gerai buka profil karyawan
 - Pilih badge dari list (atau hapus badge)
-- Simpan → update `employees.active_badge_id`
+- Simpan â†’ update `employees.active_badge_id`
 - Perubahan langsung terlihat di semua layar
 
 **Border Rendering (Flutter):**
 ```dart
-// solid  → BoxDecoration border dengan warna tunggal
-// gradient → ShaderMask / gradient border menggunakan CustomPaint
-// glow   → BoxDecoration + BoxShadow spread dengan warna badge
+// solid  â†’ BoxDecoration border dengan warna tunggal
+// gradient â†’ ShaderMask / gradient border menggunakan CustomPaint
+// glow   â†’ BoxDecoration + BoxShadow spread dengan warna badge
 ```
 
 **Acceptance:**
 - [ ] Admin bisa assign badge ke karyawan dari layar employee detail
-- [ ] Karyawan tanpa badge → foto tampil normal (no ring)
-- [ ] Karyawan dengan badge → foto tampil dengan colored ring sesuai badge
+- [ ] Karyawan tanpa badge â†’ foto tampil normal (no ring)
+- [ ] Karyawan dengan badge â†’ foto tampil dengan colored ring sesuai badge
 - [ ] Ring style: solid / gradient / glow sesuai badge definition
 - [ ] Emoji badge muncul di pojok avatar (small chip overlay)
 - [ ] Badge label ("Employee of the Month") tampil di kiosk scan result
 - [ ] Admin bisa buat badge custom (nama, warna, emoji) dari admin panel
-- [ ] Hapus badge dari karyawan → kembali ke avatar normal
+- [ ] Hapus badge dari karyawan â†’ kembali ke avatar normal
 
 ---
 
@@ -393,7 +399,8 @@ employees.active_badge_id — FK ke badges
 - Supabase anon key never logged or exposed
 
 ### Constraints
-- Kotlin 1.9.25 — NO upgrade to 2.x
-- `catch (e: Exception)` — NOT `catch (_: Exception)`
+- Kotlin 1.9.25 â€” NO upgrade to 2.x
+- `catch (e: Exception)` â€” NOT `catch (_: Exception)`
 - SharedPreferences for session (NOT FlutterSecureStorage)
 - Notification ID=300: MethodChannel is PRIMARY, flutter_local_notifications FALLBACK only
+
