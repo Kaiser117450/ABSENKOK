@@ -208,6 +208,12 @@ Plans:
 ### Phase 8: Schedule System Fix + Supabase Integration
 **Goal:** Schedules are persisted to Supabase and visible across all admin devices.
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Fix data flow: Supabase-first read, dual-write save, auto-generate draft indicator, SQLite date normalization
+- [ ] 08-02-PLAN.md — Bulk assign UI: employee selection checkboxes, Select All, shift picker bottom sheet
+
 **Tasks:**
 1. Fix `shift_scheduler_screen.dart` save flow: write to `schedules` + `schedule_entries` Supabase tables
 2. Rebuild schedule grid UI: week-view grid (employees × days), color-coded by shift type
