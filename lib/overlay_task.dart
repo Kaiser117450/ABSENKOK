@@ -1,5 +1,6 @@
 ﻿import 'dart:async';
 
+import 'package:absensi_enakko_flutter/models/attendance_log.dart';
 import 'package:absensi_enakko_flutter/models/overlay_pill_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -53,10 +54,8 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
   StreamSubscription<dynamic>? _dataSub;
   DateTime? _lastPayloadAt;
 
-  static const double _expandedW = 280;
-  static const double _expandedH = 60;
-  static const double _collapsedW = 110;
-  static const double _collapsedH = 36;
+  static const double _expandedHeight = 56;
+  static const double _collapsedHeight = 38;
 
   @override
   void initState() {
@@ -143,7 +142,8 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
   void _revertEventToIdle({required bool useLocalClock}) {
     _eventResetTimer?.cancel();
     _eventResetTimer = null;
-    final fallbackTime = useLocalClock ? _formatTime(widget.now()) : _idleState.time;
+    final fallbackTime =
+        useLocalClock ? _formatTime(widget.now()) : _idleState.time;
     setState(() {
       _idleState = _copyState(
         _idleState,
@@ -228,6 +228,58 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
     return '$hour:$minute';
   }
 
+  _OverlayVisualStyle _resolveStyle() {
+    final attendanceType = AttendanceTypeExt.fromString(
+      _currentState.attendanceType.toLowerCase(),
+    );
+    final accent = _parseAccentHex(_currentState.accentHex, attendanceType.color);
+    final modeLabel =
+        _currentState.mode == OverlayPillMode.event ? 'Event aktif' : 'Kiosk aktif';
+
+    return _OverlayVisualStyle(
+      attendanceLabel: attendanceType.label,
+      modeLabel: modeLabel,
+      accent: accent,
+    );
+  }
+
+  Color _parseAccentHex(String rawHex, Color fallback) {
+    final normalized = rawHex.trim().replaceFirst('#', '');
+    if (normalized.length != 6 && normalized.length != 8) {
+      return fallback;
+    }
+
+    final value =
+        normalized.length == 6 ? 'FF$normalized' : normalized.toUpperCase();
+    final parsed = int.tryParse(value, radix: 16);
+    if (parsed == null) {
+      return fallback;
+    }
+    return Color(parsed);
+  }
+
+  Widget _switchTransition(Widget child, Animation<double> animation) {
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+    final scale = Tween<double>(
+      begin: 0.98,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutBack));
+
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: slide,
+        child: ScaleTransition(
+          scale: scale,
+          child: child,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _clockTimer?.cancel();
@@ -238,6 +290,14 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final expandedWidth = (screenWidth * 0.9).clamp(250.0, 420.0).toDouble();
+    final collapsedWidth = (screenWidth * 0.48).clamp(130.0, 220.0).toDouble();
+    final style = _resolveStyle();
+    final modeOffset = _currentState.mode == OverlayPillMode.event
+        ? const Offset(0, -0.01)
+        : Offset.zero;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Align(
@@ -245,27 +305,55 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
         child: Padding(
           padding: const EdgeInsets.only(top: 0),
           child: GestureDetector(
+            key: const Key('overlay-pill-root'),
             onTap: () => setState(() => _isExpanded = !_isExpanded),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 550),
-              curve: Curves.elasticOut,
-              width: _isExpanded ? _expandedW : _collapsedW,
-              height: _isExpanded ? _expandedH : _collapsedH,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1C1C1E),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66000000),
-                    blurRadius: 14,
-                    offset: Offset(0, 4),
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              offset: modeOffset,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutBack,
+                width: _isExpanded ? expandedWidth : collapsedWidth,
+                height: _isExpanded ? _expandedHeight : _collapsedHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C1C1E),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xF51C1C1E),
+                      Color(0xED111113),
+                    ],
                   ),
-                ],
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _isExpanded ? _buildExpanded() : _buildCollapsed(),
+                  borderRadius: BorderRadius.circular(_isExpanded ? 28 : 22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    width: 0.8,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.34),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                    BoxShadow(
+                      color: style.accent.withValues(alpha: 0.20),
+                      blurRadius: 18,
+                      offset: const Offset(0, 0),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutBack,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: _switchTransition,
+                  child: _isExpanded
+                      ? _buildExpanded(style)
+                      : _buildCollapsed(style),
+                ),
               ),
             ),
           ),
@@ -274,31 +362,15 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
     );
   }
 
-  Widget _buildExpanded() {
+  Widget _buildExpanded(_OverlayVisualStyle style) {
     return Padding(
-      key: const ValueKey('expanded'),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      key: ValueKey(
+        'expanded-${_currentState.mode.name}-${_currentState.attendanceType}-${_currentState.time}',
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFFCC0000),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'A',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
+          _buildLogo(style.accent),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -307,60 +379,115 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
               children: [
                 Text(
                   _currentState.outlet,
+                  key: const Key('overlay-pill-outlet'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 1.1,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  '${_currentState.attendanceType} • tap NFC',
-                  style: const TextStyle(
-                    color: Color(0xFF8E8E93),
-                    fontSize: 9.5,
-                    height: 1.2,
-                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      key: const Key('overlay-pill-accent'),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: style.accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        style.attendanceLabel,
+                        key: const Key('overlay-pill-attendance'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFE5E7EB),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      '•',
+                      style: TextStyle(
+                        color: Color(0xFFA1A1AA),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        style.modeLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFA1A1AA),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            _currentState.time,
-            style: const TextStyle(
-              color: Color(0xFFAEAEB2),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'monospace',
-            ),
-          ),
+          _buildTimeChip(style.accent),
         ],
       ),
     );
   }
 
-  Widget _buildCollapsed() {
+  Widget _buildCollapsed(_OverlayVisualStyle style) {
     return Padding(
-      key: const ValueKey('collapsed'),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      key: ValueKey(
+        'collapsed-${_currentState.mode.name}-${_currentState.attendanceType}-${_currentState.time}',
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.nfc_rounded,
-            color: Color(0xFF4ADE80),
-            size: 14,
+          Container(
+            key: const Key('overlay-pill-accent'),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: style.accent,
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              style.attendanceLabel,
+              key: const Key('overlay-pill-collapsed-status'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFFE5E7EB),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             _currentState.time,
+            key: const Key('overlay-pill-time'),
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
+              color: Color(0xFFF4F4F5),
+              fontSize: 11.5,
               fontWeight: FontWeight.w600,
               fontFamily: 'monospace',
             ),
@@ -369,4 +496,68 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
       ),
     );
   }
+
+  Widget _buildLogo(Color accent) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.withValues(alpha: 0.85),
+            accent.withValues(alpha: 0.55),
+          ],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'A',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeChip(Color accent) {
+    return Container(
+      key: const Key('overlay-pill-time-chip'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.55),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        _currentState.time,
+        key: const Key('overlay-pill-time'),
+        style: const TextStyle(
+          color: Color(0xFFF4F4F5),
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'monospace',
+        ),
+      ),
+    );
+  }
+}
+
+class _OverlayVisualStyle {
+  const _OverlayVisualStyle({
+    required this.attendanceLabel,
+    required this.modeLabel,
+    required this.accent,
+  });
+
+  final String attendanceLabel;
+  final String modeLabel;
+  final Color accent;
 }
