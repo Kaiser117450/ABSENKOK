@@ -52,34 +52,45 @@ Plans:
 ---
 
 ## Milestone 2 — Floating Pill Live Activity (v1.2)
-**Goal:** After each NFC scan, a floating pill appears over all apps showing outlet + employee + status.
+**Goal:** Persistent live-activity floating pill appears above other apps when Absensi Enakko is minimized/backgrounded.
 This is the signature UX feature — "Dynamic Island" feel for kiosk attendance.
+use the principle of live activity from grab in this website https://engineering.grab.com/live-activity-2
 
 ### Phase 3: Overlay Pill Implementation
-**Goal:** Floating attendance pill overlay shows correctly on scan success with premium animation.
+**Goal:** Persistent floating attendance pill overlay behaves like live activity when app is minimized/backgrounded.
+
+**Plan Progress:** 1/4 complete
+
+Plans:
+- [x] 03-01-PLAN.md — Overlay payload contract model + parser/serializer tests (DONE: 96afaab)
+- [ ] 03-02-PLAN.md
+- [ ] 03-03-PLAN.md
+- [ ] 03-04-PLAN.md
 
 **Tasks:**
-1. Design overlay widget in `overlay_task.dart`:
-   - Dark semi-transparent pill container (rounded, ~56dp tall)
-   - Left accent bar (colored by attendance type)
-   - Brand micro-logo (24dp) + outlet name
-   - Employee name (bold) + status label + time
-2. Add slide-down + fade entrance animation (spring physics, 300ms)
-3. Add auto-dismiss timer (3s) with fade-out
-4. Wire MethodChannel events from `kiosk_idle_screen.dart` → overlay:
-   - `show_overlay` with payload: {outletName, employeeName, type, time}
-   - `hide_overlay` for manual dismiss
-5. Request SYSTEM_ALERT_WINDOW permission on first kiosk setup if not already granted
-6. Tap-to-dismiss: overlay window click → hide immediately
-7. Test on real kiosk device (emulator behavior differs for overlays)
+1. Refactor overlay state in `overlay_task.dart` to support persistent idle pill + event transition state:
+   - Persistent idle state remains visible above other apps
+   - Expanded/minimized toggle by tap
+   - Compact dark pill (~56dp), brand micro-logo, outlet, type + accent, and time
+2. Keep premium transition feel (slide/fade + spring) for state changes, while prioritizing persistent stability
+3. Ensure event state returns to persistent idle state (not full overlay dismiss)
+4. Wire lifecycle/background triggers (`app.dart` + `kiosk_background_service.dart`) so overlay shows on app minimize/background
+5. Add foreground visibility setting (hide vs keep overlay when app is active)
+6. Harden permission flow:
+   - Guided SYSTEM_ALERT_WINDOW prompt with OEM guidance (MIUI/HyperOS, etc.)
+   - Re-check permission each kiosk start
+7. Fallback UX:
+   - Show toast warning when overlay render/show fails
+8. Test on real kiosk devices and OEM variants (emulator behavior differs for overlays)
 
 **UAT:**
-- Setelah NFC scan sukses → pil muncul dalam 300ms
-- Pil menampilkan nama gerai, nama karyawan, jenis absen, jam yang benar
-- Pil auto-hilang setelah 3 detik
-- Animasi masuk halus (slide down + fade in)
-- Pil tidak memblokir interaksi kiosk
-- Warna aksen sesuai jenis absen (hijau=masuk, abu=pulang, amber=istirahat)
+- Saat aplikasi di-minimize/background → pil live-activity muncul di atas aplikasi lain
+- Pil tetap terlihat (persistent idle) sampai user/app menyembunyikannya
+- Tap pil mengubah mode expanded/minimized
+- Jenis absen + warna aksen terlihat di pill persistent
+- Transisi state tetap halus tanpa mengganggu aplikasi lain
+- Jika izin overlay belum ada, user mendapat panduan jelas untuk mengaktifkan
+- Jika overlay gagal tampil, user mendapat toast peringatan
 
 ---
 

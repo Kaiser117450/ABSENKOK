@@ -1,10 +1,23 @@
+---
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: milestone
+status: in_progress
+last_updated: "2026-03-01T16:10:45.000Z"
+progress:
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 5
+---
+
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** M1 — Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 2 COMPLETE — Phase 3 ready to begin
+- **Active Phase:** Phase 3 IN PROGRESS — Plan 01 complete
 - **Last Updated:** 2026-03-01
-- **Last Session:** Completed Phase 2 (02-kiosk-scan-cycle-edge-cases) — all 5 bugs resolved, 12/12 verification
+- **Last Session:** Completed 03-overlay-pill-implementation-01-PLAN.md
 
 ## What's Done
 - [x] Codebase mapped → `.planning/codebase/` (7 documents, 1556 lines)
@@ -16,9 +29,10 @@
 - [x] **Phase 2 Plan 02 COMPLETE** — Fixed BUG-004: Belum Pulang state in Rekap Harian (admin_reports_screen.dart)
 - [x] **Phase 2 Plan 03 COMPLETE** — Admin dashboard Open Shifts widget + manual pulang dialog (admin_dashboard_screen.dart)
 - [x] **Phase 2 VERIFIED** — 12/12 must-haves pass; gap fix d554797 (belumPulang dayNotes guard)
+- [x] **Phase 3 Plan 01 COMPLETE** — Overlay payload contract model + tests (`OverlayPillState`, legacy fallback, v1 serializer)
 
 ## What's Next
-Phase 3: Floating Pill Live Activity overlay (enhance overlay_task.dart + KioskNotificationHelper)
+Phase 3 Plan 02: Integrate payload contract into overlay UI/service state transitions.
 
 ## ⚠️ Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
@@ -43,6 +57,8 @@ Phase 3: Floating Pill Live Activity overlay (enhance overlay_task.dart + KioskN
 11. **belumPulang dayNotes guard:** `dayNotes` extraction must only run for `sakit` and `izin` — NOT for `belumPulang` (no sakit/izin row exists to firstWhere on). Fixed in d554797 after verification gap. (Phase 2 Plan 02).
 12. **Open Shifts 32h window:** Use 32h (not 24h or yesterday) for open-shifts query to cover overnight shifts starting 22:00+ previous day. (Phase 2 Plan 03).
 13. **Manual pulang INSERT:** `is_backup: false` on admin-created pulang records — marks as legitimate correction, not offline sync artifact. (Phase 2 Plan 03).
+14. **Overlay payload contract isolation:** Keep `OverlayPillState` pure Dart (no Flutter/UI imports) so service isolate and overlay isolate share one contract safely. (Phase 3 Plan 01).
+15. **Migration decode strategy:** `fromRaw` parses JSON `v:1` first, then falls back to legacy `outlet|HH:mm` payload to avoid breaking existing senders during rollout. (Phase 3 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian — sakit/izin shows 4 time cells [CRITICAL]~~ → FIXED Phase 1
@@ -58,6 +74,7 @@ Phase 3: Floating Pill Live Activity overlay (enhance overlay_task.dart + KioskN
 | 02-kiosk-scan-cycle-edge-cases | 01 | 2min | 1 | 1 |
 | 02-kiosk-scan-cycle-edge-cases | 02 | ~8min | 2 | 1 |
 | 02-kiosk-scan-cycle-edge-cases | 03 | ~20min | 2 | 1 |
+| 03-overlay-pill-implementation | 01 | 11 min | 2 | 2 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
