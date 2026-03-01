@@ -428,7 +428,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       }
 
       String? dayNotes;
-      if (dayStatus != DailySummaryStatus.normal) {
+      if (dayStatus == DailySummaryStatus.sakit ||
+          dayStatus == DailySummaryStatus.izin) {
         dayNotes = rows
             .firstWhere(
               (r) =>
