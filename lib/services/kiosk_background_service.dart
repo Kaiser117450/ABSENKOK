@@ -13,9 +13,13 @@ import '../models/overlay_pill_state.dart';
 // ---------------------------------------------------------------------------
 // Notification IDs
 // ---------------------------------------------------------------------------
-const int _kNotifIdPersistent = 100; // legacy persistent notif ID (kept for cancel)
-const int _kNotifIdScan = 101;       // heads-up on NFC scan
-const String _kChannelId = 'absensi_enakko_kiosk'; // used for scan notification channel
+const int _kNotifIdPersistent =
+    100; // legacy persistent notif ID (kept for cancel)
+const int _kNotifIdScan = 101; // heads-up on NFC scan
+const String _kChannelId =
+    'absensi_enakko_kiosk'; // used for scan notification channel
+const int _kOverlayWindowWidth = 380;
+const int _kOverlayWindowHeight = 96;
 
 enum OverlayShowResult { shown, permissionDenied, showFailed }
 
@@ -72,7 +76,8 @@ class KioskBackgroundService {
         debugPrint('[BgService] notif permission: already granted');
         return;
       }
-      final result = await FlutterForegroundTask.requestNotificationPermission();
+      final result =
+          await FlutterForegroundTask.requestNotificationPermission();
       debugPrint('[BgService] notif permission after request: $result');
     } catch (e) {
       debugPrint('[BgService] requestNotificationPermission error: $e');
@@ -111,7 +116,7 @@ class KioskBackgroundService {
   /// Start the foreground service with rotating notification content.
   /// Call from kiosk_idle_screen.initState — do NOT stop on dispose,
   /// so the service keeps running when app is backgrounded.
-  static Future<void> start(KioskSession session) async {
+  static Future<OverlayShowResult> start(KioskSession session) async {
     _session = session;
 
     await _initNotifications();
@@ -138,8 +143,8 @@ class KioskBackgroundService {
     await showLiveNotification(outletName: session.outletName);
 
     // Coba overlay juga (best-effort, bisa gagal di beberapa OEM)
-    final idleOverlayState =
-        _buildIdleOverlayState(outletName: session.outletName, at: DateTime.now());
+    final idleOverlayState = _buildIdleOverlayState(
+        outletName: session.outletName, at: DateTime.now());
     final overlayResult = await ensureOverlayVisible(idleOverlayState);
     debugPrint('[BgService] start ensureOverlayVisible result=$overlayResult');
 
@@ -148,6 +153,8 @@ class KioskBackgroundService {
     _rotateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _rotateNotification();
     });
+
+    return overlayResult;
   }
 
   // ── Stop ──────────────────────────────────────────────────────────────────
@@ -195,7 +202,8 @@ class KioskBackgroundService {
         'body': 'Tempelkan kartu NFC untuk absensi',
       });
       methodChannelOk = result == true;
-      debugPrint('[BgService] showLiveNotification MethodChannel result: $result');
+      debugPrint(
+          '[BgService] showLiveNotification MethodChannel result: $result');
     } catch (e) {
       debugPrint('[BgService] showLiveNotification MethodChannel error: $e');
     }
@@ -203,12 +211,14 @@ class KioskBackgroundService {
     // Fallback: standard flutter_local_notifications (only if MethodChannel failed)
     if (!methodChannelOk) {
       final now = DateTime.now();
-      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      final timeStr =
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
       const androidDetails = AndroidNotificationDetails(
         'absensi_enakko_pill',
         'Kiosk Status',
-        channelDescription: 'Status kiosk absensi aktif — notifikasi live real-time',
+        channelDescription:
+            'Status kiosk absensi aktif — notifikasi live real-time',
         importance: Importance.high,
         priority: Priority.high,
         ongoing: true,
@@ -236,7 +246,8 @@ class KioskBackgroundService {
 
   /// Update the Live Activity notification with new body text.
   /// Primary: MethodChannel (custom RemoteViews). Fallback: flutter_local_notifications.
-  static Future<void> updateLiveNotification({String? outletName, String? body}) async {
+  static Future<void> updateLiveNotification(
+      {String? outletName, String? body}) async {
     if (!Platform.isAndroid) return;
     await _initNotifications();
 
@@ -256,12 +267,14 @@ class KioskBackgroundService {
     // Fallback: standard notification (only if MethodChannel failed)
     if (!methodChannelOk) {
       final now = DateTime.now();
-      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      final timeStr =
+          '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
       const androidDetails = AndroidNotificationDetails(
         'absensi_enakko_pill',
         'Kiosk Status',
-        channelDescription: 'Status kiosk absensi aktif — notifikasi live real-time',
+        channelDescription:
+            'Status kiosk absensi aktif — notifikasi live real-time',
         importance: Importance.high,
         priority: Priority.high,
         ongoing: true,
@@ -302,13 +315,14 @@ class KioskBackgroundService {
   /// Show the floating Dynamic Island pill overlay.
   /// Can be called from anywhere (e.g., app lifecycle observer).
   /// [outletName] is shown on the pill. If null, uses cached session name.
-  static Future<void> showOverlayPill({String? outletName}) async {
+  static Future<OverlayShowResult> showOverlayPill({String? outletName}) async {
     final idleState = _buildIdleOverlayState(
       outletName: outletName ?? _session?.outletName,
       at: DateTime.now(),
     );
     final result = await ensureOverlayVisible(idleState);
     debugPrint('[BgService] showOverlayPill wrapper result=$result');
+    return result;
   }
 
   static Future<OverlayShowResult> ensureOverlayVisible(
@@ -330,8 +344,10 @@ class KioskBackgroundService {
       final wasActive = await FlutterOverlayWindow.isActive();
       if (!wasActive) {
         await FlutterOverlayWindow.showOverlay(
-          height: WindowSize.matchParent,
-          width: WindowSize.matchParent,
+          // Keep overlay window tight around the pill and pass touches to the
+          // underlying app outside this floating area.
+          height: _kOverlayWindowHeight,
+          width: _kOverlayWindowWidth,
           alignment: OverlayAlignment.topCenter,
           flag: OverlayFlag.focusPointer,
           enableDrag: false,
@@ -369,7 +385,8 @@ class KioskBackgroundService {
         return;
       }
       await FlutterOverlayWindow.shareData(state.toWirePayload());
-      debugPrint('[BgService] updateOverlayState pushed mode=${state.mode.name}');
+      debugPrint(
+          '[BgService] updateOverlayState pushed mode=${state.mode.name}');
     } catch (e) {
       debugPrint('[BgService] updateOverlayState error=$e');
     }

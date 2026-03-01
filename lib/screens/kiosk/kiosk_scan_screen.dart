@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:nfc_manager/nfc_manager.dart';
 import 'package:toastification/toastification.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +12,9 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
+import '../../models/overlay_pill_state.dart';
 import '../../providers/app_provider.dart';
+import '../../services/kiosk_background_service.dart';
 import '../../services/location_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
@@ -161,14 +162,12 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       // Hanya lakukan assign ulang jika bukan mode backup dan outlet berbeda
       if (!isBackup && employee.homeOutletId != session.outletId) {
         try {
-          await SupabaseClientFactory.admin
-              .from('employees')
-              .update({
-                'home_outlet_id': session.outletId,
-                'updated_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', employee.id);
-          debugPrint('[AutoAssign] ${employee.name} moved to outlet ${session.outletId}');
+          await SupabaseClientFactory.admin.from('employees').update({
+            'home_outlet_id': session.outletId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }).eq('id', employee.id);
+          debugPrint(
+              '[AutoAssign] ${employee.name} moved to outlet ${session.outletId}');
         } catch (e) {
           debugPrint('[AutoAssign] Failed: $e');
           // Continue - absensi tetap tercatat meski auto-assign gagal
@@ -186,13 +185,19 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         ref.read(appProvider.notifier).setPendingCount(newCount);
       } catch (_) {}
 
+      await _pushAttendanceOverlayEvent(
+        type: type,
+        outletName: session.outletName,
+      );
+
       if (mounted) {
         setState(() => _step = _ScanStep.success);
         // Start confetti + bounce animation
         _confettiCtrl.play();
         _successScaleCtrl.forward();
         // Auto-close after success
-        _scheduleReset(const Duration(milliseconds: AppConstants.successScreenDurationMs));
+        _scheduleReset(
+            const Duration(milliseconds: AppConstants.successScreenDurationMs));
       }
     } catch (e) {
       if (mounted) {
@@ -200,9 +205,81 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           _step = _ScanStep.error;
           _errorMessage = 'Gagal menyimpan absensi';
         });
-        _scheduleReset(const Duration(milliseconds: AppConstants.errorResetDurationMs));
+        _scheduleReset(
+            const Duration(milliseconds: AppConstants.errorResetDurationMs));
       }
     }
+  }
+
+  Future<void> _pushAttendanceOverlayEvent({
+    required AttendanceType type,
+    required String outletName,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final state = OverlayPillState(
+        mode: OverlayPillMode.event,
+        outlet: outletName.trim().isEmpty
+            ? OverlayPillState.defaultOutlet
+            : outletName.trim(),
+        time: _formatLocalTime(now),
+        attendanceType: type.value,
+        accentHex: _colorToHex(type.color),
+        eventUntilEpochMs:
+            now.add(const Duration(seconds: 8)).millisecondsSinceEpoch,
+        expanded: true,
+      );
+
+      final keepOverlayInForeground =
+          ref.read(appProvider).keepOverlayInForeground;
+      if (keepOverlayInForeground) {
+        final result = await KioskBackgroundService.ensureOverlayVisible(state);
+        _showOverlayWarningToast(result);
+      } else {
+        await KioskBackgroundService.updateOverlayState(state);
+      }
+    } catch (e) {
+      debugPrint('[KioskScan] push overlay event error: $e');
+    }
+  }
+
+  void _showOverlayWarningToast(OverlayShowResult result) {
+    if (!mounted) return;
+
+    String? message;
+    if (result == OverlayShowResult.permissionDenied) {
+      message = 'Izin overlay belum aktif. Event absensi tidak ditampilkan.';
+    } else if (result == OverlayShowResult.showFailed) {
+      message = 'Overlay event gagal tampil. Coba lagi setelah beberapa detik.';
+    }
+
+    if (message == null) return;
+
+    toastification.show(
+      context: context,
+      alignment: Alignment.topCenter,
+      type: ToastificationType.warning,
+      style: ToastificationStyle.flat,
+      autoCloseDuration: const Duration(seconds: 3),
+      title: const Text(
+        'Peringatan Overlay',
+        style: TextStyle(fontWeight: FontWeight.w700),
+      ),
+      description: Text(message),
+      showProgressBar: false,
+    );
+  }
+
+  String _formatLocalTime(DateTime value) {
+    final h = value.hour.toString().padLeft(2, '0');
+    final m = value.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String _colorToHex(Color color) {
+    final argb =
+        color.toARGB32().toRadixString(16).padLeft(8, '0').toUpperCase();
+    return '#${argb.substring(2)}';
   }
 
   void _scheduleReset(Duration delay) {
@@ -315,11 +392,13 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     // Backup badge (hanya muncul saat mode backup)
                     if (ref.watch(appProvider).isBackupMode) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE0F2FE), // Light cyan
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF0891B2).withOpacity(0.3)),
+                          border: Border.all(
+                              color: const Color(0xFF0891B2).withOpacity(0.3)),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -342,8 +421,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     ],
                     // Verified badge
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.successLight,
                         borderRadius: BorderRadius.circular(8),
@@ -525,7 +604,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           width: size,
           height: size,
           fit: BoxFit.cover,
-          placeholder: (context, url) => Container(width: size, height: size, color: Colors.grey.shade200),
+          placeholder: (context, url) =>
+              Container(width: size, height: size, color: Colors.grey.shade200),
           errorWidget: (context, url, error) => _initialCircle(initial, size),
         ),
       );
@@ -588,13 +668,13 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   Widget _buildSuccess(Employee? employee) {
     final typeLabel = _submittedType?.label ?? 'Absensi';
     final typeColor = switch (_submittedType) {
-      AttendanceType.masuk   => AppColors.success,
+      AttendanceType.masuk => AppColors.success,
       AttendanceType.kembali => const Color(0xFF0891B2),
       AttendanceType.breakTime => const Color(0xFFF59E0B),
-      AttendanceType.pulang  => AppColors.danger,
-      AttendanceType.sakit   => const Color(0xFFDC2626),
-      AttendanceType.izin    => const Color(0xFF2563EB),
-      null                   => AppColors.success,
+      AttendanceType.pulang => AppColors.danger,
+      AttendanceType.sakit => const Color(0xFFDC2626),
+      AttendanceType.izin => const Color(0xFF2563EB),
+      null => AppColors.success,
     };
 
     return Stack(
@@ -606,11 +686,11 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           child: ConfettiWidget(
             confettiController: _confettiCtrl,
             blastDirectionality: BlastDirectionality.explosive,
-            emissionFrequency: 0,     // single burst, bukan continuous rain
-            numberOfParticles: 30,    // cukup padat tapi tidak lebay
+            emissionFrequency: 0, // single burst, bukan continuous rain
+            numberOfParticles: 30, // cukup padat tapi tidak lebay
             maxBlastForce: 25,
             minBlastForce: 10,
-            gravity: 0.2,             // jatuh pelan & natural
+            gravity: 0.2, // jatuh pelan & natural
             colors: const [
               Color(0xFF22C55E), // hijau sukses
               Color(0xFFF59E0B), // kuning aksen
