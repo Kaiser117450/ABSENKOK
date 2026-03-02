@@ -211,7 +211,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Fix data flow: Supabase-first read, dual-write save, auto-generate draft indicator, SQLite date normalization
+- [x] 08-01-PLAN.md — Fix data flow: Supabase-first read, dual-write save, auto-generate draft indicator, SQLite date normalization (DONE: c9c4406, f644232)
 - [ ] 08-02-PLAN.md — Bulk assign UI: employee selection checkboxes, Select All, shift picker bottom sheet
 
 **Tasks:**

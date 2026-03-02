@@ -270,10 +270,10 @@ Enakko brand logo asset.
 tables in Supabase have 0 rows. Fix the schedule creation flow to write to Supabase.
 
 **Acceptance:**
-- [ ] Creating a schedule â†’ inserts row in `schedules` table
-- [ ] Adding employee assignments â†’ inserts rows in `schedule_entries`
-- [ ] Fetching schedules â†’ reads from Supabase with offline SQLite fallback
-- [ ] Schedule visible in admin across devices (not just one device)
+- [x] Creating a schedule -> inserts row in `schedules` table
+- [x] Adding employee assignments -> inserts rows in `schedule_entries`
+- [x] Fetching schedules -> reads from Supabase with offline SQLite fallback
+- [x] Schedule visible in admin across devices (not just one device)
 
 ---
 
