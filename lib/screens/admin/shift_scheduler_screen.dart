@@ -30,6 +30,7 @@ class ShiftSchedulerScreen extends ConsumerStatefulWidget {
 
 class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   bool _isLoading = true;
+  bool _hasUnsavedChanges = false;
   List<Employee> _employees = [];
   OutletSchedule? _currentSchedule;
   
@@ -297,11 +298,15 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       _currentSchedule!.entries.add(ScheduleEntry.fromEmployee(
         id: '${DateTime.now().millisecondsSinceEpoch}_${emp.id}', date: date, employee: emp, shift: shift,
       ));
+      _hasUnsavedChanges = true;
     });
   }
 
   void _removeEntry(String entryId) {
-    setState(() => _currentSchedule!.entries.removeWhere((e) => e.id == entryId));
+    setState(() {
+      _currentSchedule!.entries.removeWhere((e) => e.id == entryId);
+      _hasUnsavedChanges = true;
+    });
   }
 
   Future<void> _generateAutoSchedule() async {
@@ -423,9 +428,10 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       );
       _currentSchedule = newSchedule;
       await ScheduleSQLiteService.saveSchedule(_currentSchedule!);
-      
+      _hasUnsavedChanges = true;
+
       setState(() => _isLoading = false);
-      _showSuccess('Jadwal ${_template!.name} generated!');
+      _showSuccess('Jadwal ${_template!.name} generated! Tap Simpan untuk sync ke cloud.');
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Error: $e');
@@ -514,15 +520,12 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     if (_currentSchedule == null) return;
     setState(() => _isLoading = true);
     try {
-      // 1. Save ke SQLite (lokal)
-      await ScheduleSQLiteService.saveSchedule(_currentSchedule!);
-      
-      // 2. Save ke Supabase (Soft-Delete + Insert Strategy for pseudo-atomicity)
+      // 1. Save ke Supabase FIRST (source of truth)
       try {
         final startDateStr = _currentSchedule!.startDate.toIso8601String().split('T')[0];
         final endDateStr = _currentSchedule!.endDate.toIso8601String().split('T')[0];
 
-        // 2a. Cek apakah ada active schedule di periode ini
+        // 1a. Cek apakah ada active schedule di periode ini
         final existing = await SupabaseClientFactory.admin
             .from('schedules')
             .select('id')
@@ -531,22 +534,21 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             .eq('end_date', endDateStr)
             .eq('is_active', true)
             .maybeSingle();
-        
+
         final existingId = existing?['id'] as String?;
 
-        // 2b. Selalu buat schedule row BARU
+        // 1b. Selalu buat schedule row BARU
         final result = await SupabaseClientFactory.admin.from('schedules').insert({
           'outlet_id': _currentSchedule!.outletId,
           'start_date': startDateStr,
           'end_date': endDateStr,
           'is_active': true,
         }).select('id').single();
-        
+
         final newScheduleId = result['id'];
         debugPrint('Created new schedule: $newScheduleId');
-        
-        // 2c. Bulk Insert data ke schedule_entries dengan scheduleId baru
-        // Kita bulk insert (satu HTTP call) ke schedule_entries
+
+        // 1c. Bulk Insert data ke schedule_entries dengan scheduleId baru
         final entriesData = _currentSchedule!.entries.map((entry) => {
           'schedule_id': newScheduleId,
           'date': entry.date.toIso8601String().split('T')[0],
@@ -564,7 +566,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           debugPrint('Bulk inserted ${entriesData.length} entries for $newScheduleId');
         }
 
-        // 2d. Jika inserts sukses, soft-delete schedule lama
+        // 1d. Jika inserts sukses, soft-delete schedule lama
         if (existingId != null) {
           await SupabaseClientFactory.admin.from('schedules').update({
             'is_active': false,
@@ -572,7 +574,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           debugPrint('Soft-deleted old schedule: $existingId');
         }
 
-        // 2e. Update local instance dengan ID yang baru
+        // 1e. Update local instance dengan ID yang baru
         _currentSchedule = OutletSchedule(
           id: newScheduleId,
           outletId: _currentSchedule!.outletId,
@@ -584,14 +586,18 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           syncedAt: _currentSchedule!.syncedAt,
           isActive: _currentSchedule!.isActive,
         );
-        
-        debugPrint('Supabase save successful');
+
+        // 2. Write-through: cache to SQLite with correct Supabase ID
+        await ScheduleSQLiteService.saveSchedule(_currentSchedule!);
+        _hasUnsavedChanges = false;
+        debugPrint('Supabase save successful, cached to SQLite');
       } catch (supabaseError) {
         debugPrint('Supabase sync error: $supabaseError');
-        // Jika gagal insert entry, kita bisa soft-delete schedule baru yang yatim
+        // Still save to SQLite as offline fallback
+        await ScheduleSQLiteService.saveSchedule(_currentSchedule!);
         _showError('Gagal sync ke cloud: $supabaseError');
       }
-      
+
       setState(() => _isLoading = false);
       _showSuccess('Jadwal tersimpan');
     } catch (e) {
@@ -704,7 +710,24 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         ]),
         actions: [
           IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: _exportToPdf),
-          IconButton(icon: const Icon(Icons.save), onPressed: _saveSchedule),
+          Stack(
+            children: [
+              IconButton(icon: const Icon(Icons.save), onPressed: _saveSchedule),
+              if (_hasUnsavedChanges)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Colors.amber,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
       body: _isLoading ? const Center(child: CircularProgressIndicator()) 
