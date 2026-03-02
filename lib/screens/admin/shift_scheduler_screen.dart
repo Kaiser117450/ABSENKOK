@@ -33,6 +33,10 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   bool _hasUnsavedChanges = false;
   List<Employee> _employees = [];
   OutletSchedule? _currentSchedule;
+
+  // Bulk assign state
+  Set<String> _selectedEmployeeIds = {};
+  bool _isBulkMode = false;
   
   // Data
   Map<String, Map<String, AttendanceType>> _sakitIzinMap = {};
@@ -307,6 +311,107 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       _currentSchedule!.entries.removeWhere((e) => e.id == entryId);
       _hasUnsavedChanges = true;
     });
+  }
+
+  // ===========================================================================
+  // BULK ASSIGN
+  // ===========================================================================
+
+  void _toggleBulkMode() {
+    setState(() {
+      _isBulkMode = !_isBulkMode;
+      if (!_isBulkMode) _selectedEmployeeIds.clear();
+    });
+  }
+
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selectedEmployeeIds.length == _employees.length) {
+        _selectedEmployeeIds.clear();
+      } else {
+        _selectedEmployeeIds = _employees.map((e) => e.id).toSet();
+      }
+    });
+  }
+
+  void _bulkAssign(ShiftSlot shift) {
+    if (_selectedEmployeeIds.isEmpty || _currentSchedule == null) return;
+    final days = List.generate(7, (i) => _startDate.add(Duration(days: i)));
+    final selectedEmps = _employees.where((e) => _selectedEmployeeIds.contains(e.id)).toList();
+
+    setState(() {
+      for (final emp in selectedEmps) {
+        for (final day in days) {
+          // Skip days with sakit/izin
+          if (_getSakitIzin(emp.id, day) != null) continue;
+          // Skip days with approved time off
+          if (_hasTimeOff(emp.id, day)) continue;
+
+          // Remove existing entry for this employee+day
+          _currentSchedule!.entries.removeWhere((e) =>
+            e.employeeId == emp.id &&
+            e.date.year == day.year && e.date.month == day.month && e.date.day == day.day);
+
+          // Add new entry
+          final isDayOff = shift.name == 'Libur';
+          _currentSchedule!.entries.add(ScheduleEntry.fromEmployee(
+            id: '${DateTime.now().millisecondsSinceEpoch}_${emp.id}_${day.day}',
+            date: day,
+            employee: emp,
+            shift: shift,
+            isDayOff: isDayOff,
+          ));
+        }
+      }
+      _hasUnsavedChanges = true;
+    });
+
+    _showSuccess('${shift.name} assigned to ${selectedEmps.length} karyawan');
+  }
+
+  void _showBulkAssignSheet() {
+    if (_selectedEmployeeIds.isEmpty) {
+      _showError('Pilih karyawan terlebih dahulu');
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Assign shift untuk ${_selectedEmployeeIds.length} karyawan',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFF3B82F6), radius: 16),
+              title: const Text('Pagi (09:00-17:00)'),
+              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.pagi()); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFF59E0B), radius: 16),
+              title: const Text('Siang (12:00-20:00)'),
+              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.siang()); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFF97316), radius: 16),
+              title: const Text('Sore (14:00-22:00)'),
+              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.sore()); },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFDC2626), radius: 16),
+              title: const Text('Libur'),
+              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.libur()); },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _generateAutoSchedule() async {
@@ -703,10 +808,18 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: _isBulkMode ? Colors.orange.shade700 : AppColors.primary,
+        leading: _isBulkMode
+          ? IconButton(icon: const Icon(Icons.close), onPressed: _toggleBulkMode)
+          : null,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Jadwal Shift', style: TextStyle(fontSize: 18)),
-          Text(widget.outletName ?? 'Unknown', style: const TextStyle(fontSize: 12)),
+          Text(_isBulkMode ? 'Bulk Assign' : 'Jadwal Shift', style: const TextStyle(fontSize: 18)),
+          Text(
+            _isBulkMode
+              ? '${_selectedEmployeeIds.length} karyawan dipilih'
+              : (widget.outletName ?? 'Unknown'),
+            style: const TextStyle(fontSize: 12),
+          ),
         ]),
         actions: [
           IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: _exportToPdf),
@@ -739,10 +852,21 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Tombol kecil di pojok kanan atas bawah
+          // Bulk assign FAB
+          FloatingActionButton.small(
+            heroTag: 'bulk',
+            onPressed: _isBulkMode ? _showBulkAssignSheet : _toggleBulkMode,
+            backgroundColor: _isBulkMode ? Colors.orange : Colors.blueGrey,
+            child: Icon(
+              _isBulkMode ? Icons.assignment : Icons.checklist,
+              color: Colors.white, size: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Auto-generate FAB
           FloatingActionButton.small(
             heroTag: 'auto',
-            onPressed: _generateAutoSchedule, 
+            onPressed: _generateAutoSchedule,
             backgroundColor: AppColors.primary,
             child: const Icon(Icons.auto_fix_high, color: Colors.white, size: 20),
           ),
@@ -836,8 +960,22 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         decoration: BoxDecoration(color: Colors.grey.shade50, border: Border(right: BorderSide(color: Colors.grey.shade300))),
         child: Column(children: [
           Container(height: 40, alignment: Alignment.center,
-            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), border: Border(bottom: BorderSide(color: Colors.grey.shade300))),
-            child: const Text('KARYAWAN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+            decoration: BoxDecoration(color: _isBulkMode ? Colors.orange.withOpacity(0.15) : AppColors.primary.withOpacity(0.1), border: Border(bottom: BorderSide(color: Colors.grey.shade300))),
+            child: _isBulkMode
+              ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  SizedBox(
+                    width: 24, height: 24,
+                    child: Checkbox(
+                      value: _selectedEmployeeIds.length == _employees.length && _employees.isNotEmpty,
+                      onChanged: (_) => _toggleSelectAll(),
+                      activeColor: Colors.orange,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('Semua', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+                ])
+              : const Text('KARYAWAN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
           ),
           Expanded(
             child: ListView.builder(
@@ -888,11 +1026,33 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   }
 
   Widget _buildEmployeeCell(Employee emp) {
+    final isSelected = _selectedEmployeeIds.contains(emp.id);
     return Container(
       height: 52, // COMPACT
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: _isBulkMode && isSelected ? Colors.orange.withOpacity(0.08) : null,
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
       child: Row(children: [
+        // Bulk mode checkbox
+        if (_isBulkMode)
+          SizedBox(
+            width: 28, height: 28,
+            child: Checkbox(
+              value: isSelected,
+              onChanged: (_) => setState(() {
+                if (isSelected) {
+                  _selectedEmployeeIds.remove(emp.id);
+                } else {
+                  _selectedEmployeeIds.add(emp.id);
+                }
+              }),
+              activeColor: Colors.orange,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        if (!_isBulkMode) const SizedBox(width: 4),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(emp.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -903,21 +1063,22 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 child: Text('+${_leaveBalance[emp.id]}', style: TextStyle(fontSize: 8, color: Colors.orange.shade800)),
               ),
           ])),
-        // Time off button - COMPACT
-        Material(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(6),
-          child: InkWell(
+        // Time off button - COMPACT (hidden in bulk mode)
+        if (!_isBulkMode)
+          Material(
+            color: Colors.grey.shade200,
             borderRadius: BorderRadius.circular(6),
-            onTap: () => _showTimeOffDialog(emp),
-            child: Container(
-              width: 28,
-              height: 28,
-              alignment: Alignment.center,
-              child: Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade700),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => _showTimeOffDialog(emp),
+              child: Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                child: Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade700),
+              ),
             ),
           ),
-        ),
       ]),
     );
   }
