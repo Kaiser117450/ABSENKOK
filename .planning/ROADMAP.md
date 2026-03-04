@@ -212,7 +212,7 @@ Plans:
 
 Plans:
 - [x] 08-01-PLAN.md — Fix data flow: Supabase-first read, dual-write save, auto-generate draft indicator, SQLite date normalization (DONE: c9c4406, f644232)
-- [ ] 08-02-PLAN.md — Bulk assign UI: employee selection checkboxes, Select All, shift picker bottom sheet
+- [x] 08-02-PLAN.md — Bulk assign UI: employee selection checkboxes, Select All, shift picker bottom sheet (DONE: 328c9fd)
 
 **Tasks:**
 1. Fix `shift_scheduler_screen.dart` save flow: write to `schedules` + `schedule_entries` Supabase tables
@@ -228,6 +228,16 @@ Plans:
 - Assign bulk untuk 5 karyawan dalam 2 klik
 
 ---
+
+### Phase 08.1: Perbaiki export laporan CSV/PDF: akurasi data waktu absen, bedakan export Per Scan vs Rekap Harian, dan sinkronkan format PDF dengan UI laporan (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 8
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 08.1 to break down)
 
 ### Phase 9: Direct Sakit/Izin Input + Auto-Flag + Badge System
 **Goal:** Kepala Gerai bisa langsung set sakit/izin tanpa approval. Admin punya visibility

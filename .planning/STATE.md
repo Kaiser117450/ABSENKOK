@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-02T05:34:00Z"
+last_updated: "2026-03-05T00:00:00Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # STATE.md â€” Project Memory
 
 ## Current Status
 - **Active Milestone:** M1 â€” Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 8 IN PROGRESS - Plan 01 complete
-- **Last Updated:** 2026-03-02
-- **Last Session:** Completed 08-01-PLAN.md
+- **Active Phase:** Phase 8 COMPLETE - awaiting human verification of 08-02
+- **Last Updated:** 2026-03-05
+- **Last Session:** Completed 08-02-PLAN.md (checkpoint:human-verify pending)
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -34,9 +34,14 @@ progress:
 - [x] **Phase 3 Plan 03 COMPLETE** - Overlay isolate typed state-machine + premium compact pill UI + widget coverage (`overlay_task.dart`, `overlay_pill_widget_test.dart`)
 - [x] **Phase 6 Plan 01 COMPLETE** - Dark kiosk idle screen with 3-layer ambient background (gradient, glow, shimmer) using CustomPainter
 - [x] **Phase 8 Plan 01 COMPLETE** - Supabase-first schedule load with write-through SQLite cache and unsaved draft indicator
+- [x] **Phase 8 Plan 02 COMPLETE** - Bulk assign UI: checklist FAB, Select All header checkbox, individual row checkboxes, shift picker bottom sheet; skips sakit/izin/time-off days
 
 ## What's Next
-Phase 8 Plan 02: Additional schedule system fixes (if applicable).
+Phase 8 awaiting human verification (build + install + test full flow). After approval, Phase 08.1 (export laporan CSV/PDF accuracy) or Phase 7 (Admin UI Polish) can begin.
+
+## Accumulated Context
+### Roadmap Evolution
+- Phase 08.1 inserted after Phase 8: Perbaiki export laporan CSV/PDF: akurasi data waktu absen, bedakan export Per Scan vs Rekap Harian, dan sinkronkan format PDF dengan UI laporan (URGENT)
 
 ## âš ï¸ Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
@@ -71,6 +76,8 @@ Phase 8 Plan 02: Additional schedule system fixes (if applicable).
 21. **Supabase-first schedule load:** try cloud first, cache to SQLite, fallback only on network error. Auto-generate stays as local draft until explicit Save. (Phase 8 Plan 01).
 22. **SQLite date normalization:** split('T')[0] on both save and query paths to match Supabase yyyy-MM-dd format. (Phase 8 Plan 01).
 23. **Dual-write save order:** Supabase first, then SQLite cache with correct Supabase-generated ID. SQLite fallback in catch block. (Phase 8 Plan 01).
+24. **Bulk assign FAB dual-state:** Same FAB changes behavior+color based on _isBulkMode — enters selection mode vs opens shift picker. AppBar turns orange with X button as affordance. (Phase 8 Plan 02).
+25. **Bulk assign skip logic:** Skips both _getSakitIzin() and _hasTimeOff() days — consistent with single-cell add behavior (Phase 8 Plan 02).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -91,6 +98,7 @@ Phase 8 Plan 02: Additional schedule system fixes (if applicable).
 | Phase 03-overlay-pill-implementation P03 | 17 min | 3 tasks | 2 files |
 | 06-nfc-idle-screen-visual-enhancement | 01 | 9min | 2 | 3 |
 | 08-schedule-system-fix-supabase-integration | 01 | 5min | 2 | 2 |
+| 08-schedule-system-fix-supabase-integration | 02 | 8min | 1 | 1 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
@@ -103,4 +111,3 @@ Phase 8 Plan 02: Additional schedule system fixes (if applicable).
 - Codebase map: `.planning/codebase/`
 - Live activity guide: `absensi apk/liveaction.md`
 - Build script: `build_flutter.ps1` (root of projekan/)
-
