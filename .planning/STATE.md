@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.1
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-04T22:27:27.693Z"
+progress:
+  total_phases: 8
+  completed_phases: 4
+  total_plans: 19
+  completed_plans: 12
+---
+
 ﻿---
 gsd_state_version: 1.0
 milestone: v1.1
@@ -17,7 +30,7 @@ progress:
 - **Active Milestone:** M1 â€” Bug Fix + Edge Cases (v1.1)
 - **Active Phase:** Phase 8 COMPLETE - awaiting human verification of 08-02
 - **Last Updated:** 2026-03-05
-- **Last Session:** Completed 08-02-PLAN.md (checkpoint:human-verify pending)
+- **Last Session:** 2026-03-04T22:27:27.691Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -35,9 +48,10 @@ progress:
 - [x] **Phase 6 Plan 01 COMPLETE** - Dark kiosk idle screen with 3-layer ambient background (gradient, glow, shimmer) using CustomPainter
 - [x] **Phase 8 Plan 01 COMPLETE** - Supabase-first schedule load with write-through SQLite cache and unsaved draft indicator
 - [x] **Phase 8 Plan 02 COMPLETE** - Bulk assign UI: checklist FAB, Select All header checkbox, individual row checkboxes, shift picker bottom sheet; skips sakit/izin/time-off days
+- [ ] **Phase 08.1 Plan 01 IN PROGRESS** - Tasks 1+2 done (PDF stats DTOs, summary page builder); stopped at checkpoint:human-verify (Task 3)
 
 ## What's Next
-Phase 8 awaiting human verification (build + install + test full flow). After approval, Phase 08.1 (export laporan CSV/PDF accuracy) or Phase 7 (Admin UI Polish) can begin.
+Phase 08.1 Plan 01 awaiting human verification (build + install + verify Rekap Harian PDF has summary Page 1). After approval, Phase 08.1 Plan 02 and remaining export accuracy plans.
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -78,6 +92,7 @@ Phase 8 awaiting human verification (build + install + test full flow). After ap
 23. **Dual-write save order:** Supabase first, then SQLite cache with correct Supabase-generated ID. SQLite fallback in catch block. (Phase 8 Plan 01).
 24. **Bulk assign FAB dual-state:** Same FAB changes behavior+color based on _isBulkMode — enters selection mode vs opens shift picker. AppBar turns orange with X button as affordance. (Phase 8 Plan 02).
 25. **Bulk assign skip logic:** Skips both _getSakitIzin() and _hasTimeOff() days — consistent with single-cell add behavior (Phase 8 Plan 02).
+26. **PDF summary page optional param:** AttendanceDailyPdfStats is optional on generateAndShareAttendanceDailyPdf — backward-compatible, Per Scan PDF unaffected. Stats DTOs co-located in pdf_service.dart. Summary page (A4 portrait) prepended before existing data MultiPage (A4 landscape). (Phase 08.1 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -99,6 +114,7 @@ Phase 8 awaiting human verification (build + install + test full flow). After ap
 | 06-nfc-idle-screen-visual-enhancement | 01 | 9min | 2 | 3 |
 | 08-schedule-system-fix-supabase-integration | 01 | 5min | 2 | 2 |
 | 08-schedule-system-fix-supabase-integration | 02 | 8min | 1 | 1 |
+| Phase 08.1-perbaiki-export-laporan-csv-pdf P01 | 9min | 2 tasks | 2 files |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
