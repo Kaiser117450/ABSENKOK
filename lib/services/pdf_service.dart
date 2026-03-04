@@ -379,26 +379,55 @@ class PdfService {
           if (rows.isEmpty)
             pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
           else
-            pw.TableHelper.fromTextArray(
-              headers: const ['Nama', 'Jabatan', 'Outlet', 'Jenis', 'Waktu', 'Lat', 'Lng', 'Catatan'],
-              data: rows
-                  .map((row) => [
-                        row.nama,
-                        row.jabatan,
-                        row.outlet,
-                        row.jenis,
-                        row.waktu,
-                        row.latitude,
-                        row.longitude,
-                        row.catatan,
-                      ])
-                  .toList(),
-              headerStyle: pw.TextStyle(font: ttfBold, fontSize: 9, color: PdfColors.white),
-              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
-              cellStyle: pw.TextStyle(font: ttf, fontSize: 8),
-              oddRowDecoration: pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColor.fromHex('E5E7EB'), width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),     // Nama
+                1: const pw.FlexColumnWidth(1.5),   // Jabatan
+                2: const pw.FlexColumnWidth(1.5),   // Outlet
+                3: const pw.FixedColumnWidth(52),   // Jenis
+                4: const pw.FixedColumnWidth(90),   // Waktu
+                5: const pw.FixedColumnWidth(52),   // Lat
+                6: const pw.FixedColumnWidth(52),   // Lng
+                7: const pw.FlexColumnWidth(2),     // Catatan
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
+                  children: ['Nama', 'Jabatan', 'Outlet', 'Jenis', 'Waktu', 'Lat', 'Lng', 'Catatan']
+                      .map((h) => pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                            child: pw.Text(h,
+                                style: pw.TextStyle(
+                                    font: ttfBold, fontSize: 9, color: PdfColors.white)),
+                          ))
+                      .toList(),
+                ),
+                // Data rows
+                ...rows.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final row = entry.value;
+                  final isOdd = i % 2 == 1;
+                  final jenisColor = _typeTextColor(row.jenis);
+
+                  return pw.TableRow(
+                    decoration: isOdd
+                        ? pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB'))
+                        : null,
+                    children: [
+                      _pdfCell(row.nama, ttf),
+                      _pdfCell(row.jabatan, ttf),
+                      _pdfCell(row.outlet, ttf),
+                      _pdfCell(row.jenis, ttfBold, color: jenisColor), // Colored jenis
+                      _pdfCell(row.waktu, ttf),
+                      _pdfCell(row.latitude, ttf),
+                      _pdfCell(row.longitude, ttf),
+                      _pdfCell(row.catatan, ttf),
+                    ],
+                  );
+                }),
+              ],
             ),
         ],
       ),
@@ -456,39 +485,70 @@ class PdfService {
           if (rows.isEmpty)
             pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
           else
-            pw.TableHelper.fromTextArray(
-              headers: const [
-                'Tanggal',
-                'Nama',
-                'Outlet',
-                'Status',
-                'Masuk',
-                'Pulang',
-                'Kerja',
-                'Istirahat',
-                'Scan',
-                'Catatan',
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColor.fromHex('E5E7EB'), width: 0.5),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(58),   // Tanggal
+                1: const pw.FlexColumnWidth(2),     // Nama
+                2: const pw.FlexColumnWidth(1.5),   // Outlet
+                3: const pw.FixedColumnWidth(52),   // Status
+                4: const pw.FixedColumnWidth(38),   // Masuk
+                5: const pw.FixedColumnWidth(38),   // Pulang
+                6: const pw.FixedColumnWidth(42),   // Kerja
+                7: const pw.FixedColumnWidth(42),   // Istirahat
+                8: const pw.FixedColumnWidth(28),   // Scan
+                9: const pw.FlexColumnWidth(1.5),   // Catatan
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('B91C1C')),
+                  children: [
+                    'Tanggal',
+                    'Nama',
+                    'Outlet',
+                    'Status',
+                    'Masuk',
+                    'Pulang',
+                    'Kerja',
+                    'Istirahat',
+                    'Scan',
+                    'Catatan',
+                  ]
+                      .map((h) => pw.Container(
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                            child: pw.Text(h,
+                                style: pw.TextStyle(
+                                    font: ttfBold, fontSize: 9, color: PdfColors.white)),
+                          ))
+                      .toList(),
+                ),
+                // Data rows
+                ...rows.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final row = entry.value;
+                  final isOdd = i % 2 == 1;
+                  final statusColor = _statusTextColor(row.status);
+
+                  return pw.TableRow(
+                    decoration: isOdd
+                        ? pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB'))
+                        : null,
+                    children: [
+                      _pdfCell(row.tanggal, ttf),
+                      _pdfCell(row.nama, ttf),
+                      _pdfCell(row.outlet, ttf),
+                      _pdfCell(row.status, ttfBold, color: statusColor), // Colored status
+                      _pdfCell(row.masuk, ttf),
+                      _pdfCell(row.pulang, ttf),
+                      _pdfCell(row.kerja, ttf),
+                      _pdfCell(row.istirahat, ttf),
+                      _pdfCell(row.jumlahScan, ttf),
+                      _pdfCell(row.catatan, ttf),
+                    ],
+                  );
+                }),
               ],
-              data: rows
-                  .map((row) => [
-                        row.tanggal,
-                        row.nama,
-                        row.outlet,
-                        row.status,
-                        row.masuk,
-                        row.pulang,
-                        row.kerja,
-                        row.istirahat,
-                        row.jumlahScan,
-                        row.catatan,
-                      ])
-                  .toList(),
-              headerStyle: pw.TextStyle(font: ttfBold, fontSize: 9, color: PdfColors.white),
-              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('B91C1C')),
-              cellStyle: pw.TextStyle(font: ttf, fontSize: 8),
-              oddRowDecoration: pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
             ),
         ],
       ),
@@ -739,6 +799,51 @@ class PdfService {
               style:
                   pw.TextStyle(font: fontBold, fontSize: 18, color: accent)),
         ],
+      ),
+    );
+  }
+
+  static PdfColor _statusTextColor(String status) {
+    switch (status) {
+      case 'Sakit':
+        return PdfColor.fromHex('DC2626');
+      case 'Izin':
+        return PdfColor.fromHex('2563EB');
+      case 'Belum Pulang':
+        return PdfColor.fromHex('D97706');
+      default:
+        return PdfColor.fromHex('16A34A'); // Hadir = green
+    }
+  }
+
+  static PdfColor _typeTextColor(String jenis) {
+    switch (jenis) {
+      case 'Masuk':
+        return PdfColor.fromHex('16A34A');
+      case 'Istirahat':
+        return PdfColor.fromHex('D97706');
+      case 'Pulang':
+        return PdfColor.fromHex('6B7280');
+      case 'Kembali':
+        return PdfColor.fromHex('0891B2');
+      case 'Sakit':
+        return PdfColor.fromHex('DC2626');
+      case 'Izin':
+        return PdfColor.fromHex('2563EB');
+      default:
+        return PdfColor.fromHex('374151');
+    }
+  }
+
+  static pw.Widget _pdfCell(String text, pw.Font font, {PdfColor? color}) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+            font: font,
+            fontSize: 8,
+            color: color ?? PdfColor.fromHex('374151')),
       ),
     );
   }
