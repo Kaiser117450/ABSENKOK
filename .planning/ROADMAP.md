@@ -234,10 +234,10 @@ Plans:
 **Goal:** [Urgent work - to be planned]
 **Requirements**: TBD
 **Depends on:** Phase 8
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 08.1 to break down)
+- [x] TBD (run /gsd:plan-phase 08.1 to break down) (completed 2026-03-04)
 
 ### Phase 9: Direct Sakit/Izin Input + Auto-Flag + Badge System
 **Goal:** Kepala Gerai bisa langsung set sakit/izin tanpa approval. Admin punya visibility
