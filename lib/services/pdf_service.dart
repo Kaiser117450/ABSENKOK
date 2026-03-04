@@ -417,6 +417,7 @@ class PdfService {
 
   static Future<void> generateAndShareAttendanceDailyPdf({
     required List<AttendanceDailyPdfRow> rows,
+    AttendanceDailyPdfStats? stats,
     required DateTime startDate,
     required DateTime endDate,
     required String outletName,
@@ -425,6 +426,18 @@ class PdfService {
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
     final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+
+    // Insert summary page first if stats provided
+    if (stats != null) {
+      pdf.addPage(_buildSummaryPage(
+        stats: stats,
+        startDate: startDate,
+        endDate: endDate,
+        outletName: outletName,
+        font: ttf,
+        fontBold: ttfBold,
+      ));
+    }
 
     pdf.addPage(
       pw.MultiPage(
@@ -557,6 +570,174 @@ class PdfService {
             '$rowCount baris',
             style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('6B7280')),
           ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Page _buildSummaryPage({
+    required AttendanceDailyPdfStats stats,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String outletName,
+    required pw.Font font,
+    required pw.Font fontBold,
+  }) {
+    final range =
+        '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(24),
+      build: (context) {
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Reuse _buildAttendanceHeader
+            _buildAttendanceHeader(
+              title: 'Laporan Absensi - Ringkasan',
+              outletName: outletName,
+              dateRange: range,
+              rowCount: stats.totalScan,
+              font: font,
+              fontBold: fontBold,
+            ),
+            pw.SizedBox(height: 20),
+
+            // 2x2 Insight Cards
+            pw.Row(
+              children: [
+                pw.Expanded(
+                    child: _insightCard(
+                        'Total Hadir',
+                        '${stats.totalHadir} hari',
+                        PdfColor.fromHex('16A34A'),
+                        font,
+                        fontBold)),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                    child: _insightCard(
+                        'Tingkat Kehadiran',
+                        '${stats.attendanceRate.toStringAsFixed(1)}%',
+                        PdfColor.fromHex('16A34A'),
+                        font,
+                        fontBold)),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+            pw.Row(
+              children: [
+                pw.Expanded(
+                    child: _insightCard(
+                        'Rata-rata Kerja',
+                        stats.avgWorkStr,
+                        PdfColor.fromHex('1D4ED8'),
+                        font,
+                        fontBold)),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                    child: _insightCard(
+                        'Tidak Hadir',
+                        '${stats.totalSakit} kali',
+                        PdfColor.fromHex('DC2626'),
+                        font,
+                        fontBold)),
+              ],
+            ),
+
+            pw.SizedBox(height: 24),
+
+            // Per-Employee Aggregate Table
+            pw.Text(
+              'Ringkasan Per Karyawan',
+              style: pw.TextStyle(font: fontBold, fontSize: 14),
+            ),
+            pw.SizedBox(height: 8),
+
+            if (stats.employeeRows.isEmpty)
+              pw.Text('Tidak ada data karyawan.',
+                  style: pw.TextStyle(font: font, fontSize: 10))
+            else
+              pw.TableHelper.fromTextArray(
+                headers: const [
+                  'No',
+                  'Nama',
+                  'Hadir',
+                  'Avg Masuk',
+                  'Avg Pulang',
+                  'Total Kerja',
+                  'Sakit'
+                ],
+                data: stats.employeeRows
+                    .asMap()
+                    .entries
+                    .map((e) => [
+                          '${e.key + 1}',
+                          e.value.nama,
+                          '${e.value.hadirCount}',
+                          e.value.avgMasukStr,
+                          e.value.avgPulangStr,
+                          e.value.totalKerjaStr,
+                          '${e.value.sakitCount}',
+                        ])
+                    .toList(),
+                headerStyle: pw.TextStyle(
+                    font: fontBold, fontSize: 9, color: PdfColors.white),
+                headerDecoration:
+                    pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
+                cellStyle: pw.TextStyle(font: font, fontSize: 9),
+                oddRowDecoration:
+                    pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
+                cellAlignment: pw.Alignment.center,
+                cellPadding:
+                    const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(28), // No
+                  1: const pw.FlexColumnWidth(3), // Nama
+                  2: const pw.FixedColumnWidth(40), // Hadir
+                  3: const pw.FixedColumnWidth(55), // Avg Masuk
+                  4: const pw.FixedColumnWidth(55), // Avg Pulang
+                  5: const pw.FixedColumnWidth(60), // Total Kerja
+                  6: const pw.FixedColumnWidth(36), // Sakit
+                },
+              ),
+
+            pw.Spacer(),
+
+            // Footer
+            pw.Text(
+              'Dibuat pada: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}',
+              style: pw.TextStyle(
+                  font: font,
+                  fontSize: 8,
+                  color: PdfColor.fromHex('9CA3AF')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  static pw.Widget _insightCard(String label, String value, PdfColor accent,
+      pw.Font font, pw.Font fontBold) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColor.fromHex('E5E7EB'), width: 0.5),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(label,
+              style: pw.TextStyle(
+                  font: font,
+                  fontSize: 9,
+                  color: PdfColor.fromHex('6B7280'))),
+          pw.SizedBox(height: 4),
+          pw.Text(value,
+              style:
+                  pw.TextStyle(font: fontBold, fontSize: 18, color: accent)),
         ],
       ),
     );
