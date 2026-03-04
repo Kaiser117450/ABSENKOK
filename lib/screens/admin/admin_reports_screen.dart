@@ -211,7 +211,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     setState(() => _exportingCsv = true);
 
     try {
-      final allRows = await _fetchAllRowsForExport(ascending: true);
+      final allRows = _dailyRows.isNotEmpty
+          ? _dailyRows
+          : await _fetchAllRowsForExport(ascending: true);
       if (allRows.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -285,7 +287,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     setState(() => _exportingPdf = true);
 
     try {
-      final allRows = await _fetchAllRowsForExport(ascending: true);
+      final allRows = _dailyRows.isNotEmpty
+          ? _dailyRows
+          : await _fetchAllRowsForExport(ascending: true);
       if (allRows.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -403,7 +407,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       case DailySummaryStatus.belumPulang:
         return 'Belum Pulang';
       case DailySummaryStatus.normal:
-        return 'Normal';
+        return 'Hadir';
     }
   }
 
