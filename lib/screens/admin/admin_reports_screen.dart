@@ -11,6 +11,7 @@ import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../services/pdf_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Reports Screen
@@ -32,7 +33,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   List<_ReportRow> _rows = [];
   bool _loading = false;
-  bool _exporting = false;
+  bool _exportingCsv = false;
+  bool _exportingPdf = false;
   bool _hasLoaded = false;
   
   // Pagination
@@ -52,6 +54,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl.addListener(() {
+      if (!mounted || _tabCtrl.indexIsChanging) return;
+      setState(() {});
+    });
     // Kepala gerai: auto-set outlet sebelum load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -88,6 +94,57 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     } catch (_) {}
   }
 
+  void _markDataDirty() {
+    _hasLoaded = false;
+    _rows = [];
+    _dailyRows = [];
+    _currentOffset = 0;
+    _hasMore = true;
+    _isLoadingMore = false;
+    _loading = false;
+    _loadingDaily = false;
+  }
+
+  dynamic _buildAttendanceBaseQuery() {
+    final start = DateTime(_startDate.year, _startDate.month, _startDate.day);
+    final end = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+
+    dynamic query = SupabaseClientFactory.admin
+        .from('attendance_logs')
+        .select('*, employees(*), outlets(*)')
+        .gte('scanned_at', start.toUtc().toIso8601String())
+        .lte('scanned_at', end.toUtc().toIso8601String());
+
+    if (_selectedOutletId != null) {
+      query = query.eq('scan_outlet_id', _selectedOutletId!);
+    }
+    return query;
+  }
+
+  Future<List<_ReportRow>> _fetchAllRowsForExport({
+    bool ascending = true,
+    int batchSize = 1000,
+  }) async {
+    final allRows = <_ReportRow>[];
+    var offset = 0;
+
+    while (true) {
+      final data = await _buildAttendanceBaseQuery()
+          .order('scanned_at', ascending: ascending)
+          .range(offset, offset + batchSize - 1);
+
+      final batch = (data as List)
+          .map((e) => _ReportRow.fromJson(e as Map<String, dynamic>))
+          .toList();
+      allRows.addAll(batch);
+
+      if (batch.length < batchSize) break;
+      offset += batchSize;
+    }
+
+    return allRows;
+  }
+
   Future<void> _loadReport({bool reset = true}) async {
     if (reset) {
       setState(() {
@@ -102,22 +159,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
 
     try {
-      final start =
-          DateTime(_startDate.year, _startDate.month, _startDate.day);
-      final end = DateTime(
-          _endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
-
-      var baseQuery = SupabaseClientFactory.admin
-          .from('attendance_logs')
-          .select('*, employees(*), outlets(*)')
-          .gte('scanned_at', start.toUtc().toIso8601String())
-          .lte('scanned_at', end.toUtc().toIso8601String());
-
-      if (_selectedOutletId != null) {
-        baseQuery = baseQuery.eq('scan_outlet_id', _selectedOutletId!);
-      }
-
-      final data = await baseQuery
+      final data = await _buildAttendanceBaseQuery()
           .order('scanned_at', ascending: false) // newest first
           .range(_currentOffset, _currentOffset + _limit - 1);
 
@@ -151,32 +193,12 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   Future<void> _loadDailySummaryData() async {
     setState(() => _loadingDaily = true);
     try {
-      final start = DateTime(_startDate.year, _startDate.month, _startDate.day);
-      final end = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
-
-      var query = SupabaseClientFactory.admin
-          .from('attendance_logs')
-          .select('*, employees(*), outlets(*)')
-          .gte('scanned_at', start.toUtc().toIso8601String())
-          .lte('scanned_at', end.toUtc().toIso8601String());
-
-      if (_selectedOutletId != null) {
-        query = query.eq('scan_outlet_id', _selectedOutletId!);
-      }
-
-      // No .range() — fetch all records. .limit(5000) is a documented safety valve.
-      final data = await query
-          .order('scanned_at', ascending: true)
-          .limit(5000);
-
-      if (mounted) {
-        setState(() {
-          _dailyRows = (data as List)
-              .map((e) => _ReportRow.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _loadingDaily = false;
-        });
-      }
+      final allRows = await _fetchAllRowsForExport(ascending: true);
+      if (!mounted) return;
+      setState(() {
+        _dailyRows = allRows;
+        _loadingDaily = false;
+      });
     } catch (e) {
       if (mounted) setState(() => _loadingDaily = false);
     }
@@ -185,47 +207,157 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   // ── CSV export ───────────────────────────────────────────────────────────────
 
   Future<void> _exportCsv() async {
-    if (_rows.isEmpty) return;
-    setState(() => _exporting = true);
+    if (_exportingCsv || _loading || _loadingDaily) return;
+    setState(() => _exportingCsv = true);
 
     try {
+      final allRows = await _fetchAllRowsForExport(ascending: true);
+      if (allRows.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data untuk diekspor')),
+          );
+        }
+        return;
+      }
+
+      final isRekap = _tabCtrl.index == 1;
       final buffer = StringBuffer();
-      buffer.writeln('Nama,Jabatan,Outlet,Jenis,Waktu,Latitude,Longitude');
 
-      // Export per-scan (original order = reversed for export)
-      final sorted = [..._rows]
-        ..sort((a, b) => b.log.scannedAt.compareTo(a.log.scannedAt));
+      if (isRekap) {
+        buffer.writeln('Tanggal,Nama,Outlet,Status,Masuk,Pulang,Kerja,Istirahat,Jumlah Scan,Catatan');
+        final summaries = _computeDailySummaries(sourceRows: allRows);
+        for (final summary in summaries) {
+          final date = _escapeCsv(_formatDateLabelForExport(summary.dateLabel));
+          final name = _escapeCsv(summary.employee?.name ?? '-');
+          final outlet = _escapeCsv(summary.outlet?.name ?? '-');
+          final status = _escapeCsv(_statusLabel(summary.status));
+          final masuk = _escapeCsv(_formatHm(summary.firstMasuk));
+          final pulang = _escapeCsv(_formatHm(summary.lastPulang));
+          final kerja = _escapeCsv(_durationText(summary.workDuration));
+          final istirahat = _escapeCsv(_durationText(summary.totalBreak));
+          final scanCount = summary.scanCount.toString();
+          final notes = _escapeCsv(summary.statusNotes ?? '');
+          buffer.writeln('$date,$name,$outlet,$status,$masuk,$pulang,$kerja,$istirahat,$scanCount,$notes');
+        }
+      } else {
+        buffer.writeln('Nama,Jabatan,Outlet,Jenis,Waktu Lokal,Latitude,Longitude,Catatan');
+        final sorted = [...allRows]
+          ..sort((a, b) => _safeDateTime(b.log.scannedAt).compareTo(_safeDateTime(a.log.scannedAt)));
 
-      for (final row in sorted) {
-        final name = _escapeCsv(row.employee?.name ?? '-');
-        final jabatan = _escapeCsv(row.employee?.position ?? '-');
-        final outlet = _escapeCsv(row.outlet?.name ?? '-');
-        final type = _escapeCsv(row.log.type.label);
-        final time = _escapeCsv(row.log.scannedAt);
-        final lat = row.log.lat?.toString() ?? '';
-        final lng = row.log.lng?.toString() ?? '';
-        buffer.writeln('$name,$jabatan,$outlet,$type,$time,$lat,$lng');
+        for (final row in sorted) {
+          final name = _escapeCsv(row.employee?.name ?? '-');
+          final jabatan = _escapeCsv(row.employee?.position ?? '-');
+          final outlet = _escapeCsv(row.outlet?.name ?? '-');
+          final type = _escapeCsv(row.log.type.label);
+          final time = _escapeCsv(_formatLocalDateTime(row.log.scannedAt));
+          final lat = row.log.lat?.toString() ?? '';
+          final lng = row.log.lng?.toString() ?? '';
+          final notes = _escapeCsv(row.log.notes ?? '');
+          buffer.writeln('$name,$jabatan,$outlet,$type,$time,$lat,$lng,$notes');
+        }
       }
 
       final dir = await getTemporaryDirectory();
-      final now = DateTime.now();
-      final filename =
-          'absensi_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.csv';
+      final filename = isRekap
+          ? 'absensi_rekap_harian_${_exportToken()}.csv'
+          : 'absensi_per_scan_${_exportToken()}.csv';
       final file = File('${dir.path}/$filename');
       await file.writeAsString(buffer.toString());
 
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'text/csv')],
-        subject: 'Laporan Absensi Enakko',
+        subject: isRekap ? 'Laporan Rekap Harian Enakko' : 'Laporan Per Scan Enakko',
       );
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengekspor laporan')),
+          const SnackBar(content: Text('Gagal mengekspor CSV')),
         );
       }
     } finally {
-      if (mounted) setState(() => _exporting = false);
+      if (mounted) setState(() => _exportingCsv = false);
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    if (_exportingPdf || _loading || _loadingDaily) return;
+    setState(() => _exportingPdf = true);
+
+    try {
+      final allRows = await _fetchAllRowsForExport(ascending: true);
+      if (allRows.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data untuk diekspor')),
+          );
+        }
+        return;
+      }
+
+      final outletName = _resolvedOutletName();
+      final isRekap = _tabCtrl.index == 1;
+      if (isRekap) {
+        final summaries = _computeDailySummaries(sourceRows: allRows);
+        final rows = summaries
+            .map(
+              (summary) => AttendanceDailyPdfRow(
+                tanggal: _formatDateLabelForExport(summary.dateLabel),
+                nama: summary.employee?.name ?? '-',
+                outlet: summary.outlet?.name ?? '-',
+                status: _statusLabel(summary.status),
+                masuk: _formatHm(summary.firstMasuk),
+                pulang: _formatHm(summary.lastPulang),
+                kerja: _durationText(summary.workDuration),
+                istirahat: _durationText(summary.totalBreak),
+                jumlahScan: summary.scanCount.toString(),
+                catatan: summary.statusNotes ?? '',
+              ),
+            )
+            .toList();
+
+        final stats = _computeExportStats(summaries);
+        await PdfService.generateAndShareAttendanceDailyPdf(
+          rows: rows,
+          stats: stats,
+          startDate: _startDate,
+          endDate: _endDate,
+          outletName: outletName,
+        );
+      } else {
+        final sorted = [...allRows]
+          ..sort((a, b) => _safeDateTime(b.log.scannedAt).compareTo(_safeDateTime(a.log.scannedAt)));
+
+        final rows = sorted
+            .map(
+              (row) => AttendancePerScanPdfRow(
+                nama: row.employee?.name ?? '-',
+                jabatan: row.employee?.position ?? '-',
+                outlet: row.outlet?.name ?? '-',
+                jenis: row.log.type.label,
+                waktu: _formatLocalDateTime(row.log.scannedAt),
+                latitude: row.log.lat?.toString() ?? '-',
+                longitude: row.log.lng?.toString() ?? '-',
+                catatan: row.log.notes ?? '',
+              ),
+            )
+            .toList();
+
+        await PdfService.generateAndShareAttendancePerScanPdf(
+          rows: rows,
+          startDate: _startDate,
+          endDate: _endDate,
+          outletName: outletName,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengekspor PDF')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportingPdf = false);
     }
   }
 
@@ -234,6 +366,70 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       return '"${val.replaceAll('"', '""')}"';
     }
     return val;
+  }
+
+  DateTime _safeDateTime(String isoStr) {
+    final dt = DateTime.tryParse(isoStr)?.toLocal();
+    return dt ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  String _formatLocalDateTime(String isoStr) {
+    final dt = DateTime.tryParse(isoStr)?.toLocal();
+    if (dt == null) return isoStr;
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatHm(DateTime? dt) {
+    if (dt == null) return '--:--';
+    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _durationText(Duration? duration) {
+    if (duration == null || duration.inMinutes <= 0) return '-';
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours == 0) return '${minutes}m';
+    if (minutes == 0) return '${hours}j';
+    return '${hours}j ${minutes}m';
+  }
+
+  String _statusLabel(DailySummaryStatus status) {
+    switch (status) {
+      case DailySummaryStatus.sakit:
+        return 'Sakit';
+      case DailySummaryStatus.izin:
+        return 'Izin';
+      case DailySummaryStatus.belumPulang:
+        return 'Belum Pulang';
+      case DailySummaryStatus.normal:
+        return 'Normal';
+    }
+  }
+
+  String _formatDateLabelForExport(String raw) {
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return raw;
+    return '${dt.day.toString().padLeft(2, '0')}/'
+        '${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+  }
+
+  String _exportToken() {
+    final now = DateTime.now();
+    return '${now.year}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}_'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}';
+  }
+
+  String _resolvedOutletName() {
+    if (_selectedOutletId == null) return 'Semua Outlet';
+    for (final outlet in _outlets) {
+      if (outlet.id == _selectedOutletId) return outlet.name;
+    }
+    return 'Outlet Terpilih';
   }
 
   String _formatDate(DateTime dt) {
@@ -277,6 +473,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       setState(() {
         _startDate = range.start;
         _endDate = range.end;
+        _markDataDirty();
       });
     }
   }
@@ -284,9 +481,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   // ── Rekap Harian computation ──────────────────────────────────────────────
 
   /// Group raw rows by (employeeId, dateString) and compute daily summary.
-  List<_DailySummary> _computeDailySummaries() {
+  List<_DailySummary> _computeDailySummaries({List<_ReportRow>? sourceRows}) {
+    final source = sourceRows ?? _dailyRows;
     // Sort ascending by time for correct duration calc
-    final sorted = [..._dailyRows]
+    final sorted = [...source]
       ..sort((a, b) => a.log.scannedAt.compareTo(b.log.scannedAt));
 
     // Group key = "employeeId|YYYY-MM-DD"
@@ -464,6 +662,109 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     return summaries;
   }
 
+  // ── Export stats computation ──────────────────────────────────────────────
+
+  AttendanceDailyPdfStats _computeExportStats(List<_DailySummary> summaries) {
+    // Group by employee
+    final Map<String, List<_DailySummary>> byEmployee = {};
+    for (final s in summaries) {
+      final key = s.employee?.id ?? 'unknown';
+      byEmployee.putIfAbsent(key, () => []).add(s);
+    }
+
+    final employeeRows = <AttendanceDailyPdfEmployeeRow>[];
+    int globalHadir = 0;
+    int globalSakit = 0;
+    int globalScan = 0;
+    Duration globalWork = Duration.zero;
+
+    for (final entry in byEmployee.entries) {
+      final empSummaries = entry.value;
+      final name = empSummaries.first.employee?.name ?? 'Tidak Diketahui';
+
+      final hadirDays = empSummaries
+          .where((s) =>
+              s.status == DailySummaryStatus.normal && s.firstMasuk != null)
+          .toList();
+      final sakitDays = empSummaries
+          .where((s) => s.status == DailySummaryStatus.sakit)
+          .toList();
+
+      // Avg masuk
+      final masukTimes = hadirDays
+          .where((s) => s.firstMasuk != null)
+          .map((s) => s.firstMasuk!.hour * 60 + s.firstMasuk!.minute)
+          .toList();
+      final avgMasukStr =
+          masukTimes.isEmpty ? '--:--' : _avgMinutesToHm(masukTimes);
+
+      // Avg pulang
+      final pulangTimes = hadirDays
+          .where((s) => s.lastPulang != null)
+          .map((s) => s.lastPulang!.hour * 60 + s.lastPulang!.minute)
+          .toList();
+      final avgPulangStr =
+          pulangTimes.isEmpty ? '--:--' : _avgMinutesToHm(pulangTimes);
+
+      // Total kerja
+      Duration totalKerja = Duration.zero;
+      for (final s in hadirDays) {
+        if (s.workDuration != null && !s.workDuration!.isNegative) {
+          totalKerja += s.workDuration!;
+        }
+      }
+      final totalKerjaStr =
+          _durationText(totalKerja.inMinutes > 0 ? totalKerja : null);
+
+      employeeRows.add(AttendanceDailyPdfEmployeeRow(
+        nama: name,
+        hadirCount: hadirDays.length,
+        avgMasukStr: avgMasukStr,
+        avgPulangStr: avgPulangStr,
+        totalKerjaStr: totalKerjaStr,
+        sakitCount: sakitDays.length,
+      ));
+
+      globalHadir += hadirDays.length;
+      globalSakit += sakitDays.length;
+      globalScan += empSummaries.fold(0, (sum, s) => sum + s.scanCount);
+      globalWork += totalKerja;
+    }
+
+    // Sort by name
+    employeeRows
+        .sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
+
+    // Attendance rate
+    final totalDays = summaries.map((s) => s.dateLabel).toSet().length;
+    final totalEmployees = byEmployee.keys.length;
+    final attendanceRate = (totalEmployees > 0 && totalDays > 0)
+        ? (globalHadir / (totalDays * totalEmployees) * 100)
+        : 0.0;
+
+    // Avg work
+    final avgWorkMinutes =
+        globalHadir > 0 ? globalWork.inMinutes ~/ globalHadir : 0;
+    final avgH = avgWorkMinutes ~/ 60;
+    final avgM = avgWorkMinutes % 60;
+    final avgWorkStr = avgWorkMinutes > 0 ? '${avgH}j ${avgM}m' : '-';
+
+    return AttendanceDailyPdfStats(
+      totalHadir: globalHadir,
+      attendanceRate: attendanceRate,
+      avgWorkStr: avgWorkStr,
+      totalSakit: globalSakit,
+      totalScan: globalScan,
+      employeeRows: employeeRows,
+    );
+  }
+
+  String _avgMinutesToHm(List<int> minutesList) {
+    if (minutesList.isEmpty) return '--:--';
+    final avg = minutesList.reduce((a, b) => a + b) ~/ minutesList.length;
+    return '${(avg ~/ 60).toString().padLeft(2, '0')}:${(avg % 60).toString().padLeft(2, '0')}';
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -566,8 +867,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                                             ),
                                           )),
                                 ],
-                                onChanged: (v) =>
-                                    setState(() => _selectedOutletId = v),
+                                onChanged: (v) => setState(() {
+                                  _selectedOutletId = v;
+                                  _markDataDirty();
+                                }),
                               ),
                       ),
                       const SizedBox(width: spacerWidth),
@@ -603,7 +906,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         ),
 
         // ── TAB BAR ───────────────────────────────────────────────────
-        if (_hasLoaded && _rows.isNotEmpty) ...[
+        if (_hasLoaded && (_rows.isNotEmpty || _dailyRows.isNotEmpty)) ...[
           Container(
             color: Colors.white,
             child: TabBar(
@@ -629,7 +932,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
             child: Row(
               children: [
                 Text(
-                  '${_rows.length} data scan',
+                  _tabCtrl.index == 1
+                      ? '${_computeDailySummaries().length} data rekap'
+                      : '${_rows.length} data scan',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -638,8 +943,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                 ),
                 const Spacer(),
                 TextButton.icon(
-                  onPressed: _exporting ? null : _exportCsv,
-                  icon: _exporting
+                  onPressed: (_exportingCsv || _exportingPdf || _loading || _loadingDaily)
+                      ? null
+                      : _exportCsv,
+                  icon: _exportingCsv
                       ? const SizedBox(
                           width: 14,
                           height: 14,
@@ -648,7 +955,30 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                       : const Icon(Icons.download_outlined,
                           size: 16, color: AppColors.primary),
                   label: Text(
-                    _exporting ? 'Exporting...' : 'Export CSV',
+                    _exportingCsv
+                        ? 'Exporting...'
+                        : (_tabCtrl.index == 1 ? 'Export CSV Rekap' : 'Export CSV Scan'),
+                    style: const TextStyle(
+                        color: AppColors.primary, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: (_exportingPdf || _exportingCsv || _loading || _loadingDaily)
+                      ? null
+                      : _exportPdf,
+                  icon: _exportingPdf
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.primary))
+                      : const Icon(Icons.picture_as_pdf_outlined,
+                          size: 16, color: AppColors.primary),
+                  label: Text(
+                    _exportingPdf
+                        ? 'Exporting...'
+                        : (_tabCtrl.index == 1 ? 'Export PDF Rekap' : 'Export PDF Scan'),
                     style: const TextStyle(
                         color: AppColors.primary, fontSize: 13),
                   ),

@@ -1,0 +1,619 @@
+import 'dart:io';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
+
+import '../models/employee.dart';
+import '../models/shift_schedule.dart';
+
+class AttendancePerScanPdfRow {
+  final String nama;
+  final String jabatan;
+  final String outlet;
+  final String jenis;
+  final String waktu;
+  final String latitude;
+  final String longitude;
+  final String catatan;
+
+  const AttendancePerScanPdfRow({
+    required this.nama,
+    required this.jabatan,
+    required this.outlet,
+    required this.jenis,
+    required this.waktu,
+    required this.latitude,
+    required this.longitude,
+    required this.catatan,
+  });
+}
+
+class AttendanceDailyPdfRow {
+  final String tanggal;
+  final String nama;
+  final String outlet;
+  final String status;
+  final String masuk;
+  final String pulang;
+  final String kerja;
+  final String istirahat;
+  final String jumlahScan;
+  final String catatan;
+
+  const AttendanceDailyPdfRow({
+    required this.tanggal,
+    required this.nama,
+    required this.outlet,
+    required this.status,
+    required this.masuk,
+    required this.pulang,
+    required this.kerja,
+    required this.istirahat,
+    required this.jumlahScan,
+    required this.catatan,
+  });
+}
+
+class AttendanceDailyPdfStats {
+  final int totalHadir;
+  final double attendanceRate; // percentage 0-100
+  final String avgWorkStr;     // "8j 12m" format
+  final int totalSakit;
+  final int totalScan;
+  final List<AttendanceDailyPdfEmployeeRow> employeeRows;
+
+  const AttendanceDailyPdfStats({
+    required this.totalHadir,
+    required this.attendanceRate,
+    required this.avgWorkStr,
+    required this.totalSakit,
+    required this.totalScan,
+    required this.employeeRows,
+  });
+}
+
+class AttendanceDailyPdfEmployeeRow {
+  final String nama;
+  final int hadirCount;
+  final String avgMasukStr;   // "HH:mm" or "--:--"
+  final String avgPulangStr;
+  final String totalKerjaStr; // "Xj Ym"
+  final int sakitCount;
+
+  const AttendanceDailyPdfEmployeeRow({
+    required this.nama,
+    required this.hadirCount,
+    required this.avgMasukStr,
+    required this.avgPulangStr,
+    required this.totalKerjaStr,
+    required this.sakitCount,
+  });
+}
+
+/// Service untuk generate PDF jadwal shift
+class PdfService {
+  static Future<void> generateAndShareSchedule({
+    required OutletSchedule schedule,
+    required List<Employee> employees,
+    required String outletName,
+  }) async {
+    final pdf = pw.Document();
+    final dateFormat = DateFormat('dd MMM yyyy');
+    
+    // Use default Helvetica font
+    final ttf = pw.Font.helvetica();
+    final ttfBold = pw.Font.helveticaBold();
+
+    final days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    final daysCount = schedule.endDate.difference(schedule.startDate).inDays + 1;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header dengan Logo
+              pw.Row(
+                children: [
+                  // Logo placeholder (kotak merah)
+                  pw.Container(
+                    width: 50,
+                    height: 50,
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('DC2626'),
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(
+                        'E',
+                        style: pw.TextStyle(
+                          fontSize: 28,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Ayam Guling Enakko',
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          font: ttfBold,
+                          color: PdfColor.fromHex('DC2626'),
+                        ),
+                      ),
+                      pw.Text(
+                        'Jadwal Shift - $outletName',
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          font: ttf,
+                          color: PdfColor.fromHex('6B7280'),
+                        ),
+                      ),
+                      pw.Text(
+                        'Periode: ${dateFormat.format(schedule.startDate)} - ${dateFormat.format(schedule.endDate)}',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          font: ttf,
+                          color: PdfColor.fromHex('9CA3AF'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              pw.SizedBox(height: 20),
+              
+              // Legend
+              pw.Row(
+                children: [
+                  _buildLegendChip('Pagi', PdfColor.fromHex('3B82F6'), ttf),
+                  pw.SizedBox(width: 12),
+                  _buildLegendChip('Siang', PdfColor.fromHex('F59E0B'), ttf),
+                  pw.SizedBox(width: 12),
+                  _buildLegendChip('Sore', PdfColor.fromHex('F97316'), ttf),
+                  pw.SizedBox(width: 12),
+                  _buildLegendChip('Libur', PdfColor.fromHex('DC2626'), ttf),
+                  pw.SizedBox(width: 12),
+                  _buildLegendChip('Sakit', PdfColor.fromHex('991B1B'), ttf),
+                  pw.SizedBox(width: 12),
+                  _buildLegendChip('Izin', PdfColor.fromHex('1E40AF'), ttf),
+                ],
+              ),
+              
+              pw.SizedBox(height: 16),
+              
+              // Schedule Table
+              pw.Table(
+                border: pw.TableBorder.all(
+                  color: PdfColor.fromHex('E5E7EB'),
+                  width: 0.5,
+                ),
+                columnWidths: {
+                  0: const pw.FixedColumnWidth(100), // Employee name
+                  for (int i = 1; i <= daysCount; i++) 
+                    i: const pw.FixedColumnWidth(60), // Days
+                },
+                children: [
+                  // Header row
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('FEE2E2'),
+                    ),
+                    children: [
+                      pw.Container(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          'KARYAWAN',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            font: ttfBold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      ...List.generate(daysCount, (i) {
+                        final date = schedule.startDate.add(Duration(days: i));
+                        return pw.Container(
+                          padding: const pw.EdgeInsets.all(8),
+                          child: pw.Column(
+                            children: [
+                              pw.Text(
+                                days[date.weekday % 7],
+                                style: pw.TextStyle(
+                                  fontWeight: pw.FontWeight.bold,
+                                  font: ttfBold,
+                                  fontSize: 9,
+                                ),
+                              ),
+                              pw.Text(
+                                '${date.day}',
+                                style: pw.TextStyle(
+                                  font: ttf,
+                                  fontSize: 8,
+                                  color: PdfColor.fromHex('6B7280'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                  
+                  // Data rows
+                  ...employees.map((emp) {
+                    return pw.TableRow(
+                      children: [
+                        // Employee name cell
+                        pw.Container(
+                          padding: const pw.EdgeInsets.all(8),
+                          decoration: pw.BoxDecoration(
+                            color: PdfColor.fromHex('F9FAFB'),
+                          ),
+                          child: pw.Text(
+                            emp.name,
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              font: ttf,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                        
+                        // Day cells
+                        ...List.generate(daysCount, (dayIndex) {
+                          final date = schedule.startDate.add(Duration(days: dayIndex));
+                          
+                          // Find entries for this employee on this date
+                          final entries = schedule.entries.where((e) =>
+                            e.employeeId == emp.id &&
+                            e.date.year == date.year &&
+                            e.date.month == date.month &&
+                            e.date.day == date.day).toList();
+                          
+                          if (entries.isEmpty) {
+                            return pw.Container(
+                              padding: const pw.EdgeInsets.all(8),
+                              child: pw.Text('-', 
+                                style: pw.TextStyle(font: ttf, fontSize: 8),
+                                textAlign: pw.TextAlign.center,
+                              ),
+                            );
+                          }
+                          
+                          // Get the first entry (should be only one per day)
+                          final entry = entries.first;
+                          final shiftColors = _getShiftColors(entry.shift.name, entry.status);
+                          
+                          return pw.Container(
+                            padding: const pw.EdgeInsets.all(4),
+                            color: shiftColors.background,
+                            child: pw.Center(
+                              child: pw.Text(
+                                _getShiftLabel(entry),
+                                style: pw.TextStyle(
+                                  font: ttf,
+                                  fontSize: 8,
+                                  color: shiftColors.text,
+                                  fontWeight: pw.FontWeight.bold,
+                                ),
+                                textAlign: pw.TextAlign.center,
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+              
+              pw.Spacer(),
+              
+              // Footer
+              pw.Text(
+                'Dibuat pada: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}',
+                style: pw.TextStyle(
+                  font: ttf,
+                  fontSize: 8,
+                  color: PdfColor.fromHex('9CA3AF'),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Save PDF
+    final directory = await getTemporaryDirectory();
+    final fileName = 'jadwal_${outletName.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(schedule.startDate)}.pdf';
+    final filePath = '${directory.path}/$fileName';
+    final file = File(filePath);
+    await file.writeAsBytes(await pdf.save());
+
+    // Share PDF
+    await Share.shareXFiles(
+      [XFile(filePath)],
+      text: 'Jadwal Shift $outletName - ${dateFormat.format(schedule.startDate)} sampai ${dateFormat.format(schedule.endDate)}',
+    );
+  }
+
+  static Future<void> generateAndShareAttendancePerScanPdf({
+    required List<AttendancePerScanPdfRow> rows,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String outletName,
+  }) async {
+    final pdf = pw.Document();
+    final ttf = pw.Font.helvetica();
+    final ttfBold = pw.Font.helveticaBold();
+    final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(20),
+        build: (context) => [
+          _buildAttendanceHeader(
+            title: 'Laporan Absensi - Per Scan',
+            outletName: outletName,
+            dateRange: range,
+            rowCount: rows.length,
+            font: ttf,
+            fontBold: ttfBold,
+          ),
+          pw.SizedBox(height: 12),
+          if (rows.isEmpty)
+            pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
+          else
+            pw.TableHelper.fromTextArray(
+              headers: const ['Nama', 'Jabatan', 'Outlet', 'Jenis', 'Waktu', 'Lat', 'Lng', 'Catatan'],
+              data: rows
+                  .map((row) => [
+                        row.nama,
+                        row.jabatan,
+                        row.outlet,
+                        row.jenis,
+                        row.waktu,
+                        row.latitude,
+                        row.longitude,
+                        row.catatan,
+                      ])
+                  .toList(),
+              headerStyle: pw.TextStyle(font: ttfBold, fontSize: 9, color: PdfColors.white),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
+              cellStyle: pw.TextStyle(font: ttf, fontSize: 8),
+              oddRowDecoration: pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            ),
+        ],
+      ),
+    );
+
+    final dir = await getTemporaryDirectory();
+    final fileName = 'laporan_absensi_per_scan_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/pdf')],
+      text: 'Laporan Absensi Per Scan - $outletName ($range)',
+    );
+  }
+
+  static Future<void> generateAndShareAttendanceDailyPdf({
+    required List<AttendanceDailyPdfRow> rows,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String outletName,
+  }) async {
+    final pdf = pw.Document();
+    final ttf = pw.Font.helvetica();
+    final ttfBold = pw.Font.helveticaBold();
+    final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(20),
+        build: (context) => [
+          _buildAttendanceHeader(
+            title: 'Laporan Absensi - Rekap Harian',
+            outletName: outletName,
+            dateRange: range,
+            rowCount: rows.length,
+            font: ttf,
+            fontBold: ttfBold,
+          ),
+          pw.SizedBox(height: 12),
+          if (rows.isEmpty)
+            pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
+          else
+            pw.TableHelper.fromTextArray(
+              headers: const [
+                'Tanggal',
+                'Nama',
+                'Outlet',
+                'Status',
+                'Masuk',
+                'Pulang',
+                'Kerja',
+                'Istirahat',
+                'Scan',
+                'Catatan',
+              ],
+              data: rows
+                  .map((row) => [
+                        row.tanggal,
+                        row.nama,
+                        row.outlet,
+                        row.status,
+                        row.masuk,
+                        row.pulang,
+                        row.kerja,
+                        row.istirahat,
+                        row.jumlahScan,
+                        row.catatan,
+                      ])
+                  .toList(),
+              headerStyle: pw.TextStyle(font: ttfBold, fontSize: 9, color: PdfColors.white),
+              headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('B91C1C')),
+              cellStyle: pw.TextStyle(font: ttf, fontSize: 8),
+              oddRowDecoration: pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            ),
+        ],
+      ),
+    );
+
+    final dir = await getTemporaryDirectory();
+    final fileName = 'laporan_absensi_rekap_harian_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/pdf')],
+      text: 'Laporan Rekap Harian - $outletName ($range)',
+    );
+  }
+
+  static pw.Widget _buildAttendanceHeader({
+    required String title,
+    required String outletName,
+    required String dateRange,
+    required int rowCount,
+    required pw.Font font,
+    required pw.Font fontBold,
+  }) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('FEF2F2'),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 34,
+            height: 34,
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('DC2626'),
+              borderRadius: pw.BorderRadius.circular(6),
+            ),
+            child: pw.Center(
+              child: pw.Text(
+                'E',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 18,
+                  color: PdfColors.white,
+                ),
+              ),
+            ),
+          ),
+          pw.SizedBox(width: 10),
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Ayam Guling Enakko',
+                  style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColor.fromHex('B91C1C')),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  title,
+                  style: pw.TextStyle(font: fontBold, fontSize: 11),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'Outlet: $outletName',
+                  style: pw.TextStyle(font: font, fontSize: 9, color: PdfColor.fromHex('374151')),
+                ),
+                pw.Text(
+                  'Periode: $dateRange',
+                  style: pw.TextStyle(font: font, fontSize: 9, color: PdfColor.fromHex('374151')),
+                ),
+              ],
+            ),
+          ),
+          pw.Text(
+            '$rowCount baris',
+            style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('6B7280')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildLegendChip(String label, PdfColor color, pw.Font font) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: pw.BoxDecoration(
+        color: color,
+        borderRadius: pw.BorderRadius.circular(12),
+      ),
+      child: pw.Text(
+        label,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 8,
+          color: PdfColors.white,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  static ({PdfColor background, PdfColor text}) _getShiftColors(String shiftName, ScheduleStatus? status) {
+    // Priority: Sakit/Izin status
+    if (status == ScheduleStatus.sakit) {
+      return (background: PdfColor.fromHex('FECACA'), text: PdfColor.fromHex('7F1D1D'));
+    }
+    if (status == ScheduleStatus.izin) {
+      return (background: PdfColor.fromHex('BFDBFE'), text: PdfColor.fromHex('1E3A8A'));
+    }
+    
+    final name = shiftName.toLowerCase();
+    if (name.contains('pagi')) {
+      return (background: PdfColor.fromHex('DBEAFE'), text: PdfColor.fromHex('1E40AF'));
+    } else if (name.contains('siang')) {
+      return (background: PdfColor.fromHex('FEF3C7'), text: PdfColor.fromHex('92400E'));
+    } else if (name.contains('sore')) {
+      return (background: PdfColor.fromHex('FFEDD5'), text: PdfColor.fromHex('C2410C'));
+    } else if (name.contains('libur')) {
+      return (background: PdfColor.fromHex('FEE2E2'), text: PdfColor.fromHex('991B1B'));
+    }
+    return (background: PdfColor.fromHex('F3F4F6'), text: PdfColor.fromHex('374151'));
+  }
+
+  static String _getShiftLabel(ScheduleEntry entry) {
+    if (entry.status == ScheduleStatus.sakit) return 'Sakit';
+    if (entry.status == ScheduleStatus.izin) return 'Izin';
+    if (entry.status == ScheduleStatus.libur) return 'Libur';
+    if (entry.isCustomName && entry.displayName != 'Unknown') return entry.displayName.toUpperCase();
+    
+    final name = entry.shift.name.toLowerCase();
+    if (name.contains('pagi')) return 'Pagi';
+    if (name.contains('siang')) return 'Siang';
+    if (name.contains('sore')) return 'Sore';
+    if (name.contains('libur')) return 'Libur';
+    return entry.shift.name.substring(0, 1).toUpperCase();
+  }
+}
