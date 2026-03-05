@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-05T06:00:00.000Z"
+last_updated: "2026-03-05T10:12:27.140Z"
 progress:
-  total_phases: 10
-  completed_phases: 6
-  total_plans: 19
-  completed_plans: 17
+  total_phases: 12
+  completed_phases: 7
+  total_plans: 21
+  completed_plans: 19
 ---
 
 ﻿---
@@ -28,9 +28,9 @@ progress:
 
 ## Current Status
 - **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 6 Plan 02 COMPLETE (pending human verification) -- gradient NFC ring, monospace clock, premium typography
+- **Active Phase:** Phase 10 Plan 01 COMPLETE -- Direct Supabase insert for sakit/izin with edit mode
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T06:00:00.000Z
+- **Last Session:** 2026-03-05T06:35:00.000Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -54,9 +54,10 @@ progress:
 - [x] **Phase 07 Plan 02 COMPLETE** - Applied widget library to admin_dashboard_screen + bottom nav polish
 - [x] **Phase 07 Plan 03 COMPLETE** - Applied widget library to employees, reports, outlets, sakit_izin: AppCard, ShimmerSkeleton, AppEmptyState, AppToast
 - [x] **Phase 06 Plan 02 COMPLETE** - Gradient NFC ring (_GradientRingPainter), monospace clock (GoogleFonts.robotoMono), premium light-weight instruction typography
+- [x] **Phase 10 Plan 01 COMPLETE** - Direct Supabase INSERT for sakit/izin with edit mode, duplicate prevention, 30-day backdating, 08:00 time anchor
 
 ## What's Next
-Phase 6 Plan 02 code complete. Pending human visual verification on device (Task 2 blocking gate). After approval, Phase 6 is fully done.
+Phase 10 Plan 01 complete. Ready for next plans in Phase 10 (sakit/izin history list, delete capability) or Phase 11 (badge system).
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -105,6 +106,9 @@ Phase 6 Plan 02 code complete. Pending human visual verification on device (Task
 31. **Button/dialog spinners preserved:** CircularProgressIndicator inside ElevatedButton and dialog actions are kept as action-in-progress indicators -- only main loading states replaced with shimmer. (Phase 7 Plan 03).
 32. **Gradient ring SweepGradient + pulse glow:** _GradientRingPainter uses SweepGradient for ring stroke and Color.fromRGBO for dynamic-opacity inner glow tied to _pulseAnim value. (Phase 6 Plan 02).
 33. **Monospace clock font:** GoogleFonts.robotoMono(w300) for time display -- consistent character width prevents layout shifts on second ticks. (Phase 6 Plan 02).
+34. **Sakit/izin direct Supabase INSERT:** Admin operations use SupabaseClientFactory.admin directly, not SQLite offline queue. Immediate visibility in reports. SQLite fallback only on network failure. (Phase 10 Plan 01).
+35. **scanned_at 08:00 anchor for sakit/izin:** Backdated sakit/izin records use 08:00 local time (not current time) to ensure correct date bucketing in Rekap Harian. (Phase 10 Plan 01).
+36. **Duplicate check non-blocking on error:** _checkDuplicate() returns false on network failure -- better to allow potential duplicate than block user. In edit mode, skips check when date unchanged. (Phase 10 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -133,6 +137,7 @@ Phase 6 Plan 02 code complete. Pending human visual verification on device (Task
 | Phase 07-admin-ui-system-polish P02 | ~5min | 1 tasks | 3 files |
 | Phase 07-admin-ui-system-polish P03 | 8min | 2 tasks | 4 files |
 | 06-nfc-idle-screen-visual-enhancement | 02 | 5min | 1 | 1 |
+| 10-sakit-izin-direct-input | 01 | 5min | 1 | 1 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`

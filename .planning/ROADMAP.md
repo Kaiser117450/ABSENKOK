@@ -299,6 +299,12 @@ open shifts. Karyawan bisa diberikan badge khusus yang tampil di profil mereka.
 **Gap Closure:** Closes unsatisfied requirement from v1.1 audit
 **Depends on:** Phase 1 (Rekap Harian badge rendering already works for sakit/izin)
 
+**Plan Progress:** 1/2 complete
+
+Plans:
+- [x] 10-01-PLAN.md — Direct Supabase insert with offline fallback, edit mode, duplicate check, 30-day date range (DONE: caf166f)
+- [ ] 10-02-PLAN.md
+
 **Tasks:**
 1. Admin employee detail → "Set Sakit/Izin" button with date picker, type selector (sakit/izin), optional notes
 2. Direct insert to `attendance_logs` with type sakit/izin — no approval step needed

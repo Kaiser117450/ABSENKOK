@@ -325,6 +325,8 @@ hari tertentu â€” **tanpa perlu approval**. Kepala Gerai adalah authority-n
 - [ ] Bisa di-set untuk tanggal lampau (kemarin, minggu lalu)
 - [ ] Bisa di-hapus/edit jika salah
 
+**Status: IN PROGRESS** — Plan 01 complete (commit caf166f): Direct Supabase insert, edit mode, duplicate check, 30-day date range, 08:00 time anchor. Delete/history list pending Plan 02.
+
 ---
 
 ### REQ-M5-05: Employee Badge System
