@@ -364,6 +364,16 @@ Plans:
 - QR code backup when NFC fails (camera scan)
 - Employee self-service portal (view own attendance history)
 
+### Phase 12: Fix kiosk logout not working after app restart
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 11
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
+
 ---
 
 ## Release Schedule Estimate

@@ -54,6 +54,7 @@ All gap-closure phases (10, 11) are complete.
 ## Accumulated Context
 ### Roadmap Evolution
 - Phase 08.1 inserted after Phase 8: Perbaiki export laporan CSV/PDF: akurasi data waktu absen, bedakan export Per Scan vs Rekap Harian, dan sinkronkan format PDF dengan UI laporan (URGENT)
+- Phase 12 added: Fix kiosk logout not working after app restart (tombol log out gerai tidak berfungsi setelah tutup aplikasi)
 
 ## âš ï¸ Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
