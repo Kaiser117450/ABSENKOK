@@ -1,9 +1,62 @@
 # PROJECT.md — Absensi Enakko
 
-## Vision
+## What This Is
 NFC attendance kiosk app for **Ayam Guling Enakko** restaurant chain — Android tablet deployed
-at each outlet. Replaces paper attendance. Admin can see real-time reports, export to PDF/CSV,
-manage employees and schedules. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+at each outlet. Replaces paper attendance. Features: real-time reports with PDF/CSV export,
+persistent floating pill overlay (Dynamic Island-style), employee badge system, Supabase-synced
+schedules, and premium kiosk UI. Admin can manage employees, attendance, schedules, and badges.
+Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+
+## Core Value
+Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
+
+## Requirements
+
+### Validated
+- ✓ Rekap Harian sakit/izin display — v1.1
+- ✓ Rekap Harian --:-- pagination fix — v1.1
+- ✓ Cross-day shift grouping (noon rule) — v1.1
+- ✓ Lupa absen pulang handling (belum pulang state) — v1.1
+- ✓ 24h outlet shift cycle — v1.1
+- ✓ Persistent live-activity overlay on background — v1.1
+- ✓ Overlay UI luxury pill design — v1.1
+- ✓ PDF export with insights (branded summary + per-employee table) — v1.1
+- ✓ CSV export improvement (per-scan + rekap harian) — v1.1
+- ✓ NFC idle screen ambient animation — v1.1
+- ✓ Brand logo on idle screen — v1.1
+- ✓ Admin UI polish (cards, shimmer, empty states, toast) — v1.1
+- ✓ Schedule persistence to Supabase — v1.1
+- ✓ Auto-flag missing clock-out (open shifts widget) — v1.1
+- ✓ Sakit/Izin direct input by Kepala Gerai — v1.1
+- ✓ Employee badge system (solid/gradient/glow rings, emoji, CRUD) — v1.1
+
+### Active
+- [ ] Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
+- [ ] Time-off request approval workflow
+- [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
+- [ ] Overtime tracking (> 8h kerja → overtime flag)
+- [ ] Push notification for missing clock-out
+- [ ] Attendance rate card on admin dashboard
+
+### Out of Scope
+- iOS app — Android-only kiosk, no iOS target
+- Employee self-service portal — kiosk-only workflow, employees don't interact with app directly
+- WhatsApp/email daily summary — external integration, low priority
+- Video chat / real-time monitoring — not needed for attendance kiosk
+- QR code backup — NFC reliability proven sufficient at 4 outlets
+
+## Context
+
+Shipped v1.1 with 19,124 LOC Dart across 47 files.
+Tech stack: Flutter 3.x, Supabase (PostgreSQL + Auth), SQLite (offline queue), Kotlin 1.9.25.
+Running at 4 Ayam Guling Enakko outlets with 14 employees.
+All 5 original production bugs fixed. 71/71 tests GREEN.
+
+Key areas shipped: bug fixes, floating pill overlay, PDF/CSV reports, kiosk visual polish,
+admin UI consistency, schedule Supabase sync, sakit/izin management, employee badges, logout resilience.
+
+Known tech debt: dual PDF service files (pdf_report_service.dart + pdf_service.dart), missing
+VERIFICATION.md on 6/11 phases, missing VALIDATION.md on 8/11 phases.
 
 ## Product Context
 - **Type:** B2B internal tool (restaurant chain HR/ops)
@@ -16,52 +69,27 @@ manage employees and schedules. Kiosk runs unattended 24/7; NFC tap takes < 2 se
 ## Tech Stack
 - **Framework:** Flutter 3.x / Dart (Kotlin 1.9.25 — cannot upgrade to 2.x, breaks nfc_manager)
 - **Backend:** Supabase (PostgreSQL + Auth + Realtime) — project `tmapxdftdhxovthgbhww`
-- **Local DB:** SQLite (sqflite) — offline attendance queue
+- **Local DB:** SQLite (sqflite) — offline attendance queue + schedule cache
 - **State:** Riverpod (`AppProvider`)
 - **Navigation:** GoRouter with redirect guards
 - **NFC:** nfc_manager ^3.5.0 — universal UID reader (8 card types)
 - **Notifications:** 3-tier — KioskNotificationHelper.kt (primary) + flutter_local_notifications (fallback) + flutter_overlay_window (floating pill)
 - **Foreground service:** flutter_foreground_task — keeps app alive
+- **PDF:** `pdf` package — PdfReportService (summary) + PdfService (export tables)
+- **UI System:** AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast, BadgeAvatar
 
 ## Database Schema (Supabase — `tmapxdftdhxovthgbhww`)
 ```
 outlets (4 rows)          — id, name, address, lat/lng, device_id, kiosk_password_hash, is_active
-employees (14 rows)       — id, name, employee_code, nfc_uid, home_outlet_id, position, photo_url, is_active
-attendance_logs (89 rows) — id, employee_id, scan_outlet_id, type[masuk|break|pulang|kembali|sakit|izin],
+employees (14 rows)       — id, name, employee_code, nfc_uid, home_outlet_id, position, photo_url, is_active, active_badge_id
+attendance_logs (89+ rows)— id, employee_id, scan_outlet_id, type[masuk|break|pulang|kembali|sakit|izin],
                             lat/lng, scanned_at, local_id, is_backup, notes
 shift_templates (3 rows)  — id, outlet_id, name, slots(jsonb), is_default
-schedules (0 rows!)       — schedule system exists in schema but HAS NO DATA — broken/unused
-schedule_entries (0 rows!)
-time_off_requests (0 rows)— workflow schema exists (approved_by/approved_at) but UI incomplete
+schedules                 — id, outlet_id, week_start, created_by (Supabase-synced since v1.1)
+schedule_entries           — id, schedule_id, employee_id, date, shift_type
+badges                    — id, name, description, emoji, border_color, border_color2, border_style
+time_off_requests (0 rows)— workflow schema exists but UI incomplete
 ```
-
-### Attendance Type Distribution (real data)
-- masuk: 24, pulang: 22, kembali: 21, break: 21, sakit: 1, izin: 0
-- Pattern: balanced masuk/pulang (healthy), break/kembali balanced, very few sick days
-
-## Known Bugs (Confirmed)
-
-### BUG-001: Rekap Harian — Sakit/Izin shows wrong tiles [HIGH]
-- **Where:** `admin_reports_screen.dart` → `_DailySummaryTile`
-- **Root cause:** `_computeDailySummaries()` has no detection of sakit/izin-only days.
-  `_DailySummaryTile` always renders 4 cells (Masuk | Pulang | Kerja | Istirahat) even
-  when the only attendance event for that day is `sakit` or `izin`.
-- **Fix:** Add `status` enum (normal/sakit/izin/tidakAbsen) to `_DailySummary`. When status ≠ normal,
-  render a single-status badge row instead of the 4 time cells.
-
-### BUG-002: Rekap Harian — --:-- on masuk/pulang fields [HIGH]
-- **Where:** `admin_reports_screen.dart` → `_computeDailySummaries()`
-- **Root cause:** Pagination! Data fetched in descending order, limit 50. For earlier dates
-  in the range, `masuk` scan may not be in the first 50 records → `firstMasuk = null` → shows `--:--`.
-- **Fix:** Rekap Harian tab must fetch ALL data for the date range (separate query, no pagination limit,
-  or use a higher limit). Per-scan tab keeps pagination. Or separate the two queries entirely.
-
-### BUG-003: Midnight/Cross-day shift grouping [MEDIUM]
-- **Where:** `_computeDailySummaries()` — groups by local-timezone date of `scanned_at`
-- **Root cause:** Employee on 22:00–06:00 shift has masuk on Day 1, pulang on Day 2. These land
-  in different day buckets → Day 1 shows masuk+no pulang (--:--), Day 2 shows pulang+no masuk.
-- **Fix:** Implement "shift day anchor" — if pulang occurs before 12:00 next day, attach it to
-  the masuk's date group. Also handle auto-pulang for lupa absen.
 
 ## Key Architecture Rules (DO NOT BREAK)
 - `supabaseReady` bool must gate all Supabase calls
@@ -72,6 +100,23 @@ time_off_requests (0 rows)— workflow schema exists (approved_by/approved_at) b
 - Both use ID=300 — never create both simultaneously
 - Kotlin 1.9.x syntax: `catch (e: Exception)` NOT `catch (_: Exception)`
 - GoRouter: `/admin/login` must ALWAYS be accessible before kiosk check
+- KioskBackgroundService.stop() — each step individually try-caught (Phase 12 pattern)
+- Logout handler has 5s timeout, clearKioskSession() always runs in separate try-catch
+
+## Key Decisions
+
+| # | Decision | Outcome |
+|---|----------|---------|
+| 1 | Overlay pill via flutter_overlay_window (not live_activities) | ✓ Good — works on Android, no iOS complexity |
+| 2 | Separate fetch for Rekap Harian (no pagination) | ✓ Good — eliminates --:-- bug completely |
+| 3 | Noon rule for cross-day grouping | ✓ Good — handles 22:00-06:00 shifts correctly |
+| 4 | PDF via existing `pdf` package | ✓ Good — no new dependency, branded output |
+| 5 | Kotlin 1.9.25 (no upgrade) | ✓ Good — nfc_manager stable |
+| 6 | Supabase-first schedule load | ✓ Good — dual-write ensures cross-device sync |
+| 7 | SharedPreferences over FlutterSecureStorage | ✓ Good — eliminated ANR issue |
+| 8 | Direct Supabase INSERT for sakit/izin | ✓ Good — immediate visibility in reports |
+| 9 | BadgeService singleton with in-memory cache | ✓ Good — small reference table, fast lookup |
+| 10 | Per-step try-catch in KioskBackgroundService.stop() | ✓ Good — prevents cascade failure on cold restart |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -80,48 +125,15 @@ time_off_requests (0 rows)— workflow schema exists (approved_by/approved_at) b
   - Cards with subtle shadows, clean typography, purposeful whitespace
   - Luxury "polished" feel — like a premium POS system
   - Animations: subtle, ambient, not intrusive (especially on kiosk idle screen)
-- **Logo:** Replace placeholder with Ayam Guling Enakko brand logo (asset to be provided)
+- **Logo:** Ayam Guling Enakko brand logo in kiosk idle screen header
 
-## Flutter Overlay / Live Activity Implementation Plan
-The app already has `flutter_overlay_window` package + `overlay_task.dart` entry point.
-The existing `KioskNotificationHelper.kt` does Grab-style RemoteViews notification (ID=300).
-The user wants a **floating pill overlay** (separate from notification) showing:
-  - Gerai (outlet name)
-  - Waktu scan (time)
-  - Nama karyawan + status (masuk/istirahat/pulang)
+## Constraints
+- Kotlin 1.9.25 — NO upgrade to 2.x
+- `catch (e: Exception)` — NOT `catch (_: Exception)`
+- SharedPreferences for session (NOT FlutterSecureStorage)
+- Notification ID=300: MethodChannel is PRIMARY, flutter_local_notifications FALLBACK only
+- Android only — no iOS target
+- minSdk 24, compileSdk 35, targetSdk 35
 
-**Approach:** Enhance `overlay_task.dart` with a properly designed overlay widget.
-Show on NFC scan success → auto-hide after 3s. Uses `SYSTEM_ALERT_WINDOW` permission
-(already granted in manifest). This is separate from the notification system.
-Do NOT use `live_activities` package (adds iOS complexity for Android-only app).
-Platform channel: `com.enakko.kiosk/notification` → show/update/dismiss.
-
-## Schedule System Status
-- `schedules` and `schedule_entries` tables exist with correct schema
-- The Flutter UI (`shift_scheduler_screen.dart`) has code but writes to SQLite only (local)
-- DB has 0 schedules — the system has never successfully persisted a schedule to Supabase
-- Need to fix: schedule creation must write to Supabase, not just local state
-
-## Sakit/Izin System Status (Phase 10 — Complete)
-- Admin can directly set sakit/izin for employees — no approval workflow needed
-- Direct Supabase INSERT (not SQLite queue) for immediate visibility in Rekap Harian
-- Edit mode via `existingLog` parameter on `SakitIzinDialog`
-- Duplicate prevention per employee+date
-- History list screen with per-record edit/delete from employee card popup menu
-- 30-day backdated entries supported, 08:00 time anchor for correct date bucketing
-
-## PDF Report Design Direction
-- Use `pdf` package (already in pubspec.yaml)
-- Enakko brand header (logo + colors)
-- Summary section: total present, total absent, avg hours worked, total overtime
-- Per-employee table: name | days present | avg masuk | avg pulang | late count | sakit days
-- Visual: clean table layouts, colored status badges, brand footer
-- File name: `laporan_absensi_YYYYMMDD_YYYYMMDD.pdf`
-
-## Feature Ideas (Suggested based on DB analysis)
-1. **Auto-pulang reminder** — employee has masuk but no pulang after 10h → flag in admin
-2. **Time-off approval workflow** — `time_off_requests` schema exists; build UI for approve/reject
-3. **Keterlambatan tracking** — flag employees who scan masuk > 15min past shift start
-4. **Cross-outlet visibility** — `is_backup` column already exists; add filter in admin reports
-5. **Attendance rate card** — quick % card on admin dashboard (hadir today / total employees)
-6. **Employee streak** — consecutive present days (gamification for morale)
+---
+*Last updated: 2026-03-05 after v1.1 milestone*
