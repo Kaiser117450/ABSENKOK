@@ -84,6 +84,7 @@ class AttendanceDailyPdfEmployeeRow {
   final String avgPulangStr;
   final String totalKerjaStr; // "Xj Ym"
   final int sakitCount;
+  final String badgeName;     // badge name or empty
 
   const AttendanceDailyPdfEmployeeRow({
     required this.nama,
@@ -92,6 +93,7 @@ class AttendanceDailyPdfEmployeeRow {
     required this.avgPulangStr,
     required this.totalKerjaStr,
     required this.sakitCount,
+    this.badgeName = '',
   });
 }
 
@@ -744,6 +746,7 @@ class PdfService {
                 headers: const [
                   'No',
                   'Nama',
+                  'Badge',
                   'Hadir',
                   'Avg Masuk',
                   'Avg Pulang',
@@ -756,6 +759,7 @@ class PdfService {
                     .map((e) => [
                           '${e.key + 1}',
                           e.value.nama,
+                          e.value.badgeName,
                           '${e.value.hadirCount}',
                           e.value.avgMasukStr,
                           e.value.avgPulangStr,
@@ -774,13 +778,14 @@ class PdfService {
                 cellPadding:
                     const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                 columnWidths: {
-                  0: const pw.FixedColumnWidth(28), // No
-                  1: const pw.FlexColumnWidth(3), // Nama
-                  2: const pw.FixedColumnWidth(40), // Hadir
-                  3: const pw.FixedColumnWidth(55), // Avg Masuk
-                  4: const pw.FixedColumnWidth(55), // Avg Pulang
-                  5: const pw.FixedColumnWidth(60), // Total Kerja
-                  6: const pw.FixedColumnWidth(36), // Sakit
+                  0: const pw.FixedColumnWidth(28),  // No
+                  1: const pw.FlexColumnWidth(2.5),  // Nama
+                  2: const pw.FlexColumnWidth(2),    // Badge
+                  3: const pw.FixedColumnWidth(36),  // Hadir
+                  4: const pw.FixedColumnWidth(50),  // Avg Masuk
+                  5: const pw.FixedColumnWidth(50),  // Avg Pulang
+                  6: const pw.FixedColumnWidth(55),  // Total Kerja
+                  7: const pw.FixedColumnWidth(36),  // Sakit
                 },
               ),
 

@@ -721,6 +721,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final totalKerjaStr =
           _durationText(totalKerja.inMinutes > 0 ? totalKerja : null);
 
+      // Resolve badge name from employee's active badge
+      final empObj = empSummaries.first.employee;
+      final badge = BadgeService.instance.getBadgeByIdSync(empObj?.activeBadgeId);
+
       employeeRows.add(AttendanceDailyPdfEmployeeRow(
         nama: name,
         hadirCount: hadirDays.length,
@@ -728,6 +732,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         avgPulangStr: avgPulangStr,
         totalKerjaStr: totalKerjaStr,
         sakitCount: sakitDays.length,
+        badgeName: badge?.name ?? '',
       ));
 
       globalHadir += hadirDays.length;
