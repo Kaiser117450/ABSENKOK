@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-05T05:08:00.000Z"
+last_updated: "2026-03-05T06:00:00.000Z"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 ﻿---
@@ -28,9 +28,9 @@ progress:
 
 ## Current Status
 - **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 7 COMPLETE (3/3 plans done) -- all admin screens polished with widget library
+- **Active Phase:** Phase 6 Plan 02 COMPLETE (pending human verification) -- gradient NFC ring, monospace clock, premium typography
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T05:08:00.000Z
+- **Last Session:** 2026-03-05T06:00:00.000Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -53,9 +53,10 @@ progress:
 - [x] **Phase 07 Plan 01 COMPLETE** - Created reusable widget library (AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast) + badge color palette
 - [x] **Phase 07 Plan 02 COMPLETE** - Applied widget library to admin_dashboard_screen + bottom nav polish
 - [x] **Phase 07 Plan 03 COMPLETE** - Applied widget library to employees, reports, outlets, sakit_izin: AppCard, ShimmerSkeleton, AppEmptyState, AppToast
+- [x] **Phase 06 Plan 02 COMPLETE** - Gradient NFC ring (_GradientRingPainter), monospace clock (GoogleFonts.robotoMono), premium light-weight instruction typography
 
 ## What's Next
-Phase 7 complete (3/3 plans done). All admin screens use consistent widget library. Ready for next phase.
+Phase 6 Plan 02 code complete. Pending human visual verification on device (Task 2 blocking gate). After approval, Phase 6 is fully done.
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -102,6 +103,8 @@ Phase 7 complete (3/3 plans done). All admin screens use consistent widget libra
 29. **AppCard zero-padding for complex cards:** Employee and outlet cards use `padding: EdgeInsets.zero` on AppCard to preserve internal color bars and avatar layouts. (Phase 7 Plan 03).
 30. **Shimmer composites match target layout:** Each shimmer builder replicates the target content's visual structure (avatar+text rows, icon+text+trailing) for believable loading skeletons. (Phase 7 Plan 03).
 31. **Button/dialog spinners preserved:** CircularProgressIndicator inside ElevatedButton and dialog actions are kept as action-in-progress indicators -- only main loading states replaced with shimmer. (Phase 7 Plan 03).
+32. **Gradient ring SweepGradient + pulse glow:** _GradientRingPainter uses SweepGradient for ring stroke and Color.fromRGBO for dynamic-opacity inner glow tied to _pulseAnim value. (Phase 6 Plan 02).
+33. **Monospace clock font:** GoogleFonts.robotoMono(w300) for time display -- consistent character width prevents layout shifts on second ticks. (Phase 6 Plan 02).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -129,6 +132,7 @@ Phase 7 complete (3/3 plans done). All admin screens use consistent widget libra
 | Phase 07-admin-ui-system-polish P01 | 2min | 1 tasks | 6 files |
 | Phase 07-admin-ui-system-polish P02 | ~5min | 1 tasks | 3 files |
 | Phase 07-admin-ui-system-polish P03 | 8min | 2 tasks | 4 files |
+| 06-nfc-idle-screen-visual-enhancement | 02 | 5min | 1 | 1 |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`

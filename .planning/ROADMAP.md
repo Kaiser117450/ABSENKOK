@@ -153,6 +153,12 @@ Plans:
 ### Phase 6: NFC Idle Screen Visual Enhancement
 **Goal:** Idle screen feels like a premium kiosk product, not a demo app.
 
+**Plan Progress:** 2/2 complete
+
+Plans:
+- [x] 06-01-PLAN.md — Dark kiosk idle screen with 3-layer ambient background (gradient, glow, shimmer) using CustomPainter (DONE: fa1a2b2)
+- [x] 06-02-PLAN.md — Brand logo, gradient NFC ring (_GradientRingPainter), monospace clock (GoogleFonts.robotoMono), premium typography (DONE: 613b39f)
+
 **Tasks:**
 1. Implement ambient background animation:
    - 3-layer gradient mesh with `AnimationController` (20s cycle, repeat)
