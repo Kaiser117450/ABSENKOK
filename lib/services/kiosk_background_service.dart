@@ -162,23 +162,38 @@ class KioskBackgroundService {
   // ── Stop ──────────────────────────────────────────────────────────────────
 
   /// Stop the foreground service. Call from clearKioskSession().
+  /// Each step is individually wrapped in try-catch so one failure
+  /// cannot block subsequent cleanup steps.
   static Future<void> stop() async {
     _rotateTimer?.cancel();
     _rotateTimer = null;
     _session = null;
 
-    await FlutterForegroundTask.stopService();
+    try {
+      await FlutterForegroundTask.stopService();
+    } catch (e) {
+      debugPrint('[BgService] stop: stopService error: $e');
+    }
 
-    // Cancel persistent notification (legacy ID)
-    await _notifPlugin.cancel(_kNotifIdPersistent);
+    try {
+      await _notifPlugin.cancel(_kNotifIdPersistent);
+    } catch (e) {
+      debugPrint('[BgService] stop: cancel persistent notif error: $e');
+    }
 
-    // Dismiss Live Activity notification
-    await dismissLiveNotification();
+    try {
+      await dismissLiveNotification();
+    } catch (e) {
+      debugPrint('[BgService] stop: dismissLiveNotification error: $e');
+    }
 
-    // Tutup floating overlay (best effort)
-    await hideOverlayPill();
+    try {
+      await hideOverlayPill();
+    } catch (e) {
+      debugPrint('[BgService] stop: hideOverlayPill error: $e');
+    }
 
-    debugPrint('[BgService] stopped');
+    debugPrint('[BgService] stopped (all steps attempted)');
   }
 
   // ── Public Live Notification Methods (Grab-style) ─────────────────────────
