@@ -1,0 +1,97 @@
+import 'attendance_log.dart';
+
+enum SyncStatus { pending, uploading, synced, failed }
+
+extension SyncStatusExt on SyncStatus {
+  String get value {
+    switch (this) {
+      case SyncStatus.pending:
+        return 'pending';
+      case SyncStatus.uploading:
+        return 'uploading';
+      case SyncStatus.synced:
+        return 'synced';
+      case SyncStatus.failed:
+        return 'failed';
+    }
+  }
+
+  static SyncStatus fromString(String s) {
+    switch (s) {
+      case 'uploading':
+        return SyncStatus.uploading;
+      case 'synced':
+        return SyncStatus.synced;
+      case 'failed':
+        return SyncStatus.failed;
+      default:
+        return SyncStatus.pending;
+    }
+  }
+}
+
+/// Represents an attendance log waiting to be synced to Supabase.
+/// Stored in local SQLite database.
+class PendingLog {
+  final String localId;
+  final String employeeId;
+  final String scanOutletId;
+  final AttendanceType type;
+  final double? lat;
+  final double? lng;
+  final String deviceId;
+  final String scannedAt;
+  final SyncStatus syncStatus;
+  final int retryCount;
+  final String createdAt;
+  final bool isBackup;
+  final String? notes;
+
+  const PendingLog({
+    required this.localId,
+    required this.employeeId,
+    required this.scanOutletId,
+    required this.type,
+    this.lat,
+    this.lng,
+    required this.deviceId,
+    required this.scannedAt,
+    required this.syncStatus,
+    required this.retryCount,
+    required this.createdAt,
+    this.isBackup = false,
+    this.notes,
+  });
+
+  factory PendingLog.fromMap(Map<String, dynamic> map) => PendingLog(
+        localId: map['local_id'] as String,
+        employeeId: map['employee_id'] as String,
+        scanOutletId: map['scan_outlet_id'] as String,
+        type: AttendanceTypeExt.fromString(map['type'] as String),
+        lat: map['lat'] as double?,
+        lng: map['lng'] as double?,
+        deviceId: map['device_id'] as String,
+        scannedAt: map['scanned_at'] as String,
+        syncStatus: SyncStatusExt.fromString(map['sync_status'] as String),
+        retryCount: map['retry_count'] as int? ?? 0,
+        createdAt: map['created_at'] as String? ?? '',
+        isBackup: (map['is_backup'] as int? ?? 0) == 1,
+        notes: map['notes'] as String?,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'local_id': localId,
+        'employee_id': employeeId,
+        'scan_outlet_id': scanOutletId,
+        'type': type.value,
+        'lat': lat,
+        'lng': lng,
+        'device_id': deviceId,
+        'scanned_at': scannedAt,
+        'sync_status': syncStatus.value,
+        'retry_count': retryCount,
+        'created_at': createdAt,
+        'is_backup': isBackup ? 1 : 0,
+        'notes': notes,
+      };
+}

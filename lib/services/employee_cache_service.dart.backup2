@@ -1,0 +1,41 @@
+import '../models/employee.dart';
+
+/// In-memory cache untuk employee lookup berdasarkan NFC UID.
+/// TTL 5 menit — kartu NFC karyawan bisa berpindah outlet sewaktu-waktu,
+/// jadi cache diperbarui setiap 5 menit untuk sinkronisasi outlet terbaru.
+/// Scan NFC kedua dalam 5 menit = instant (skip Supabase).
+class EmployeeCacheService {
+  static final instance = EmployeeCacheService._();
+  EmployeeCacheService._();
+
+  static const _ttl = Duration(minutes: 5);
+  final _cache = <String, _CachedEntry>{};
+
+  /// Ambil employee dari cache. Return null jika tidak ada atau sudah expired.
+  Employee? get(String uid) {
+    final entry = _cache[uid];
+    if (entry == null) return null;
+    if (DateTime.now().difference(entry.cachedAt) > _ttl) {
+      _cache.remove(uid);
+      return null;
+    }
+    return entry.employee;
+  }
+
+  /// Simpan employee ke cache dengan timestamp sekarang.
+  void put(String uid, Employee employee) {
+    _cache[uid] = _CachedEntry(employee: employee, cachedAt: DateTime.now());
+  }
+
+  /// Hapus semua cache (dipanggil saat reset/logout kiosk).
+  void clear() => _cache.clear();
+
+  /// Jumlah entry yang tersimpan (untuk debugging).
+  int get size => _cache.length;
+}
+
+class _CachedEntry {
+  final Employee employee;
+  final DateTime cachedAt;
+  const _CachedEntry({required this.employee, required this.cachedAt});
+}

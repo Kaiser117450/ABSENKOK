@@ -48,6 +48,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   late final AnimationController _fadeController;
   late final Animation<double> _fadeAnim;
 
+  // Subtle ambient glow animation for white background
+  late final AnimationController _glowController;
+
   @override
   void initState() {
     super.initState();
@@ -223,6 +226,11 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     )..forward();
 
     _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat(reverse: true);
   }
 
   void _startNfcListener() {
@@ -614,6 +622,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   void dispose() {
     _pulseController.dispose();
     _fadeController.dispose();
+    _glowController.dispose();
     _nfcCheckTimer?.cancel();
     final cleanup = _nfcCleanup;
     if (cleanup != null) {
@@ -633,33 +642,50 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     final pendingCount = appState.pendingCount;
     return Scaffold(
       backgroundColor: Colors.white,
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ── TOP HEADER ─────────────────────────────────────────────
-              _buildHeader(session?.outletName, pendingCount),
-
-              const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-
-              // ── NFC WARNING BANNER (hanya muncul jika NFC mati) ────────
-              if (!_nfcAvailable) _buildNfcOffBanner(),
-
-              // ── CLOCK ──────────────────────────────────────────────────
-              const SizedBox(height: 32),
-              _buildClock(),
-
-              // ── NFC ZONE ───────────────────────────────────────────────
-              const Spacer(),
-              _buildNfcZone(),
-              const Spacer(),
-
-              // ── BOTTOM BAR ─────────────────────────────────────────────
-              _buildBottomBar(),
-            ],
+      body: Stack(
+        children: [
+          // Layer 0: Subtle ambient glow — soft breathing radial gradient
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _glowController,
+              builder: (context, _) {
+                final t = _glowController.value;
+                return CustomPaint(
+                  painter: _AmbientGlowPainter(phase: t),
+                );
+              },
+            ),
           ),
-        ),
+          // Layer 1: Main UI
+          FadeTransition(
+            opacity: _fadeAnim,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // ── TOP HEADER ─────────────────────────────────────────────
+                  _buildHeader(session?.outletName, pendingCount),
+
+                  const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+
+                  // ── NFC WARNING BANNER (hanya muncul jika NFC mati) ────────
+                  if (!_nfcAvailable) _buildNfcOffBanner(),
+
+                  // ── CLOCK ──────────────────────────────────────────────────
+                  const SizedBox(height: 32),
+                  _buildClock(),
+
+                  // ── NFC ZONE ───────────────────────────────────────────────
+                  const Spacer(),
+                  _buildNfcZone(),
+                  const Spacer(),
+
+                  // ── BOTTOM BAR ─────────────────────────────────────────────
+                  _buildBottomBar(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -679,14 +705,25 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/images/logo_enakko.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 32,
+                        height: 32,
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.restaurant,
+                            color: AppColors.primary, size: 16),
+                      ),
                     ),
-                    child: const Icon(Icons.restaurant,
-                        color: AppColors.primary, size: 16),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -1565,4 +1602,54 @@ class _StepRow extends StatelessWidget {
       ],
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Subtle ambient glow painter — soft breathing radial gradient on white
+// ---------------------------------------------------------------------------
+class _AmbientGlowPainter extends CustomPainter {
+  final double phase; // 0.0 - 1.0
+
+  _AmbientGlowPainter({required this.phase});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.55);
+
+    // Soft red/warm glow that breathes gently
+    final glowRadius = size.width * (0.6 + 0.15 * phase);
+    final glowOpacity = 0.03 + 0.025 * phase;
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.0,
+        colors: [
+          Color.fromRGBO(220, 38, 38, glowOpacity), // brand red, very subtle
+          Color.fromRGBO(220, 38, 38, glowOpacity * 0.3),
+          const Color.fromRGBO(220, 38, 38, 0),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: glowRadius));
+
+    canvas.drawCircle(center, glowRadius, glowPaint);
+
+    // Secondary warm accent — top-right, very faint
+    final accent = Offset(size.width * 0.8, size.height * 0.15);
+    final accentRadius = size.width * 0.35;
+    final accentOpacity = 0.015 + 0.01 * (1.0 - phase);
+    final accentPaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 1.0,
+        colors: [
+          Color.fromRGBO(245, 158, 11, accentOpacity), // warm amber
+          const Color.fromRGBO(245, 158, 11, 0),
+        ],
+      ).createShader(Rect.fromCircle(center: accent, radius: accentRadius));
+
+    canvas.drawCircle(accent, accentRadius, accentPaint);
+  }
+
+  @override
+  bool shouldRepaint(_AmbientGlowPainter old) => old.phase != phase;
 }

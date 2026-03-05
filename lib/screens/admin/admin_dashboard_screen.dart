@@ -39,7 +39,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int _todayPulang = 0;
   int _todayBackup = 0; // Total backup hari ini
   int _totalEmployees = 0;
-  RealtimeChannel? _employeeChannel;
+    RealtimeChannel? _employeeChannel;
 
   List<_OpenShift> _openShifts = [];
   bool _loadingOpenShifts = false;
@@ -475,7 +475,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.75),
+                              color: Colors.white.withValues(alpha: 0.75),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -500,10 +500,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                         ),
                       ),
                       child: Row(
@@ -550,7 +550,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       'Live — update otomatis',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.white.withOpacity(0.75),
+                        color: Colors.white.withValues(alpha: 0.75),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -636,10 +636,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFCD34D).withOpacity(0.50)),
+        border: Border.all(color: const Color(0xFFFCD34D).withValues(alpha: 0.50)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -769,7 +769,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Quick Actions ─────────────────────────────────────────────────────────
 
   Widget _buildQuickActions() {
-    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+ final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: SingleChildScrollView(
@@ -844,7 +844,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Outlet Filter ─────────────────────────────────────────────────────────
 
   Widget _buildOutletFilter() {
-    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+ final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
 
     // Kepala gerai: tampilkan nama outlet sebagai label statis (tidak bisa ganti)
     if (isKepalaGerai) {
@@ -869,9 +869,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -975,7 +975,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -999,7 +999,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.dangerLight,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -1042,7 +1042,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   ),
@@ -1115,7 +1115,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
+                      color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.add_business_rounded,
@@ -1164,7 +1164,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   color: const Color(0xFFFFF7ED),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: const Color(0xFFF59E0B).withOpacity(0.35)),
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
                 ),
                 child: const Row(
                   children: [
@@ -1207,7 +1207,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                 'password': passwordCtrl.text,
                               },
                             );
-                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (ctx.mounted) { Navigator.pop(ctx); }
                             await _loadOutlets();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -1296,12 +1296,12 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: accent.withOpacity(0.08),
+            color: accent.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: accent.withOpacity(0.15)),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1311,7 +1311,7 @@ class _StatCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
+              color: accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(child: Icon(icon, size: 21, color: accent)),
@@ -1343,7 +1343,7 @@ class _StatCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: accent.withOpacity(0.8),
+                    color: accent.withValues(alpha: 0.8),
                     letterSpacing: 0.1,
                   ),
                   maxLines: 1,
@@ -1389,7 +1389,7 @@ class _QuickActionBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.25),
+              color: color.withValues(alpha: 0.25),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -1447,7 +1447,7 @@ class _FilterChip extends StatelessWidget {
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.25),
+                    color: AppColors.primary.withValues(alpha: 0.25),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -1573,7 +1573,7 @@ class _LogCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1632,7 +1632,7 @@ class _LogCard extends StatelessWidget {
                           color: const Color(0xFFE0F2FE),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: const Color(0xFF0891B2).withOpacity(0.3)),
+                              color: const Color(0xFF0891B2).withValues(alpha: 0.3)),
                         ),
                         child: const Text(
                           'BACKUP',
@@ -1681,7 +1681,7 @@ class _LogCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _typeColor.withOpacity(0.1),
+                    color: _typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(

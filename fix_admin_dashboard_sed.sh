@@ -1,0 +1,1 @@
+sed -i 's/import '\''.*core\/theme.dart'\'';/import '\''.*core\/theme.dart'\'';\nimport '\''.*..\/widgets\/app_card.dart'\'';\nimport '\''.*..\/widgets\/shimmer_skeleton.dart'\'';\nimport '\''.*..\/widgets\/app_toast.dart'\'';/' lib/screens/admin/admin_dashboard_screen.dart
