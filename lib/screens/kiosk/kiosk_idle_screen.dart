@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:toastification/toastification.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
 import '../../core/supabase_client.dart';
@@ -980,35 +981,36 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                 ),
               ),
 
-              // Inner filled circle — white with red icon
-              Container(
-                width: 128,
-                height: 128,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.2),
-                    width: 2,
+              // Inner filled circle with gradient ring
+              SizedBox(
+                width: 136,
+                height: 136,
+                child: AnimatedBuilder(
+                  animation: _pulseAnim,
+                  builder: (context, child) => CustomPaint(
+                    painter: _GradientRingPainter(pulseValue: _pulseAnim.value - 1.0),
+                    child: child,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.08),
-                      blurRadius: 24,
-                      spreadRadius: 4,
+                  child: Container(
+                    margin: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.kioskNfcGlowRed,
+                          blurRadius: 24,
+                          spreadRadius: 4,
+                        ),
+                      ],
                     ),
-                    BoxShadow(
-                      color: const Color(0xFFF59E0B).withOpacity(0.06),
-                      blurRadius: 32,
-                      spreadRadius: 8,
+                    child: const Center(
+                      child: Icon(
+                        Icons.contactless_rounded,
+                        size: 56,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.contactless_rounded,
-                    size: 56,
-                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -1020,12 +1022,12 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
         // Main instruction
         const Text(
-          'Tempelkan Kartu',
+          'Tempelkan Kartu NFC',
           style: TextStyle(
             fontSize: 24,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w300,
             color: AppColors.textPrimary,
-            letterSpacing: -0.3,
+            letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 6),
@@ -1033,8 +1035,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
           'di belakang perangkat ini',
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textMuted,
           ),
         ),
       ],
@@ -1273,11 +1275,11 @@ class _DigitalClockState extends State<_DigitalClock> {
       children: [
         Text(
           _formattedTime,
-          style: const TextStyle(
-            fontSize: 58,
-            fontWeight: FontWeight.w800,
+          style: GoogleFonts.robotoMono(
+            fontSize: 52,
+            fontWeight: FontWeight.w300,
             color: AppColors.textPrimary,
-            letterSpacing: -1.5,
+            letterSpacing: 2.0,
             height: 1,
           ),
         ),
@@ -1287,8 +1289,8 @@ class _DigitalClockState extends State<_DigitalClock> {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.2,
+            color: AppColors.kioskTextSecondary,
+            letterSpacing: 0.3,
           ),
         ),
       ],
@@ -1652,4 +1654,45 @@ class _AmbientGlowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AmbientGlowPainter old) => old.phase != phase;
+}
+
+// ---------------------------------------------------------------------------
+// Gradient ring painter for NFC idle circle — SweepGradient with pulse glow
+// ---------------------------------------------------------------------------
+class _GradientRingPainter extends CustomPainter {
+  final double pulseValue; // 0.0-0.16 from _pulseAnim (1.0-1.16 minus 1.0)
+
+  _GradientRingPainter({this.pulseValue = 0.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+
+    // Gradient ring stroke (SweepGradient around the circle)
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..shader = const SweepGradient(
+        colors: [
+          Color(0xFFDC2626), // brand red
+          Color(0xFFF87171), // lighter red
+          Color(0xFFFCA5A5), // even lighter
+          Color(0xFFDC2626), // back to brand
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
+    canvas.drawCircle(center, radius, ringPaint);
+
+    // Inner glow tied to pulse animation
+    if (pulseValue > 0) {
+      final glowOpacity = 0.08 + (0.12 * pulseValue / 0.16); // subtle 8-20%
+      final glowPaint = Paint()
+        ..color = Color.fromRGBO(220, 38, 38, glowOpacity)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+      canvas.drawCircle(center, radius * 0.7, glowPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GradientRingPainter old) => old.pulseValue != pulseValue;
 }
