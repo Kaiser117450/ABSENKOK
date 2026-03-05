@@ -366,13 +366,13 @@ Plans:
 
 ### Phase 12: Fix kiosk logout not working after app restart
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Fix the bug where the kiosk logout button ("Reset Perangkat") stops working after the app is closed and reopened.
+**Requirements**: Bug fix — KioskBackgroundService.stop() has no error isolation, causing clearKioskSession() to never run after cold restart.
 **Depends on:** Phase 11
-**Plans:** 0 plans
+**Plan Progress:** 1/1 complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 12 to break down)
+- [x] 12-01-PLAN.md — Make stop() individually resilient, harden logout handler with 5s timeout, add verification logging (DONE: 23490c4, a337672, e675ea6)
 
 ---
 

@@ -3,21 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-05T12:13:51.104Z"
+last_updated: "2026-03-05T14:00:00.000Z"
 progress:
   total_phases: 12
-  completed_phases: 9
-  total_plans: 24
-  completed_plans: 23
+  completed_phases: 10
+  total_plans: 25
+  completed_plans: 24
 ---
 
 # STATE.md â€” Project Memory
 
 ## Current Status
 - **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 11 -- Employee Badge System (COMPLETE - all 3 plans done)
+- **Active Phase:** Phase 12 -- Fix kiosk logout not working after app restart (COMPLETE - plan 01 done)
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T13:00:00Z
+- **Last Session:** 2026-03-05T14:00:00Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -46,10 +46,11 @@ progress:
 - [x] **Phase 11 Plan 01 COMPLETE** - EmployeeBadge model, BadgeService singleton, BadgeAvatar widget (solid/gradient/glow ring + emoji chip)
 - [x] **Phase 11 Plan 02 COMPLETE** - BadgeAvatar integrated across 6 avatar surfaces, badge label in kiosk scan success, badge emoji in overlay pill, Badge column in PDF summary
 - [x] **Phase 11 Plan 03 COMPLETE** - BadgeManagementScreen CRUD (list/create/edit/delete with assigned-count warning), badge picker bottom sheet, wired into admin employees screen (popup menu + management icon)
+- [x] **Phase 12 Plan 01 COMPLETE** - Fix kiosk logout bug: resilient stop() with per-step try-catch, 5s timeout in logout handler, guaranteed clearKioskSession(), verification logging
 
 ## What's Next
-Phase 11 COMPLETE (all 3 plans done). Employee Badge System fully implemented: model, service, display integration, and admin management CRUD.
-All gap-closure phases (10, 11) are complete.
+Phase 12 COMPLETE (1 plan done). Kiosk logout bug fixed: stop() is individually resilient, logout handler has 5s timeout, clearKioskSession() always runs.
+All phases (1-12) in milestone are complete.
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -108,6 +109,7 @@ All gap-closure phases (10, 11) are complete.
 40. **BadgeService singleton pattern:** Static singleton (`BadgeService._()` + `static final instance`) with in-memory Map cache for small reference tables (<20 rows). (Phase 11 Plan 01).
 41. **Badge ring rendering technique:** solid=BoxDecoration border, gradient=CustomPaint SweepGradient, glow=BoxDecoration+BoxShadow. Ring width scales in 3 tiers: >=52dp (3px), >=40dp (2.5px), <40dp (2px). (Phase 11 Plan 01).
 42. **Badge management placement:** Badge management icon in summary strip (not AppBar) since employees screen is inside AdminShell tab. Static showBadgePicker on BadgeManagementScreen for reusable bottom sheet access. (Phase 11 Plan 03).
+43. **Kiosk logout resilience pattern:** Each stop() step isolated in its own try-catch. Logout handler wraps stop() with 5s timeout. clearKioskSession() runs in separate try-catch so it ALWAYS executes. No artificial delay before navigation. (Phase 12 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -141,6 +143,7 @@ All gap-closure phases (10, 11) are complete.
 | Phase 11 P01 | 3min | 3 tasks | 4 files |
 | Phase 11 P02 | 13min | 4 tasks | 7 files |
 | Phase 11 P03 | 5min | 2 tasks | 2 files |
+| Phase 12 P01 | 5min | 3 tasks | 3 files |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
