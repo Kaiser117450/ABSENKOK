@@ -16,6 +16,7 @@ class OverlayPillState {
     required this.accentHex,
     this.eventUntilEpochMs = 0,
     this.expanded = true,
+    this.badgeEmoji = '',
   });
 
   factory OverlayPillState.defaults() {
@@ -27,6 +28,7 @@ class OverlayPillState {
       accentHex: defaultAccentHex,
       eventUntilEpochMs: 0,
       expanded: true,
+      badgeEmoji: '',
     );
   }
 
@@ -37,6 +39,7 @@ class OverlayPillState {
   final String accentHex;
   final int eventUntilEpochMs;
   final bool expanded;
+  final String badgeEmoji;
 
   factory OverlayPillState.fromRaw(String raw) {
     final normalized = raw.trim();
@@ -70,6 +73,7 @@ class OverlayPillState {
 
     final parsedEventUntil = _toInt(map['eventUntilEpochMs']);
     final parsedExpanded = _toBool(map['expanded']);
+    final badgeEmojiValue = (map['badgeEmoji'] ?? '').toString().trim();
 
     return OverlayPillState(
       mode: parsedMode,
@@ -81,6 +85,7 @@ class OverlayPillState {
       accentHex: accentValue.isEmpty ? defaultAccentHex : accentValue,
       eventUntilEpochMs: parsedEventUntil ?? 0,
       expanded: parsedExpanded ?? true,
+      badgeEmoji: badgeEmojiValue,
     );
   }
 
@@ -97,6 +102,7 @@ class OverlayPillState {
       accentHex: defaultAccentHex,
       eventUntilEpochMs: 0,
       expanded: true,
+      badgeEmoji: '',
     );
   }
 
@@ -110,6 +116,7 @@ class OverlayPillState {
       'accentHex': accentHex,
       'eventUntilEpochMs': eventUntilEpochMs,
       'expanded': expanded,
+      'badgeEmoji': badgeEmoji,
     };
   }
 

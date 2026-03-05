@@ -219,6 +219,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     required String outletName,
   }) async {
     try {
+      final employee = ref.read(appProvider).detectedEmployee;
+      final badge = BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
+      final badgeEmoji = badge?.emoji ?? '';
+
       final now = DateTime.now();
       final state = OverlayPillState(
         mode: OverlayPillMode.event,
@@ -231,6 +235,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         eventUntilEpochMs:
             now.add(const Duration(seconds: 8)).millisecondsSinceEpoch,
         expanded: true,
+        badgeEmoji: badgeEmoji,
       );
 
       await KioskBackgroundService.updateOverlayState(state);

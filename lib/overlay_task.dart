@@ -203,6 +203,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
     String? accentHex,
     int? eventUntilEpochMs,
     bool? expanded,
+    String? badgeEmoji,
   }) {
     return OverlayPillState(
       mode: mode ?? source.mode,
@@ -212,6 +213,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
       accentHex: accentHex ?? source.accentHex,
       eventUntilEpochMs: eventUntilEpochMs ?? source.eventUntilEpochMs,
       expanded: expanded ?? source.expanded,
+      badgeEmoji: badgeEmoji ?? source.badgeEmoji,
     );
   }
 
@@ -385,17 +387,30 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _currentState.outlet,
-                  key: const Key('overlay-pill-outlet'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _currentState.outlet,
+                        key: const Key('overlay-pill-outlet'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                    if (_currentState.badgeEmoji.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        _currentState.badgeEmoji,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Row(
