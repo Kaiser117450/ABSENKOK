@@ -43,6 +43,18 @@ class AppColors {
   static const Color badgePulangBg = Color(0xFFFEE2E2);
   static const Color badgePulangText = Color(0xFFDC2626);
 
+  // Sakit badge
+  static const Color badgeSakitBg = Color(0xFFFEF3C7);     // Warm amber light
+  static const Color badgeSakitText = Color(0xFF92400E);    // Dark amber
+
+  // Izin badge
+  static const Color badgeIzinBg = Color(0xFFDBEAFE);      // Light blue
+  static const Color badgeIzinText = Color(0xFF1E40AF);     // Dark blue
+
+  // Belum Pulang badge
+  static const Color badgeBelumPulangBg = Color(0xFFFEF9C3); // Light yellow
+  static const Color badgeBelumPulangText = Color(0xFF854D0E); // Dark yellow-brown
+
   // Special
   static const Color kioskBackground = Color(0xFFFFFFFF);
   static const Color nfcRingColor = Color(0xFFDC2626);
