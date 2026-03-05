@@ -10,6 +10,7 @@ class Employee {
   final bool isActive;
   final String createdAt;
   final String updatedAt;
+  final String? activeBadgeId;
 
   const Employee({
     required this.id,
@@ -22,6 +23,7 @@ class Employee {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.activeBadgeId,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
@@ -35,6 +37,7 @@ class Employee {
         isActive: json['is_active'] as bool? ?? true,
         createdAt: json['created_at'] as String? ?? '',
         updatedAt: json['updated_at'] as String? ?? '',
+        activeBadgeId: json['active_badge_id'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -48,6 +51,7 @@ class Employee {
         'is_active': isActive,
         'created_at': createdAt,
         'updated_at': updatedAt,
+        'active_badge_id': activeBadgeId,
       };
 
   Employee copyWith({
@@ -55,6 +59,7 @@ class Employee {
     bool? isActive,
     String? position,
     String? homeOutletId,
+    String? activeBadgeId,
   }) =>
       Employee(
         id: id,
@@ -67,6 +72,7 @@ class Employee {
         isActive: isActive ?? this.isActive,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        activeBadgeId: activeBadgeId ?? this.activeBadgeId,
       );
 
   /// Returns the first letter of the name, uppercased — used for avatar placeholders
