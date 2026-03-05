@@ -12,10 +12,12 @@ import '../../models/daily_summary.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../services/badge_service.dart';
 import '../../services/pdf_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/badge_avatar.dart';
 import '../../widgets/shimmer_skeleton.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +153,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Future<void> _loadReport({bool reset = true}) async {
+    // Warm badge cache for BadgeAvatar rendering
+    BadgeService.instance.fetchAll();
     if (reset) {
       setState(() {
         _loading = true;
@@ -1356,11 +1360,10 @@ class _DailySummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final empName = summary.employee?.name ?? '-';
-    final initial =
-        empName.isNotEmpty ? empName[0].toUpperCase() : '?';
     final outletName = summary.outlet?.name ?? '-';
     final hasWork = summary.firstMasuk != null;
     final hasPulang = summary.lastPulang != null;
+    final badge = BadgeService.instance.getBadgeByIdSync(summary.employee?.activeBadgeId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1384,17 +1387,11 @@ class _DailySummaryTile extends StatelessWidget {
             child: Row(
               children: [
                 // Avatar
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: AppColors.primaryLight,
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                      fontSize: 16,
-                    ),
-                  ),
+                BadgeAvatar(
+                  photoUrl: summary.employee?.photoUrl,
+                  name: empName,
+                  size: 40,
+                  badge: badge,
                 ),
                 const SizedBox(width: 12),
 

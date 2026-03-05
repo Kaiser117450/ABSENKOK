@@ -13,10 +13,12 @@ import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
 import '../../models/overlay_pill_state.dart';
 import '../../providers/app_provider.dart';
+import '../../services/badge_service.dart';
 import '../../services/kiosk_background_service.dart';
 import '../../services/location_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
+import '../../widgets/badge_avatar.dart';
 
 enum _ScanStep { selectAction, submitting, success, error }
 
@@ -66,6 +68,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
 
     // Load smart break status
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Warm badge cache for BadgeAvatar
+      BadgeService.instance.fetchAll();
       final employee = ref.read(appProvider).detectedEmployee;
       if (employee != null) {
         _loadLastAttendance(employee.id);
@@ -289,8 +293,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   Widget _buildActionSelection(Employee? employee) {
     final name = employee?.name ?? '-';
     final position = employee?.position;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final photoUrl = employee?.photoUrl;
+    final badge = BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
 
     return Column(
       children: [
@@ -316,7 +319,12 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             child: Row(
               children: [
                 // Avatar
-                _buildAvatarCircle(photoUrl, initial, 56),
+                BadgeAvatar(
+                  photoUrl: employee?.photoUrl,
+                  name: name,
+                  size: 56,
+                  badge: badge,
+                ),
                 const SizedBox(width: 16),
 
                 // Name + position
@@ -733,6 +741,32 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  // Badge label (emoji + name)
+                  Builder(builder: (_) {
+                    final badge = BadgeService.instance.getBadgeByIdSync(employee.activeBadgeId);
+                    if (badge == null || badge.name.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            badge.emoji,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            badge.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: badge.color1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
                 ],
 
                 const SizedBox(height: 32),
