@@ -293,6 +293,54 @@ open shifts. Karyawan bisa diberikan badge khusus yang tampil di profil mereka.
 
 ---
 
+### Phase 10: Sakit/Izin Direct Input (Gap Closure)
+**Goal:** Kepala Gerai can directly set sakit/izin status for employees without approval workflow.
+**Requirements:** REQ-M5-04
+**Gap Closure:** Closes unsatisfied requirement from v1.1 audit
+**Depends on:** Phase 1 (Rekap Harian badge rendering already works for sakit/izin)
+
+**Tasks:**
+1. Admin employee detail → "Set Sakit/Izin" button with date picker, type selector (sakit/izin), optional notes
+2. Direct insert to `attendance_logs` with type sakit/izin — no approval step needed
+3. Edit/delete existing sakit/izin records from admin panel
+4. Verify sakit/izin entries appear in Rekap Harian as badge (existing Phase 1 rendering)
+5. Support backdated entries (yesterday, last week)
+
+**UAT:**
+- Kepala gerai set sakit untuk karyawan → langsung muncul di Rekap Harian hari itu
+- Catatan (alasan) bisa diisi opsional
+- Bisa di-set untuk tanggal lampau (kemarin, minggu lalu)
+- Bisa di-hapus/edit jika salah
+- Set sakit/izin dalam < 3 tap
+
+---
+
+### Phase 11: Employee Badge System (Gap Closure)
+**Goal:** Employees can be assigned visual badges that display as colored rings on their profile photos.
+**Requirements:** REQ-M5-05
+**Gap Closure:** Closes unsatisfied requirement from v1.1 audit
+**Depends on:** Phase 7 (widget library for consistent UI)
+
+**Tasks:**
+1. Badge model + BadgeService: fetch from Supabase `badges` table, cache locally
+2. BadgeAvatar widget: solid/gradient/glow ring rendering + emoji chip overlay
+3. Admin employee detail: badge picker (list badges → tap assign → save active_badge_id)
+4. Display badge in: kiosk scan success screen, employee list, rekap harian tile, overlay pill
+5. Admin badge management: CRUD badge definitions (name, color, emoji, style)
+6. Badge in PDF report: badge name column in per-employee table
+
+**UAT:**
+- Admin bisa assign badge ke karyawan dari layar employee detail
+- Karyawan tanpa badge → foto tampil normal (no ring)
+- Karyawan dengan badge → foto tampil dengan colored ring sesuai badge definition
+- Ring style: solid / gradient / glow sesuai badge definition
+- Emoji badge muncul di pojok avatar (small chip overlay)
+- Badge label tampil di kiosk scan result
+- Admin bisa buat badge custom dari admin panel
+- Hapus badge dari karyawan → kembali ke avatar normal
+
+---
+
 ## Future Backlog (Not Scheduled)
 - Push notification when employee doesn't clock out by X hours
 - Employee attendance streak tracking (gamification)
@@ -313,3 +361,4 @@ open shifts. Karyawan bisa diberikan badge khusus yang tampil di profil mereka.
 | v1.3 — PDF Reports | 4–5 | 2–3 days |
 | v1.4 — UI Polish | 6–7 | 3–4 days |
 | v1.5 — Schedule + Advanced | 8–9 | 4–5 days |
+| v1.1 Gap Closure | 10–11 | 2–3 days |

@@ -307,6 +307,7 @@ tables in Supabase have 0 rows. Fix the schedule creation flow to write to Supab
 
 ### REQ-M5-04: Sakit/Izin â€” Direct Input by Kepala Gerai (No Approval Step)
 **Priority:** Medium
+**Phase:** 10 (Gap Closure)
 **What:** Kepala Gerai langsung bisa memasukkan status sakit/izin untuk karyawan pada
 hari tertentu â€” **tanpa perlu approval**. Kepala Gerai adalah authority-nya sendiri.
 
@@ -328,6 +329,7 @@ hari tertentu â€” **tanpa perlu approval**. Kepala Gerai adalah authority-n
 
 ### REQ-M5-05: Employee Badge System
 **Priority:** Medium
+**Phase:** 11 (Gap Closure)
 **What:** Setiap karyawan bisa diberikan badge khusus (border custom + emoji) yang tampil
 sebagai cincin berwarna di foto profil mereka. Badge membuat karyawan merasa diapresiasi.
 
