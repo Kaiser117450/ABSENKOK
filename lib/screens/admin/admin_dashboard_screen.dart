@@ -11,6 +11,8 @@ import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../services/badge_service.dart';
+import '../../widgets/badge_avatar.dart';
 import 'shift_scheduler_screen.dart';
 import '../../main.dart' show supabaseReady;
 
@@ -58,6 +60,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Future<void> _initialLoad() async {
+    // Warm badge cache for BadgeAvatar rendering
+    BadgeService.instance.fetchAll();
     await Future.wait([_loadOutlets(), _loadEmployeeCount(), _loadOpenShifts()]);
   }
 
@@ -119,7 +123,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
       var q = SupabaseClientFactory.admin
           .from('attendance_logs')
-          .select('*, employees(id, name, photo_url), outlets(id, name)')
+          .select('*, employees(id, name, photo_url, active_badge_id), outlets(id, name)')
           .gte('scanned_at', startOfDay)
           .lte('scanned_at', endOfDay);
 
@@ -159,7 +163,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
       final data = await SupabaseClientFactory.admin
           .from('attendance_logs')
-          .select('employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url)')
+          .select('employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url, active_badge_id)')
           .gte('scanned_at', cutoff)
           .order('scanned_at', ascending: true);
 
@@ -191,6 +195,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             photoUrl: emp?['photo_url'] as String?,
             masukTime: lastMasuk['scanned_at'] as String,
             outletId: lastMasuk['scan_outlet_id'] as String,
+            activeBadgeId: emp?['active_badge_id'] as String?,
           ));
         }
       });
@@ -799,24 +804,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           : 0;
 
                       return ListTile(
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: const Color(0xFFFEF3C7),
-                          backgroundImage: shift.photoUrl != null
-                              ? NetworkImage(shift.photoUrl!)
-                              : null,
-                          child: shift.photoUrl == null
-                              ? Text(
-                                  shift.employeeName.isNotEmpty
-                                      ? shift.employeeName[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFFD97706),
-                                    fontSize: 14,
-                                  ),
-                                )
-                              : null,
+                        leading: BadgeAvatar(
+                          photoUrl: shift.photoUrl,
+                          name: shift.employeeName,
+                          size: 36,
+                          badge: BadgeService.instance.getBadgeByIdSync(shift.activeBadgeId),
                         ),
                         title: Text(
                           shift.employeeName,
@@ -1581,8 +1573,7 @@ class _LogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final empName = item.employee?.name ?? 'Karyawan';
     final outletName = item.outlet?.name ?? '';
-    final initial = empName.isNotEmpty ? empName[0].toUpperCase() : '?';
-    final avatarBg = _avatarColor(empName);
+    final empBadge = BadgeService.instance.getBadgeByIdSync(item.employee?.activeBadgeId);
 
     return Container(
       height: 70,
@@ -1616,7 +1607,12 @@ class _LogCard extends StatelessWidget {
           const SizedBox(width: 12),
 
           // Avatar
-          _buildAvatar(item.employee?.photoUrl, initial, avatarBg),
+          BadgeAvatar(
+            photoUrl: item.employee?.photoUrl,
+            name: empName,
+            size: 40,
+            badge: empBadge,
+          ),
 
           const SizedBox(width: 12),
 
@@ -1831,6 +1827,7 @@ class _OpenShift {
   final String? photoUrl;
   final String masukTime; // UTC ISO string
   final String outletId;
+  final String? activeBadgeId;
 
   const _OpenShift({
     required this.employeeId,
@@ -1838,5 +1835,6 @@ class _OpenShift {
     this.photoUrl,
     required this.masukTime,
     required this.outletId,
+    this.activeBadgeId,
   });
 }

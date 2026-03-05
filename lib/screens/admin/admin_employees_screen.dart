@@ -8,8 +8,10 @@ import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
 import '../../services/nfc_service.dart';
+import '../../services/badge_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
+import '../../widgets/badge_avatar.dart';
 import '../../widgets/shimmer_skeleton.dart';
 import 'sakit_izin_dialog.dart';
 import 'sakit_izin_list_screen.dart';
@@ -91,6 +93,9 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
         outFilter = outFilter.eq('id', managedOutletId);
       }
       final outData = await outFilter.order('name');
+
+      // Ensure badge cache is warm for BadgeAvatar rendering
+      BadgeService.instance.fetchAll();
 
       if (mounted) {
         setState(() {
@@ -513,6 +518,7 @@ class _EmployeeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasNfc = employee.nfcUid != null;
     final isActive = employee.isActive;
+    final badge = BadgeService.instance.getBadgeByIdSync(employee.activeBadgeId);
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -537,29 +543,11 @@ class _EmployeeCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Stack(
               children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: isActive
-                      ? AppColors.primaryLight
-                      : AppColors.surfaceVariant,
-                  backgroundImage: (employee.photoUrl != null && employee.photoUrl!.isNotEmpty)
-                      ? NetworkImage(employee.photoUrl!)
-                      : null,
-                  onBackgroundImageError: (employee.photoUrl != null && employee.photoUrl!.isNotEmpty)
-                      ? (_, __) {}
-                      : null,
-                  child: (employee.photoUrl == null || employee.photoUrl!.isEmpty)
-                      ? Text(
-                          employee.name.substring(0, 1).toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: isActive
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                            fontSize: 20,
-                          ),
-                        )
-                      : null,
+                BadgeAvatar(
+                  photoUrl: employee.photoUrl,
+                  name: employee.name,
+                  size: 52,
+                  badge: badge,
                 ),
                 // NFC badge
                 Positioned(
