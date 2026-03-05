@@ -12,6 +12,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/shimmer_skeleton.dart';
 import 'sakit_izin_dialog.dart';
+import 'sakit_izin_list_screen.dart';
 
 class AdminEmployeesScreen extends ConsumerStatefulWidget {
   const AdminEmployeesScreen({super.key});
@@ -173,6 +174,27 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
         _loadData(); // Refresh data jika berhasil
       }
     });
+  }
+
+  void _showSakitIzinHistory(Employee employee) {
+    final appState = ref.read(appProvider);
+    final outletId = appState.isKepalaGerai
+        ? appState.managedOutletId!
+        : employee.homeOutletId ?? _outlets.first.id;
+    final outletName = _outlets
+        .where((o) => o.id == outletId)
+        .map((o) => o.name)
+        .firstOrNull ?? 'Unknown';
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SakitIzinListScreen(
+          employee: employee,
+          outletId: outletId,
+          outletName: outletName,
+        ),
+      ),
+    );
   }
 
   Widget _buildEmployeeListShimmer() {
@@ -404,6 +426,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                                 onEdit: () => _showEmployeeSheet(emp),
                                 onAssignNfc: () => _showAssignNfcDialog(emp),
                                 onSakitIzin: () => _showSakitIzinDialog(emp),
+                                onSakitIzinHistory: () => _showSakitIzinHistory(emp),
                               );
                             },
                           ),
@@ -475,6 +498,7 @@ class _EmployeeCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onAssignNfc;
   final VoidCallback onSakitIzin;
+  final VoidCallback onSakitIzinHistory;
 
   const _EmployeeCard({
     required this.employee,
@@ -482,6 +506,7 @@ class _EmployeeCard extends StatelessWidget {
     required this.onEdit,
     required this.onAssignNfc,
     required this.onSakitIzin,
+    required this.onSakitIzinHistory,
   });
 
   @override
@@ -658,6 +683,8 @@ class _EmployeeCard extends StatelessWidget {
                       onEdit();
                     } else if (value == 'sakit_izin') {
                       onSakitIzin();
+                    } else if (value == 'sakit_izin_history') {
+                      onSakitIzinHistory();
                     }
                   },
                   itemBuilder: (context) => [
@@ -677,10 +704,21 @@ class _EmployeeCard extends StatelessWidget {
                       value: 'sakit_izin',
                       child: Row(
                         children: [
-                          Icon(Icons.medical_services_outlined, 
+                          Icon(Icons.medical_services_outlined,
                               size: 18, color: const Color(0xFFDC2626)),
                           const SizedBox(width: 12),
                           const Text('Input Sakit/Izin'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'sakit_izin_history',
+                      child: Row(
+                        children: [
+                          Icon(Icons.history,
+                              size: 18, color: AppColors.textSecondary),
+                          const SizedBox(width: 12),
+                          const Text('Riwayat Sakit/Izin'),
                         ],
                       ),
                     ),
