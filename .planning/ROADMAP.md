@@ -182,6 +182,13 @@ Plans:
 ### Phase 7: Admin UI System Polish
 **Goal:** Admin screens feel consistent, polished, and professional throughout.
 
+**Plan Progress:** 3/3 complete
+
+Plans:
+- [x] 07-01-PLAN.md — Create reusable widget library: AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast + badge color palette (DONE: b9d295d)
+- [x] 07-02-PLAN.md — Apply widget library to admin_dashboard_screen + bottom nav polish (DONE: 66b959d)
+- [x] 07-03-PLAN.md — Apply widget library to employees, reports, outlets, sakit_izin screens (DONE: 319b833, 6639b91)
+
 **Tasks:**
 1. Create `AppWidgets` library:
    - `AppCard` — consistent card with shadow + border radius

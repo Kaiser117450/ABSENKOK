@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-05T04:36:27.717Z"
+last_updated: "2026-03-05T05:08:00.000Z"
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 19
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 ﻿---
@@ -27,10 +27,10 @@ progress:
 # STATE.md â€” Project Memory
 
 ## Current Status
-- **Active Milestone:** M1 â€” Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 8 COMPLETE - awaiting human verification of 08-02
+- **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
+- **Active Phase:** Phase 7 COMPLETE (3/3 plans done) -- all admin screens polished with widget library
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T04:36:27.714Z
+- **Last Session:** 2026-03-05T05:08:00.000Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -50,9 +50,12 @@ progress:
 - [x] **Phase 8 Plan 02 COMPLETE** - Bulk assign UI: checklist FAB, Select All header checkbox, individual row checkboxes, shift picker bottom sheet; skips sakit/izin/time-off days
 - [x] **Phase 08.1 Plan 01 COMPLETE** - PDF stats DTOs, summary Page 1 builder, multi-page layout for Rekap Harian
 - [x] **Phase 08.1 Plan 02 COMPLETE** - Color-coded status/type cells in PDF tables; cached _dailyRows for export; 'Hadir' label fix
+- [x] **Phase 07 Plan 01 COMPLETE** - Created reusable widget library (AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast) + badge color palette
+- [x] **Phase 07 Plan 02 COMPLETE** - Applied widget library to admin_dashboard_screen + bottom nav polish
+- [x] **Phase 07 Plan 03 COMPLETE** - Applied widget library to employees, reports, outlets, sakit_izin: AppCard, ShimmerSkeleton, AppEmptyState, AppToast
 
 ## What's Next
-Phase 08.1 complete (2/2 plans done). Ready for next phase or user verification of PDF exports.
+Phase 7 complete (3/3 plans done). All admin screens use consistent widget library. Ready for next phase.
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -96,6 +99,9 @@ Phase 08.1 complete (2/2 plans done). Ready for next phase or user verification 
 26. **PDF summary page optional param:** AttendanceDailyPdfStats is optional on generateAndShareAttendanceDailyPdf — backward-compatible, Per Scan PDF unaffected. Stats DTOs co-located in pdf_service.dart. Summary page (A4 portrait) prepended before existing data MultiPage (A4 landscape). (Phase 08.1 Plan 01).
 27. **Manual pw.Table for PDF color cells:** pw.TableHelper.fromTextArray does not support per-cell text color — replaced with manual pw.Table in both Rekap Harian and Per Scan PDF methods. (Phase 08.1 Plan 02).
 28. **Cached _dailyRows for export:** _exportCsv() and _exportPdf() use _dailyRows cache when non-empty, fallback to Supabase fetch only when cache is empty. (Phase 08.1 Plan 02).
+29. **AppCard zero-padding for complex cards:** Employee and outlet cards use `padding: EdgeInsets.zero` on AppCard to preserve internal color bars and avatar layouts. (Phase 7 Plan 03).
+30. **Shimmer composites match target layout:** Each shimmer builder replicates the target content's visual structure (avatar+text rows, icon+text+trailing) for believable loading skeletons. (Phase 7 Plan 03).
+31. **Button/dialog spinners preserved:** CircularProgressIndicator inside ElevatedButton and dialog actions are kept as action-in-progress indicators -- only main loading states replaced with shimmer. (Phase 7 Plan 03).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -121,6 +127,8 @@ Phase 08.1 complete (2/2 plans done). Ready for next phase or user verification 
 | Phase 08.1-perbaiki-export-laporan-csv-pdf P02 | 10min | 2 tasks | 2 files |
 | Phase 04-pdf-export-engine P01 | 8min | 2 tasks | 4 files |
 | Phase 07-admin-ui-system-polish P01 | 2min | 1 tasks | 6 files |
+| Phase 07-admin-ui-system-polish P02 | ~5min | 1 tasks | 3 files |
+| Phase 07-admin-ui-system-polish P03 | 8min | 2 tasks | 4 files |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
