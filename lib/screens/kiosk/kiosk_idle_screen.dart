@@ -554,11 +554,32 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              await KioskBackgroundService.stop();
-              await ref.read(appProvider.notifier).clearKioskSession();
-              // Small delay to let GoRouter refreshListenable pick up state change
-              await Future.delayed(const Duration(milliseconds: 100));
-              if (mounted) context.go('/setup');
+              debugPrint('[Logout] starting logout flow');
+
+              // Step 1: Stop background services (best-effort, never blocks logout)
+              try {
+                await KioskBackgroundService.stop()
+                    .timeout(const Duration(seconds: 5));
+                debugPrint('[Logout] background service stopped');
+              } catch (e) {
+                debugPrint('[Logout] stop() failed/timed out: $e');
+              }
+
+              // Step 2: ALWAYS clear kiosk session (the critical step)
+              try {
+                await ref.read(appProvider.notifier).clearKioskSession();
+                debugPrint('[Logout] kiosk session cleared');
+              } catch (e) {
+                debugPrint('[Logout] clearKioskSession error: $e');
+              }
+
+              // Step 3: Explicit navigation (belt-and-suspenders with GoRouter redirect)
+              if (mounted) {
+                debugPrint('[Logout] navigating to /setup');
+                context.go('/setup');
+              } else {
+                debugPrint('[Logout] widget already unmounted (GoRouter redirect handled it)');
+              }
             },
             child: const Text('Reset',
                 style: TextStyle(fontWeight: FontWeight.w700)),
