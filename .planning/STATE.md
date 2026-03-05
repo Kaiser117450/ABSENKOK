@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-05T10:12:27.140Z"
+last_updated: "2026-03-05T10:22:34.005Z"
 progress:
   total_phases: 12
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 ﻿---
@@ -28,9 +28,9 @@ progress:
 
 ## Current Status
 - **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 10 Plan 01 COMPLETE -- Direct Supabase insert for sakit/izin with edit mode
+- **Active Phase:** Phase 10 COMPLETE -- Sakit/izin direct input with history, edit, delete
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T06:35:00.000Z
+- **Last Session:** 2026-03-05T10:21:37Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -55,9 +55,10 @@ progress:
 - [x] **Phase 07 Plan 03 COMPLETE** - Applied widget library to employees, reports, outlets, sakit_izin: AppCard, ShimmerSkeleton, AppEmptyState, AppToast
 - [x] **Phase 06 Plan 02 COMPLETE** - Gradient NFC ring (_GradientRingPainter), monospace clock (GoogleFonts.robotoMono), premium light-weight instruction typography
 - [x] **Phase 10 Plan 01 COMPLETE** - Direct Supabase INSERT for sakit/izin with edit mode, duplicate prevention, 30-day backdating, 08:00 time anchor
+- [x] **Phase 10 Plan 02 COMPLETE** - Sakit/izin history list screen with edit/delete actions, employee card popup menu navigation
 
 ## What's Next
-Phase 10 Plan 01 complete. Ready for next plans in Phase 10 (sakit/izin history list, delete capability) or Phase 11 (badge system).
+Phase 10 complete. Ready for Phase 11 (badge system) or next milestone work.
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -109,6 +110,8 @@ Phase 10 Plan 01 complete. Ready for next plans in Phase 10 (sakit/izin history 
 34. **Sakit/izin direct Supabase INSERT:** Admin operations use SupabaseClientFactory.admin directly, not SQLite offline queue. Immediate visibility in reports. SQLite fallback only on network failure. (Phase 10 Plan 01).
 35. **scanned_at 08:00 anchor for sakit/izin:** Backdated sakit/izin records use 08:00 local time (not current time) to ensure correct date bucketing in Rekap Harian. (Phase 10 Plan 01).
 36. **Duplicate check non-blocking on error:** _checkDuplicate() returns false on network failure -- better to allow potential duplicate than block user. In edit mode, skips check when date unchanged. (Phase 10 Plan 01).
+37. **Sakit/izin delete type safety guard:** Only records with type sakit or izin can be deleted -- prevents accidental deletion of masuk/pulang records even if record somehow appears in the list. (Phase 10 Plan 02).
+38. **History screen via Navigator.push:** SakitIzinListScreen accessed via Navigator.push from popup menu, not GoRouter -- consistent with modal drill-down pattern across admin screens. (Phase 10 Plan 02).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -138,6 +141,7 @@ Phase 10 Plan 01 complete. Ready for next plans in Phase 10 (sakit/izin history 
 | Phase 07-admin-ui-system-polish P03 | 8min | 2 tasks | 4 files |
 | 06-nfc-idle-screen-visual-enhancement | 02 | 5min | 1 | 1 |
 | 10-sakit-izin-direct-input | 01 | 5min | 1 | 1 |
+| Phase 10 P02 | 5min | 2 tasks | 2 files |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`
