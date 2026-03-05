@@ -751,7 +751,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     final avgWorkStr = avgWorkMinutes > 0 ? '${avgH}j ${avgM}m' : '-';
 
     return AttendanceDailyPdfStats(
-      totalHadir: globalHadir,
+      totalKaryawan: totalEmployees,
       attendanceRate: attendanceRate,
       avgWorkStr: avgWorkStr,
       totalSakit: globalSakit,

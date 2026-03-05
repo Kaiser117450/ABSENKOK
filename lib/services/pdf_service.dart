@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -57,7 +60,7 @@ class AttendanceDailyPdfRow {
 }
 
 class AttendanceDailyPdfStats {
-  final int totalHadir;
+  final int totalKaryawan;
   final double attendanceRate; // percentage 0-100
   final String avgWorkStr;     // "8j 12m" format
   final int totalSakit;
@@ -65,7 +68,7 @@ class AttendanceDailyPdfStats {
   final List<AttendanceDailyPdfEmployeeRow> employeeRows;
 
   const AttendanceDailyPdfStats({
-    required this.totalHadir,
+    required this.totalKaryawan,
     required this.attendanceRate,
     required this.avgWorkStr,
     required this.totalSakit,
@@ -94,6 +97,50 @@ class AttendanceDailyPdfEmployeeRow {
 
 /// Service untuk generate PDF jadwal shift
 class PdfService {
+  /// Load logo from assets, returns null if not available
+  static Future<Uint8List?> _loadLogo() async {
+    try {
+      final data = await rootBundle.load('assets/images/logo_enakko.png');
+      return data.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Build logo widget — image if available, red "E" box fallback
+  static pw.Widget _buildLogo(Uint8List? logoBytes, {double size = 50}) {
+    if (logoBytes != null) {
+      return pw.ClipRRect(
+        horizontalRadius: 8,
+        verticalRadius: 8,
+        child: pw.Image(
+          pw.MemoryImage(logoBytes),
+          width: size,
+          height: size,
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    }
+    return pw.Container(
+      width: size,
+      height: size,
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('DC2626'),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Center(
+        child: pw.Text(
+          'E',
+          style: pw.TextStyle(
+            fontSize: size * 0.56,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
   static Future<void> generateAndShareSchedule({
     required OutletSchedule schedule,
     required List<Employee> employees,
@@ -101,7 +148,8 @@ class PdfService {
   }) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('dd MMM yyyy');
-    
+    final logoBytes = await _loadLogo();
+
     // Use default Helvetica font
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
@@ -120,25 +168,8 @@ class PdfService {
               // Header dengan Logo
               pw.Row(
                 children: [
-                  // Logo placeholder (kotak merah)
-                  pw.Container(
-                    width: 50,
-                    height: 50,
-                    decoration: pw.BoxDecoration(
-                      color: PdfColor.fromHex('DC2626'),
-                      borderRadius: pw.BorderRadius.circular(8),
-                    ),
-                    child: pw.Center(
-                      child: pw.Text(
-                        'E',
-                        style: pw.TextStyle(
-                          fontSize: 28,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Logo
+                  _buildLogo(logoBytes, size: 50),
                   pw.SizedBox(width: 16),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -360,6 +391,7 @@ class PdfService {
     final pdf = pw.Document();
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
+    final logoBytes = await _loadLogo();
     final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
 
     pdf.addPage(
@@ -374,6 +406,7 @@ class PdfService {
             rowCount: rows.length,
             font: ttf,
             fontBold: ttfBold,
+            logoBytes: logoBytes,
           ),
           pw.SizedBox(height: 12),
           if (rows.isEmpty)
@@ -454,6 +487,7 @@ class PdfService {
     final pdf = pw.Document();
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
+    final logoBytes = await _loadLogo();
     final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
 
     // Insert summary page first if stats provided
@@ -465,6 +499,7 @@ class PdfService {
         outletName: outletName,
         font: ttf,
         fontBold: ttfBold,
+        logoBytes: logoBytes,
       ));
     }
 
@@ -480,6 +515,7 @@ class PdfService {
             rowCount: rows.length,
             font: ttf,
             fontBold: ttfBold,
+            logoBytes: logoBytes,
           ),
           pw.SizedBox(height: 12),
           if (rows.isEmpty)
@@ -572,6 +608,7 @@ class PdfService {
     required int rowCount,
     required pw.Font font,
     required pw.Font fontBold,
+    Uint8List? logoBytes,
   }) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
@@ -582,24 +619,7 @@ class PdfService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Container(
-            width: 34,
-            height: 34,
-            decoration: pw.BoxDecoration(
-              color: PdfColor.fromHex('DC2626'),
-              borderRadius: pw.BorderRadius.circular(6),
-            ),
-            child: pw.Center(
-              child: pw.Text(
-                'E',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 18,
-                  color: PdfColors.white,
-                ),
-              ),
-            ),
-          ),
+          _buildLogo(logoBytes, size: 34),
           pw.SizedBox(width: 10),
           pw.Expanded(
             child: pw.Column(
@@ -642,6 +662,7 @@ class PdfService {
     required String outletName,
     required pw.Font font,
     required pw.Font fontBold,
+    Uint8List? logoBytes,
   }) {
     final range =
         '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
@@ -661,6 +682,7 @@ class PdfService {
               rowCount: stats.totalScan,
               font: font,
               fontBold: fontBold,
+              logoBytes: logoBytes,
             ),
             pw.SizedBox(height: 20),
 
@@ -669,8 +691,8 @@ class PdfService {
               children: [
                 pw.Expanded(
                     child: _insightCard(
-                        'Total Hadir',
-                        '${stats.totalHadir} hari',
+                        'Total Karyawan',
+                        '${stats.totalKaryawan} orang',
                         PdfColor.fromHex('16A34A'),
                         font,
                         fontBold)),
@@ -902,4 +924,13 @@ class PdfService {
     if (name.contains('libur')) return 'Libur';
     return entry.shift.name.substring(0, 1).toUpperCase();
   }
+
+  // ─── Test-visible wrappers ──────────────────────────────────────────────
+  @visibleForTesting
+  static PdfColor statusTextColorForTest(String status) =>
+      _statusTextColor(status);
+
+  @visibleForTesting
+  static PdfColor typeTextColorForTest(String jenis) =>
+      _typeTextColor(jenis);
 }
