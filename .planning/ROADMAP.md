@@ -327,11 +327,11 @@ Plans:
 **Gap Closure:** Closes unsatisfied requirement from v1.1 audit
 **Depends on:** Phase 7 (widget library for consistent UI)
 
-**Plan Progress:** 1/3 complete
+**Plan Progress:** 2/3 complete
 
 Plans:
 - [x] 11-01-PLAN.md — EmployeeBadge model, BadgeService singleton, BadgeAvatar widget (solid/gradient/glow ring + emoji chip) (DONE: 11ec0ce, ff3d94a, fa9cb1c)
-- [ ] 11-02-PLAN.md
+- [x] 11-02-PLAN.md — BadgeAvatar integration across 6 avatar surfaces, badge label in scan success, badge emoji in overlay pill, Badge column in PDF (DONE: f2a037e, a832a14, abfc0bb, f13d677)
 - [ ] 11-03-PLAN.md
 
 **Tasks:**
