@@ -8,6 +8,9 @@ import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
 import '../../services/nfc_service.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/shimmer_skeleton.dart';
 import 'sakit_izin_dialog.dart';
 
 class AdminEmployeesScreen extends ConsumerStatefulWidget {
@@ -172,6 +175,43 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     });
   }
 
+  Widget _buildEmployeeListShimmer() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      child: Column(
+        children: List.generate(
+          5,
+          (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: const [
+                  ShimmerSkeleton(width: 52, height: 52, borderRadius: 26),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerSkeleton(width: 140, height: 14, borderRadius: 4),
+                        SizedBox(height: 6),
+                        ShimmerSkeleton(width: 100, height: 12, borderRadius: 4),
+                        SizedBox(height: 4),
+                        ShimmerSkeleton(width: 80, height: 11, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  ShimmerSkeleton(width: 34, height: 34, borderRadius: 17),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered;
@@ -332,41 +372,19 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           // ── LIST ─────────────────────────────────────────────────────────
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary))
+                ? _buildEmployeeListShimmer()
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _loadData,
                     child: filtered.isEmpty
                         ? ListView(
-                            children: [
+                            children: const [
                               SizedBox(
                                 height: 300,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(20),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surfaceVariant,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                            Icons.people_outline,
-                                            size: 40,
-                                            color: AppColors.textSecondary),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Tidak ada karyawan',
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                child: AppEmptyState(
+                                  icon: Icons.people_outline,
+                                  heading: 'Belum Ada Karyawan',
+                                  subtext: 'Tambahkan karyawan untuk memulai',
                                 ),
                               ),
                             ],
@@ -471,22 +489,9 @@ class _EmployeeCard extends StatelessWidget {
     final hasNfc = employee.nfcUid != null;
     final isActive = employee.isActive;
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isActive ? AppColors.border : AppColors.border.withOpacity(0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
       child: Row(
         children: [
           // Left color bar (red if active, gray if inactive)
