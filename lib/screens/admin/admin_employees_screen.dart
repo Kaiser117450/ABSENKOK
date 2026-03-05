@@ -13,6 +13,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/badge_avatar.dart';
 import '../../widgets/shimmer_skeleton.dart';
+import 'badge_management_screen.dart';
 import 'sakit_izin_dialog.dart';
 import 'sakit_izin_list_screen.dart';
 
@@ -202,6 +203,24 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     );
   }
 
+  Future<void> _showBadgePicker(Employee employee) async {
+    final changed = await BadgeManagementScreen.showBadgePicker(
+      context,
+      employee: employee,
+    );
+    if (changed) {
+      _loadData();
+    }
+  }
+
+  void _openBadgeManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const BadgeManagementScreen(),
+      ),
+    );
+  }
+
   Widget _buildEmployeeListShimmer() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
@@ -273,6 +292,22 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                   color: AppColors.accent,
                 ),
                 const Spacer(),
+                // Badge management button
+                GestureDetector(
+                  onTap: _openBadgeManagement,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: const Color(0xFFF59E0B).withOpacity(0.2)),
+                    ),
+                    child: const Icon(Icons.workspace_premium,
+                        size: 18, color: Color(0xFFF59E0B)),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Add button - yellow
                 GestureDetector(
                   onTap: () => _showEmployeeSheet(null),
@@ -432,6 +467,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                                 onAssignNfc: () => _showAssignNfcDialog(emp),
                                 onSakitIzin: () => _showSakitIzinDialog(emp),
                                 onSakitIzinHistory: () => _showSakitIzinHistory(emp),
+                                onAssignBadge: () => _showBadgePicker(emp),
                               );
                             },
                           ),
@@ -504,6 +540,7 @@ class _EmployeeCard extends StatelessWidget {
   final VoidCallback onAssignNfc;
   final VoidCallback onSakitIzin;
   final VoidCallback onSakitIzinHistory;
+  final VoidCallback onAssignBadge;
 
   const _EmployeeCard({
     required this.employee,
@@ -512,6 +549,7 @@ class _EmployeeCard extends StatelessWidget {
     required this.onAssignNfc,
     required this.onSakitIzin,
     required this.onSakitIzinHistory,
+    required this.onAssignBadge,
   });
 
   @override
@@ -673,6 +711,8 @@ class _EmployeeCard extends StatelessWidget {
                       onSakitIzin();
                     } else if (value == 'sakit_izin_history') {
                       onSakitIzinHistory();
+                    } else if (value == 'assign_badge') {
+                      onAssignBadge();
                     }
                   },
                   itemBuilder: (context) => [
@@ -707,6 +747,18 @@ class _EmployeeCard extends StatelessWidget {
                               size: 18, color: AppColors.textSecondary),
                           const SizedBox(width: 12),
                           const Text('Riwayat Sakit/Izin'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'assign_badge',
+                      child: Row(
+                        children: [
+                          Icon(Icons.workspace_premium_outlined,
+                              size: 18, color: const Color(0xFFF59E0B)),
+                          const SizedBox(width: 12),
+                          const Text('Assign Badge'),
                         ],
                       ),
                     ),
