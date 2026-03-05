@@ -102,6 +102,14 @@ Platform channel: `com.enakko.kiosk/notification` → show/update/dismiss.
 - DB has 0 schedules — the system has never successfully persisted a schedule to Supabase
 - Need to fix: schedule creation must write to Supabase, not just local state
 
+## Sakit/Izin System Status (Phase 10 — Complete)
+- Admin can directly set sakit/izin for employees — no approval workflow needed
+- Direct Supabase INSERT (not SQLite queue) for immediate visibility in Rekap Harian
+- Edit mode via `existingLog` parameter on `SakitIzinDialog`
+- Duplicate prevention per employee+date
+- History list screen with per-record edit/delete from employee card popup menu
+- 30-day backdated entries supported, 08:00 time anchor for correct date bucketing
+
 ## PDF Report Design Direction
 - Use `pdf` package (already in pubspec.yaml)
 - Enakko brand header (logo + colors)
