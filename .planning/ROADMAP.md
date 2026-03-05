@@ -208,7 +208,7 @@ Plans:
 ### Phase 8: Schedule System Fix + Supabase Integration
 **Goal:** Schedules are persisted to Supabase and visible across all admin devices.
 
-**Plans:** 2 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [x] 08-01-PLAN.md — Fix data flow: Supabase-first read, dual-write save, auto-generate draft indicator, SQLite date normalization (DONE: c9c4406, f644232)
