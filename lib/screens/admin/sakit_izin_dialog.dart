@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
@@ -10,6 +9,7 @@ import '../../models/shift_schedule.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
 import '../../services/schedule_sqlite_service.dart';
+import '../../widgets/app_toast.dart';
 
 /// Dialog untuk input absensi Sakit/Izin oleh Admin/Kepala Gerai
 class SakitIzinDialog extends ConsumerStatefulWidget {
@@ -111,16 +111,7 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${_selectedType.label} tercatat untuk ${widget.employee.name}'),
-            backgroundColor: _selectedType == AttendanceType.sakit 
-                ? const Color(0xFFDC2626) 
-                : const Color(0xFF2563EB),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        AppToast.success(context, '${_selectedType.label} tercatat untuk ${widget.employee.name}');
       }
     } catch (e) {
       setState(() {

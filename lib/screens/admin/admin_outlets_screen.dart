@@ -1,10 +1,14 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/shimmer_skeleton.dart';
+import '../../widgets/app_toast.dart';
+
 import '../../models/outlet.dart';
 
 class AdminOutletsScreen extends ConsumerStatefulWidget {
@@ -102,23 +106,42 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
           .eq('id', outlet.id);
       await _loadOutlets();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gerai "${outlet.name}" berhasil di-$label'),
-          backgroundColor: newStatus ? AppColors.success : AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
+        AppToast.success(context, 'Gerai "${outlet.name}" berhasil di-$label');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal: $e'),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
+        AppToast.error(context, 'Gagal: $e');
       }
     }
+  }
+
+  
+  Widget _buildOutletShimmer() {
+    return Column(
+      children: List.generate(
+        3,
+        (index) => AppCard(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ShimmerSkeleton(width: 150, height: 18, borderRadius: 4),
+                  ShimmerSkeleton(width: 40, height: 24, borderRadius: 12),
+                ],
+              ),
+              SizedBox(height: 12),
+              ShimmerSkeleton(width: double.infinity, height: 14, borderRadius: 4),
+              SizedBox(height: 4),
+              ShimmerSkeleton(width: 200, height: 14, borderRadius: 4),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -183,7 +206,7 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
           // ── LIST ─────────────────────────────────────────────────────────
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? _buildOutletShimmer()
                 : _error != null
                     ? _buildError()
                     : _outlets.isEmpty
@@ -239,25 +262,12 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.store_outlined,
-                size: 40, color: AppColors.textSecondary),
+          const AppEmptyState(
+            icon: Icons.store_outlined,
+            heading: 'Belum Ada Gerai',
+            subtext: 'Tambahkan gerai untuk memulai',
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Belum ada gerai',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => _showOutletSheet(null),
             icon: const Icon(Icons.add, size: 16),
@@ -332,22 +342,9 @@ class _OutletCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = outlet.isActive;
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isActive ? AppColors.border : AppColors.border.withOpacity(0.4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.zero,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

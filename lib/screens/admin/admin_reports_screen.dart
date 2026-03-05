@@ -13,6 +13,10 @@ import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
 import '../../services/pdf_service.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_toast.dart';
+import '../../widgets/shimmer_skeleton.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Reports Screen
@@ -217,9 +221,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           : await _fetchAllRowsForExport(ascending: true);
       if (allRows.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tidak ada data untuk diekspor')),
-          );
+          AppToast.info(context, 'Tidak ada data untuk diekspor');
         }
         return;
       }
@@ -274,9 +276,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengekspor CSV')),
-        );
+        AppToast.error(context, 'Gagal mengekspor CSV');
       }
     } finally {
       if (mounted) setState(() => _exportingCsv = false);
@@ -293,9 +293,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           : await _fetchAllRowsForExport(ascending: true);
       if (allRows.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tidak ada data untuk diekspor')),
-          );
+          AppToast.info(context, 'Tidak ada data untuk diekspor');
         }
         return;
       }
@@ -357,9 +355,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengekspor PDF')),
-        );
+        AppToast.error(context, 'Gagal mengekspor PDF');
       }
     } finally {
       if (mounted) setState(() => _exportingPdf = false);
@@ -996,38 +992,18 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         // ── LIST CONTENT ──────────────────────────────────────────────
         Expanded(
           child: !_hasLoaded
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.bar_chart,
-                          size: 56, color: AppColors.textSecondary),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Pilih rentang tanggal\nlalu klik Tampilkan',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.textSecondary),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+              ? const AppEmptyState(
+                  icon: Icons.bar_chart_outlined,
+                  heading: 'Pilih Rentang Tanggal',
+                  subtext: 'Pilih rentang tanggal lalu klik Tampilkan',
                 )
               : _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary))
+                  ? _buildReportShimmer()
                   : _rows.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Tidak ada data absensi\npada rentang waktu ini',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(color: AppColors.textSecondary),
-                            textAlign: TextAlign.center,
-                          ),
+                      ? const AppEmptyState(
+                          icon: Icons.bar_chart_outlined,
+                          heading: 'Belum Ada Data',
+                          subtext: 'Tidak ada data absensi pada rentang waktu ini',
                         )
                       : TabBarView(
                           controller: _tabCtrl,
@@ -1070,18 +1046,15 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   Widget _buildRekapHarian() {
     if (_loadingDaily) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return _buildReportShimmer();
     }
     final summaries = _computeDailySummaries();
 
     if (summaries.isEmpty) {
-      return const Center(
-        child: Text(
-          'Tidak ada data rekap',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
+      return const AppEmptyState(
+        icon: Icons.bar_chart_outlined,
+        heading: 'Belum Ada Data',
+        subtext: 'Tidak ada data rekap pada rentang waktu ini',
       );
     }
 
@@ -1089,6 +1062,41 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       padding: const EdgeInsets.all(16),
       itemCount: summaries.length,
       itemBuilder: (context, i) => _DailySummaryTile(summary: summaries[i]),
+    );
+  }
+
+  Widget _buildReportShimmer() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: List.generate(
+          6,
+          (index) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AppCard(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: const [
+                  ShimmerSkeleton(width: 36, height: 36, borderRadius: 18),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerSkeleton(width: 120, height: 13, borderRadius: 4),
+                        SizedBox(height: 6),
+                        ShimmerSkeleton(width: 180, height: 11, borderRadius: 4),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  ShimmerSkeleton(width: 70, height: 11, borderRadius: 4),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1169,14 +1177,9 @@ class _ReportTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
       child: Row(
         children: [
           Container(
