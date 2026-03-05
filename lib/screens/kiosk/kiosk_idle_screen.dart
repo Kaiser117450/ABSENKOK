@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:toastification/toastification.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants.dart';
 import '../../core/supabase_client.dart';
@@ -557,6 +556,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               Navigator.pop(ctx);
               await KioskBackgroundService.stop();
               await ref.read(appProvider.notifier).clearKioskSession();
+              // Small delay to let GoRouter refreshListenable pick up state change
+              await Future.delayed(const Duration(milliseconds: 100));
               if (mounted) context.go('/setup');
             },
             child: const Text('Reset',
@@ -1275,11 +1276,11 @@ class _DigitalClockState extends State<_DigitalClock> {
       children: [
         Text(
           _formattedTime,
-          style: GoogleFonts.robotoMono(
-            fontSize: 52,
-            fontWeight: FontWeight.w300,
+          style: const TextStyle(
+            fontSize: 58,
+            fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
-            letterSpacing: 2.0,
+            letterSpacing: -1.5,
             height: 1,
           ),
         ),
@@ -1289,7 +1290,7 @@ class _DigitalClockState extends State<_DigitalClock> {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: AppColors.kioskTextSecondary,
+            color: AppColors.textSecondary,
             letterSpacing: 0.3,
           ),
         ),

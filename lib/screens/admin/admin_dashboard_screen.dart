@@ -393,9 +393,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // ── STAT GRID 2×2 ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildStatGrid()),
 
-            // ── OPEN SHIFTS (between stat grid and quick actions) ──────────
-            SliverToBoxAdapter(child: _buildOpenShiftsWidget()),
-
             // ── QUICK ACTIONS ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildQuickActions()),
 
@@ -625,147 +622,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ─── Open Shifts Widget ─────────────────────────────────────────────────────
-
-  Widget _buildOpenShiftsWidget() {
-    // Hidden if no open shifts and not loading
-    if (!_loadingOpenShifts && _openShifts.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFCD34D).withValues(alpha: 0.50)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-            child: Row(
-              children: [
-                const Text('\u26a0\ufe0f', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Belum Absen Pulang (${_openShifts.length})',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: Color(0xFFD97706),
-                    ),
-                  ),
-                ),
-                if (_loadingOpenShifts)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFFD97706),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
-
-          // List of open shifts
-          ...(_openShifts.map((shift) => _buildOpenShiftRow(shift)).toList()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOpenShiftRow(_OpenShift shift) {
-    final masukLocal = DateTime.tryParse(shift.masukTime)?.toLocal();
-    final masukStr = masukLocal != null
-        ? '${masukLocal.hour.toString().padLeft(2, '0')}:${masukLocal.minute.toString().padLeft(2, '0')}'
-        : '-';
-
-    // How long ago (in hours)
-    final hoursAgo = masukLocal != null
-        ? DateTime.now().difference(masukLocal).inHours
-        : 0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      child: Row(
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFFEF3C7),
-            backgroundImage: shift.photoUrl != null
-                ? NetworkImage(shift.photoUrl!)
-                : null,
-            child: shift.photoUrl == null
-                ? Text(
-                    shift.employeeName.isNotEmpty
-                        ? shift.employeeName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFFD97706),
-                      fontSize: 14,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 10),
-
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  shift.employeeName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                Text(
-                  'Masuk $masukStr \u00b7 ${hoursAgo}j lalu',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Action button
-          TextButton(
-            onPressed: () => _manualPulang(shift),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              'Tutup\nShift',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ─── Quick Actions ─────────────────────────────────────────────────────────
 
   Widget _buildQuickActions() {
@@ -803,6 +659,42 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               textColor: Colors.white,
               onTap: _loadLogs,
             ),
+            // Belum Pulang button — only visible when open shifts exist
+            if (_openShifts.isNotEmpty) ...[
+              const SizedBox(width: 10),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _QuickActionBtn(
+                    icon: Icons.warning_amber_rounded,
+                    label: 'Belum\nPulang',
+                    color: const Color(0xFFF59E0B),
+                    textColor: Colors.white,
+                    onTap: _showOpenShiftsSheet,
+                  ),
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: Text(
+                        '${_openShifts.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -838,6 +730,133 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           outletName: outletName,
         ),
       ),
+    );
+  }
+
+  void _showOpenShiftsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.45,
+          minChildSize: 0.3,
+          maxChildSize: 0.8,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          color: Color(0xFFD97706), size: 22),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Belum Absen Pulang (${_openShifts.length})',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Scrollable list
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _openShifts.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 60),
+                    itemBuilder: (context, index) {
+                      final shift = _openShifts[index];
+                      final masukLocal =
+                          DateTime.tryParse(shift.masukTime)?.toLocal();
+                      final masukStr = masukLocal != null
+                          ? '${masukLocal.hour.toString().padLeft(2, '0')}:${masukLocal.minute.toString().padLeft(2, '0')}'
+                          : '-';
+                      final hoursAgo = masukLocal != null
+                          ? DateTime.now().difference(masukLocal).inHours
+                          : 0;
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: const Color(0xFFFEF3C7),
+                          backgroundImage: shift.photoUrl != null
+                              ? NetworkImage(shift.photoUrl!)
+                              : null,
+                          child: shift.photoUrl == null
+                              ? Text(
+                                  shift.employeeName.isNotEmpty
+                                      ? shift.employeeName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFD97706),
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        title: Text(
+                          shift.employeeName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Masuk $masukStr · ${hoursAgo}j lalu',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        trailing: TextButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _manualPulang(shift);
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Tutup Shift',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
