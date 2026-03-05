@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
+import '../../models/daily_summary.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
@@ -485,7 +486,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   // ── Rekap Harian computation ──────────────────────────────────────────────
 
   /// Group raw rows by (employeeId, dateString) and compute daily summary.
-  List<_DailySummary> _computeDailySummaries({List<_ReportRow>? sourceRows}) {
+  List<DailySummary> _computeDailySummaries({List<_ReportRow>? sourceRows}) {
     final source = sourceRows ?? _dailyRows;
     // Sort ascending by time for correct duration calc
     final sorted = [...source]
@@ -555,7 +556,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       groups[entry.key]!.sort((a, b) => a.log.scannedAt.compareTo(b.log.scannedAt));
     }
 
-    final summaries = <_DailySummary>[];
+    final summaries = <DailySummary>[];
 
     groups.forEach((key, rows) {
       final datePart = key.split('|')[1];
@@ -642,7 +643,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
             .notes;
       }
 
-      summaries.add(_DailySummary(
+      summaries.add(DailySummary(
         dateLabel: datePart,
         employee: employee,
         outlet: outlet,
@@ -668,9 +669,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   // ── Export stats computation ──────────────────────────────────────────────
 
-  AttendanceDailyPdfStats _computeExportStats(List<_DailySummary> summaries) {
+  AttendanceDailyPdfStats _computeExportStats(List<DailySummary> summaries) {
     // Group by employee
-    final Map<String, List<_DailySummary>> byEmployee = {};
+    final Map<String, List<DailySummary>> byEmployee = {};
     for (final s in summaries) {
       final key = s.employee?.id ?? 'unknown';
       byEmployee.putIfAbsent(key, () => []).add(s);
@@ -1114,36 +1115,6 @@ class _ReportRow {
   }
 }
 
-/// Status of a daily attendance summary entry.
-/// Used to select the correct rendering path in _DailySummaryTile.
-enum DailySummaryStatus { normal, sakit, izin, belumPulang }
-
-class _DailySummary {
-  final String dateLabel; // "YYYY-MM-DD"
-  final Employee? employee;
-  final Outlet? outlet;
-  final DateTime? firstMasuk;
-  final DateTime? lastPulang;
-  final Duration? workDuration;
-  final Duration totalBreak;
-  final int scanCount;
-  final DailySummaryStatus status;   // normal/sakit/izin — controls tile rendering
-  final String? statusNotes;         // from attendance_logs.notes — shown below badge
-
-  const _DailySummary({
-    required this.dateLabel,
-    required this.employee,
-    required this.outlet,
-    required this.firstMasuk,
-    required this.lastPulang,
-    required this.workDuration,
-    required this.totalBreak,
-    required this.scanCount,
-    required this.status,
-    this.statusNotes,
-  });
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-Scan Tile
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1270,7 +1241,7 @@ class _ReportTile extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DailySummaryTile extends StatelessWidget {
-  final _DailySummary summary;
+  final DailySummary summary;
 
   const _DailySummaryTile({required this.summary});
 
