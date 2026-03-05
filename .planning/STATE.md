@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-03-05T10:30:00.000Z"
+status: unknown
+last_updated: "2026-03-05T11:42:19.125Z"
 progress:
   total_phases: 12
-  completed_phases: 9
-  total_plans: 21
+  completed_phases: 8
+  total_plans: 24
   completed_plans: 21
 ---
 
@@ -15,9 +15,9 @@ progress:
 
 ## Current Status
 - **Active Milestone:** M1 -- Bug Fix + Edge Cases (v1.1)
-- **Active Phase:** Phase 11 -- Employee Badge System (ready to plan)
+- **Active Phase:** Phase 11 -- Employee Badge System (Plan 01 complete)
 - **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05T10:30:00Z
+- **Last Session:** 2026-03-05T11:41:27Z
 
 ## What's Done
 - [x] Codebase mapped â†’ `.planning/codebase/` (7 documents, 1556 lines)
@@ -43,10 +43,11 @@ progress:
 - [x] **Phase 06 Plan 02 COMPLETE** - Gradient NFC ring (_GradientRingPainter), monospace clock (GoogleFonts.robotoMono), premium light-weight instruction typography
 - [x] **Phase 10 Plan 01 COMPLETE** - Direct Supabase INSERT for sakit/izin with edit mode, duplicate prevention, 30-day backdating, 08:00 time anchor
 - [x] **Phase 10 Plan 02 COMPLETE** - Sakit/izin history list screen with edit/delete actions, employee card popup menu navigation
+- [x] **Phase 11 Plan 01 COMPLETE** - EmployeeBadge model, BadgeService singleton, BadgeAvatar widget (solid/gradient/glow ring + emoji chip)
 
 ## What's Next
-Phase 10 complete. Ready for Phase 11 (Employee Badge System) — discuss context first, then plan.
-Next: `/gsd:discuss-phase 11` → `/gsd:plan-phase 11` → `/gsd:execute-phase 11`
+Phase 11 Plan 01 complete (badge foundation layer). More plans remaining in Phase 11.
+Next: `/gsd:execute-phase 11` (Plan 02+)
 
 ## Accumulated Context
 ### Roadmap Evolution
@@ -100,6 +101,9 @@ Next: `/gsd:discuss-phase 11` → `/gsd:plan-phase 11` → `/gsd:execute-phase 1
 36. **Duplicate check non-blocking on error:** _checkDuplicate() returns false on network failure -- better to allow potential duplicate than block user. In edit mode, skips check when date unchanged. (Phase 10 Plan 01).
 37. **Sakit/izin delete type safety guard:** Only records with type sakit or izin can be deleted -- prevents accidental deletion of masuk/pulang records even if record somehow appears in the list. (Phase 10 Plan 02).
 38. **History screen via Navigator.push:** SakitIzinListScreen accessed via Navigator.push from popup menu, not GoRouter -- consistent with modal drill-down pattern across admin screens. (Phase 10 Plan 02).
+39. **Badge activeBadgeId copyWith pattern:** Uses `??` (not sentinel) -- clearing badge is done via BadgeService.unassignBadge() which updates Supabase directly, not copyWith. (Phase 11 Plan 01).
+40. **BadgeService singleton pattern:** Static singleton (`BadgeService._()` + `static final instance`) with in-memory Map cache for small reference tables (<20 rows). (Phase 11 Plan 01).
+41. **Badge ring rendering technique:** solid=BoxDecoration border, gradient=CustomPaint SweepGradient, glow=BoxDecoration+BoxShadow. Ring width scales in 3 tiers: >=52dp (3px), >=40dp (2.5px), <40dp (2px). (Phase 11 Plan 01).
 
 ## Active Bugs (Priority Order)
 1. ~~BUG-001: Rekap Harian â€” sakit/izin shows 4 time cells [CRITICAL]~~ â†’ FIXED Phase 1
@@ -130,6 +134,7 @@ Next: `/gsd:discuss-phase 11` → `/gsd:plan-phase 11` → `/gsd:execute-phase 1
 | 06-nfc-idle-screen-visual-enhancement | 02 | 5min | 1 | 1 |
 | 10-sakit-izin-direct-input | 01 | 5min | 1 | 1 |
 | Phase 10 P02 | 5min | 2 tasks | 2 files |
+| Phase 11 P01 | 3min | 3 tasks | 4 files |
 
 ## Supabase Project
 - Project ID: `tmapxdftdhxovthgbhww`

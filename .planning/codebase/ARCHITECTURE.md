@@ -56,6 +56,7 @@
 - Schedule local cache: `lib/services/schedule_sqlite_service.dart`.
 - Schedule export: `lib/services/pdf_service.dart`.
 - Best-effort geo capture: `lib/services/location_service.dart`.
+- Badge definitions fetch/cache/CRUD: `lib/services/badge_service.dart`.
 
 ### 6) Data and Model Layer
 
@@ -63,7 +64,8 @@
   - attendance (`attendance_log.dart`, `pending_log.dart`)
   - identity (`employee.dart`, `outlet.dart`, `kiosk_session.dart`)
   - scheduling (`shift_schedule.dart`, `time_off_request.dart`)
-  - overlay payload (`overlay_pill_state.dart`).
+  - overlay payload (`overlay_pill_state.dart`)
+  - badge definitions (`employee_badge.dart`).
 
 ### 7) Native Platform Layer
 
@@ -111,6 +113,7 @@
 - `EmployeeCacheService` in `lib/services/employee_cache_service.dart`: two TTL caches (5 minutes employee data, 5 hours backup choice).
 - `OverlayPillState` in `lib/models/overlay_pill_state.dart`: versioned wire payload contract between app isolate and overlay isolate.
 - `ScheduleSQLiteService` in `lib/services/schedule_sqlite_service.dart`: local schedule persistence and time-off cache queries.
+- `BadgeService` in `lib/services/badge_service.dart`: singleton with in-memory Map cache for badge definitions, CRUD, assign/unassign.
 
 ## Entry Points
 

@@ -327,6 +327,13 @@ Plans:
 **Gap Closure:** Closes unsatisfied requirement from v1.1 audit
 **Depends on:** Phase 7 (widget library for consistent UI)
 
+**Plan Progress:** 1/3 complete
+
+Plans:
+- [x] 11-01-PLAN.md — EmployeeBadge model, BadgeService singleton, BadgeAvatar widget (solid/gradient/glow ring + emoji chip) (DONE: 11ec0ce, ff3d94a, fa9cb1c)
+- [ ] 11-02-PLAN.md
+- [ ] 11-03-PLAN.md
+
 **Tasks:**
 1. Badge model + BadgeService: fetch from Supabase `badges` table, cache locally
 2. BadgeAvatar widget: solid/gradient/glow ring rendering + emoji chip overlay
