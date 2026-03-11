@@ -109,7 +109,7 @@ Plans:
 | 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete    | 2026-03-11 | - |
 | 14. Batch CSV Import | 2/2 | Complete    | 2026-03-11 | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | Complete    | 2026-03-11 | - |
-| 16. Persistent Live Activity Pill | 2/2 | Complete   | 2026-03-11 | - |
+| 16. Persistent Live Activity Pill | 2/2 | Complete    | 2026-03-11 | - |
 
 ## Future Backlog (Not Scheduled)
 - Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
