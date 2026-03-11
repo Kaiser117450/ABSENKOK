@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/supabase_client.dart';
@@ -11,6 +12,7 @@ import '../../services/nfc_service.dart';
 import '../../services/badge_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_toast.dart';
 import '../../widgets/badge_avatar.dart';
 import '../../widgets/shimmer_skeleton.dart';
 import 'badge_management_screen.dart';
@@ -79,7 +81,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       // (PostgrestTransformBuilder tidak punya .eq(), hanya PostgrestFilterBuilder)
       var empFilter = SupabaseClientFactory.admin
           .from('employees')
-          .select('*');
+          .select('*')
+          .eq('is_active', true);
       if (isKepalaGerai && managedOutletId != null) {
         empFilter = empFilter.eq('home_outlet_id', managedOutletId);
       }
@@ -291,23 +294,27 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                   value: '$noNfcCount',
                   color: AppColors.accent,
                 ),
-                const Spacer(),
-                // Badge management button
+                const SizedBox(width: 8),
+                // Archive navigation button
                 GestureDetector(
-                  onTap: _openBadgeManagement,
+                  onTap: () => context.push('/admin/archived-employees'),
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.1),
+                      color: AppColors.textMuted.withOpacity(0.1),
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: const Color(0xFFF59E0B).withOpacity(0.2)),
+                          color: AppColors.textMuted.withOpacity(0.2)),
                     ),
-                    child: const Icon(Icons.workspace_premium,
-                        size: 18, color: Color(0xFFF59E0B)),
+                    child: const Tooltip(
+                      message: 'Riwayat Karyawan',
+                      child: Icon(Icons.archive_outlined,
+                          size: 18, color: AppColors.textSecondary),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const Spacer(),
                 // Add button - yellow
                 GestureDetector(
                   onTap: () => _showEmployeeSheet(null),
@@ -346,11 +353,14 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
             ),
           ),
 
-          // ── SEARCH BAR ───────────────────────────────────────────────────
+          // ── SEARCH BAR + BADGE MANAGEMENT ─────────────────────────────
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
                 hintText: 'Cari nama atau jabatan...',
@@ -384,6 +394,26 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                 ),
               ),
               onChanged: (v) => setState(() => _searchQuery = v),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Badge management button — compact circle
+                GestureDetector(
+                  onTap: _openBadgeManagement,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withOpacity(0.08),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: const Color(0xFFF59E0B).withOpacity(0.18)),
+                    ),
+                    child: const Icon(Icons.workspace_premium,
+                        size: 20, color: Color(0xFFF59E0B)),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -475,6 +505,106 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Archive confirmation dialog
+// ---------------------------------------------------------------------------
+
+class _ArchiveConfirmDialog extends StatelessWidget {
+  final String employeeName;
+  final int upcomingShifts;
+
+  const _ArchiveConfirmDialog({
+    required this.employeeName,
+    required this.upcomingShifts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.archive_outlined,
+                color: AppColors.danger, size: 22),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Arsipkan Karyawan?',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Karyawan "$employeeName" akan dipindahkan ke arsip.',
+            style:
+                const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          if (upcomingShifts > 0)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber,
+                      color: AppColors.warning, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$upcomingShifts jadwal mendatang akan dihapus',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          const Text(
+            'Karyawan tidak akan bisa absen via NFC. Riwayat absensi tetap tersimpan.',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.danger,
+          ),
+          onPressed: () => Navigator.of(context).pop(true),
+          child:
+              const Text('Arsipkan', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }
@@ -698,7 +828,7 @@ class _EmployeeCard extends StatelessWidget {
                   onTap: onAssignNfc,
                 ),
                 const SizedBox(width: 8),
-                // More options menu (contains Edit and Sakit/Izin)
+                // More options menu (contains Edit, Sakit/Izin, Badge)
                 PopupMenuButton<String>(
                   offset: const Offset(0, 40),
                   shape: RoundedRectangleBorder(
@@ -720,7 +850,7 @@ class _EmployeeCard extends StatelessWidget {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, 
+                          Icon(Icons.edit_outlined,
                               size: 18, color: AppColors.primary),
                           const SizedBox(width: 12),
                           const Text('Edit Karyawan'),
@@ -1253,6 +1383,65 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     }
   }
 
+  Future<void> _archiveEmployee() async {
+    if (widget.employee == null) return;
+
+    // Count upcoming shifts
+    final today = DateTime.now().toIso8601String().split('T')[0];
+    final upcomingData = await SupabaseClientFactory.admin
+        .from('schedule_entries')
+        .select('id')
+        .eq('employee_id', widget.employee!.id)
+        .gte('date', today);
+    final upcomingShifts = (upcomingData as List).length;
+
+    // Show confirmation dialog
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _ArchiveConfirmDialog(
+        employeeName: widget.employee!.name,
+        upcomingShifts: upcomingShifts,
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Execute archive
+    setState(() => _saving = true);
+    try {
+      // Update employee record
+      await SupabaseClientFactory.admin
+          .from('employees')
+          .update({
+            'is_active': false,
+            'archived_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', widget.employee!.id);
+
+      // Delete future schedule entries
+      if (upcomingShifts > 0) {
+        await SupabaseClientFactory.admin
+            .from('schedule_entries')
+            .delete()
+            .eq('employee_id', widget.employee!.id)
+            .gte('date', today);
+      }
+
+      // Close sheet and refresh list
+      widget.onSaved();
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppToast.success(context, 'Karyawan berhasil diarsipkan');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        AppToast.error(context, 'Gagal mengarsipkan karyawan');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.employee != null;
@@ -1471,6 +1660,51 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                             ),
                     ),
                   ),
+
+                  // Archive section (only for existing employees, not create mode)
+                  if (isEdit)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Divider(height: 1, thickness: 1),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'ZONA BERBAHAYA',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textMuted,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _saving ? null : _archiveEmployee,
+                              icon: const Icon(Icons.archive_outlined, size: 18),
+                              label: const Text('Arsipkan Karyawan'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.danger,
+                                side: const BorderSide(color: AppColors.danger),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Karyawan akan dipindahkan ke arsip dan tidak bisa absen via NFC. Riwayat absensi tetap tersimpan.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
