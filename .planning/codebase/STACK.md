@@ -1,70 +1,127 @@
 # Technology Stack
 
-## Scope Snapshot
-- Project type is Flutter app (`project_type: app`) in `.metadata`.
-- Active platform in this repository is Android (`android/` exists, while `ios/`, `web/`, `macos/`, `linux/`, and `windows/` are not present).
-- Main app entrypoint is `lib/main.dart`, and overlay entrypoint is `lib/overlay_task.dart`.
+**Analysis Date:** 2026-03-11
 
-## Languages and Build DSL
-- Dart is the primary language across `lib/` and `test/`.
-- Kotlin is used for Android-native integrations in `android/app/src/main/kotlin/com/enakko/absensi_enakko_flutter/MainActivity.kt` and `android/app/src/main/kotlin/com/enakko/absensi_enakko_flutter/KioskNotificationHelper.kt`.
-- XML is used for Android manifests, resources, notification layouts, and NFC tech filters in `android/app/src/main/AndroidManifest.xml`, `android/app/src/main/res/layout/`, and `android/app/src/main/res/xml/`.
-- Gradle Kotlin DSL is used in `android/build.gradle.kts`, `android/app/build.gradle.kts`, and `android/settings.gradle.kts`.
+## Languages
 
-## Runtime and Toolchain
-- Flutter channel and revision are tracked in `.metadata` (`stable`, revision `582a0e7c5581dc0ca5f7bfd8662bb8db6f59d536`).
-- Dart SDK constraint in `pubspec.yaml` is `>=3.3.0 <4.0.0`.
-- Resolved lockfile SDK floor in `pubspec.lock` is Dart `>=3.10.3 <4.0.0` and Flutter `>=3.38.4`.
-- Android Gradle Plugin is `8.11.1` in `android/settings.gradle.kts`.
-- Kotlin Android plugin is pinned to `1.9.25` in `android/settings.gradle.kts`.
-- Gradle wrapper distribution is `8.14` in `android/gradle/wrapper/gradle-wrapper.properties`.
-- Java/Kotlin target is 17 in `android/app/build.gradle.kts`.
-- `minSdk = 24` is explicit in `android/app/build.gradle.kts`.
-- `targetSdk` and `compileSdk` are delegated to Flutter values in `android/app/build.gradle.kts`.
+**Primary:**
+- Dart ^3.3.0 - Flutter app language, all business logic, UI, services
+- Kotlin - Android native integration (NFC handling, notification customization at `android/app/src/main/kotlin/`)
 
-## App Framework and Architecture
-- Flutter Material app shell with router is in `lib/app.dart`.
-- State management uses Riverpod (`flutter_riverpod`) via `lib/providers/app_provider.dart`.
-- Navigation uses GoRouter with role/session redirects in `lib/app.dart`.
-- Theme and design tokens are centralized in `lib/core/theme.dart`.
-- Supabase client factory is centralized in `lib/core/supabase_client.dart`.
-- Kiosk + admin feature split is visible under `lib/screens/kiosk/` and `lib/screens/admin/`.
-- Service layer lives under `lib/services/` (NFC, sync, SQLite, background notification/overlay, PDF export).
+**Secondary:**
+- Python - Build scripts and code transformation tools (multiple `fix_*.py` and `convert_*.py` scripts for codebase maintenance)
 
-## Major Dependency Set (Current Constraints)
-- Backend/cloud: `supabase_flutter` declared in `pubspec.yaml` (resolved to `2.12.0` in `pubspec.lock`).
-- Offline DB: `sqflite`, `path_provider`, `path` in `pubspec.yaml` and used by `lib/services/sqlite_service.dart` and `lib/services/schedule_sqlite_service.dart`.
-- Device/NFC: `nfc_manager` in `pubspec.yaml`, used by `lib/services/nfc_service.dart` and `lib/screens/kiosk/kiosk_idle_screen.dart`.
-- Location: `geolocator` in `pubspec.yaml`, used by `lib/services/location_service.dart`.
-- Connectivity: `connectivity_plus` in `pubspec.yaml`, used by `lib/services/sync_service.dart`.
-- Notifications/foreground/overlay: `flutter_foreground_task`, `flutter_local_notifications`, `flutter_overlay_window` in `pubspec.yaml`, used by `lib/services/kiosk_background_service.dart`.
-- UI and UX: `toastification`, `confetti`, `cached_network_image`, `google_fonts` in `pubspec.yaml`, used in `lib/app.dart`, `lib/screens/kiosk/`, `lib/screens/admin/`, and `lib/core/theme.dart`.
-- Export/reporting: `pdf`, `share_plus` in `pubspec.yaml`, used by `lib/services/pdf_service.dart` and `lib/screens/admin/admin_reports_screen.dart`.
-- Environment loading: `flutter_dotenv` in `pubspec.yaml`, used by `lib/main.dart`.
+## Runtime
 
-## Declared But Not Currently Imported in `lib/`
-- `http` is declared in `pubspec.yaml` but has no current import usage under `lib/`.
-- `uuid` is declared in `pubspec.yaml` but has no current import usage under `lib/`.
-- `printing` is declared in `pubspec.yaml` but no import usage under `lib/`.
-- `screenshot` is declared in `pubspec.yaml` but no import usage under `lib/`.
+**Environment:**
+- Flutter SDK stable channel (revision 582a0e7c5581dc0ca5f7bfd8662bb8db6f59d536)
+- Dart SDK >=3.3.0 <4.0.0
 
-## Build and Release Configuration
-- Release build enables code shrinking and resource shrinking in `android/app/build.gradle.kts` (`isMinifyEnabled = true`, `isShrinkResources = true`).
-- Release currently signs with debug signing config in `android/app/build.gradle.kts`.
-- ProGuard rules are customized in `android/app/proguard-rules.pro` for foreground task, NFC, overlay, and notification classes.
-- Core library desugaring is enabled with `com.android.tools:desugar_jdk_libs:2.1.4` in `android/app/build.gradle.kts`.
-- MultiDex is enabled in `android/app/build.gradle.kts`.
-- Root and subproject build output are redirected to `../../build` in `android/build.gradle.kts`.
-- Gradle JVM flags are tuned in `android/gradle.properties` (`-Xmx3g`, G1GC, daemon disabled).
+**Package Manager:**
+- pub (Flutter's package manager)
+- Lockfile: `pubspec.lock` present and committed
 
-## Config, Assets, and Analysis
-- Environment variables are loaded from `.env` and bundled as Flutter asset via `pubspec.yaml`.
-- Supabase init keys are read from `dotenv.env` in `lib/main.dart`.
-- App icon generation is configured via `flutter_launcher_icons` in `pubspec.yaml` (`ios: false`, Android enabled).
-- Analyzer uses `flutter_lints` via `analysis_options.yaml`.
-- Test harness is Flutter test with specs under `test/`.
+## Frameworks
 
-## Practical Planning Notes
-- This is an Android-first codebase with heavy native permission and background-service behavior (`android/app/src/main/AndroidManifest.xml`, `lib/services/kiosk_background_service.dart`).
-- Offline-first attendance logging is core architecture (`lib/services/sqlite_service.dart` plus `lib/services/sync_service.dart`).
-- Supabase is both admin and kiosk backend through one shared client factory (`lib/core/supabase_client.dart`), so future auth hardening likely affects both flows.
+**Core:**
+- Flutter SDK - Cross-platform mobile framework (Android primary target)
+- Material Design - UI component library via `flutter/material.dart`
+
+**State Management:**
+- flutter_riverpod ^2.6.1 - Global and screen-level state management via providers in `lib/providers/`
+
+**Navigation:**
+- go_router ^14.8.1 - Declarative routing with type-safe navigation in `lib/app.dart`
+
+**Testing:**
+- flutter_test (SDK) - Unit and widget testing framework
+- flutter_lints ^5.0.0 - Dart static analysis and linting rules
+
+**Build/Dev:**
+- flutter_launcher_icons ^0.14.3 - Generates Android adaptive icons from `assets/icon.png`
+- ProGuard - Android code minification and obfuscation (enabled for release builds in `android/app/build.gradle.kts`)
+
+## Key Dependencies
+
+**Backend & Data:**
+- supabase_flutter ^2.8.4 - PostgreSQL database client, authentication, realtime subscriptions to `attendance_logs`, `employees`, `outlets` tables
+- sqflite ^2.4.1 - SQLite local database for offline attendance queue (table: `pending_logs` in `absensi_enakko.db`)
+- path_provider ^2.1.5 - Cross-platform path resolution for local database storage
+- shared_preferences ^2.3.3 - Key-value storage for kiosk session (`kiosk_session_v1`, `overlay_keep_foreground_v1`)
+
+**Hardware Integration:**
+- nfc_manager ^3.5.0 - Universal NFC reader supporting e-KTP, e-Toll, Flazz, bank cards, all ISO 14443-A/B/4, FeliCa, Mifare technologies in `lib/services/nfc_service.dart`
+- geolocator ^13.0.2 - GPS location capture (best-effort, 5s timeout, medium accuracy) in `lib/services/location_service.dart`
+
+**Background Processing:**
+- flutter_foreground_task ^8.14.0 - Android foreground service for background NFC scanning without app open (service type: `connectedDevice`)
+- flutter_local_notifications ^18.0.0 - Local push notifications for NFC scan alerts
+- flutter_overlay_window ^0.5.0 - System-wide floating overlay (Dynamic Island-style pill UI) with `SYSTEM_ALERT_WINDOW` permission
+
+**Network & Sync:**
+- connectivity_plus ^6.1.4 - Network state checking before sync operations in `lib/services/sync_service.dart`
+- http ^1.2.2 - HTTP client for custom header injection in kiosk authentication
+
+**UI & UX:**
+- google_fonts ^6.2.1 - Custom typography loading
+- cached_network_image ^3.3.1 - Image caching for employee photos
+- toastification ^2.3.0 - In-app toast notifications (Dynamic Island style)
+- confetti ^0.8.0 - Success screen celebration animation in `lib/screens/kiosk/kiosk_scan_screen.dart`
+
+**Data Processing:**
+- pdf ^3.10.8 - PDF document generation for attendance reports in `lib/services/pdf_service.dart`
+- printing ^5.13.4 - PDF preview and sharing via native Android print dialog
+- screenshot ^3.0.0 - Widget-to-image capture for schedule exports
+- share_plus ^10.1.4 - Native share sheet for CSV/PDF export
+- intl ^0.19.0 - Date/time formatting and internationalization (Indonesian locale `id_ID`)
+
+**Utilities:**
+- uuid ^4.5.1 - UUID v4 generation for local log IDs (`local_id` in `pending_logs` table)
+- path ^1.9.1 - Path manipulation for file operations
+- flutter_dotenv ^5.2.1 - Environment variable loading from `.env` (Supabase credentials)
+
+## Configuration
+
+**Environment:**
+- Configuration via `.env` file (loaded in `lib/main.dart` via `flutter_dotenv`)
+- Required variables:
+  - `SUPABASE_URL` - Supabase project URL
+  - `SUPABASE_ANON_KEY` - Supabase anonymous key for client initialization
+- `.env` file is listed in `pubspec.yaml` assets but must NOT be committed to git (secrets)
+
+**Build:**
+- `pubspec.yaml` - Dependency manifest, app version 1.1.0+8006
+- `android/app/build.gradle.kts` - Android build configuration:
+  - applicationId: `com.enakko.absensi_enakko_flutter`
+  - minSdk: 24 (Android 7.0)
+  - targetSdk: flutter.targetSdkVersion (latest stable)
+  - compileSdk: flutter.compileSdkVersion
+  - Java/Kotlin target: JVM 17
+  - Release: ProGuard enabled, resources shrunk, signed with debug keys
+  - Output filename: `ABSENKOK-v${versionName}.apk`
+- `analysis_options.yaml` - Dart analyzer configuration
+- `devtools_options.yaml` - Flutter DevTools settings
+
+**Assets:**
+- `assets/icon.png` - App launcher icon source
+- `assets/images/` - Image assets directory
+- Adaptive icon background: `#FF0000` (red, Enakko brand color)
+
+## Platform Requirements
+
+**Development:**
+- Flutter SDK stable channel
+- Android Studio / VS Code with Flutter plugin
+- Android SDK with API 24+ for development devices
+- JDK 17 for Android builds
+
+**Production:**
+- Target: Android 7.0+ (API 24+)
+- NFC hardware required (`android.hardware.nfc` marked as required in `AndroidManifest.xml`)
+- Permissions: INTERNET, NFC, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, VIBRATE, FOREGROUND_SERVICE, FOREGROUND_SERVICE_CONNECTED_DEVICE, POST_NOTIFICATIONS (Android 13+), SYSTEM_ALERT_WINDOW, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+- Deployment target: Standalone APK for kiosk Android tablets with NFC readers
+- No iOS support (iOS platform excluded from launcher icons config)
+
+---
+
+*Stack analysis: 2026-03-11*

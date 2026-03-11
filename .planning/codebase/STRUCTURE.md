@@ -1,124 +1,250 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-03-04
+**Analysis Date:** 2024-12-20
 
 ## Directory Layout
 
-```text
+```
 absensi_enakko_flutter/
-|- lib/
-|  |- main.dart
-|  |- app.dart
-|  |- overlay_task.dart
-|  |- core/
-|  |- models/
-|  |- providers/
-|  |- services/
-|  `- screens/
-|- android/
-|- assets/
-|- test/
-|- .planning/codebase/
-|- pubspec.yaml
-|- analysis_options.yaml
-`- README.md
+├── lib/
+│   ├── core/                 # App-wide utilities and configuration
+│   ├── models/               # Data classes and domain objects
+│   ├── providers/            # Riverpod state management
+│   ├── screens/              # Feature-organized UI screens
+│   │   ├── admin/            # Admin dashboard and management screens
+│   │   ├── kiosk/            # NFC scanning kiosk screens
+│   │   └── setup/            # Initial device setup screen
+│   ├── services/             # Business logic and platform integrations
+│   ├── widgets/              # Reusable UI components
+│   ├── app.dart              # Router configuration and root app widget
+│   ├── main.dart             # Entry point and initialization
+│   └── overlay_task.dart     # Overlay window entry point
+├── android/                  # Android native project
+├── assets/                   # Static resources (images, etc.)
+├── test/                     # Unit and widget tests
+├── .env                      # Environment variables (Supabase credentials)
+├── pubspec.yaml              # Dependencies and project metadata
+└── README.md                 # Project documentation
 ```
 
-## Top-Level Folders and Purpose
+## Directory Purposes
 
-- `lib/`: all Dart application code.
-- `android/`: Android host app, permissions, MethodChannel handlers, and custom notification layouts.
-- `assets/`: static images (`assets/icon.png`, `assets/images/logo_enakko.png`).
-- `test/`: widget and model tests (overlay and report placeholders included).
-- `.planning/codebase/`: planning artifacts used by GSD mapping flow.
-- `.codex/skills/`: local skill definitions and workflow adapters.
+**`lib/core/`:**
+- Purpose: Shared utilities, constants, theme, and client factories
+- Contains: Configuration files, theme definitions, Supabase client wrapper
+- Key files: `constants.dart`, `theme.dart`, `supabase_client.dart`
 
-## `lib/` Module Map
+**`lib/models/`:**
+- Purpose: Data structures representing domain entities
+- Contains: Immutable classes with JSON serialization (fromJson/toJson)
+- Key files: `employee.dart`, `attendance_log.dart`, `kiosk_session.dart`, `outlet.dart`, `pending_log.dart`, `shift_schedule.dart`, `time_off_request.dart`, `employee_badge.dart`, `daily_summary.dart`, `overlay_pill_state.dart`
 
-### Boot and App Shell
+**`lib/providers/`:**
+- Purpose: Global state management with Riverpod
+- Contains: StateNotifier classes and provider definitions
+- Key files: `app_provider.dart` (main app state: kiosk session, admin mode, detected employee)
 
-- `lib/main.dart`: runtime bootstrap (dotenv, Supabase init, SQLite init, NFC warm-up, app launch).
-- `lib/app.dart`: router definition, redirects, app lifecycle handling, auth listener.
-- `lib/overlay_task.dart`: second Flutter entrypoint for floating overlay UI.
+**`lib/screens/admin/`:**
+- Purpose: Admin dashboard and management interfaces
+- Contains: Screens accessible only to authenticated admin/kepala_gerai users
+- Key files: 
+  - `admin_shell.dart` (wrapper with AppBar + BottomNav)
+  - `admin_login_screen.dart` (Supabase Auth login)
+  - `admin_dashboard_screen.dart` (realtime attendance overview)
+  - `admin_employees_screen.dart` (CRUD for employees + NFC registration)
+  - `admin_outlets_screen.dart` (outlet management, admin-only)
+  - `admin_reports_screen.dart` (CSV export, date range filtering)
+  - `shift_scheduler_screen.dart` (shift schedule management)
+  - `badge_management_screen.dart` (employee badge/uniform tracking)
+  - `sakit_izin_list_screen.dart` (sick leave and permission requests)
+  - `sakit_izin_dialog.dart` (dialog for sakit/izin input)
 
-### Core
+**`lib/screens/kiosk/`:**
+- Purpose: NFC attendance scanning interface for kiosk devices
+- Contains: Idle screen (NFC listener) and scan confirmation screen
+- Key files: 
+  - `kiosk_idle_screen.dart` (main NFC scan listener with pulse animation)
+  - `kiosk_scan_screen.dart` (attendance type selection after NFC tap)
 
-- `lib/core/constants.dart`: app constants (DB version, NFC debounce, sync retries, UI timings).
-- `lib/core/theme.dart`: design tokens and `ThemeData` builder.
-- `lib/core/supabase_client.dart`: central Supabase client access (`admin` and `kiosk`).
+**`lib/screens/setup/`:**
+- Purpose: Initial device setup for kiosk mode
+- Contains: Outlet selection and password verification screen
+- Key files: `setup_screen.dart` (verifies kiosk password via Supabase RPC)
 
-### State
+**`lib/services/`:**
+- Purpose: Business logic, external integrations, platform features
+- Contains: NFC handling, SQLite queue, sync logic, caching, background services
+- Key files:
+  - `nfc_service.dart` (universal NFC UID extraction for 8+ card types)
+  - `sqlite_service.dart` (offline queue CRUD with schema migrations)
+  - `sync_service.dart` (background sync to Supabase with retry logic)
+  - `employee_cache_service.dart` (in-memory cache with TTL, mutex locking)
+  - `kiosk_background_service.dart` (Android foreground service + notifications)
+  - `location_service.dart` (GPS coordinates for attendance logs)
+  - `badge_service.dart` (employee badge data fetching)
+  - `pdf_service.dart`, `pdf_report_service.dart` (PDF generation for reports)
+  - `schedule_generator.dart`, `schedule_sqlite_service.dart` (shift scheduling)
 
-- `lib/providers/app_provider.dart`: `AppState` + `AppNotifier` + `appProvider`.
-- This is the only global Riverpod state file; most other state remains local to screens.
+**`lib/widgets/`:**
+- Purpose: Reusable UI components used across screens
+- Contains: Custom widgets for consistent design system
+- Key files:
+  - `app_card.dart` (standardized card component)
+  - `app_badge.dart` (badge/chip component)
+  - `app_empty_state.dart` (empty state placeholder)
+  - `app_toast.dart` (toast notification helper)
+  - `badge_avatar.dart` (employee avatar with badge overlay)
+  - `shimmer_skeleton.dart` (loading placeholder skeleton)
 
-### Models
+## Key File Locations
 
-- Attendance and sync: `lib/models/attendance_log.dart`, `lib/models/pending_log.dart`.
-- Identity and session: `lib/models/employee.dart`, `lib/models/outlet.dart`, `lib/models/kiosk_session.dart`.
-- Scheduling: `lib/models/shift_schedule.dart`, `lib/models/time_off_request.dart`.
-- Overlay payload contract: `lib/models/overlay_pill_state.dart`.
+**Entry Points:**
+- `lib/main.dart`: App initialization (Supabase, SQLite, NFC, date formatting, error handlers)
+- `lib/app.dart`: Router configuration with GoRouter, auth guards, ShellRoute for admin
+- `lib/overlay_task.dart`: Overlay window entry point (Dynamic Island-style pill)
 
-### Services
+**Configuration:**
+- `lib/core/constants.dart`: App-wide constants (DB version, sync settings, UI timings)
+- `lib/core/theme.dart`: Material theme, colors, text styles
+- `lib/core/supabase_client.dart`: Supabase client factory (admin/kiosk clients)
+- `.env`: Supabase URL and anon key (NOT committed to git)
+- `pubspec.yaml`: Dependencies, app version, SDK constraints
 
-- NFC and scanning: `lib/services/nfc_service.dart`.
-- Offline queue: `lib/services/sqlite_service.dart`.
-- Queue sync to cloud: `lib/services/sync_service.dart`.
-- Employee cache and backup mode cache: `lib/services/employee_cache_service.dart`.
-- Background and overlay control: `lib/services/kiosk_background_service.dart`.
-- Location capture: `lib/services/location_service.dart`.
-- Scheduling helpers and persistence: `lib/services/schedule_generator.dart`, `lib/services/schedule_sqlite_service.dart`.
-- PDF export: `lib/services/pdf_service.dart`.
+**Core Logic:**
+- `lib/providers/app_provider.dart`: Global app state (kiosk session, admin mode, detected employee, pending count, backup mode)
+- `lib/services/nfc_service.dart`: NFC scanning with universal UID extraction
+- `lib/services/sqlite_service.dart`: Offline queue with pending_logs table
+- `lib/services/sync_service.dart`: Background sync worker
 
-### Screens
+**Testing:**
+- `test/`: Unit and widget tests (currently minimal)
 
-- Setup: `lib/screens/setup/setup_screen.dart`.
-- Kiosk runtime: `lib/screens/kiosk/kiosk_idle_screen.dart`, `lib/screens/kiosk/kiosk_scan_screen.dart`.
-- Admin shell: `lib/screens/admin/admin_shell.dart`, `lib/screens/admin/admin_login_screen.dart`.
-- Admin modules:
-  - dashboard: `lib/screens/admin/admin_dashboard_screen.dart`
-  - employees: `lib/screens/admin/admin_employees_screen.dart`
-  - reports: `lib/screens/admin/admin_reports_screen.dart`
-  - outlets: `lib/screens/admin/admin_outlets_screen.dart`
-  - scheduling: `lib/screens/admin/shift_scheduler_screen.dart`
-  - sakit/izin input dialog: `lib/screens/admin/sakit_izin_dialog.dart`
+## Naming Conventions
 
-## Native and Platform Structure
+**Files:**
+- `snake_case.dart` for all Dart files
+- Screen files: `{feature}_{screen_type}.dart` (e.g., `admin_dashboard_screen.dart`, `kiosk_idle_screen.dart`)
+- Service files: `{domain}_service.dart` (e.g., `nfc_service.dart`, `sqlite_service.dart`)
+- Model files: `{entity}.dart` (e.g., `employee.dart`, `attendance_log.dart`)
+- Widget files: `{component_name}.dart` (e.g., `app_card.dart`, `shimmer_skeleton.dart`)
 
-- Android manifest and permissions: `android/app/src/main/AndroidManifest.xml`.
-- Flutter activity + MethodChannels: `android/app/src/main/kotlin/com/enakko/absensi_enakko_flutter/MainActivity.kt`.
-- Custom notification rendering: `android/app/src/main/kotlin/com/enakko/absensi_enakko_flutter/KioskNotificationHelper.kt`.
-- Notification layouts: `android/app/src/main/res/layout/notification_kiosk.xml`, `android/app/src/main/res/layout/notification_kiosk_expanded.xml`.
+**Directories:**
+- `snake_case/` for all directories
+- Feature grouping: `screens/{feature}/` (e.g., `screens/admin/`, `screens/kiosk/`)
 
-## Naming Conventions in This Repository
+**Classes:**
+- `PascalCase` for class names
+- Screens: `{Feature}{Descriptor}Screen` (e.g., `AdminDashboardScreen`, `KioskIdleScreen`)
+- Widgets: `{ComponentName}` or `_{PrivateComponentName}` for internal widgets (e.g., `AppCard`, `_EnakkoAppBar`)
+- Models: `{EntityName}` (e.g., `Employee`, `AttendanceLog`, `KioskSession`)
+- Services: `{Domain}Service` (e.g., `NfcService`, `SqliteService`, `SyncService`)
+- Providers: `{Feature}Provider` or `{Feature}Notifier` (e.g., `AppNotifier`, `appProvider`)
 
-- Dart files use `snake_case` (`admin_reports_screen.dart`, `schedule_sqlite_service.dart`).
-- Screen files follow `*_screen.dart` under role folders (`lib/screens/admin/`, `lib/screens/kiosk/`, `lib/screens/setup/`).
-- Service files follow `*_service.dart` under `lib/services/`.
-- Model files are singular nouns (`employee.dart`, `outlet.dart`, `kiosk_session.dart`).
-- Class and enum type names use `PascalCase` (`AppState`, `AttendanceType`, `ShiftTemplate`).
-- Variables and methods use `camelCase`; private members are prefixed with `_`.
-- The repo currently includes local recovery copies (`.backup`, `.backup2`, `.backup3`, `.checkpoint`) alongside some source files in `lib/`.
+**Variables:**
+- `camelCase` for variables and parameters
+- Private fields: `_fieldName` with underscore prefix
+- Boolean flags: `isActive`, `hasKiosk`, `_isLoading`
+- Controllers: `{purpose}Ctrl` suffix (e.g., `_outletNameCtrl`, `_passwordCtrl`)
 
-## Where Key Concerns Live
+**Constants:**
+- `camelCase` for const variables in classes
+- UPPER_SNAKE_CASE for static const in utility classes (e.g., `AppConstants.kioskSessionKey`)
 
-- Role-based navigation and guards: `lib/app.dart`.
-- Session persistence and role flags: `lib/providers/app_provider.dart`.
-- Kiosk activation RPC and device session creation: `lib/screens/setup/setup_screen.dart`.
-- NFC detection + fast/slow employee lookup path: `lib/screens/kiosk/kiosk_idle_screen.dart` and `lib/services/nfc_service.dart`.
-- Attendance submission and offline-first insert: `lib/screens/kiosk/kiosk_scan_screen.dart` + `lib/services/sqlite_service.dart`.
-- Cloud sync retry and dedupe policy: `lib/services/sync_service.dart`.
-- Floating overlay UI and payload parsing: `lib/overlay_task.dart` + `lib/models/overlay_pill_state.dart`.
-- Live notification orchestration: `lib/services/kiosk_background_service.dart` + Android Kotlin helper files.
-- Employee CRUD and NFC card assignment: `lib/screens/admin/admin_employees_screen.dart`.
-- Outlet CRUD and password RPC workflows: `lib/screens/admin/admin_outlets_screen.dart`.
-- Daily report and rekap computation logic: `lib/screens/admin/admin_reports_screen.dart`.
-- Shift scheduling, cloud write-through, and offline cache fallback: `lib/screens/admin/shift_scheduler_screen.dart` + `lib/services/schedule_sqlite_service.dart`.
-- Sakit/izin admin input and schedule mutation: `lib/screens/admin/sakit_izin_dialog.dart`.
+## Where to Add New Code
 
-## Practical Planning Notes
+**New Admin Screen:**
+- Primary code: `lib/screens/admin/{feature}_screen.dart`
+- Add route in `lib/app.dart` under ShellRoute routes
+- Add navigation item in `lib/screens/admin/admin_shell.dart` (_EnakkoBottomNav)
+- Add realtime subscription if data updates needed
+- Tests: `test/screens/admin/{feature}_screen_test.dart`
 
-- High-churn files for product changes are concentrated in `lib/screens/admin/*.dart` and `lib/screens/kiosk/*.dart`.
-- Offline behavior depends on schema in `lib/services/sqlite_service.dart` and schedule cache in `lib/services/schedule_sqlite_service.dart`.
-- Changes to notification or overlay behavior are cross-layer and usually require edits in both `lib/services/kiosk_background_service.dart` and `android/app/src/main/kotlin/com/enakko/absensi_enakko_flutter/*.kt`.
-- The repository is feature-rich but does not isolate data access behind repositories, so structural refactors should plan for direct Supabase calls inside UI files.
+**New Kiosk Screen:**
+- Primary code: `lib/screens/kiosk/{feature}_screen.dart`
+- Add route in `lib/app.dart` under `/kiosk` GoRoute
+- Handle NFC state management via `AppProvider`
+- Tests: `test/screens/kiosk/{feature}_screen_test.dart`
+
+**New Feature/Mode:**
+- Create new directory: `lib/screens/{feature}/`
+- Add router entry in `lib/app.dart`
+- Add auth guard logic in router redirect function
+- Update `AppProvider` if new state needed
+
+**New Component/Module:**
+- Implementation: `lib/widgets/{component_name}.dart`
+- Export commonly-used widgets for easy imports
+- Follow existing widget patterns (StatelessWidget or custom StatefulWidget)
+
+**New Model:**
+- Implementation: `lib/models/{entity}.dart`
+- Include `fromJson` factory and `toJson` method for Supabase integration
+- Use immutable fields (`final`) with `copyWith` for updates
+- Add to Supabase table schema if needed
+
+**New Service:**
+- Implementation: `lib/services/{domain}_service.dart`
+- Use static methods for stateless services (e.g., `NfcService`, `SqliteService`)
+- Use singleton pattern for stateful services (e.g., `EmployeeCacheService.instance`)
+- Add initialization in `lib/main.dart` if required on app startup
+
+**Utilities:**
+- Shared helpers: `lib/core/{utility_name}.dart`
+- Constants: Add to `lib/core/constants.dart` (organized by category)
+- Theme updates: `lib/core/theme.dart` (colors, text styles, component themes)
+
+## Special Directories
+
+**`.planning/`:**
+- Purpose: GSD codebase mapping and planning documents
+- Generated: Yes (by GSD tools)
+- Committed: Yes (part of repository for reference)
+
+**`build/`:**
+- Purpose: Compiled output (APK, iOS app)
+- Generated: Yes (by `flutter build`)
+- Committed: No (in `.gitignore`)
+
+**`.dart_tool/`:**
+- Purpose: Dart analyzer cache and package metadata
+- Generated: Yes (by Dart SDK)
+- Committed: No (in `.gitignore`)
+
+**`android/` and `ios/`:**
+- Purpose: Native platform projects
+- Generated: Initially by `flutter create`, modified for native features
+- Committed: Yes (contains custom native code for foreground service, NFC config)
+
+**`assets/`:**
+- Purpose: Static resources (images, fonts, etc.)
+- Generated: No (manually added)
+- Committed: Yes
+
+**`.env`:**
+- Purpose: Environment variables (Supabase URL, anon key)
+- Generated: No (manually created)
+- Committed: No (in `.gitignore`, contains secrets)
+
+## Backup and Checkpoint Files
+
+**Pattern:** Files with `.backup`, `.backup2`, `.backup3`, `.checkpoint`, `.checkpoint2` suffixes
+
+**Examples:**
+- `lib/providers/app_provider.dart.backup`
+- `lib/screens/admin/admin_dashboard_screen.dart.backup3`
+- `lib/models/attendance_log.dart.checkpoint2`
+- `lib/services/sync_service.dart.checkpoint2`
+
+**Purpose:** Manual version control during development (likely created by fix scripts in root directory)
+
+**Status:** Not used by app at runtime, can be cleaned up
+
+**Fix Scripts in Root:**
+- Multiple Python scripts (`fix_*.py`, `convert_*.py`, `step*.py`) for automated code transformations
+- Shell scripts (`fix_*.sh`, `sed_*.sh`) for text replacements
+- Likely used during refactoring/bug fixing iterations
+- Not part of app runtime, development artifacts only
+
+---
+
+*Structure analysis: 2024-12-20*
