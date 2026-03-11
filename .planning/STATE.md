@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Admin Tools + Live Activity
-current_plan: Not started
+current_plan: 16-02 (1/2 plans complete in phase)
 status: unknown
-stopped_at: Completed 14-02-PLAN.md (Phase 14 complete)
-last_updated: "2026-03-11T17:28:44.447Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-11T18:23:34.859Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** v2.0 — Admin Tools + Live Activity
-- **Active Phase:** Phase 14 — Batch CSV Import
-- **Current Plan:** Not started
+- **Active Phase:** Phase 16 — Persistent Live Activity Pill
+- **Current Plan:** 16-02 (1/2 plans complete in phase)
 - **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11T17:15:29.550Z
-- **Stopped At:** Completed 14-02-PLAN.md (Phase 14 complete)
+- **Last Session:** 2026-03-11T18:23:34.856Z
+- **Stopped At:** Completed 16-01-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[██████████] 5/5 plans · 2/4 phases done
+[████████░░] 6/7 plans · 2/4 phases done
 ```
 
 ## Project Reference
@@ -35,7 +35,7 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 14 COMPLETE — All CSV import plans done. Ready for Phase 15.
+**Current focus:** Phase 16 Plan 01 COMPLETE — LiveContentProvider + displayLabel. Ready for Plan 02.
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
@@ -46,9 +46,10 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 - ✅ Phase 13 Plan 03: Riwayat Karyawan screen + route registration
 - ✅ Phase 14 Plan 01: CSV import service (parseBytes, validate, buildInsertPayloads, generateTemplateCsv, insertAll) + 30 unit tests
 - ✅ Phase 14 Plan 02: CSV import wizard UI (4-step: Upload→Preview→Confirm→Result) + route + nav button
+- ✅ Phase 16 Plan 01: LiveContentProvider (break detection + fun facts) + OverlayPillState.displayLabel
 
 ## What's Next
-Phase 15: Kepala Gerai role (SQL script for role-based access).
+Phase 16 Plan 02: Wire LiveContentProvider into KioskBackgroundService + overlay rendering.
 
 ## Accumulated Context
 
@@ -64,6 +65,9 @@ Phase 15: Kepala Gerai role (SQL script for role-based access).
 | 17 | ZONA BERBAHAYA pattern for destructive archive action | Clear separation from normal edit form; archive is irreversible-feeling |
 | 18 | Normalize CSV line endings for cross-platform; pure-function validation; consistent-key batch payloads | CSV service reliability and testability |
 | 19 | Custom step indicator + enum state machine for CSV wizard; pre-fetch lookups in initState | Lighter than Material Stepper; instant validation after file pick |
+| 20 | Injectable callbacks for LiveContentProvider over Supabase mocking | Cleaner testability, no static method issues, pure Dart service |
+| 21 | displayLabel defaults to empty string for backward compat | Existing payloads without displayLabel keep working unchanged |
+| 22 | Replace content lists completely on each poll, reset rotation index | Prevent memory growth over 24h; fresh content appears immediately |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations
