@@ -204,6 +204,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
     int? eventUntilEpochMs,
     bool? expanded,
     String? badgeEmoji,
+    String? displayLabel,
   }) {
     return OverlayPillState(
       mode: mode ?? source.mode,
@@ -214,6 +215,7 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
       eventUntilEpochMs: eventUntilEpochMs ?? source.eventUntilEpochMs,
       expanded: expanded ?? source.expanded,
       badgeEmoji: badgeEmoji ?? source.badgeEmoji,
+      displayLabel: displayLabel ?? source.displayLabel,
     );
   }
 
@@ -236,11 +238,17 @@ class _KioskOverlayUIState extends State<KioskOverlayUI> {
       _currentState.attendanceType.toLowerCase(),
     );
     final accent = _parseAccentHex(_currentState.accentHex, attendanceType.color);
+
+    // Use displayLabel if non-empty, otherwise fall back to enum label
+    final label = _currentState.displayLabel.isNotEmpty
+        ? _currentState.displayLabel
+        : attendanceType.label;
+
     final modeLabel =
         _currentState.mode == OverlayPillMode.event ? 'Event aktif' : 'Kiosk aktif';
 
     return _OverlayVisualStyle(
-      attendanceLabel: attendanceType.label,
+      attendanceLabel: label,
       modeLabel: modeLabel,
       accent: accent,
     );

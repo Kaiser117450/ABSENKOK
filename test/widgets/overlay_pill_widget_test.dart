@@ -182,6 +182,103 @@ void main() {
         _expectReadableContrast(tester);
       },
     );
+
+    testWidgets(
+      'displayLabel payload renders custom text instead of enum label',
+      (tester) async {
+        await pumpOverlay(tester);
+
+        stream.add(
+          _payload(
+            attendanceType: 'masuk',
+            displayLabel: '🍽️ Budi istirahat',
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final attendance = tester.widget<Text>(
+          find.byKey(const Key('overlay-pill-attendance')),
+        );
+        expect(attendance.data, '🍽️ Budi istirahat');
+        // Must NOT show the enum label 'Masuk'
+        expect(find.text('Masuk'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'empty displayLabel falls back to attendanceType label',
+      (tester) async {
+        await pumpOverlay(tester);
+
+        stream.add(
+          _payload(
+            attendanceType: 'pulang',
+            displayLabel: '',
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final attendance = tester.widget<Text>(
+          find.byKey(const Key('overlay-pill-attendance')),
+        );
+        expect(attendance.data, 'Pulang');
+      },
+    );
+
+    testWidgets(
+      'displayLabel with break accent shows amber color',
+      (tester) async {
+        await pumpOverlay(tester);
+
+        stream.add(
+          _payload(
+            attendanceType: 'break',
+            accentHex: '#F59E0B',
+            displayLabel: '🍽️ Sari istirahat',
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final attendance = tester.widget<Text>(
+          find.byKey(const Key('overlay-pill-attendance')),
+        );
+        expect(attendance.data, '🍽️ Sari istirahat');
+
+        // Verify accent dot has amber color
+        final accentDot = tester.widget<Container>(
+          find.byKey(const Key('overlay-pill-accent')).first,
+        );
+        final dotColor =
+            (accentDot.decoration as BoxDecoration?)?.color;
+        // #F59E0B = 0xFFF59E0B
+        expect(dotColor, const Color(0xFFF59E0B));
+      },
+    );
+
+    testWidgets(
+      'fun fact displayLabel shows in idle mode',
+      (tester) async {
+        await pumpOverlay(tester);
+
+        stream.add(
+          _payload(
+            attendanceType: 'masuk',
+            accentHex: '#22C55E',
+            displayLabel: 'Hari ini 12/14 hadir 🎉',
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        final attendance = tester.widget<Text>(
+          find.byKey(const Key('overlay-pill-attendance')),
+        );
+        expect(attendance.data, 'Hari ini 12/14 hadir 🎉');
+      },
+    );
   });
 }
 
@@ -192,6 +289,7 @@ String _payload({
   String attendanceType = 'masuk',
   String accentHex = '#22C55E',
   int eventUntilEpochMs = 0,
+  String displayLabel = '',
 }) {
   return jsonEncode({
     'v': 1,
@@ -202,6 +300,7 @@ String _payload({
     'accentHex': accentHex,
     'eventUntilEpochMs': eventUntilEpochMs,
     'expanded': true,
+    'displayLabel': displayLabel,
   });
 }
 
