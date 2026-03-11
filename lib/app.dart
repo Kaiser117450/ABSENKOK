@@ -19,6 +19,7 @@ import 'screens/admin/admin_outlets_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/archived_employees_screen.dart';
+import 'screens/admin/csv_import_screen.dart';
 import 'screens/kiosk/kiosk_idle_screen.dart';
 import 'screens/kiosk/kiosk_scan_screen.dart';
 import 'screens/setup/setup_screen.dart';
@@ -123,6 +124,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/archived-employees',
             builder: (_, __) => const ArchivedEmployeesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/csv-import',
+            builder: (_, __) => const CsvImportScreen(),
           ),
         ],
       ),

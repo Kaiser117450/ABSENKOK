@@ -314,8 +314,27 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                // CSV Import navigation button
+                GestureDetector(
+                  onTap: () => context.push('/admin/csv-import'),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.textMuted.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: AppColors.textMuted.withValues(alpha: 0.2)),
+                    ),
+                    child: const Tooltip(
+                      message: 'Import CSV',
+                      child: Icon(Icons.upload_file_outlined,
+                          size: 18, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ),
                 const Spacer(),
-                // Add button - yellow
                 GestureDetector(
                   onTap: () => _showEmployeeSheet(null),
                   child: Container(
