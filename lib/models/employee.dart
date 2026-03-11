@@ -10,6 +10,7 @@ class Employee {
   final bool isActive;
   final String createdAt;
   final String updatedAt;
+  final DateTime? archivedAt;
   final String? activeBadgeId;
 
   const Employee({
@@ -23,6 +24,7 @@ class Employee {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.archivedAt,
     this.activeBadgeId,
   });
 
@@ -37,6 +39,9 @@ class Employee {
         isActive: json['is_active'] as bool? ?? true,
         createdAt: json['created_at'] as String? ?? '',
         updatedAt: json['updated_at'] as String? ?? '',
+        archivedAt: json['archived_at'] == null
+            ? null
+            : DateTime.parse(json['archived_at'] as String),
         activeBadgeId: json['active_badge_id'] as String?,
       );
 
@@ -51,6 +56,7 @@ class Employee {
         'is_active': isActive,
         'created_at': createdAt,
         'updated_at': updatedAt,
+        'archived_at': archivedAt?.toIso8601String(),
         'active_badge_id': activeBadgeId,
       };
 
@@ -60,6 +66,7 @@ class Employee {
     String? position,
     String? homeOutletId,
     String? activeBadgeId,
+    DateTime? archivedAt,
   }) =>
       Employee(
         id: id,
@@ -72,6 +79,7 @@ class Employee {
         isActive: isActive ?? this.isActive,
         createdAt: createdAt,
         updatedAt: updatedAt,
+        archivedAt: archivedAt ?? this.archivedAt,
         activeBadgeId: activeBadgeId ?? this.activeBadgeId,
       );
 
