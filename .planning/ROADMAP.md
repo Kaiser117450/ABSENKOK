@@ -85,6 +85,11 @@ Plans:
   2. Employee starts break (istirahat) → overlay pill shows employee name and "Istirahat" status within 30 seconds, updates automatically
   3. No employees currently on break → overlay pill cycles through fun facts and daily attendance stats (e.g., "Hari ini 12/14 hadir 🎉") every 30 seconds
   4. Overlay pill runs for 24+ hours continuously without memory growth, ANR, or being killed by OEM battery optimization on target tablets
+**Plans**: 2 plans in 2 waves
+
+Plans:
+- [ ] 16-01-PLAN.md — LiveContentProvider service + OverlayPillState displayLabel (Wave 1)
+- [ ] 16-02-PLAN.md — Overlay rendering + KioskBackgroundService wiring + human verify (Wave 2)
 
 ## Progress
 
@@ -104,7 +109,7 @@ Plans:
 | 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete    | 2026-03-11 | - |
 | 14. Batch CSV Import | 2/2 | Complete    | 2026-03-11 | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | Complete    | 2026-03-11 | - |
-| 16. Persistent Live Activity Pill | v2.0 | 0/? | Not started | - |
+| 16. Persistent Live Activity Pill | v2.0 | 0/2 | In Progress | - |
 
 ## Future Backlog (Not Scheduled)
 - Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
