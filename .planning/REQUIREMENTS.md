@@ -70,29 +70,29 @@ Deferred from v2.0. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | — | Pending |
-| ARCH-02 | — | Pending |
-| ARCH-03 | — | Pending |
-| ARCH-04 | — | Pending |
-| ARCH-05 | — | Pending |
-| ARCH-06 | — | Pending |
-| CSV-01 | — | Pending |
-| CSV-02 | — | Pending |
-| CSV-03 | — | Pending |
-| CSV-04 | — | Pending |
-| CSV-05 | — | Pending |
-| CSV-06 | — | Pending |
-| ADMIN-01 | — | Pending |
-| LIVE-01 | — | Pending |
-| LIVE-02 | — | Pending |
-| LIVE-03 | — | Pending |
-| LIVE-04 | — | Pending |
+| ARCH-01 | Phase 13 | Pending |
+| ARCH-02 | Phase 13 | Pending |
+| ARCH-03 | Phase 13 | Pending |
+| ARCH-04 | Phase 13 | Pending |
+| ARCH-05 | Phase 13 | Pending |
+| ARCH-06 | Phase 13 | Pending |
+| CSV-01 | Phase 14 | Pending |
+| CSV-02 | Phase 14 | Pending |
+| CSV-03 | Phase 14 | Pending |
+| CSV-04 | Phase 14 | Pending |
+| CSV-05 | Phase 14 | Pending |
+| CSV-06 | Phase 14 | Pending |
+| ADMIN-01 | Phase 15 | Pending |
+| LIVE-01 | Phase 16 | Pending |
+| LIVE-02 | Phase 16 | Pending |
+| LIVE-03 | Phase 16 | Pending |
+| LIVE-04 | Phase 16 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation*

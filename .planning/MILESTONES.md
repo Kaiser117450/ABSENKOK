@@ -1,5 +1,19 @@
 # Milestones
 
+## v2.0 Admin Tools + Live Activity (Active)
+
+**Phases:** 13-16 (4 phases)
+**Requirements:** 17 (ARCH×6, CSV×6, ADMIN×1, LIVE×4)
+**Status:** Roadmap complete, ready to plan Phase 13
+
+**Target features:**
+1. Soft-archive karyawan with Riwayat Karyawan history page
+2. Batch CSV import for multi-outlet employee onboarding
+3. Quick SQL setup for promoting Kepala Gerai admin
+4. Persistent live activity pill outside app (break status, fun facts)
+
+---
+
 ## v1.1 Bug Fix + Edge Cases + Features (Shipped: 2026-03-05)
 
 **Phases completed:** 11 phases (1-4, 6-8, 8.1, 10-12), 24 plans executed
