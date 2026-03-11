@@ -18,6 +18,7 @@ import 'screens/admin/admin_login_screen.dart';
 import 'screens/admin/admin_outlets_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
 import 'screens/admin/admin_shell.dart';
+import 'screens/admin/archived_employees_screen.dart';
 import 'screens/kiosk/kiosk_idle_screen.dart';
 import 'screens/kiosk/kiosk_scan_screen.dart';
 import 'screens/setup/setup_screen.dart';
@@ -118,6 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/outlets',
             builder: (_, __) => const AdminOutletsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/archived-employees',
+            builder: (_, __) => const ArchivedEmployeesScreen(),
           ),
         ],
       ),
