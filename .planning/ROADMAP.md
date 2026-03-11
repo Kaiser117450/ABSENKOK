@@ -29,7 +29,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 ### v2.0 Admin Tools + Live Activity
 
 - [x] **Phase 13: Soft-Archive Karyawan + Riwayat** — Admin can archive/restore employees with full history preservation (completed 2026-03-11)
-- [ ] **Phase 14: Batch CSV Import** — Admin can onboard multiple karyawan at once via CSV with validation and preview
+- [ ] **Phase 14: Batch CSV Import** — Admin can onboard multiple karyawan at once via CSV with validation and preview (2 plans, 2 waves)
 - [ ] **Phase 15: Kepala Gerai SQL Setup** — SQL script to promote outlet manager to Kepala Gerai admin role
 - [ ] **Phase 16: Persistent Live Activity Pill** — Dynamic Island-style overlay with real-time break status and fun facts
 
@@ -61,7 +61,11 @@ Plans:
   2. CSV row with misspelled or unknown outlet name → that row is flagged with "outlet not found" error and blocked from inserting
   3. CSV with duplicate employee (same nama + same outlet as existing) → flagged as duplicate, admin sees which rows conflict
   4. Admin confirms valid rows → employees appear in active employee list with correct outlet assignment, position, and photo URL
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — CSV Import Service Layer (parse, validate, insert logic + unit tests)
+- [ ] 14-02-PLAN.md — Wizard UI screen + route integration + human verification
 
 ### Phase 15: Kepala Gerai SQL Setup
 **Goal**: Any outlet manager can be promoted to Kepala Gerai admin role via a SQL script run in Supabase dashboard — zero app code changes
@@ -98,7 +102,7 @@ Plans:
 | 11. Employee Badge System | v1.1 | 3/3 | Complete | 2026-03-05 |
 | 12. Kiosk Logout Bug Fix | v1.1 | 1/1 | Complete | 2026-03-05 |
 | 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete    | 2026-03-11 | - |
-| 14. Batch CSV Import | v2.0 | 0/? | Not started | - |
+| 14. Batch CSV Import | v2.0 | 0/2 | Planned | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | 0/? | Not started | - |
 | 16. Persistent Live Activity Pill | v2.0 | 0/? | Not started | - |
 
