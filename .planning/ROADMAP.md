@@ -97,7 +97,7 @@ Plans:
 | 10. Sakit/Izin Direct Input | v1.1 | 2/2 | Complete | 2026-03-05 |
 | 11. Employee Badge System | v1.1 | 3/3 | Complete | 2026-03-05 |
 | 12. Kiosk Logout Bug Fix | v1.1 | 1/1 | Complete | 2026-03-05 |
-| 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete   | 2026-03-11 | - |
+| 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete    | 2026-03-11 | - |
 | 14. Batch CSV Import | v2.0 | 0/? | Not started | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | 0/? | Not started | - |
 | 16. Persistent Live Activity Pill | v2.0 | 0/? | Not started | - |
