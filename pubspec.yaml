@@ -1,7 +1,7 @@
 name: absensi_enakko_flutter
 description: Sistem Absensi NFC Ayam Guling Enakko
 publish_to: 'none'
-version: 1.0.0+6005
+version: 1.1.0+8006
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -30,7 +30,9 @@ dependencies:
   # Network check before sync
   connectivity_plus: ^6.1.4
 
-  # CSV export
+  # CSV import/export
+  csv: ^6.0.0
+  file_picker: ^8.1.0
   share_plus: ^10.1.4
 
   # State management
