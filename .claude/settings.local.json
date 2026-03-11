@@ -16,7 +16,13 @@
       "Bash(node:*)",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__execute_sql",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash($env:JAVA_HOME =:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(adb install:*)",
+      "Bash(grep:*)",
+      "Skill(gsd:plan-milestone-gaps)",
+      "Skill(gsd:execute-phase)"
     ]
   }
 }
