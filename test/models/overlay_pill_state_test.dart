@@ -149,4 +149,89 @@ void main() {
       );
     });
   });
+
+  group('OverlayPillState displayLabel', () {
+    test('v1 JSON with displayLabel field parses displayLabel correctly', () {
+      final raw = jsonEncode({
+        'v': 1,
+        'mode': 'idle',
+        'outlet': 'Gerai Cihampelas',
+        'time': '08:30',
+        'attendanceType': 'masuk',
+        'accentHex': '#22C55E',
+        'eventUntilEpochMs': 0,
+        'expanded': true,
+        'displayLabel': '🍽️ Budi istirahat',
+      });
+
+      final state = OverlayPillState.fromRaw(raw);
+
+      expect(state.displayLabel, '🍽️ Budi istirahat');
+    });
+
+    test('v1 JSON WITHOUT displayLabel defaults to empty string (backward compat)', () {
+      final raw = jsonEncode({
+        'v': 1,
+        'mode': 'idle',
+        'outlet': 'Gerai Cihampelas',
+        'time': '08:30',
+        'attendanceType': 'masuk',
+        'accentHex': '#22C55E',
+        'eventUntilEpochMs': 0,
+        'expanded': true,
+      });
+
+      final state = OverlayPillState.fromRaw(raw);
+
+      expect(state.displayLabel, '');
+    });
+
+    test('toWirePayload includes displayLabel in output map', () {
+      final state = OverlayPillState(
+        mode: OverlayPillMode.event,
+        outlet: 'Gerai Riau',
+        time: '13:00',
+        attendanceType: 'kembali',
+        accentHex: '#3B82F6',
+        eventUntilEpochMs: 1700000000000,
+        expanded: false,
+        displayLabel: 'Hari ini 12/14 hadir 🎉',
+      );
+
+      final payload = state.toWirePayload();
+      final decoded = jsonDecode(payload) as Map<String, dynamic>;
+
+      expect(decoded['displayLabel'], 'Hari ini 12/14 hadir 🎉');
+    });
+
+    test('displayLabel round-trip: construct → toWirePayload → fromRaw → matches', () {
+      final original = OverlayPillState(
+        mode: OverlayPillMode.idle,
+        outlet: 'Gerai Bandung',
+        time: '10:00',
+        attendanceType: 'masuk',
+        accentHex: '#22C55E',
+        displayLabel: '🍽️ Sari istirahat',
+      );
+
+      final payload = original.toWirePayload();
+      final restored = OverlayPillState.fromRaw(payload);
+
+      expect(restored.displayLabel, '🍽️ Sari istirahat');
+      expect(restored.outlet, 'Gerai Bandung');
+      expect(restored.time, '10:00');
+    });
+
+    test('legacy delimiter payload → displayLabel is empty string', () {
+      final state = OverlayPillState.fromRaw('Gerai Dipatiukur|09:15');
+
+      expect(state.displayLabel, '');
+    });
+
+    test('defaults() → displayLabel is empty string', () {
+      final state = OverlayPillState.defaults();
+
+      expect(state.displayLabel, '');
+    });
+  });
 }
