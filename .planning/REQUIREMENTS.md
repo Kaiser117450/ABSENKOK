@@ -31,10 +31,10 @@ Requirements for v2.0 Admin Tools + Live Activity. Each maps to roadmap phases.
 
 ### Live Activity Pill
 
-- [ ] **LIVE-01**: Persistent Dynamic Island-style overlay pill visible outside the app when kiosk is running
+- [x] **LIVE-01**: Persistent Dynamic Island-style overlay pill visible outside the app when kiosk is running
 - [x] **LIVE-02**: Overlay pill shows real-time break status (nama karyawan yang sedang istirahat)
 - [x] **LIVE-03**: Overlay pill shows fun facts / rotating idle messages when no one is on break (e.g. "Hari ini 12/14 hadir 🎉")
-- [ ] **LIVE-04**: Overlay pill updates automatically without user interaction
+- [x] **LIVE-04**: Overlay pill updates automatically without user interaction
 
 ## Future Requirements
 
@@ -83,10 +83,10 @@ Deferred from v2.0. Tracked but not in current roadmap.
 | CSV-05 | Phase 14 | Complete |
 | CSV-06 | Phase 14 | Complete |
 | ADMIN-01 | Phase 15 | Pending |
-| LIVE-01 | Phase 16 | Pending |
+| LIVE-01 | Phase 16 | Complete |
 | LIVE-02 | Phase 16 | Complete |
 | LIVE-03 | Phase 16 | Complete |
-| LIVE-04 | Phase 16 | Pending |
+| LIVE-04 | Phase 16 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 17 total

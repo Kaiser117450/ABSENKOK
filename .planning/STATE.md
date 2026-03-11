@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Admin Tools + Live Activity
-current_plan: 16-02 (1/2 plans complete in phase)
-status: unknown
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-03-11T18:23:34.859Z"
+current_plan: 16-02 (2/2 plans complete in phase)
+status: phase-complete
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-03-12T02:31:25Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # STATE.md — Project Memory
@@ -18,16 +18,16 @@ progress:
 ## Current Status
 - **Active Milestone:** v2.0 — Admin Tools + Live Activity
 - **Active Phase:** Phase 16 — Persistent Live Activity Pill
-- **Current Plan:** 16-02 (1/2 plans complete in phase)
-- **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11T18:23:34.856Z
-- **Stopped At:** Completed 16-01-PLAN.md
+- **Current Plan:** 16-02 (2/2 plans complete in phase)
+- **Last Updated:** 2026-03-12
+- **Last Session:** 2026-03-12T02:31:25Z
+- **Stopped At:** Completed 16-02-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[████████░░] 6/7 plans · 2/4 phases done
+[██████████] 7/7 plans · 4/4 phases done
 ```
 
 ## Project Reference
@@ -35,7 +35,7 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 16 Plan 01 COMPLETE — LiveContentProvider + displayLabel. Ready for Plan 02.
+**Current focus:** Phase 16 COMPLETE — All Live Activity plans done. Milestone v2.0 complete.
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
@@ -47,9 +47,10 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 - ✅ Phase 14 Plan 01: CSV import service (parseBytes, validate, buildInsertPayloads, generateTemplateCsv, insertAll) + 30 unit tests
 - ✅ Phase 14 Plan 02: CSV import wizard UI (4-step: Upload→Preview→Confirm→Result) + route + nav button
 - ✅ Phase 16 Plan 01: LiveContentProvider (break detection + fun facts) + OverlayPillState.displayLabel
+- ✅ Phase 16 Plan 02: Wire LiveContentProvider into overlay rendering + background service + event priority
 
 ## What's Next
-Phase 16 Plan 02: Wire LiveContentProvider into KioskBackgroundService + overlay rendering.
+v2.0 Milestone complete! All 7 plans across 4 phases delivered.
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Phase 16 Plan 02: Wire LiveContentProvider into KioskBackgroundService + overlay
 | 20 | Injectable callbacks for LiveContentProvider over Supabase mocking | Cleaner testability, no static method issues, pure Dart service |
 | 21 | displayLabel defaults to empty string for backward compat | Existing payloads without displayLabel keep working unchanged |
 | 22 | Replace content lists completely on each poll, reset rotation index | Prevent memory growth over 24h; fresh content appears immediately |
+| 23 | displayLabel fallback: non-empty → custom text, empty → enum label | Backward compatible with existing payloads |
+| 24 | Event priority via epoch tracking in main isolate | Overlay isolate can't block idle pushes (Research Pitfall 2) |
+| 25 | Removed _showingTime toggle, replaced by LiveContentProvider rotation | Single source of truth for display content |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations

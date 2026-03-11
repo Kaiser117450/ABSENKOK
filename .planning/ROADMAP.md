@@ -31,7 +31,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] **Phase 13: Soft-Archive Karyawan + Riwayat** — Admin can archive/restore employees with full history preservation (completed 2026-03-11)
 - [x] **Phase 14: Batch CSV Import** — Admin can onboard multiple karyawan at once via CSV with validation and preview (2 plans, 2 waves) (completed 2026-03-11)
 - [x] **Phase 15: Kepala Gerai SQL Setup** — SQL script to promote outlet manager to Kepala Gerai admin role (completed 2026-03-11)
-- [ ] **Phase 16: Persistent Live Activity Pill** — Dynamic Island-style overlay with real-time break status and fun facts
+- [x] **Phase 16: Persistent Live Activity Pill** — Dynamic Island-style overlay with real-time break status and fun facts (completed 2026-03-11)
 
 ## Phase Details
 
@@ -109,7 +109,7 @@ Plans:
 | 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete    | 2026-03-11 | - |
 | 14. Batch CSV Import | 2/2 | Complete    | 2026-03-11 | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | Complete    | 2026-03-11 | - |
-| 16. Persistent Live Activity Pill | 1/2 | In Progress|  | - |
+| 16. Persistent Live Activity Pill | 2/2 | Complete   | 2026-03-11 | - |
 
 ## Future Backlog (Not Scheduled)
 - Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
