@@ -4,30 +4,30 @@ milestone: v2.0
 milestone_name: Admin Tools + Live Activity
 current_plan: Not started
 status: unknown
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-03-11T15:21:55.462Z"
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-11T17:02:44.033Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** v2.0 — Admin Tools + Live Activity
-- **Active Phase:** Phase 13 — Soft-Archive Karyawan + Riwayat
-- **Current Plan:** Not started
+- **Active Phase:** Phase 14 — Batch CSV Import
+- **Current Plan:** Plan 02 of 2
 - **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11T15:19:56.634Z
-- **Stopped At:** Completed 13-02-PLAN.md
+- **Last Session:** 2026-03-11T17:02:44.030Z
+- **Stopped At:** Completed 14-01-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[████████████████████] 3/3 plans in Phase 13 · 1/4 phases
+[████████░░░░░░░░░░░░] 1/2 plans in Phase 14 · 2/4 phases
 ```
 
 ## Project Reference
@@ -35,7 +35,7 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 13 COMPLETE — All 3 plans executed (archive model, UI action, riwayat screen)
+**Current focus:** Phase 14 IN PROGRESS — Plan 01 complete (CSV import service layer), Plan 02 pending (UI)
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
@@ -44,9 +44,10 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 - ✅ Phase 13 Plan 01: archived_at column + Employee model archivedAt field
 - ✅ Phase 13 Plan 02: Archive action in admin employee UI + is_active filter + Arsip nav
 - ✅ Phase 13 Plan 03: Riwayat Karyawan screen + route registration
+- ✅ Phase 14 Plan 01: CSV import service (parseBytes, validate, buildInsertPayloads, generateTemplateCsv, insertAll) + 30 unit tests
 
 ## What's Next
-Phase 13 complete. Ready for Phase 14 planning.
+Phase 14 Plan 02: CSV Import UI screen (file picker, preview, validation display, import action).
 
 ## Accumulated Context
 
@@ -60,6 +61,7 @@ Phase 13 complete. Ready for Phase 14 planning.
 | 15 | Additive migrations only | Production DB at 4 outlets — all new columns NULLABLE or with DEFAULT |
 | 16 | archivedAt as DateTime? not String | Type-safe timestamp handling for future archive/restore date comparisons |
 | 17 | ZONA BERBAHAYA pattern for destructive archive action | Clear separation from normal edit form; archive is irreversible-feeling |
+| 18 | Normalize CSV line endings for cross-platform; pure-function validation; consistent-key batch payloads | CSV service reliability and testability |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations
