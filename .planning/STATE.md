@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Admin Tools + Live Activity
-current_plan: Not started
+current_plan: Plan 02 of 2
 status: unknown
-stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-03-11T17:02:44.033Z"
+stopped_at: Completed 14-02-PLAN.md (Phase 14 complete)
+last_updated: "2026-03-11T17:15:29.553Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # STATE.md — Project Memory
@@ -20,14 +20,14 @@ progress:
 - **Active Phase:** Phase 14 — Batch CSV Import
 - **Current Plan:** Plan 02 of 2
 - **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11T17:02:44.030Z
-- **Stopped At:** Completed 14-01-PLAN.md
+- **Last Session:** 2026-03-11T17:15:29.550Z
+- **Stopped At:** Completed 14-02-PLAN.md (Phase 14 complete)
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[████████░░░░░░░░░░░░] 1/2 plans in Phase 14 · 2/4 phases
+[██████████] 5/5 plans · 2/4 phases done
 ```
 
 ## Project Reference
@@ -35,7 +35,7 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 14 IN PROGRESS — Plan 01 complete (CSV import service layer), Plan 02 pending (UI)
+**Current focus:** Phase 14 COMPLETE — All CSV import plans done. Ready for Phase 15.
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
@@ -45,9 +45,10 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 - ✅ Phase 13 Plan 02: Archive action in admin employee UI + is_active filter + Arsip nav
 - ✅ Phase 13 Plan 03: Riwayat Karyawan screen + route registration
 - ✅ Phase 14 Plan 01: CSV import service (parseBytes, validate, buildInsertPayloads, generateTemplateCsv, insertAll) + 30 unit tests
+- ✅ Phase 14 Plan 02: CSV import wizard UI (4-step: Upload→Preview→Confirm→Result) + route + nav button
 
 ## What's Next
-Phase 14 Plan 02: CSV Import UI screen (file picker, preview, validation display, import action).
+Phase 15: Kepala Gerai role (SQL script for role-based access).
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Phase 14 Plan 02: CSV Import UI screen (file picker, preview, validation display
 | 16 | archivedAt as DateTime? not String | Type-safe timestamp handling for future archive/restore date comparisons |
 | 17 | ZONA BERBAHAYA pattern for destructive archive action | Clear separation from normal edit form; archive is irreversible-feeling |
 | 18 | Normalize CSV line endings for cross-platform; pure-function validation; consistent-key batch payloads | CSV service reliability and testability |
+| 19 | Custom step indicator + enum state machine for CSV wizard; pre-fetch lookups in initState | Lighter than Material Stepper; instant validation after file pick |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations

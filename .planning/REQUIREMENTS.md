@@ -21,7 +21,7 @@ Requirements for v2.0 Admin Tools + Live Activity. Each maps to roadmap phases.
 - [x] **CSV-01**: Admin can upload a CSV file to batch-add multiple karyawan at once
 - [x] **CSV-02**: CSV format supports columns: nama, jabatan, gerai (nama outlet), photo_url (link)
 - [x] **CSV-03**: System auto-resolves outlet name to outlet UUID (case-insensitive match)
-- [ ] **CSV-04**: System shows preview screen with parsed rows before committing to database
+- [x] **CSV-04**: System shows preview screen with parsed rows before committing to database
 - [x] **CSV-05**: System detects and reports duplicate karyawan (by name + outlet combination)
 - [x] **CSV-06**: System shows per-row validation errors (missing fields, unknown outlet, duplicates)
 
@@ -79,7 +79,7 @@ Deferred from v2.0. Tracked but not in current roadmap.
 | CSV-01 | Phase 14 | Complete |
 | CSV-02 | Phase 14 | Complete |
 | CSV-03 | Phase 14 | Complete |
-| CSV-04 | Phase 14 | Pending |
+| CSV-04 | Phase 14 | Complete |
 | CSV-05 | Phase 14 | Complete |
 | CSV-06 | Phase 14 | Complete |
 | ADMIN-01 | Phase 15 | Pending |
