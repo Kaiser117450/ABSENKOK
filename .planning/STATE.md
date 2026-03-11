@@ -2,28 +2,30 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Admin Tools + Live Activity
-status: roadmap_complete
-last_updated: "2026-03-11T14:00:00.000Z"
+status: executing
+last_updated: "2026-03-11T15:03:18.000Z"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** v2.0 — Admin Tools + Live Activity
-- **Active Phase:** Phase 13 — Soft-Archive Karyawan + Riwayat (next up)
+- **Active Phase:** Phase 13 — Soft-Archive Karyawan + Riwayat
+- **Current Plan:** 2 of 3 in Phase 13
 - **Last Updated:** 2026-03-11
 - **Last Session:** 2026-03-11
+- **Stopped At:** Completed 13-01-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[░░░░░░░░░░░░░░░░░░░░] 0/4 phases · 0% complete
+[███░░░░░░░░░░░░░░░░░] 1/3 plans in Phase 13 · 0/4 phases
 ```
 
 ## Project Reference
@@ -31,18 +33,19 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** v2.0 roadmap complete — ready to plan Phase 13 (Soft-Archive Karyawan)
+**Current focus:** Phase 13 executing — Plan 01 complete (DB migration + Employee model), Plan 02 next (archive/restore service + admin UI)
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
 - ✅ Requirements defined (17 requirements across 4 categories)
 - ✅ Roadmap created (4 phases: 13-16)
+- ✅ Phase 13 Plan 01: archived_at column + Employee model archivedAt field
 
 ## What's Next
-Plan Phase 13: Soft-Archive Karyawan + Riwayat
-- Foundation phase — modifies Employee data model that all subsequent phases depend on
-- 6 requirements: ARCH-01 through ARCH-06
-- Key deliverables: DB migration, archive/restore actions, Riwayat Karyawan page, NFC exclusion, query audit
+Execute Phase 13 Plan 02: Archive/Restore Service + Admin UI
+- Archive action in employee detail page
+- Restore action for archived employees
+- Riwayat Karyawan page with archived employee list
 
 ## Accumulated Context
 
@@ -54,6 +57,7 @@ Plan Phase 13: Soft-Archive Karyawan + Riwayat
 | 13 | Kepala Gerai = SQL script only, zero Flutter code | 4 outlets doesn't justify admin UI; SQL script is faster and safer |
 | 14 | Overlay data flow via shareData() only | Overlay runs in separate isolate — cannot access main Supabase client |
 | 15 | Additive migrations only | Production DB at 4 outlets — all new columns NULLABLE or with DEFAULT |
+| 16 | archivedAt as DateTime? not String | Type-safe timestamp handling for future archive/restore date comparisons |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations

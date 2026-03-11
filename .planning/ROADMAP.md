@@ -48,7 +48,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 **Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 13-01-PLAN.md — Database migration + Employee model update (Wave 1)
+- [x] 13-01-PLAN.md — Database migration + Employee model update (Wave 1) ✅
 - [ ] 13-02-PLAN.md — Archive actions + admin UI (Wave 2)
 - [ ] 13-03-PLAN.md — Riwayat Karyawan screen (Wave 2)
 
@@ -97,7 +97,7 @@ Plans:
 | 10. Sakit/Izin Direct Input | v1.1 | 2/2 | Complete | 2026-03-05 |
 | 11. Employee Badge System | v1.1 | 3/3 | Complete | 2026-03-05 |
 | 12. Kiosk Logout Bug Fix | v1.1 | 1/1 | Complete | 2026-03-05 |
-| 13. Soft-Archive Karyawan + Riwayat | v2.0 | 0/3 | Not started | - |
+| 13. Soft-Archive Karyawan + Riwayat | v2.0 | 1/3 | In Progress | - |
 | 14. Batch CSV Import | v2.0 | 0/? | Not started | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | 0/? | Not started | - |
 | 16. Persistent Live Activity Pill | v2.0 | 0/? | Not started | - |

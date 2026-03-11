@@ -70,11 +70,11 @@ Deferred from v2.0. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 13 | Pending |
+| ARCH-01 | Phase 13 | In Progress |
 | ARCH-02 | Phase 13 | Pending |
 | ARCH-03 | Phase 13 | Pending |
 | ARCH-04 | Phase 13 | Pending |
-| ARCH-05 | Phase 13 | Pending |
+| ARCH-05 | Phase 13 | In Progress |
 | ARCH-06 | Phase 13 | Pending |
 | CSV-01 | Phase 14 | Pending |
 | CSV-02 | Phase 14 | Pending |
