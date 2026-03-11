@@ -1,46 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Bug Fix + Edge Cases + Features
-status: shipped
-last_updated: "2026-03-05T20:45:00.000Z"
+milestone: v2.0
+milestone_name: Admin Tools + Live Activity
+status: defining_requirements
+last_updated: "2026-03-11T13:20:00.000Z"
 progress:
-  total_phases: 11
-  completed_phases: 11
-  total_plans: 24
-  completed_plans: 24
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
-- **Shipped Milestone:** v1.1 — Bug Fix + Edge Cases + Features (2026-03-05)
-- **Active Phase:** None — milestone complete
-- **Last Updated:** 2026-03-05
-- **Last Session:** 2026-03-05
+- **Active Milestone:** v2.0 — Admin Tools + Live Activity
+- **Active Phase:** None — defining requirements
+- **Last Updated:** 2026-03-11
+- **Last Session:** 2026-03-11
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v2.0
 
-## What's Done (v1.1)
-- [x] Phase 1: Rekap Harian Bug Fixes (1 plan) — fixed BUG-001, BUG-002, BUG-003
-- [x] Phase 2: Kiosk Scan Cycle Edge Cases (3 plans) — fixed BUG-004, BUG-005, open shifts widget
-- [x] Phase 3: Overlay Pill Implementation (4 plans) — persistent floating pill overlay
-- [x] Phase 4: PDF Export Engine (1 plan) — PdfReportService with branded summary
-- [x] Phase 6: NFC Idle Screen Visual Enhancement (2 plans) — ambient animation, gradient ring, brand logo
-- [x] Phase 7: Admin UI System Polish (3 plans) — AppCard, ShimmerSkeleton, AppBadge, AppToast library
-- [x] Phase 8: Schedule System Fix (2 plans) — Supabase-first, bulk assign
-- [x] Phase 8.1: PDF/CSV Export Fix (2 plans) — color-coded tables, cached export
-- [x] Phase 10: Sakit/Izin Direct Input (2 plans) — direct Supabase INSERT, history list
-- [x] Phase 11: Employee Badge System (3 plans) — model, avatar widget, CRUD management
-- [x] Phase 12: Kiosk Logout Bug Fix (1 plan) — resilient stop(), 5s timeout
+## What's Done (v2.0)
+(Nothing yet — milestone just started)
 
 ## What's Next
-Milestone v1.1 shipped. Start next milestone with `/gsd:new-milestone`.
+Define requirements and create roadmap for v2.0.
 
 ## Accumulated Context
 ### Key Decisions (carried forward)

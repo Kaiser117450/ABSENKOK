@@ -31,6 +31,12 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✓ Employee badge system (solid/gradient/glow rings, emoji, CRUD) — v1.1
 
 ### Active
+- [ ] Soft-archive karyawan (arsip ke Riwayat Karyawan, hilang dari daftar aktif & jadwal, log tetap utuh)
+- [ ] Batch import karyawan via CSV (nama, jabatan, gerai, photo_url — NFC UID di-set manual)
+- [ ] Quick setup Kepala Gerai via SQL script (tinggal ganti email di Supabase SQL editor)
+- [ ] Persistent live activity pill (Dynamic Island-style overlay di luar app — status istirahat real-time, fun fact saat idle)
+
+### Deferred (Future)
 - [ ] Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
 - [ ] Time-off request approval workflow
 - [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
@@ -135,5 +141,15 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Android only — no iOS target
 - minSdk 24, compileSdk 35, targetSdk 35
 
+## Current Milestone: v2.0 Admin Tools + Live Activity
+
+**Goal:** Empower admin with employee lifecycle management (archive, batch import, quick Kepala Gerai setup) and deliver persistent Dynamic Island-style live activity overlay.
+
+**Target features:**
+- Soft-archive karyawan with Riwayat Karyawan history page
+- Batch CSV import for multi-outlet employee onboarding
+- Quick SQL setup for promoting Kepala Gerai admin
+- Persistent live activity pill outside app (break status, fun facts)
+
 ---
-*Last updated: 2026-03-05 after v1.1 milestone*
+*Last updated: 2026-03-11 after v2.0 milestone start*
