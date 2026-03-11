@@ -9,6 +9,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import '../models/kiosk_session.dart';
 import '../models/overlay_pill_state.dart';
+import 'live_content_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Notification IDs
@@ -42,7 +43,9 @@ class KioskBackgroundService {
   static bool _notifInitialized = false;
   static KioskSession? _session;
   static Timer? _rotateTimer;
-  static bool _showingTime = false; // toggles between outlet name & time
+  static final LiveContentProvider _liveContent = LiveContentProvider();
+  static Timer? _pollTimer;
+  static int _eventUntilEpochMs = 0;
 
   // MethodChannel → KioskNotificationHelper.kt untuk custom pill notification
   static const _notifChannel = MethodChannel('com.enakko.kiosk/notification');
@@ -156,6 +159,14 @@ class KioskBackgroundService {
       _rotateNotification();
     });
 
+    // Start content poll timer (30s) for break status + fun facts
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _pollContent();
+    });
+    // Immediate first poll
+    unawaited(_pollContent());
+
     return overlayResult;
   }
 
@@ -165,9 +176,12 @@ class KioskBackgroundService {
   /// Each step is individually wrapped in try-catch so one failure
   /// cannot block subsequent cleanup steps.
   static Future<void> stop() async {
+    _pollTimer?.cancel();
+    _pollTimer = null;
     _rotateTimer?.cancel();
     _rotateTimer = null;
     _session = null;
+    _eventUntilEpochMs = 0;
 
     try {
       await FlutterForegroundTask.stopService();
@@ -453,31 +467,67 @@ class KioskBackgroundService {
 
   // ── Rotating notification ─────────────────────────────────────────────────
 
+  /// Call when pushing event mode overlay to prevent idle rotation overwriting it.
+  static void markEventActive(int eventUntilEpochMs) {
+    _eventUntilEpochMs = eventUntilEpochMs;
+  }
+
+  static Future<void> _pollContent() async {
+    final session = _session;
+    if (session == null) return;
+    try {
+      await _liveContent.poll(session.outletId);
+    } catch (e) {
+      debugPrint('[BgService] _pollContent error: $e');
+    }
+  }
+
   static Future<void> _rotateNotification() async {
     final session = _session;
     if (session == null) return;
 
-    _showingTime = !_showingTime;
+    // Event mode priority: skip rotation while event is active
+    if (_eventUntilEpochMs > 0 &&
+        DateTime.now().millisecondsSinceEpoch < _eventUntilEpochMs) {
+      return; // Event still active, don't overwrite
+    }
+    _eventUntilEpochMs = 0; // Expired, clear
 
     final now = DateTime.now();
-    final timeStr =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final timeStr = _formatClock(now);
 
-    final body = _showingTime ? timeStr : 'Tempelkan kartu NFC untuk absensi';
+    // Get next display content from live content provider
+    final displayText = _liveContent.nextDisplayText();
+    final hasBreak = _liveContent.hasActiveBreaks;
 
-    // Update keepalive service text (low-priority, mostly background)
-    FlutterForegroundTask.updateService(
-      notificationTitle: session.outletName,
-      notificationText: body,
+    // Accent: amber when someone is on break, green otherwise
+    final accentHex = hasBreak ? '#F59E0B' : '#22C55E';
+    // attendanceType: 'break' for amber accent resolution, 'masuk' for green
+    final attendanceType = hasBreak ? 'break' : 'masuk';
+
+    final idleOverlayState = OverlayPillState(
+      mode: OverlayPillMode.idle,
+      outlet: session.outletName,
+      time: timeStr,
+      attendanceType: attendanceType,
+      accentHex: accentHex,
+      displayLabel: displayText,
+      eventUntilEpochMs: 0,
+      expanded: true,
     );
 
-    // Update custom Live Activity notification (the Grab-style primary approach)
-    await updateLiveNotification(outletName: session.outletName, body: body);
-
-    // Update floating overlay data (best-effort, may fail on some OEMs)
-    final idleOverlayState =
-        _buildIdleOverlayState(outletName: session.outletName, at: now);
     await updateOverlayState(idleOverlayState);
+
+    // Also update notification bar
+    await updateLiveNotification(
+      outletName: session.outletName,
+      body: displayText,
+    );
+
+    FlutterForegroundTask.updateService(
+      notificationTitle: session.outletName,
+      notificationText: displayText,
+    );
   }
 
   static OverlayPillState _buildIdleOverlayState({
@@ -494,6 +544,7 @@ class KioskBackgroundService {
       time: _formatClock(now),
       attendanceType: OverlayPillState.defaultAttendanceType,
       accentHex: OverlayPillState.defaultAccentHex,
+      displayLabel: '', // initial idle — no live content yet
       eventUntilEpochMs: 0,
       expanded: true,
     );

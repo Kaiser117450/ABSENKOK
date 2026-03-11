@@ -239,6 +239,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       );
 
       await KioskBackgroundService.updateOverlayState(state);
+      // Prevent idle rotation from overwriting event overlay
+      KioskBackgroundService.markEventActive(state.eventUntilEpochMs);
     } catch (e) {
       debugPrint('[KioskScan] push overlay event error: $e');
     }
