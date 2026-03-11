@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Admin Tools + Live Activity
 current_plan: 3 of 3 in Phase 13
 status: unknown
-stopped_at: Completed 13-03-PLAN.md
-last_updated: "2026-03-11T15:18:37.924Z"
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-03-11T15:19:56.638Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -20,14 +20,14 @@ progress:
 - **Active Phase:** Phase 13 — Soft-Archive Karyawan + Riwayat
 - **Current Plan:** 3 of 3 in Phase 13
 - **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11T15:18:17.195Z
-- **Stopped At:** Completed 13-03-PLAN.md
+- **Last Session:** 2026-03-11T15:19:56.634Z
+- **Stopped At:** Completed 13-02-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[█████████████░░░░░░░] 2/3 plans in Phase 13 · 0/4 phases
+[████████████████████] 3/3 plans in Phase 13 · 1/4 phases
 ```
 
 ## Project Reference
@@ -35,17 +35,18 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 13 executing — Plans 01 & 03 complete, Plan 02 executing in parallel
+**Current focus:** Phase 13 COMPLETE — All 3 plans executed (archive model, UI action, riwayat screen)
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
 - ✅ Requirements defined (17 requirements across 4 categories)
 - ✅ Roadmap created (4 phases: 13-16)
 - ✅ Phase 13 Plan 01: archived_at column + Employee model archivedAt field
+- ✅ Phase 13 Plan 02: Archive action in admin employee UI + is_active filter + Arsip nav
 - ✅ Phase 13 Plan 03: Riwayat Karyawan screen + route registration
 
 ## What's Next
-Awaiting Phase 13 Plan 02 completion (parallel execution): Archive/Restore in Admin Employees UI
+Phase 13 complete. Ready for Phase 14 planning.
 
 ## Accumulated Context
 
@@ -58,6 +59,7 @@ Awaiting Phase 13 Plan 02 completion (parallel execution): Archive/Restore in Ad
 | 14 | Overlay data flow via shareData() only | Overlay runs in separate isolate — cannot access main Supabase client |
 | 15 | Additive migrations only | Production DB at 4 outlets — all new columns NULLABLE or with DEFAULT |
 | 16 | archivedAt as DateTime? not String | Type-safe timestamp handling for future archive/restore date comparisons |
+| 17 | ZONA BERBAHAYA pattern for destructive archive action | Clear separation from normal edit form; archive is irreversible-feeling |
 
 ### Key Constraints
 - Production database serving 4 outlets, 14 employees — NO destructive migrations
