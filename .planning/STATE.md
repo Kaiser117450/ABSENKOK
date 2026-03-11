@@ -2,13 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Admin Tools + Live Activity
-status: executing
-last_updated: "2026-03-11T15:03:18.000Z"
+current_plan: 3 of 3 in Phase 13
+status: unknown
+stopped_at: Completed 13-03-PLAN.md
+last_updated: "2026-03-11T15:18:37.924Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
@@ -16,16 +18,16 @@ progress:
 ## Current Status
 - **Active Milestone:** v2.0 — Admin Tools + Live Activity
 - **Active Phase:** Phase 13 — Soft-Archive Karyawan + Riwayat
-- **Current Plan:** 2 of 3 in Phase 13
+- **Current Plan:** 3 of 3 in Phase 13
 - **Last Updated:** 2026-03-11
-- **Last Session:** 2026-03-11
-- **Stopped At:** Completed 13-01-PLAN.md
+- **Last Session:** 2026-03-11T15:18:17.195Z
+- **Stopped At:** Completed 13-03-PLAN.md
 
 ## Progress
 
 ```
 v2.0 Admin Tools + Live Activity
-[███░░░░░░░░░░░░░░░░░] 1/3 plans in Phase 13 · 0/4 phases
+[█████████████░░░░░░░] 2/3 plans in Phase 13 · 0/4 phases
 ```
 
 ## Project Reference
@@ -33,19 +35,17 @@ v2.0 Admin Tools + Live Activity
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 13 executing — Plan 01 complete (DB migration + Employee model), Plan 02 next (archive/restore service + admin UI)
+**Current focus:** Phase 13 executing — Plans 01 & 03 complete, Plan 02 executing in parallel
 
 ## What's Done (v2.0)
 - ✅ Research completed (HIGH confidence across all 4 areas)
 - ✅ Requirements defined (17 requirements across 4 categories)
 - ✅ Roadmap created (4 phases: 13-16)
 - ✅ Phase 13 Plan 01: archived_at column + Employee model archivedAt field
+- ✅ Phase 13 Plan 03: Riwayat Karyawan screen + route registration
 
 ## What's Next
-Execute Phase 13 Plan 02: Archive/Restore Service + Admin UI
-- Archive action in employee detail page
-- Restore action for archived employees
-- Riwayat Karyawan page with archived employee list
+Awaiting Phase 13 Plan 02 completion (parallel execution): Archive/Restore in Admin Employees UI
 
 ## Accumulated Context
 

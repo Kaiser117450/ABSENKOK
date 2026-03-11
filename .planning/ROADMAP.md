@@ -28,7 +28,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### v2.0 Admin Tools + Live Activity
 
-- [ ] **Phase 13: Soft-Archive Karyawan + Riwayat** — Admin can archive/restore employees with full history preservation
+- [x] **Phase 13: Soft-Archive Karyawan + Riwayat** — Admin can archive/restore employees with full history preservation (completed 2026-03-11)
 - [ ] **Phase 14: Batch CSV Import** — Admin can onboard multiple karyawan at once via CSV with validation and preview
 - [ ] **Phase 15: Kepala Gerai SQL Setup** — SQL script to promote outlet manager to Kepala Gerai admin role
 - [ ] **Phase 16: Persistent Live Activity Pill** — Dynamic Island-style overlay with real-time break status and fun facts
@@ -97,7 +97,7 @@ Plans:
 | 10. Sakit/Izin Direct Input | v1.1 | 2/2 | Complete | 2026-03-05 |
 | 11. Employee Badge System | v1.1 | 3/3 | Complete | 2026-03-05 |
 | 12. Kiosk Logout Bug Fix | v1.1 | 1/1 | Complete | 2026-03-05 |
-| 13. Soft-Archive Karyawan + Riwayat | v2.0 | 1/3 | In Progress | - |
+| 13. Soft-Archive Karyawan + Riwayat | 3/3 | Complete   | 2026-03-11 | - |
 | 14. Batch CSV Import | v2.0 | 0/? | Not started | - |
 | 15. Kepala Gerai SQL Setup | v2.0 | 0/? | Not started | - |
 | 16. Persistent Live Activity Pill | v2.0 | 0/? | Not started | - |

@@ -10,11 +10,11 @@ Requirements for v2.0 Admin Tools + Live Activity. Each maps to roadmap phases.
 ### Employee Archive
 
 - [ ] **ARCH-01**: Admin can archive (soft-delete) a karyawan from the active employee list
-- [ ] **ARCH-02**: Archived karyawan is excluded from NFC scan lookup (cannot clock in)
+- [x] **ARCH-02**: Archived karyawan is excluded from NFC scan lookup (cannot clock in)
 - [ ] **ARCH-03**: Archived karyawan is excluded from schedule assignment and shift selector
 - [ ] **ARCH-04**: Archive confirmation dialog shows impact summary (jumlah jadwal mendatang yang terdampak)
-- [ ] **ARCH-05**: Admin can restore (un-archive) a previously archived karyawan
-- [ ] **ARCH-06**: Admin can view Riwayat Karyawan page showing archived employees with full attendance history
+- [x] **ARCH-05**: Admin can restore (un-archive) a previously archived karyawan
+- [x] **ARCH-06**: Admin can view Riwayat Karyawan page showing archived employees with full attendance history
 
 ### Batch CSV Import
 
@@ -71,11 +71,11 @@ Deferred from v2.0. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ARCH-01 | Phase 13 | In Progress |
-| ARCH-02 | Phase 13 | Pending |
+| ARCH-02 | Phase 13 | Complete |
 | ARCH-03 | Phase 13 | Pending |
 | ARCH-04 | Phase 13 | Pending |
 | ARCH-05 | Phase 13 | In Progress |
-| ARCH-06 | Phase 13 | Pending |
+| ARCH-06 | Phase 13 | Complete |
 | CSV-01 | Phase 14 | Pending |
 | CSV-02 | Phase 14 | Pending |
 | CSV-03 | Phase 14 | Pending |
