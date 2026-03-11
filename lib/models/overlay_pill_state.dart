@@ -17,6 +17,7 @@ class OverlayPillState {
     this.eventUntilEpochMs = 0,
     this.expanded = true,
     this.badgeEmoji = '',
+    this.displayLabel = '',
   });
 
   factory OverlayPillState.defaults() {
@@ -29,6 +30,7 @@ class OverlayPillState {
       eventUntilEpochMs: 0,
       expanded: true,
       badgeEmoji: '',
+      displayLabel: '',
     );
   }
 
@@ -40,6 +42,7 @@ class OverlayPillState {
   final int eventUntilEpochMs;
   final bool expanded;
   final String badgeEmoji;
+  final String displayLabel;
 
   factory OverlayPillState.fromRaw(String raw) {
     final normalized = raw.trim();
@@ -74,6 +77,7 @@ class OverlayPillState {
     final parsedEventUntil = _toInt(map['eventUntilEpochMs']);
     final parsedExpanded = _toBool(map['expanded']);
     final badgeEmojiValue = (map['badgeEmoji'] ?? '').toString().trim();
+    final displayLabelValue = (map['displayLabel'] ?? '').toString().trim();
 
     return OverlayPillState(
       mode: parsedMode,
@@ -86,6 +90,7 @@ class OverlayPillState {
       eventUntilEpochMs: parsedEventUntil ?? 0,
       expanded: parsedExpanded ?? true,
       badgeEmoji: badgeEmojiValue,
+      displayLabel: displayLabelValue,
     );
   }
 
@@ -103,6 +108,7 @@ class OverlayPillState {
       eventUntilEpochMs: 0,
       expanded: true,
       badgeEmoji: '',
+      displayLabel: '',
     );
   }
 
@@ -117,6 +123,7 @@ class OverlayPillState {
       'eventUntilEpochMs': eventUntilEpochMs,
       'expanded': expanded,
       'badgeEmoji': badgeEmoji,
+      'displayLabel': displayLabel,
     };
   }
 
