@@ -45,6 +45,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 - [x] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate (completed 2026-03-12)
 - [x] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel (completed 2026-03-12)
+- [ ] **Phase 19: Website Polish** — Screenshot asli dari app, section About/Architecture, ikon tech stack (Supabase, Flutter)
 
 ## Phase Details
 
@@ -86,6 +87,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
 | 18. ABSENKOK Landing Website | 2/2 | Complete    | 2026-03-12 | - |
+| 19. Website Polish | 0/0 | Not planned | -          | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
@@ -99,3 +101,18 @@ Plans:
 - QR code backup when NFC fails (camera scan)
 - Employee self-service portal (view own attendance history)
 - Live Activity pill device debugging (code delivered, needs on-device verification)
+
+### Phase 19: Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
+
+**Goal:** Polish website ABSENKOK dengan screenshot asli dari aplikasi, tambah section About/Architecture yang menceritakan project story + tech stack, dan tambah ikon Supabase/Flutter
+**Requirements**: WEB-P01, WEB-P02, WEB-P03, WEB-P04
+**Depends on:** Phase 18
+**Success Criteria** (what must be TRUE):
+  1. Hero section menggunakan gambar asli "enakko hero.png" (bukan CSS mockup)
+  2. Screenshot asli dari app dipakai di section Features atau HowItWorks
+  3. Section About/Architecture baru yang menjelaskan tech stack (Flutter, Supabase, NFC), development story (solo project, vibe coding with AI), dan deployment (Android Kiosk)
+  4. Icon SVG Supabase dan Flutter ditampilkan di section architecture
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 19 to break down)

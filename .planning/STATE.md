@@ -46,7 +46,10 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 - ✅ Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4, 6 content sections, zero-JS static build)
 
 ## What's Next
-- v3.0 milestone complete — all phases done
+- Phase 19: Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
+
+### Roadmap Evolution
+- Phase 19 added: Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
 
 ## Accumulated Context
 
