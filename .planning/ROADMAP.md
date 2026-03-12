@@ -43,7 +43,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 **Milestone Goal:** Redesign schedule management UI to week-view grid layout, and create a marketing landing website for ABSENKOK.
 
-- [ ] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate
+- [x] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate (completed 2026-03-12)
 - [ ] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel
 
 ## Phase Details
@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
   2. Admin tap cell untuk assign shift type (Pagi/Siang/Sore/Libur), setiap shift ditampilkan sebagai chip berwarna berbeda; status Sakit/Izin tampil sebagai overlay pada cell
   3. Admin navigasi antar minggu (← →), menggunakan bulk assign untuk set shift yang sama ke beberapa karyawan sekaligus, dan auto-generate jadwal dari template shift
   4. Semua perubahan jadwal tersimpan ke Supabase + SQLite cache — data layer tetap utuh, zero regression dari fungsionalitas yang sudah ada
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 17-01-PLAN.md — Widget architecture: add `two_dimensional_scrollables`, create cell builders, TableView wrapper, legend widget
@@ -83,7 +83,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 17. Schedule Grid UI Redesign | 1/2 | In Progress|  | - |
+| 17. Schedule Grid UI Redesign | 2/2 | Complete   | 2026-03-12 | - |
 | 18. ABSENKOK Landing Website | v3.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)

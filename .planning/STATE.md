@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
-current_plan: Plan 02 of Phase 17
-status: in_progress
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-03-12T17:08:50.134Z"
+current_plan: Plan 02 of 02 (Phase 17)
+status: unknown
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-03-12T17:27:40.402Z"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
@@ -20,14 +20,14 @@ progress:
 - **Active Phase:** Phase 17 — Schedule Grid UI Redesign
 - **Current Plan:** Plan 02 of 02 (Phase 17)
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T17:08:50.130Z
-- **Stopped At:** Completed 17-01-PLAN.md
+- **Last Session:** 2026-03-12T17:27:40.399Z
+- **Stopped At:** Completed 17-02-PLAN.md
 
 ## Progress
 
 ```
 v3.0 Schedule Grid + Landing Website — IN PROGRESS
-[█████░░░░░] 1/2 plans · 0/2 phases
+[██████████] 2/2 plans · 1/2 phases
 ```
 
 ## Project Reference
@@ -35,16 +35,17 @@ v3.0 Schedule Grid + Landing Website — IN PROGRESS
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 17 — Schedule Grid UI Redesign
+**Current focus:** Phase 17 complete — ready for Phase 18
 
 ## What's Done (v2.0)
 - ✅ Phase 13-16: Archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
 - ✅ Release APK built and deployed to tablet
 
+## What's Done (v3.0)
+- ✅ Phase 17: Schedule Grid UI Redesign (TableView with pinned headers, extracted widgets, screen integration)
+
 ## What's Next
-- Phase 17: Schedule Grid UI Redesign (refactor `shift_scheduler_screen.dart` → `TableView` with pinned headers)
 - Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4 → Vercel)
-- Both phases independent — can be planned/executed in any order
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 | 24 | Website in separate repo | Zero coupling with Flutter app |
 | 25 | `withValues(alpha:)` over `withOpacity()` | Modern Dart API, avoids deprecation warnings |
 | 26 | Cell builders as top-level functions | Composable, importable without widget instantiation |
+| 27 | Removed unused imports during rendering extraction | dart:io, supabase_flutter, outlet.dart, time_off_request.dart no longer needed |
+| 28 | Parent screen keeps state+data, delegates rendering via callbacks | Clean separation: ~943 lines state+data, widgets handle all rendering |
 
 ### Key Constraints
 - Production database serving 4 outlets — NO destructive migrations

@@ -10,15 +10,15 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 ### Schedule Grid (GRID)
 
 - [x] **GRID-01**: Admin melihat jadwal mingguan dalam format grid (karyawan di baris, Senin-Minggu di kolom)
-- [ ] **GRID-02**: Admin tap cell untuk assign shift type (Pagi/Siang/Sore/Libur) ke karyawan pada hari tertentu
+- [x] **GRID-02**: Admin tap cell untuk assign shift type (Pagi/Siang/Sore/Libur) ke karyawan pada hari tertentu
 - [x] **GRID-03**: Kolom nama karyawan tetap terlihat (pinned) saat scroll horizontal
 - [x] **GRID-04**: Header hari (Senin-Minggu) tetap terlihat (pinned) saat scroll vertikal
 - [x] **GRID-05**: Setiap shift type ditampilkan dengan warna berbeda (chip berwarna di cell)
-- [ ] **GRID-06**: Status Sakit/Izin ditampilkan sebagai overlay pada cell grid
-- [ ] **GRID-07**: Admin dapat navigasi antar minggu (← minggu sebelumnya / minggu berikutnya →)
-- [ ] **GRID-08**: Jadwal tersimpan ke Supabase + SQLite cache seperti sebelumnya
-- [ ] **GRID-09**: Bulk assign mode — pilih beberapa karyawan, assign shift yang sama sekaligus
-- [ ] **GRID-10**: Auto-generate jadwal dari template shift (2-shift/3-shift)
+- [x] **GRID-06**: Status Sakit/Izin ditampilkan sebagai overlay pada cell grid
+- [x] **GRID-07**: Admin dapat navigasi antar minggu (← minggu sebelumnya / minggu berikutnya →)
+- [x] **GRID-08**: Jadwal tersimpan ke Supabase + SQLite cache seperti sebelumnya
+- [x] **GRID-09**: Bulk assign mode — pilih beberapa karyawan, assign shift yang sama sekaligus
+- [x] **GRID-10**: Auto-generate jadwal dari template shift (2-shift/3-shift)
 
 ### Landing Website (WEB)
 
@@ -67,15 +67,15 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | GRID-01 | Phase 17 | Complete |
-| GRID-02 | Phase 17 | Pending |
+| GRID-02 | Phase 17 | Complete |
 | GRID-03 | Phase 17 | Complete |
 | GRID-04 | Phase 17 | Complete |
 | GRID-05 | Phase 17 | Complete |
-| GRID-06 | Phase 17 | Pending |
-| GRID-07 | Phase 17 | Pending |
-| GRID-08 | Phase 17 | Pending |
-| GRID-09 | Phase 17 | Pending |
-| GRID-10 | Phase 17 | Pending |
+| GRID-06 | Phase 17 | Complete |
+| GRID-07 | Phase 17 | Complete |
+| GRID-08 | Phase 17 | Complete |
+| GRID-09 | Phase 17 | Complete |
+| GRID-10 | Phase 17 | Complete |
 | WEB-01 | Phase 18 | Pending |
 | WEB-02 | Phase 18 | Pending |
 | WEB-03 | Phase 18 | Pending |
