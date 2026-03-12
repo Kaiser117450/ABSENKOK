@@ -28,9 +28,9 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 - [ ] **WEB-04**: Tombol download APK mengarah ke GitHub Releases
 - [ ] **WEB-05**: Watermark/credit developer "Akmal" di footer
 - [ ] **WEB-06**: Responsive design (mobile + tablet + desktop)
-- [ ] **WEB-07**: Semua copy dalam Bahasa Indonesia
-- [ ] **WEB-08**: Page load < 2 detik, zero JavaScript shipped
-- [ ] **WEB-09**: SEO meta tags + sitemap.xml
+- [x] **WEB-07**: Semua copy dalam Bahasa Indonesia
+- [x] **WEB-08**: Page load < 2 detik, zero JavaScript shipped
+- [x] **WEB-09**: SEO meta tags + sitemap.xml
 - [ ] **WEB-10**: Deploy ke Vercel
 
 ## Future Requirements
@@ -82,9 +82,9 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 | WEB-04 | Phase 18 | Pending |
 | WEB-05 | Phase 18 | Pending |
 | WEB-06 | Phase 18 | Pending |
-| WEB-07 | Phase 18 | Pending |
-| WEB-08 | Phase 18 | Pending |
-| WEB-09 | Phase 18 | Pending |
+| WEB-07 | Phase 18 | Complete |
+| WEB-08 | Phase 18 | Complete |
+| WEB-09 | Phase 18 | Complete |
 | WEB-10 | Phase 18 | Pending |
 
 **Coverage:**

@@ -4,13 +4,13 @@ milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
 current_plan: Not started
 status: unknown
-stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-03-12T17:35:21.736Z"
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-03-12T18:17:49.987Z"
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
@@ -18,16 +18,16 @@ progress:
 ## Current Status
 - **Active Milestone:** v3.0 — Schedule Grid + Landing Website
 - **Active Phase:** Phase 18 — ABSENKOK Landing Website
-- **Current Plan:** Not started
+- **Current Plan:** Plan 02 of 02
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12
-- **Stopped At:** Phase 17 complete, ready to plan Phase 18
+- **Last Session:** 2026-03-12T18:17:49.984Z
+- **Stopped At:** Completed 18-01-PLAN.md
 
 ## Progress
 
 ```
 v3.0 Schedule Grid + Landing Website — IN PROGRESS
-[██████████] 2/2 plans · 1/2 phases
+[████████░░] 3/4 plans · 1/2 phases
 ```
 
 ## Project Reference
@@ -60,6 +60,7 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 | 26 | Cell builders as top-level functions | Composable, importable without widget instantiation |
 | 27 | Removed unused imports during rendering extraction | dart:io, supabase_flutter, outlet.dart, time_off_request.dart no longer needed |
 | 28 | Parent screen keeps state+data, delegates rendering via callbacks | Clean separation: ~943 lines state+data, widgets handle all rendering |
+| 29 | Manual npm init to avoid Astro 6; Tailwind v4 via @tailwindcss/vite | npm create astro@latest scaffolds Astro 6; @astrojs/tailwind is v3 only |
 
 ### Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
