@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+
+  --color-brand-primary: #DC2626;
+  --color-brand-dark: #B91C1C;
+  --color-brand-light: #FEE2E2;
+
+  --color-brand-accent: #F59E0B;
+  --color-brand-accent-dark: #D97706;
+  --color-brand-accent-light: #FEF3C7;
+
+  --color-brand-surface: #F9FAFB;
+  --color-brand-border: #E5E7EB;
+
+  --color-brand-text: #111827;
+  --color-brand-text-secondary: #6B7280;
+  --color-brand-text-muted: #9CA3AF;
+}
