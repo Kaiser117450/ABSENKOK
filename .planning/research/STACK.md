@@ -1,318 +1,350 @@
-# Stack Research — v2.0 Admin Tools + Live Activity
+# Technology Stack — v3.0 Schedule Grid + Landing Website
 
-**Domain:** NFC attendance kiosk (Flutter/Android) — subsequent milestone additions
-**Researched:** 2025-07-14
-**Confidence:** HIGH
-
-## Executive Summary
-
-The v2.0 milestone requires remarkably few new dependencies. Of the 4 features, only **CSV import** needs new packages (`csv` + `file_picker`). The other 3 features — persistent live activity pill, soft-archive, and Kepala Gerai setup — build entirely on the existing stack. This is the correct outcome: the v1.1 architecture was well-designed with extension points in the right places.
-
-**Key insight:** The existing `flutter_overlay_window` + `KioskNotificationHelper.kt` (Kotlin RemoteViews) + `flutter_foreground_task` trio already provides persistent overlay + notification infrastructure. The v2.0 "persistent live activity pill" is an **extension of existing behavior**, not a new system. The overlay already runs persistently; what's new is the *content* it displays (break status, fun facts).
+**Project:** Absensi Enakko (ABSENKOK)
+**Researched:** 2026-03-12
+**Scope:** NEW additions only — Schedule Grid UI (Flutter) + Astro.js Marketing Website
 
 ---
 
-## Recommended Stack Additions
+## Part 1: Flutter Schedule Grid Redesign
 
-### New Dependencies (ADD to pubspec.yaml)
+### Recommended Addition
 
-| Package | Version | Purpose | Why This One |
-|---------|---------|---------|--------------|
-| `csv` | ^6.0.0 | CSV parsing for batch employee import | Standard Dart CSV parser — handles quoted fields, BOM detection, configurable delimiters. Used by 1000+ packages. The existing manual `_escapeCsv()` in reports is fine for *export* but insufficient for robust *import* (edge cases: Indonesian names with commas, UTF-8 BOM from Excel). |
-| `file_picker` | ^8.1.0 | File selection dialog for CSV file | De facto Flutter file picker. Supports Android 7+ (minSdk 24 ✓). No iOS needed. Returns platform file with bytes + path. |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `two_dimensional_scrollables` | ^0.3.8 | 2D scrolling grid with pinned rows/columns | Official Flutter team package. Replaces manual dual-ListView sync with true 2D scrolling. Pinned left employee column + pinned top day header = exactly the schedule grid pattern needed. Eliminates 40+ lines of manual `ScrollController` sync code. |
 
-### Existing Dependencies (NO CHANGES — already sufficient)
+**Confidence:** HIGH — verified on pub.dev, SDK ^3.9.0 compatible with project's Dart 3.11.0, Flutter >=3.35.0 compatible with 3.41.1
 
-| Existing Package | Version | v2.0 Usage | Why No Change |
-|------------------|---------|------------|---------------|
-| `flutter_overlay_window` | ^0.5.0 | Persistent break status pill | Already shows overlay with `SYSTEM_ALERT_WINDOW`. Already updates via `shareData()`. Already has idle/event modes. Just extend `OverlayPillState` model. |
-| `flutter_foreground_task` | ^8.14.0 | Background service for pill lifecycle | Already keeps kiosk alive. 10s event loop (`_rotateNotification`) already updates both notification and overlay. Add break status + fun fact rotation to this loop. |
-| `flutter_local_notifications` | ^18.0.0 | Fallback notification | No change — existing fallback pattern preserved. |
-| `supabase_flutter` | ^2.8.4 | Realtime break status subscription | Already has realtime subscriptions for `attendance_logs` and `employees`. Add new channel for break status queries. |
-| `shared_preferences` | ^2.3.3 | Fun facts cache, session state | Already used for kiosk session. Can store fun facts list locally. |
-| `intl` | ^0.19.0 | Date formatting for archive timestamps | Already used for `id_ID` locale formatting. |
+### What NOT to Add
 
-### Native Code Additions (Kotlin — NOT new packages)
+| Rejected Package | Why Not |
+|------------------|---------|
+| `pluto_grid` v8.1.0 | Heavy data-grid overkill for a 14-employee × 7-day grid. Designed for Excel-like spreadsheets, not shift scheduling. |
+| `data_table_2` v2.7.2 | Wraps Material `DataTable` — no 2D scroll support, limited to single-axis scrolling with fixed headers. |
+| `syncfusion_flutter_datagrid` v32.2.9 | Requires commercial license. Way too heavy for this simple use case. |
+| `linked_scroll_controller` v0.2.0 | SDK constraint `>=2.12.0-0 <3.0.0` — **incompatible with Dart 3.x**. Abandoned package. |
+| `flutter_animate` v4.5.2 | Nice-to-have but unnecessary. Built-in `AnimatedContainer`, `AnimatedSwitcher`, `AnimatedScale` provide all the cell transition animations needed. Already have `confetti` for celebrations. |
+| `table_calendar` v3.2.0 | Calendar widget, not a schedule grid. Wrong abstraction. |
+| `flutter_staggered_grid_view` v0.7.0 | SDK `>=2.12.0 <3.0.0` — incompatible with Dart 3.x. Also designed for Pinterest-style layouts, not data grids. |
 
-| Component | Location | What Changes | Why |
-|-----------|----------|--------------|-----|
-| `KioskNotificationHelper.kt` | `android/.../kotlin/` | Add break status fields to RemoteViews `show()` | Notification needs to display "🍽️ Ahmad sedang istirahat" — extend existing `title`/`body` params, no structural change. |
-| `notification_kiosk.xml` | `res/layout/` | Optional: add break status row | Compact view can show break employee name. Current layout already has title + body + time — body text is sufficient. |
-| `notification_kiosk_expanded.xml` | `res/layout/` | Optional: add break count or break employee list | Expanded view has room for additional status info below the divider. |
+### Architecture: Why `two_dimensional_scrollables` Over Current Approach
 
-### Database Schema Additions (Supabase SQL)
+The existing `shift_scheduler_screen.dart` (1,123 lines) manually synchronizes two `ListView.builder` widgets with a `bool _isSyncing` flag and paired `ScrollController.jumpTo()` calls. This works but is fragile:
 
-| Change | Table | What | Why |
-|--------|-------|------|-----|
-| ADD COLUMN | `employees` | `archived_at TIMESTAMPTZ DEFAULT NULL` | Soft-archive audit trail. `is_active = false` already exists but doesn't record *when*. `archived_at` is the timestamp. All existing `is_active = true` filters already exclude archived employees — zero query changes needed. |
-| ADD COLUMN | `employees` | `archived_by TEXT DEFAULT NULL` | Records who archived (admin user ID). Useful for audit log. |
-| NO CHANGE | `attendance_logs` | — | Foreign key to `employees.id` stays intact. Archived employee logs remain visible in reports (filter by employee_id, not is_active). |
-| NO CHANGE | `schedule_entries` | — | Existing entries for archived employees remain. New schedules already filter `is_active = true` (verified: `shift_scheduler_screen.dart` line 103). |
-
----
-
-## Feature-by-Feature Stack Analysis
-
-### Feature 1: Persistent Live Activity Pill
-
-**Verdict: NO new packages. Extend existing overlay + notification system.**
-
-#### What Already Works (verified in codebase)
-- `flutter_overlay_window ^0.5.0` creates system overlay with `SYSTEM_ALERT_WINDOW` permission
-- `KioskOverlayUI` (`overlay_task.dart`) renders Dynamic Island pill with idle/event modes
-- `OverlayPillState` model carries mode, outlet, time, attendanceType, accentHex, badgeEmoji
-- `KioskBackgroundService._rotateNotification()` updates notification + overlay every 5 seconds
-- `KioskNotificationHelper.kt` shows Grab-style RemoteViews notification with compact/expanded layouts
-- `FlutterOverlayWindow.shareData()` pushes state updates to overlay isolate
-- Overlay persistence: `ensureOverlayVisible()` has OEM matchParent fallback (line 380)
-- Notification persistence: `setOngoing(true)` makes it non-dismissible
-
-#### What Needs to Change (code, not packages)
-
-1. **Extend `OverlayPillState` model** — add fields:
-   - `breakEmployeeName` (String) — who's on break right now
-   - `breakCount` (int) — how many on break
-   - `funFact` (String) — idle-mode fun fact text
-   - `contentMode` enum: `kiosk_idle | break_status | fun_fact`
-
-2. **Supabase Realtime for break status** — new subscription:
-   ```dart
-   // Query current break employees (type='break' with no matching 'kembali')
-   // Subscribe to attendance_logs INSERT for break/kembali events
-   ```
-   Uses existing `supabase_flutter` realtime — no new package.
-
-3. **Fun facts data source** — hardcoded list or fetched from Supabase:
-   - Simplest: `List<String>` constant in Dart code
-   - Better: small `fun_facts` table in Supabase (easy to update without app release)
-   - `_rotateNotification()` cycles through fun facts during idle periods
-
-4. **Overlay UI extension** — `KioskOverlayUI._buildExpanded()` and `_buildCollapsed()`:
-   - When someone is on break: show "🍽️ Ahmad istirahat" with amber accent
-   - When idle: cycle fun facts instead of just "Kiosk aktif"
-   - Existing `AnimatedSwitcher` handles transitions already
-
-#### Integration Points
-```
-Supabase Realtime (attendance_logs INSERT)
-    ↓ break/kembali event
-BreakStatusService (new Dart service)
-    ↓ current break employees list
-KioskBackgroundService._rotateNotification()
-    ↓ update payload
-    ├── FlutterOverlayWindow.shareData() → KioskOverlayUI
-    └── KioskNotificationHelper.show() → Android notification
+```dart
+// CURRENT: Manual sync (fragile, 40+ lines of boilerplate)
+_employeeListController.addListener(() {
+  if (!_isSyncing && _scheduleGridController.hasClients) {
+    _isSyncing = true;
+    _scheduleGridController.jumpTo(_employeeListController.offset);
+    _isSyncing = false;
+  }
+});
 ```
 
-#### Approaches Evaluated and Rejected
+`two_dimensional_scrollables` provides `TableView` which handles this natively:
 
-| Approach | Why Rejected |
-|----------|--------------|
-| **Android Bubble API** (API 30+) | Bubbles are for messaging/chat apps. Google Play policy restricts bubbles to conversation-type notifications. Attendance kiosk is not a conversation. Also, minSdk 24 would need fallback. |
-| **Android 16 ProgressStyle** (API 36+) | Requires API 36 minimum. Kiosk tablets run API 24-35. Not available yet. Future-proof option for 2027+. |
-| **`live_activities` Flutter package** | Designed for iOS ActivityKit + basic Android notification. The project is Android-only, already has a superior custom RemoteViews notification. Adding this package would duplicate existing Kotlin infrastructure. |
-| **New foreground service for pill** | Existing `flutter_foreground_task` service already runs. Adding another service = battery drain + Android process limits. Extend existing service instead. |
-| **Replace overlay with notification-only** | Overlay provides always-visible pill on top of other apps. Notification can be hidden in shade. Keep both (overlay = primary, notification = backup per existing pattern). |
-
----
-
-### Feature 2: Batch CSV Import
-
-**Verdict: 2 new packages (`csv` + `file_picker`)**
-
-#### Why `csv` ^6.0.0
-- The existing `_escapeCsv()` in `admin_reports_screen.dart` is a 4-line export helper. It handles commas and quotes for output.
-- **Import is harder than export**: need to handle BOM (Excel on Windows adds BOM to UTF-8 CSV), detect delimiters (semicolons in European locales), handle multi-line quoted fields, handle encoding issues from Indonesian names with special characters.
-- The `csv` package provides `CsvToListConverter` with configurable `fieldDelimiter`, `textDelimiter`, `textEndDelimiter`, and `eol` settings.
-- Alternative considered: `fast_csv` (faster but less configurable, doesn't handle BOM). For a 200-employee file, speed is irrelevant. Correctness matters.
-
-#### Why `file_picker` ^8.1.0
-- De facto Flutter file picker with 5000+ likes on pub.dev
-- Supports `FileType.custom` with `allowedExtensions: ['csv']`
-- Returns `PlatformFile` with `bytes` (in-memory) or `path` (file system)
-- Android: storage access works on API 24+ via SAF (Storage Access Framework)
-- Alternative considered: `open_file` (lighter but less maintained), manual `Intent` via MethodChannel (unnecessary complexity for a file picker)
-
-#### Import Flow Architecture
-```
-Admin taps "Import CSV"
-    ↓
-file_picker → PlatformFile (bytes or path)
-    ↓
-csv package → List<List<dynamic>>
-    ↓
-Validation (required fields: nama, jabatan, gerai)
-    ↓
-Map to Employee insert payloads (lookup outlet by name → id)
-    ↓
-Supabase batch INSERT (existing supabase_flutter .insert(List<Map>))
-    ↓
-Show results (success count, error rows with reasons)
+```dart
+// NEW: True 2D scrolling with pinned row/column
+TableView(
+  pinnedRowCount: 1,    // Header row (Sen, Sel, Rab...)
+  pinnedColumnCount: 1, // Employee name column
+  cellBuilder: (context, vicinity) {
+    // vicinity.row = employee index, vicinity.column = day index
+    return _buildCell(vicinity);
+  },
+  columnCount: 8, // 1 name + 7 days
+  rowCount: employees.length + 1, // +1 header
+  columnBuilder: (index) => TableSpan(extent: index == 0
+    ? FixedTableSpanExtent(120) // employee column
+    : FractionalTableSpanExtent(1/7)), // day columns
+  rowBuilder: (index) => TableSpan(extent: FixedTableSpanExtent(56)),
+)
 ```
 
-#### CSV Format (expected)
-```csv
-nama,jabatan,gerai,photo_url
-Ahmad Fauzi,Kasir,Gerai Rungkut,https://...
-Budi Santoso,Cook,Gerai Darmo,
-```
-- `nama` — required
-- `jabatan` — required (maps to `position`)
-- `gerai` — required (maps to outlet name → lookup `outlets.id` for `home_outlet_id`)
-- `photo_url` — optional
-- `nfc_uid` — NOT in CSV (set manually per kiosk later, as per requirement)
-- `employee_code` — auto-generated or omitted
+**Benefits:**
+- Eliminates manual scroll sync entirely
+- True diagonal scrolling (current impl only syncs vertical)
+- Better performance — single viewport instead of two competing ListViews
+- Pinned columns/rows are first-class features
+- From Flutter team = maintained long-term
 
----
+### Use Built-In Flutter for Everything Else
 
-### Feature 3: Soft-Archive Karyawan
+| Built-in Feature | Use For |
+|-------------------|---------|
+| `AnimatedContainer` | Smooth color/size transitions when shift assigned to cell |
+| `AnimatedSwitcher` | Cross-fade between empty cell → shift chip |
+| `AnimatedScale` | Pop-in effect on tap-assign |
+| `showModalBottomSheet` | Shift picker (Pagi/Siang/Sore/Libur) — already using this |
+| `GestureDetector` + `InkWell` | Tap-to-assign cells — already using this |
+| `LayoutBuilder` | Responsive column widths — already using this |
 
-**Verdict: NO new packages. Database schema change + Dart code only.**
+### Existing Dependencies That Stay Unchanged
 
-#### Why This Is Straightforward
-The codebase already has the soft-delete mechanism:
-- `employees.is_active` boolean exists (verified in Employee model + DB schema)
-- `admin_employees_screen.dart` line 92: `.eq('is_active', true)` — active list already filtered
-- `shift_scheduler_screen.dart` line 103: `.eq('is_active', true)` — schedules already filtered
-- `employee_cache_service.dart` caches by NFC UID — cache auto-expires in 5 min (archived employee naturally drops out)
-- Reports query by `employee_id`, not by `is_active` — archived employee attendance remains visible
+These are already in `pubspec.yaml` and remain as-is for the schedule grid:
+- `flutter_riverpod: ^2.6.1` — state management (AppProvider for schedule data)
+- `supabase_flutter: ^2.8.4` — schedule CRUD to Supabase
+- `sqflite: ^2.4.1` — ScheduleSQLiteService offline cache
+- `intl: ^0.19.0` — date formatting for grid headers
+- `pdf: ^3.10.8` + `printing: ^5.13.4` — PDF export of schedule
+- `screenshot: ^3.0.0` — schedule screenshot export
+- `google_fonts: ^6.2.1` — typography
+- `uuid: ^4.5.1` — entry ID generation
 
-#### What's Needed (code only)
-1. **SQL migration**: `ALTER TABLE employees ADD COLUMN archived_at TIMESTAMPTZ DEFAULT NULL`
-2. **SQL migration**: `ALTER TABLE employees ADD COLUMN archived_by TEXT DEFAULT NULL`
-3. **Archive action**: `UPDATE employees SET is_active = false, archived_at = NOW(), archived_by = :userId WHERE id = :empId`
-4. **Unarchive action**: `UPDATE employees SET is_active = true, archived_at = NULL, archived_by = NULL WHERE id = :empId`
-5. **Riwayat Karyawan screen**: Query `employees WHERE is_active = false ORDER BY archived_at DESC`
-6. **Attendance logs**: No change needed — existing reports already query by `employee_id` without `is_active` filter
-
-#### PostgreSQL Pattern: Soft-Delete with Cascade Visibility
-```sql
--- Already enforced by existing code queries:
--- Active list: WHERE is_active = true  (admin_employees_screen.dart:92)
--- Schedule:    WHERE is_active = true  (shift_scheduler_screen.dart:103)
--- Attendance:  WHERE employee_id = X   (no is_active filter — logs preserved)
--- Reports:     JOIN employees ON ...   (show all, including archived)
-
--- Optional: Convenience view for Riwayat Karyawan
-CREATE OR REPLACE VIEW archived_employees AS
-SELECT e.*, o.name as outlet_name
-FROM employees e
-LEFT JOIN outlets o ON e.home_outlet_id = o.id
-WHERE e.is_active = false
-ORDER BY e.archived_at DESC NULLS LAST;
-```
-
-#### Important: No Separate `is_archived` Column Needed
-Previous research suggested adding `is_archived` boolean separate from `is_active`. This is **unnecessary complexity**. The existing `is_active = false` + new `archived_at TIMESTAMPTZ` is sufficient:
-- `is_active = false AND archived_at IS NOT NULL` → archived employee
-- `is_active = false AND archived_at IS NULL` → legacy inactive employee (if any)
-- `is_active = true` → active employee
-
-No existing queries need modification. All active queries already filter `is_active = true`.
-
----
-
-### Feature 4: Quick Kepala Gerai SQL Setup
-
-**Verdict: NO new packages. SQL script only.**
-
-#### How It Already Works (verified in codebase)
-- `admin_login_screen.dart` lines 59-89: Login reads `app_role` from `userMetadata` or `appMetadata`
-- Accepted roles: `'admin'` or `'kepala_gerai'`
-- `managed_outlet_id` read from `appMetadata` for Kepala Gerai
-- `AppProvider.setKepalaGeraiMode(outletId)` restricts dashboard to single outlet
-
-#### SQL Script Pattern (Two-Step — Safer)
-```sql
--- Step 1: Create user via Supabase Dashboard → Authentication → Users → "Create user"
--- Set email + password via UI (handles password hashing correctly)
-
--- Step 2: Set role metadata via SQL Editor
--- Ganti email dan outlet_id di bawah:
-UPDATE auth.users
-SET raw_app_meta_data = raw_app_meta_data
-  || '{"app_role": "kepala_gerai", "managed_outlet_id": "OUTLET-UUID-HERE"}'::jsonb,
-    raw_user_meta_data = raw_user_meta_data
-  || '{"app_role": "kepala_gerai", "managed_outlet_id": "OUTLET-UUID-HERE"}'::jsonb
-WHERE email = 'kepala.rungkut@enakko.com';
-```
-
-**Why two-step**: Direct `INSERT INTO auth.users` requires manual `crypt()` for password hashing. Supabase Dashboard handles this correctly. The SQL step only adds metadata.
-
----
-
-## Installation
+### Installation (Flutter)
 
 ```yaml
-# Add to pubspec.yaml dependencies section:
-  # NEW for v2.0 — CSV batch import
-  csv: ^6.0.0
-  file_picker: ^8.1.0
+# Add to pubspec.yaml under dependencies:
+dependencies:
+  # ... existing deps unchanged ...
+  
+  # Schedule grid 2D scrolling (official Flutter team)
+  two_dimensional_scrollables: ^0.3.8
 ```
 
 ```bash
 flutter pub get
 ```
 
-**That's it.** No Android manifest changes. No Kotlin dependency changes. No Gradle modifications.
+---
 
-`file_picker` uses Android SAF (Storage Access Framework) which is available on API 24+ — matches existing `minSdk: 24`. No `READ_EXTERNAL_STORAGE` permission needed for SAF picker.
+## Part 2: Astro.js Landing Website
+
+### Recommended Stack
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `astro` | ^5.18.0 | Static site framework | Astro 5 is battle-tested with 100+ minor releases. Astro 6 (6.0.4) just launched — too new, integrations not all updated yet. Zero JS by default = fastest possible landing page. |
+| `tailwindcss` | ^4.2.0 | CSS framework | Current major version. CSS-first config (no `tailwind.config.js`) is simpler for static sites. Just `@import "tailwindcss"` in CSS. |
+| `@tailwindcss/vite` | ^4.2.0 | Tailwind v4 Vite integration | Astro runs on Vite. This is the official way to use Tailwind v4 with Vite-based frameworks. No `@astrojs/tailwind` needed. |
+| `@astrojs/vercel` | ^9.0.5 | Vercel deployment adapter | Peer dependency: `astro ^5.0.0`. Handles static + SSR deploy to Vercel. For a landing page, use `output: 'static'` (default). |
+| `@astrojs/sitemap` | ^3.7.0 | SEO sitemap generation | Auto-generates sitemap.xml. Essential for discoverability. |
+| `sharp` | ^0.34.0 | Image optimization | Powers Astro's built-in `<Image>` component. Auto-generates WebP/AVIF, responsive sizes. Install as devDependency. |
+| `@fontsource/inter` | ^5.2.0 | Typography | Self-hosted Inter font. Clean sans-serif matching Apple/Stripe minimalist aesthetic. No Google Fonts network request. |
+
+**Confidence:** HIGH — all versions verified via `npm view`, peer dependencies checked
+
+### Why Astro 5, Not Astro 6
+
+| Factor | Astro 5 (^5.18.0) | Astro 6 (6.0.4) |
+|--------|-------------------|------------------|
+| Stability | 120+ releases, battle-tested | 4 releases, brand new |
+| `@astrojs/tailwind` | ✅ Compatible (peers ^3-5) | ❌ Not compatible |
+| `@astrojs/vercel` | ✅ v9.0.5 (stable) | ⚠️ v10.0.0 (just released) |
+| Community resources | Extensive tutorials, templates | Minimal |
+| Risk | Low | Medium-High |
+| Dist tag | Available as `astro@5.18.1` | `latest` tag |
+
+**Decision:** Astro 5. The landing page is simple — we don't need Astro 6's new features. Pin to `^5.18.0` for stability.
+
+### Why Tailwind v4, Not v3
+
+| Factor | Tailwind v4 | Tailwind v3 |
+|--------|-------------|-------------|
+| Config | CSS-first (`@import "tailwindcss"`) | JS config file (`tailwind.config.js`) |
+| Setup with Astro | `@tailwindcss/vite` as Vite plugin | `@astrojs/tailwind` integration |
+| Performance | Faster builds (Rust-based) | Slower (JS-based) |
+| Status | Current major version | Legacy |
+| Learning curve | Simpler for new projects | More docs/examples available |
+
+**Decision:** Tailwind v4. New project, no migration burden. CSS-first config is cleaner. Works natively via Vite plugin.
+
+### What NOT to Add
+
+| Rejected Tech | Why Not |
+|---------------|---------|
+| React / Svelte / Vue | Static landing page — no interactive components needed. Astro's `.astro` components + scoped CSS + Tailwind handle everything. Zero JS shipped = fastest page. |
+| `@astrojs/tailwind` | This integration targets Tailwind v3. We're using v4 with `@tailwindcss/vite` directly. |
+| Any CMS (Contentful, Sanity, etc.) | Marketing copy is hardcoded. 5 sections on one page — no dynamic content. |
+| `framer-motion` / animation library | CSS animations + Tailwind's built-in `animate-*` utilities + `@keyframes` are sufficient for a landing page. Keep JS bundle at zero. |
+| `astro-icon` v1.1.5 | Adds dependency complexity. Inline SVGs or a small icon sprite are simpler for <10 icons on a marketing page. |
+| `@astrojs/mdx` | No blog, no markdown content. Pure `.astro` components. |
+| Headless UI / Radix | No interactive components (no dropdowns, modals, etc.). Static content only. |
+
+### Astro Configuration
+
+```javascript
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
+import vercel from '@astrojs/vercel';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://absenkok.vercel.app', // Update with real domain
+  output: 'static',
+  adapter: vercel(),
+  integrations: [sitemap()],
+  vite: {
+    plugins: [tailwindcss()],
+  },
+  image: {
+    service: { entrypoint: 'astro/assets/services/sharp' },
+  },
+});
+```
+
+### Project Structure
+
+```
+absenkok-website/
+├── astro.config.mjs
+├── package.json
+├── tsconfig.json
+├── public/
+│   ├── favicon.svg
+│   ├── og-image.png          # Open Graph social preview
+│   └── absenkok-logo.svg     # Brand logo
+├── src/
+│   ├── assets/
+│   │   └── images/           # Optimized via <Image>
+│   │       ├── hero-mockup.png
+│   │       ├── feature-nfc.png
+│   │       ├── feature-schedule.png
+│   │       └── feature-reports.png
+│   ├── components/
+│   │   ├── Header.astro
+│   │   ├── Hero.astro
+│   │   ├── Features.astro
+│   │   ├── Download.astro
+│   │   ├── Footer.astro
+│   │   └── DeveloperWatermark.astro
+│   ├── layouts/
+│   │   └── BaseLayout.astro
+│   ├── pages/
+│   │   └── index.astro
+│   └── styles/
+│       └── global.css         # @import "tailwindcss"; + custom
+└── vercel.json                # Optional: redirects, headers
+```
+
+### Installation (Astro Website)
+
+```bash
+# Create project directory
+mkdir absenkok-website && cd absenkok-website
+
+# Init Astro project
+npm create astro@latest . -- --template minimal --typescript strict
+
+# Install core (pin to Astro 5)
+npm install astro@^5.18.0
+
+# Install Tailwind v4
+npm install tailwindcss@^4.2.0 @tailwindcss/vite@^4.2.0
+
+# Install integrations
+npm install @astrojs/vercel@^9.0.5 @astrojs/sitemap@^3.7.0
+
+# Install font
+npm install @fontsource/inter@^5.2.0
+
+# Install image optimizer (dev dep)
+npm install -D sharp@^0.34.0
+
+# TypeScript checking (dev dep)
+npm install -D @astrojs/check@^0.9.0 typescript
+```
+
+### Full `package.json` Dependencies
+
+```json
+{
+  "dependencies": {
+    "astro": "^5.18.0",
+    "tailwindcss": "^4.2.0",
+    "@tailwindcss/vite": "^4.2.0",
+    "@astrojs/vercel": "^9.0.5",
+    "@astrojs/sitemap": "^3.7.0",
+    "@fontsource/inter": "^5.2.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.0",
+    "@astrojs/check": "^0.9.0",
+    "typescript": "^5.7.0"
+  }
+}
+```
+
+---
+
+## Integration Points
+
+### Flutter ↔ Website Integration
+
+| Touch Point | How |
+|-------------|-----|
+| APK download | Website "Download" button → GitHub Releases URL (e.g., `github.com/user/repo/releases/latest/download/absenkok.apk`) |
+| Brand consistency | Website uses same `AppColors.primary` (#DC2626 red) and warm amber accents from Flutter app's `theme.dart` |
+| Feature screenshots | Capture app screenshots from Flutter, optimize with `sharp` in Astro |
+| No API connection | Website is 100% static. No Supabase calls, no backend connection. Completely independent deployment. |
+
+### Color Token Mapping (Flutter → Tailwind)
+
+```css
+/* global.css — map Flutter AppColors to Tailwind custom properties */
+@theme {
+  --color-brand-primary: #DC2626;     /* AppColors.primary */
+  --color-brand-dark: #B91C1C;        /* AppColors.primaryDark */
+  --color-brand-light: #FEE2E2;       /* AppColors.primaryLight */
+  --color-brand-accent: #F59E0B;      /* AppColors.accent */
+  --color-brand-accent-dark: #D97706; /* AppColors.accentDark */
+  --color-brand-accent-light: #FEF3C7; /* AppColors.accentLight */
+}
+```
+
+---
 
 ## Alternatives Considered
 
-| Feature | Recommended | Alternative | Why Not Alternative |
-|---------|-------------|-------------|---------------------|
-| CSV parsing | `csv` ^6.0.0 | `fast_csv` ^0.9.0 | Faster but no BOM handling, less configurable for edge cases. 200-employee file doesn't need speed. |
-| CSV parsing | `csv` ^6.0.0 | Manual `String.split(',')` | Breaks on commas in names ("Sari, S.Pd"), quoted fields, multi-line values. Already have `_escapeCsv()` — import needs full parser. |
-| File picker | `file_picker` ^8.1.0 | `open_file` ^3.5.0 | Less maintained, fewer platform features. `file_picker` is the standard. |
-| File picker | `file_picker` ^8.1.0 | MethodChannel + Android Intent | Unnecessary complexity for a single file picker use case. |
-| Live activity | Extend `flutter_overlay_window` | `live_activities` package | iOS-focused. Android support is basic notification — inferior to existing Kotlin RemoteViews. Would duplicate existing infrastructure. |
-| Live activity | Extend existing notification | New foreground service | Android limits concurrent foreground services. Battery drain. Existing service has 10s event loop. |
-| Soft-delete | `is_active` + `archived_at` | Separate `archived_employees` table | Moving rows between tables = foreign key nightmares. `attendance_logs.employee_id` would break. Column flag is standard pattern. |
-| Soft-delete | Reuse `is_active` | Add separate `is_archived` boolean | Unnecessary — `is_active = false` already gates everything. Adding `archived_at` timestamp gives the audit trail without a redundant boolean. |
-| Kepala Gerai | SQL script in dashboard | Supabase Edge Function API | Over-engineered for "run once per outlet setup". SQL editor is faster. |
-| Break status | Supabase Realtime subscription | Polling timer | Wastes bandwidth, battery, Supabase quota. Realtime is push-based and already proven in existing dashboard subscriptions. |
-| Bulk insert | Supabase `.insert(List<Map>)` | Individual inserts in loop | 100 employees = 100 HTTP requests. Batch = 1-2 requests. |
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Flutter grid | `two_dimensional_scrollables` | Manual dual-ListView sync (current) | Current approach works but fragile. The official package is cleaner, more performant, and eliminates manual sync code. This is a redesign — take the opportunity. |
+| Flutter grid | `two_dimensional_scrollables` | `pluto_grid` v8.1.0 | Massive dependency (300+ KB) for a 14×7 grid. Enterprise spreadsheet features we don't need. |
+| Flutter animation | Built-in (`AnimatedContainer` etc.) | `flutter_animate` v4.5.2 | Extra dependency for simple fade/scale effects. Built-in animations are sufficient and already used elsewhere in the app. |
+| Web framework | Astro 5 | Astro 6 | Too new (6.0.4), integration ecosystem not updated. `@astrojs/tailwind` breaks. |
+| Web framework | Astro 5 | Next.js | Massive overkill for a static marketing page. Astro ships zero JS by default. Next.js ships React runtime. |
+| Web framework | Astro 5 | Plain HTML/CSS | Works but no image optimization, no component reuse, no sitemap generation. Astro gives these for free. |
+| CSS framework | Tailwind v4 | Tailwind v3 | v3 works but is legacy. New project = use current version. CSS-first config is simpler. |
+| CSS framework | Tailwind v4 | Vanilla CSS | More code, no utility classes, slower development. For a marketing page with responsive design, Tailwind is 3-5x faster. |
+| Deployment | Vercel | Netlify | Both work. Vercel has better Astro integration (`@astrojs/vercel`), faster builds, better analytics. |
+| Font | Inter (self-hosted) | Google Fonts CDN | Self-hosted = no external network requests = faster FCP. `@fontsource` makes this trivial. |
 
-## What NOT to Add
+---
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------------|
-| `live_activities` package | Duplicates existing Kotlin RemoteViews notification. Adds iOS boilerplate for an Android-only project. | Extend `KioskNotificationHelper.kt` and `OverlayPillState` model. |
-| `firebase_messaging` / FCM | Live activity pill is LOCAL (same device kiosk). No remote push needed. Break status comes from Supabase Realtime, not push notifications. | Use existing `supabase_flutter` Realtime subscriptions. |
-| `flutter_background_service` | Competes with existing `flutter_foreground_task`. Two background services = OEM battery killers will terminate one. | Extend existing `KioskBackgroundService` which uses `flutter_foreground_task`. |
-| `excel` / `spreadsheet_decoder` | Over-engineered for CSV import. If Excel `.xlsx` format needed later, add then. CSV is the requirement. | Use `csv` package for `.csv` files only. |
-| `supabase` service_role key in app | Service role key in client APK = security breach. Never expose admin API key in distributed app. | Use Supabase SQL editor for admin operations (Kepala Gerai setup). |
-| `flutter_secure_storage` | Removed in v1.0 due to ANR issues on kiosk tablets (see PROJECT.md constraints). | `shared_preferences` (existing, proven stable). |
-| Separate `is_archived` boolean column | Redundant with existing `is_active` flag. Creates confusion about which boolean is canonical. | Use `is_active = false` + `archived_at IS NOT NULL` to identify archived employees. |
+## Version Compatibility Matrix
 
-## Version Compatibility
+### Flutter (Verified)
 
-| New Package | Compatible With | Notes |
-|-------------|-----------------|-------|
-| `csv` ^6.0.0 | Dart >=3.0.0 | Pure Dart, no native code. No Android manifest changes. Zero platform dependencies. |
-| `file_picker` ^8.1.0 | Flutter 3.x, Android minSdk 21+ (project uses 24) | Uses Android SAF internally. No special permissions needed — SAF handles file access natively. |
-| `file_picker` ^8.1.0 | Kotlin 1.9.25 | Pure plugin with no Kotlin version constraint. |
-| `csv` ^6.0.0 | `supabase_flutter` ^2.8.4 | No interaction — csv parses in memory, Supabase handles database insert. |
+| Package | Version | Dart SDK | Flutter SDK | Project Compatible? |
+|---------|---------|----------|-------------|---------------------|
+| `two_dimensional_scrollables` | 0.3.8 | ^3.9.0 | >=3.35.0 | ✅ Dart 3.11.0 + Flutter 3.41.1 |
 
-## Risk Assessment
+### Astro Website (Verified)
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| `file_picker` SAF fails on specific OEM tablet | LOW | MEDIUM | `share_plus` uses similar SAF mechanisms for export and already works across 4 outlets. Fallback: manual file path input. |
-| `flutter_overlay_window` killed by OEM battery optimization | MEDIUM (known issue) | LOW | Already mitigated in v1.1: `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + MIUI permission handler + `flutter_foreground_task`. Code has matchParent fallback for restrictive OEMs. |
-| CSV with wrong encoding from Excel | MEDIUM | LOW | `csv` package handles most cases. Add manual UTF-8 BOM stripping before parsing. Show preview before import confirmation. |
-| Supabase Realtime subscription for break status drops | LOW | LOW | Existing pattern: realtime subscriptions in dashboard already handle reconnection. Break status is nice-to-have on overlay, not critical for attendance. |
-| Supabase `auth.users` SQL schema changes in future versions | LOW | HIGH | The SQL script for Kepala Gerai setup touches `auth.users` directly. Supabase gotrue schema is generally stable but pin to current Supabase project version. Document exact column names. |
+| Package | Version | Peers | Compatible? |
+|---------|---------|-------|-------------|
+| `astro` | ^5.18.0 | — | ✅ Base |
+| `@tailwindcss/vite` | ^4.2.0 | Vite (bundled with Astro) | ✅ |
+| `@astrojs/vercel` | ^9.0.5 | astro ^5.0.0 | ✅ |
+| `@astrojs/sitemap` | ^3.7.0 | (no peer constraint) | ✅ |
+| `sharp` | ^0.34.0 | (native binary) | ✅ |
+| `@astrojs/check` | ^0.9.0 | (dev tool) | ✅ |
+
+---
 
 ## Sources
 
-- **Codebase analysis** (HIGH confidence): `overlay_task.dart`, `kiosk_background_service.dart`, `KioskNotificationHelper.kt`, `MainActivity.kt`, `admin_login_screen.dart`, `admin_employees_screen.dart`, `shift_scheduler_screen.dart`, `employee.dart`, `overlay_pill_state.dart`, `notification_kiosk.xml`, `notification_kiosk_expanded.xml`, `AndroidManifest.xml`
-- **liveaction.md** (HIGH confidence): Project's own 1100-line research document on Live Activity patterns, Grab architecture, Android notification approaches — confirms existing RemoteViews approach is correct
-- **Existing working code** (HIGH confidence): Current overlay + notification + foreground service stack verified operational across 4 outlets with 14 employees
-- **pub.dev packages** (MEDIUM confidence): `csv` and `file_picker` versions based on training data — verify latest version at `flutter pub add` time
-- **Supabase Auth patterns** (MEDIUM confidence): `auth.users` metadata pattern verified against existing `admin_login_screen.dart` — app already reads `app_role` and `managed_outlet_id` from metadata fields
-
----
-*Stack research for: Absensi Enakko v2.0 Admin Tools + Live Activity*
-*Researched: 2025-07-14*
+- pub.dev API: `two_dimensional_scrollables` v0.3.8 — verified SDK/Flutter constraints across all versions
+- pub.dev API: `linked_scroll_controller` v0.2.0 — confirmed SDK <3.0.0 incompatibility
+- pub.dev API: `flutter_animate` v4.5.2, `pluto_grid` v8.1.0, `data_table_2` v2.7.2
+- npm registry: `astro` 6.0.4 (latest), 5.18.1 (last v5), dist-tags confirmed
+- npm registry: `@astrojs/vercel` 9.0.5 peers `astro ^5.0.0`, 10.0.0 peers `astro ^6.0.0-alpha.0`
+- npm registry: `@astrojs/tailwind` 6.0.2 peers `astro ^3-5, tailwindcss ^3.0.24`
+- npm registry: `tailwindcss` 4.2.1, `@tailwindcss/vite` 4.2.1
+- npm registry: `sharp` 0.34.5, `@astrojs/sitemap` 3.7.1, `@astrojs/check` 0.9.7
+- Project `pubspec.yaml`: SDK `>=3.3.0 <4.0.0`, existing dependencies catalog
+- Project `flutter --version`: Flutter 3.41.1, Dart 3.11.0
+- Existing `shift_scheduler_screen.dart`: 1,123 lines, manual scroll sync pattern analyzed
