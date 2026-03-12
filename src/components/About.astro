@@ -1,0 +1,144 @@
+---
+// About.astro — Architecture & project story with tech stack icons and content cards
+import { Image } from 'astro:assets';
+import teamImg from '../assets/images/team-hands.png';
+---
+
+<section id="arsitektur" class="bg-brand-surface py-20 lg:py-28">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <!-- Section header -->
+    <div class="text-center max-w-2xl mx-auto mb-16" style="animation: fade-in-up 0.6s ease-out both;">
+      <h2 class="text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">
+        Tentang ABSENKOK
+      </h2>
+      <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
+        Solo project, dibangun dengan vibe coding dan AI.
+      </p>
+    </div>
+
+    <!-- Tech Stack Icon Row -->
+    <div class="flex flex-wrap justify-center gap-8 lg:gap-12 mb-16">
+      <!-- Flutter -->
+      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.1s both;">
+        <div class="h-16 w-16 rounded-2xl bg-[#027DFD]/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M14.314 0L3.098 11.216l3.47 3.47L17.784 3.47M14.314 11.216l-5.648 5.648 3.47 3.47 9.177-9.118-3.47-3.47-3.529 3.47" fill="#54C5F8"/>
+            <path d="M8.666 16.864l3.47 3.47 3.47-3.47-3.47-3.47" fill="#01579B"/>
+          </svg>
+        </div>
+        <span class="mt-2 text-sm font-medium text-brand-navy">Flutter</span>
+      </div>
+
+      <!-- Supabase -->
+      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.2s both;">
+        <div class="h-16 w-16 rounded-2xl bg-[#3ECF8E]/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 109 113" fill="none">
+            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-a)"/>
+            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-b)" fill-opacity=".2"/>
+            <path d="M45.317 2.071c2.86-3.601 8.657-1.628 8.726 2.97l.442 67.251H9.83c-8.19 0-12.759-9.46-7.665-15.875L45.317 2.072z" fill="#3ECF8E"/>
+            <defs>
+              <linearGradient id="supa-a" x1="53.974" y1="54.974" x2="94.163" y2="71.829" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#249361"/><stop offset="1" stop-color="#3ECF8E"/>
+              </linearGradient>
+              <linearGradient id="supa-b" x1="36.156" y1="30.578" x2="54.484" y2="65.081" gradientUnits="userSpaceOnUse">
+                <stop/><stop offset="1" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="mt-2 text-sm font-medium text-brand-navy">Supabase</span>
+      </div>
+
+      <!-- NFC -->
+      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.3s both;">
+        <div class="h-16 w-16 rounded-2xl bg-brand-pink/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F73859" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/>
+            <path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/>
+            <path d="M12.91 4.1a16.07 16.07 0 0 1 0 15.8"/>
+            <path d="M16.37 2a20.4 20.4 0 0 1 0 20"/>
+          </svg>
+        </div>
+        <span class="mt-2 text-sm font-medium text-brand-navy">NFC</span>
+      </div>
+
+      <!-- Android -->
+      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.4s both;">
+        <div class="h-16 w-16 rounded-2xl bg-[#3DDC84]/10 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3DDC84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2"/>
+            <path d="M12 2C8.69 2 6 4.69 6 8v3h12V8c0-3.31-2.69-6-6-6z"/>
+            <circle cx="9" cy="7" r="1" fill="#3DDC84"/>
+            <circle cx="15" cy="7" r="1" fill="#3DDC84"/>
+            <line x1="7" y1="2" x2="9" y2="5"/>
+            <line x1="17" y1="2" x2="15" y2="5"/>
+          </svg>
+        </div>
+        <span class="mt-2 text-sm font-medium text-brand-navy">Android</span>
+      </div>
+    </div>
+
+    <!-- Content Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Card 1: Tech Stack -->
+      <div
+        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+        style="animation: fade-in-up 0.6s ease-out 0.2s both;"
+      >
+        <div class="h-12 w-12 rounded-xl bg-brand-teal/15 text-brand-teal-dark flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </div>
+        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Tech Stack</h3>
+        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+          Dibangun dengan Flutter untuk mobile app, Supabase sebagai backend (database + auth, free tier), dan NFC reader untuk absensi. Kompatibel dengan e-KTP, e-Toll, dan kartu Flazz.
+        </p>
+      </div>
+
+      <!-- Card 2: Development Story -->
+      <div
+        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+        style="animation: fade-in-up 0.6s ease-out 0.35s both;"
+      >
+        <div class="h-12 w-12 rounded-xl bg-brand-pink/10 text-brand-pink flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/>
+          </svg>
+        </div>
+        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Vibe Coding dengan AI</h3>
+        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+          Solo project oleh Akmal — dibangun dengan pendekatan 'vibe coding' menggunakan Claude Sonnet dan Gemini Pro. Dari ide sampai production dalam hitungan hari, bukan bulan.
+        </p>
+      </div>
+
+      <!-- Card 3: Deployment -->
+      <div
+        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+        style="animation: fade-in-up 0.6s ease-out 0.5s both;"
+      >
+        <div class="h-12 w-12 rounded-xl bg-brand-navy/10 text-brand-navy flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12" y2="18.01"/>
+          </svg>
+        </div>
+        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Android Kiosk</h3>
+        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+          Tablet Android berjalan 24/7 di pintu masuk restoran sebagai kiosk absensi. Tidak perlu server management — Supabase handles everything. Sudah berjalan di 4 gerai.
+        </p>
+      </div>
+    </div>
+
+    <!-- Team Image -->
+    <div class="mt-16 flex justify-center" style="animation: fade-in-up 0.6s ease-out 0.8s both;">
+      <Image
+        src={teamImg}
+        alt="Tim kolaborasi dalam pengembangan ABSENKOK"
+        width={800}
+        class="rounded-2xl shadow-lg ring-1 ring-brand-border"
+      />
+    </div>
+  </div>
+</section>
