@@ -222,8 +222,8 @@ class CsvImportService {
   static String generateTemplateCsv() {
     final buffer = StringBuffer();
     buffer.writeln('nama,jabatan,gerai,foto_url');
-    buffer.writeln('Ahmad Fauzi,Kasir,Enakko Sudirman,');
-    buffer.writeln('Budi Santoso,Koki,Enakko Margonda,');
+    buffer.writeln('Ahmad Fauzi,Kasir,Panjer,');
+    buffer.writeln('Budi Santoso,Koki,Ahmad Yani,');
     return buffer.toString();
   }
 

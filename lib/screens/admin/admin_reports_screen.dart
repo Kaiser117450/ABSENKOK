@@ -941,17 +941,20 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                Text(
-                  _tabCtrl.index == 1
-                      ? '${_computeDailySummaries().length} data rekap'
-                      : '${_rows.length} data scan',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
+                Flexible(
+                  child: Text(
+                    _tabCtrl.index == 1
+                        ? '${_computeDailySummaries().length} data rekap'
+                        : '${_rows.length} data scan',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: (_exportingCsv || _exportingPdf || _loading || _loadingDaily)
                       ? null
@@ -965,14 +968,12 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                       : const Icon(Icons.download_outlined,
                           size: 16, color: AppColors.primary),
                   label: Text(
-                    _exportingCsv
-                        ? 'Exporting...'
-                        : (_tabCtrl.index == 1 ? 'Export CSV Rekap' : 'Export CSV Scan'),
+                    _exportingCsv ? '...' : 'CSV',
                     style: const TextStyle(
                         color: AppColors.primary, fontSize: 13),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 TextButton.icon(
                   onPressed: (_exportingPdf || _exportingCsv || _loading || _loadingDaily)
                       ? null
@@ -986,9 +987,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                       : const Icon(Icons.picture_as_pdf_outlined,
                           size: 16, color: AppColors.primary),
                   label: Text(
-                    _exportingPdf
-                        ? 'Exporting...'
-                        : (_tabCtrl.index == 1 ? 'Export PDF Rekap' : 'Export PDF Scan'),
+                    _exportingPdf ? '...' : 'PDF',
                     style: const TextStyle(
                         color: AppColors.primary, fontSize: 13),
                   ),

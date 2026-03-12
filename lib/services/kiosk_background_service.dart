@@ -474,9 +474,14 @@ class KioskBackgroundService {
 
   static Future<void> _pollContent() async {
     final session = _session;
-    if (session == null) return;
+    if (session == null) {
+      debugPrint('[BgService] _pollContent skipped: session is null');
+      return;
+    }
     try {
+      debugPrint('[BgService] _pollContent polling outletId=${session.outletId}');
       await _liveContent.poll(session.outletId);
+      debugPrint('[BgService] _pollContent OK, hasBreaks=${_liveContent.hasActiveBreaks}');
     } catch (e) {
       debugPrint('[BgService] _pollContent error: $e');
     }
@@ -484,11 +489,15 @@ class KioskBackgroundService {
 
   static Future<void> _rotateNotification() async {
     final session = _session;
-    if (session == null) return;
+    if (session == null) {
+      debugPrint('[BgService] _rotateNotification skipped: session is null');
+      return;
+    }
 
     // Event mode priority: skip rotation while event is active
     if (_eventUntilEpochMs > 0 &&
         DateTime.now().millisecondsSinceEpoch < _eventUntilEpochMs) {
+      debugPrint('[BgService] _rotateNotification skipped: event active');
       return; // Event still active, don't overwrite
     }
     _eventUntilEpochMs = 0; // Expired, clear
@@ -499,6 +508,8 @@ class KioskBackgroundService {
     // Get next display content from live content provider
     final displayText = _liveContent.nextDisplayText();
     final hasBreak = _liveContent.hasActiveBreaks;
+
+    debugPrint('[BgService] _rotateNotification: "$displayText" hasBreak=$hasBreak');
 
     // Accent: amber when someone is on break, green otherwise
     final accentHex = hasBreak ? '#F59E0B' : '#22C55E';

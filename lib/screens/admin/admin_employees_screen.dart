@@ -277,64 +277,73 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               children: [
-                _MiniStat(
-                  label: 'Total',
-                  value: '${_employees.length}',
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                _MiniStat(
-                  label: 'Aktif',
-                  value: '$activeCount',
-                  color: AppColors.success,
-                ),
-                const SizedBox(width: 8),
-                _MiniStat(
-                  label: 'Tanpa Kartu',
-                  value: '$noNfcCount',
-                  color: AppColors.accent,
-                ),
-                const SizedBox(width: 8),
-                // Archive navigation button
-                GestureDetector(
-                  onTap: () => context.push('/admin/archived-employees'),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.textMuted.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: AppColors.textMuted.withOpacity(0.2)),
-                    ),
-                    child: const Tooltip(
-                      message: 'Riwayat Karyawan',
-                      child: Icon(Icons.archive_outlined,
-                          size: 18, color: AppColors.textSecondary),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _MiniStat(
+                          label: 'Total',
+                          value: '${_employees.length}',
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        _MiniStat(
+                          label: 'Aktif',
+                          value: '$activeCount',
+                          color: AppColors.success,
+                        ),
+                        const SizedBox(width: 8),
+                        _MiniStat(
+                          label: 'Tanpa Kartu',
+                          value: '$noNfcCount',
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 8),
+                        // Archive navigation button
+                        GestureDetector(
+                          onTap: () => context.push('/admin/archived-employees'),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.textMuted.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: AppColors.textMuted.withOpacity(0.2)),
+                            ),
+                            child: const Tooltip(
+                              message: 'Riwayat Karyawan',
+                              child: Icon(Icons.archive_outlined,
+                                  size: 16, color: AppColors.textSecondary),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // CSV Import navigation button
+                        GestureDetector(
+                          onTap: () => context.push('/admin/csv-import'),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: AppColors.textMuted.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: AppColors.textMuted.withValues(alpha: 0.2)),
+                            ),
+                            child: const Tooltip(
+                              message: 'Import CSV',
+                              child: Icon(Icons.upload_file_outlined,
+                                  size: 16, color: AppColors.textSecondary),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                // CSV Import navigation button
-                GestureDetector(
-                  onTap: () => context.push('/admin/csv-import'),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.textMuted.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: AppColors.textMuted.withValues(alpha: 0.2)),
-                    ),
-                    child: const Tooltip(
-                      message: 'Import CSV',
-                      child: Icon(Icons.upload_file_outlined,
-                          size: 18, color: AppColors.textSecondary),
-                    ),
-                  ),
-                ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => _showEmployeeSheet(null),
                   child: Container(

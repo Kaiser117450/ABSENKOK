@@ -52,11 +52,14 @@ class LiveContentProvider {
   /// Called every 30 seconds from KioskBackgroundService._pollTimer.
   Future<void> poll(String outletId) async {
     try {
+      debugPrint('[LiveContent] poll start outletId=$outletId');
       final logs = await _fetchLogs(outletId);
       final activeCount = await _fetchActiveCount(outletId);
+      debugPrint('[LiveContent] poll OK: ${logs.length} logs, $activeCount active employees');
 
       _computeBreakNames(logs);
       _computeFunFacts(logs, activeCount);
+      debugPrint('[LiveContent] poll result: ${_breakNames.length} breaks, ${_funFacts.length} facts');
     } catch (e) {
       // Keep last cached data — don't clear on error (Pitfall from RESEARCH.md)
       debugPrint('[LiveContent] poll error: $e');
