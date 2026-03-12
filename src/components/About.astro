@@ -1,7 +1,8 @@
 ---
-// About.astro — Architecture & project story with tech stack icons and content cards
+// About.astro — Architecture & project story with tech stack icons, client logo, and content cards
 import { Image } from 'astro:assets';
 import teamImg from '../assets/images/team-hands.png';
+import enakkoLogo from '../assets/images/Logo Ayam Guling Enakko (Outline).png';
 ---
 
 <section id="arsitektur" class="bg-brand-surface py-20 lg:py-28">
@@ -14,6 +15,19 @@ import teamImg from '../assets/images/team-hands.png';
       <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
         Solo project, dibangun dengan vibe coding dan AI.
       </p>
+    </div>
+
+    <!-- Trusted By -->
+    <div class="flex flex-col items-center gap-3 mb-14" style="animation: fade-in-up 0.6s ease-out 0.15s both;">
+      <span class="text-xs font-semibold uppercase tracking-widest text-brand-text-muted">Dipercaya oleh</span>
+      <div class="bg-white rounded-2xl px-8 py-4 shadow-sm ring-1 ring-brand-border">
+        <Image
+          src={enakkoLogo}
+          alt="Logo Ayam Guling Enakko — klien ABSENKOK"
+          width={140}
+          class="h-12 w-auto"
+        />
+      </div>
     </div>
 
     <!-- Tech Stack Icon Row -->
@@ -131,14 +145,15 @@ import teamImg from '../assets/images/team-hands.png';
       </div>
     </div>
 
-    <!-- Team Image -->
-    <div class="mt-16 flex justify-center" style="animation: fade-in-up 0.6s ease-out 0.8s both;">
-      <Image
-        src={teamImg}
-        alt="Tim kolaborasi dalam pengembangan ABSENKOK"
-        width={800}
-        class="rounded-2xl shadow-lg ring-1 ring-brand-border"
-      />
-    </div>
+  </div>
+
+  <!-- Team Image — centered, forward overlap into Download section -->
+  <div class="relative mt-16 -mb-32 lg:-mb-44 pointer-events-none w-full z-20 flex justify-center px-6" style="animation: fade-in-up 0.8s ease-out 0.8s both;">
+    <Image
+      src={teamImg}
+      alt="Tim kolaborasi dalam pengembangan ABSENKOK"
+      width={650}
+      class="max-w-full h-auto drop-shadow-2xl"
+    />
   </div>
 </section>

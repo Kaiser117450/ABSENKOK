@@ -1,41 +1,15 @@
 ---
+// HowItWorks.astro — 3-step alternating zigzag layout with companion images
 import { Image } from 'astro:assets';
-import attendanceImg from '../assets/images/attendance-selection.png';
+import tanganScansImg from '../assets/images/tangan scans.png';
 import loginImg from '../assets/images/login-success.png';
-import monitoringImg from '../assets/images/monitoring-screen.png';
-
-const steps = [
-  {
-    number: "1",
-    title: "Pasang Tablet",
-    description: "Letakkan tablet Android di area masuk restoran. Buka ABSENKOK dalam mode kiosk.",
-    accent: "bg-brand-teal text-white",
-    image: attendanceImg,
-    imageAlt: "Layar pilihan mode absensi otomatis pada ABSENKOK",
-  },
-  {
-    number: "2",
-    title: "Tap Kartu NFC",
-    description: "Karyawan tap kartu NFC masing-masing ke tablet saat masuk dan pulang kerja.",
-    accent: "bg-brand-pink text-white",
-    image: loginImg,
-    imageAlt: "Konfirmasi berhasil login setelah tap kartu NFC",
-  },
-  {
-    number: "3",
-    title: "Pantau & Kelola",
-    description: "Admin lihat dashboard kehadiran real-time, atur jadwal shift, dan export laporan PDF.",
-    accent: "bg-brand-navy text-white",
-    image: monitoringImg,
-    imageAlt: "Dashboard monitoring kehadiran karyawan real-time",
-  },
-];
+import laporanImg from '../assets/images/laporan tampilan.png';
 ---
 
-<section id="cara-kerja" class="bg-white py-20 lg:py-28">
+<section id="cara-kerja" class="bg-white py-20 lg:py-28 overflow-hidden">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <!-- Section header -->
-    <div class="text-center max-w-2xl mx-auto mb-16" style="animation: fade-in-up 0.6s ease-out both;">
+    <div class="text-center max-w-2xl mx-auto mb-20" style="animation: fade-in-up 0.6s ease-out both;">
       <h2 class="text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">
         Cara Kerja
       </h2>
@@ -44,25 +18,76 @@ const steps = [
       </p>
     </div>
 
-    <!-- Steps -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-      {steps.map((step, i) => (
-        <div class="text-center group" style={`animation: fade-in-up 0.6s ease-out ${0.2 + i * 0.2}s both;`}>
-          <div class={`h-16 w-16 rounded-full ${step.accent} text-2xl font-bold shadow-lg mx-auto flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-            {step.number}
+    <!-- Step 1: Pasang Tablet — image left, text right -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center mb-20 lg:mb-28" style="animation: fade-in-up 0.6s ease-out 0.2s both;">
+      <div class="flex justify-center" style="animation: slide-in-left 0.8s ease-out 0.3s both;">
+        <Image
+          src={tanganScansImg}
+          alt="Tangan memegang tablet menampilkan layar scan kartu NFC ABSENKOK"
+          width={480}
+          class="drop-shadow-xl max-w-full h-auto"
+        />
+      </div>
+      <div>
+        <div class="inline-flex items-center gap-3 mb-4">
+          <div class="h-14 w-14 rounded-full bg-brand-teal text-white text-2xl font-bold shadow-lg flex items-center justify-center shrink-0">
+            1
           </div>
-          <h3 class="text-xl font-semibold text-brand-navy mt-6">{step.title}</h3>
-          <p class="text-base leading-7 text-brand-text-secondary mt-3 max-w-xs mx-auto">{step.description}</p>
-          <div class="mt-6">
-            <Image
-              src={step.image}
-              alt={step.imageAlt}
-              width={320}
-              class="rounded-xl shadow-md mx-auto ring-1 ring-brand-border"
-            />
-          </div>
+          <span class="text-sm font-medium text-brand-teal uppercase tracking-wider">Langkah Pertama</span>
         </div>
-      ))}
+        <h3 class="text-2xl lg:text-3xl font-bold text-brand-navy">Pasang Tablet</h3>
+        <p class="text-base lg:text-lg leading-7 text-brand-text-secondary mt-4 max-w-md">
+          Letakkan tablet Android di area masuk restoran. Buka ABSENKOK dalam mode kiosk — layar langsung menampilkan halaman scan kartu NFC 24/7.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 2: Tap Kartu NFC — text left, image right -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center mb-20 lg:mb-28" style="animation: fade-in-up 0.6s ease-out 0.4s both;">
+      <div class="order-2 md:order-1">
+        <div class="inline-flex items-center gap-3 mb-4">
+          <div class="h-14 w-14 rounded-full bg-brand-pink text-white text-2xl font-bold shadow-lg flex items-center justify-center shrink-0">
+            2
+          </div>
+          <span class="text-sm font-medium text-brand-pink uppercase tracking-wider">Langkah Kedua</span>
+        </div>
+        <h3 class="text-2xl lg:text-3xl font-bold text-brand-navy">Tap Kartu NFC</h3>
+        <p class="text-base lg:text-lg leading-7 text-brand-text-secondary mt-4 max-w-md">
+          Karyawan tap kartu NFC masing-masing ke tablet saat masuk dan pulang kerja. Konfirmasi "Berhasil!" muncul langsung di layar — tanpa login, tanpa ribet.
+        </p>
+      </div>
+      <div class="order-1 md:order-2 flex justify-center" style="animation: slide-in-right 0.8s ease-out 0.5s both;">
+        <Image
+          src={loginImg}
+          alt="Tampilan konfirmasi berhasil setelah tap kartu NFC"
+          width={320}
+          class="drop-shadow-xl"
+        />
+      </div>
+    </div>
+
+    <!-- Step 3: Pantau & Kelola — image left, text right -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center" style="animation: fade-in-up 0.6s ease-out 0.6s both;">
+      <div class="flex justify-center" style="animation: slide-in-left 0.8s ease-out 0.7s both;">
+        <Image
+          src={laporanImg}
+          alt="Dashboard laporan kehadiran karyawan dengan export CSV"
+          width={380}
+          class="drop-shadow-xl"
+        />
+      </div>
+      <div>
+        <div class="inline-flex items-center gap-3 mb-4">
+          <div class="h-14 w-14 rounded-full bg-brand-navy text-white text-2xl font-bold shadow-lg flex items-center justify-center shrink-0">
+            3
+          </div>
+          <span class="text-sm font-medium text-brand-navy uppercase tracking-wider">Langkah Ketiga</span>
+        </div>
+        <h3 class="text-2xl lg:text-3xl font-bold text-brand-navy">Pantau & Kelola</h3>
+        <p class="text-base lg:text-lg leading-7 text-brand-text-secondary mt-4 max-w-md">
+          Admin lihat dashboard kehadiran real-time, atur jadwal shift, dan export laporan ke CSV. Semua data tersaji lengkap dalam satu tampilan.
+        </p>
+      </div>
     </div>
   </div>
 </section>

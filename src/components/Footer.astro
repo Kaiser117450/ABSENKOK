@@ -1,5 +1,8 @@
 ---
-// Footer.astro — Dark footer with copyright + developer credit
+// Footer.astro — Dark footer with copyright, developer credit + AKM LAB logo
+import { Image } from 'astro:assets';
+import akmLabLogo from '../assets/images/akmlav.png';
+
 const currentYear = new Date().getFullYear();
 ---
 
@@ -12,8 +15,18 @@ const currentYear = new Date().getFullYear();
     <p class="text-sm text-brand-teal-light/60">
       &copy; {currentYear} ABSENKOK. Sistem Absensi NFC untuk Restoran.
     </p>
-    <p class="text-xs text-brand-teal-light/40">
-      Dibuat oleh <span class="font-semibold text-brand-teal-light/70">Akmal</span>
-    </p>
+    <!-- Developer credit with AKM LAB logo -->
+    <div class="flex items-center gap-2">
+      <p class="text-xs text-brand-teal-light/40">
+        Dibuat oleh <span class="font-semibold text-brand-teal-light/70">Akmal</span>
+      </p>
+      <span class="text-brand-teal-light/20">|</span>
+      <Image
+        src={akmLabLogo}
+        alt="AKM LAB."
+        width={56}
+        class="h-4 w-auto opacity-50 hover:opacity-80 transition-opacity duration-300"
+      />
+    </div>
   </div>
 </footer>

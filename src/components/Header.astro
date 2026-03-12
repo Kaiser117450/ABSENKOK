@@ -1,12 +1,22 @@
 ---
-// Header.astro — Sticky navigation with brand logo + anchor links
+// Header.astro — Sticky navigation with brand logo (rounded image) + anchor links
+import { Image } from 'astro:assets';
+import absenkokLogo from '../assets/images/ABSENKOK.png';
 ---
 
 <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border">
   <nav class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
     <!-- Brand Logo -->
-    <a href="/" class="flex items-center gap-0.5 text-xl font-extrabold tracking-tight">
-      <span class="text-brand-pink">ABSEN</span><span class="text-brand-navy">KOK</span>
+    <a href="/" class="flex items-center gap-2.5">
+      <Image
+        src={absenkokLogo}
+        alt="ABSENKOK"
+        width={36}
+        class="h-9 w-9 rounded-xl shadow-sm ring-1 ring-brand-border"
+      />
+      <span class="text-xl font-extrabold tracking-tight">
+        <span class="text-brand-pink">ABSEN</span><span class="text-brand-navy">KOK</span>
+      </span>
     </a>
 
     <!-- Nav Links (hidden on mobile) -->
