@@ -58,8 +58,13 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sakit/Izin direct input by Kepala Gerai
 - ✓ Employee badge system
 
+### Validated (v3.0)
+- ✓ Schedule UI grid redesign — week-view TableView with pinned headers, extracted widgets (Phase 17)
+
 ### Deferred (Future)
-- [ ] Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
+- [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
+- [ ] Schedule grid copy-week feature (GRID-D2)
+- [ ] Schedule grid today-column highlight (GRID-D3)
 - [ ] Time-off request approval workflow
 - [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
 - [ ] Overtime tracking (> 8h kerja → overtime flag)
@@ -90,6 +95,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - **Foreground service:** flutter_foreground_task — keeps app alive
 - **PDF:** `pdf` package — PdfReportService (summary) + PdfService (export tables)
 - **CSV:** `csv` ^6.0.0 + `file_picker` ^8.1.0 — batch employee import
+- **Schedule Grid:** `two_dimensional_scrollables ^0.3.8` — TableView with pinned row/column, cell builder architecture
 - **UI System:** AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast, BadgeAvatar
 
 ## Database Schema (Supabase — `tmapxdftdhxovthgbhww`)
@@ -160,4 +166,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Website in separate repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 
 ---
-*Last updated: 2026-03-12 after v3.0 milestone start*
+*Last updated: 2026-03-12 after Phase 17*

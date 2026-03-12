@@ -17,11 +17,11 @@ progress:
 
 ## Current Status
 - **Active Milestone:** v3.0 — Schedule Grid + Landing Website
-- **Active Phase:** Phase 17 — Schedule Grid UI Redesign
+- **Active Phase:** Phase 18 — ABSENKOK Landing Website
 - **Current Plan:** Not started
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T17:27:40.399Z
-- **Stopped At:** Completed 17-02-PLAN.md
+- **Last Session:** 2026-03-12
+- **Stopped At:** Phase 17 complete, ready to plan Phase 18
 
 ## Progress
 
@@ -35,7 +35,7 @@ v3.0 Schedule Grid + Landing Website — IN PROGRESS
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 17 complete — ready for Phase 18
+**Current focus:** Phase 18 — ABSENKOK Landing Website (Astro 5 + Tailwind v4)
 
 ## What's Done (v2.0)
 - ✅ Phase 13-16: Archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
