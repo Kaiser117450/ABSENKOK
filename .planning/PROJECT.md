@@ -147,5 +147,17 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - minSdk 24, compileSdk 35, targetSdk 35
 - Additive migrations only (production DB live)
 
+## Current Milestone: v3.0 Schedule Grid + Landing Website
+
+**Goal:** Redesign schedule management UI to week-view grid layout, and create a marketing landing website for ABSENKOK using Astro.js (deployed to Vercel).
+
+**Target features:**
+- Schedule UI grid redesign (karyawan di baris, hari Senin-Minggu di kolom, tap cell assign shift)
+- Astro.js landing website (clean white minimalis, Apple/Stripe style)
+- Download APK button → GitHub releases
+- Feature showcase sections
+- Developer watermark (Akmal)
+- Website in separate repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
+
 ---
-*Last updated: 2026-03-12 after v2.0 milestone complete*
+*Last updated: 2026-03-12 after v3.0 milestone start*

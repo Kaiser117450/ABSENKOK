@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Admin Tools + Live Activity
+milestone: v3.0
+milestone_name: Schedule Grid + Landing Website
 current_plan: Not started
-status: complete
-stopped_at: Milestone v2.0 archived
-last_updated: "2026-03-12T14:12:00.000Z"
+status: defining_requirements
+stopped_at: Milestone v3.0 started — defining requirements
+last_updated: "2026-03-12T15:42:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
-- **Last Milestone:** v2.0 — Admin Tools + Live Activity (SHIPPED 2026-03-12)
-- **Active Phase:** None — milestone complete
-- **Current Plan:** None
+- **Active Milestone:** v3.0 — Schedule Grid + Landing Website
+- **Active Phase:** None (defining requirements)
+- **Current Plan:** —
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T14:12:00Z
-- **Stopped At:** Milestone v2.0 archived
+- **Last Session:** 2026-03-12T15:42:00Z
+- **Stopped At:** Milestone v3.0 started — defining requirements
 
 ## Progress
 
 ```
-v2.0 Admin Tools + Live Activity — SHIPPED ✅
-[██████████] 7/7 plans · 4/4 phases done
+v3.0 Schedule Grid + Landing Website — DEFINING REQUIREMENTS
+[░░░░░░░░░░] 0/0 plans · 0/0 phases
 ```
 
 ## Project Reference
