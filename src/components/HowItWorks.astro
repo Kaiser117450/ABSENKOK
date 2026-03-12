@@ -1,21 +1,24 @@
 ---
-// HowItWorks.astro — 3 numbered steps explaining usage
+// HowItWorks.astro — 3 numbered steps explaining usage with animations
 
 const steps = [
   {
     number: "1",
     title: "Pasang Tablet",
     description: "Letakkan tablet Android di area masuk restoran. Buka ABSENKOK dalam mode kiosk.",
+    accent: "bg-brand-teal text-white",
   },
   {
     number: "2",
     title: "Tap Kartu NFC",
     description: "Karyawan tap kartu NFC masing-masing ke tablet saat masuk dan pulang kerja.",
+    accent: "bg-brand-pink text-white",
   },
   {
     number: "3",
     title: "Pantau & Kelola",
     description: "Admin lihat dashboard kehadiran real-time, atur jadwal shift, dan export laporan PDF.",
+    accent: "bg-brand-navy text-white",
   },
 ];
 ---
@@ -23,8 +26,8 @@ const steps = [
 <section id="cara-kerja" class="bg-white py-20 lg:py-28">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <!-- Section header -->
-    <div class="text-center max-w-2xl mx-auto mb-16">
-      <h2 class="text-3xl font-bold tracking-tight text-brand-text sm:text-4xl">
+    <div class="text-center max-w-2xl mx-auto mb-16" style="animation: fade-in-up 0.6s ease-out both;">
+      <h2 class="text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">
         Cara Kerja
       </h2>
       <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
@@ -34,13 +37,14 @@ const steps = [
 
     <!-- Steps -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-      {steps.map((step) => (
-        <div class="text-center">
-          <div class="h-16 w-16 rounded-full bg-brand-primary text-white text-2xl font-bold shadow-lg mx-auto flex items-center justify-center">
+      {steps.map((step, i) => (
+        <div class="text-center group" style={`animation: fade-in-up 0.6s ease-out ${0.2 + i * 0.2}s both;`}>
+          <!-- Connector line (hidden on mobile, shown between items on desktop) -->
+          <div class={`h-16 w-16 rounded-full ${step.accent} text-2xl font-bold shadow-lg mx-auto flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
             {step.number}
           </div>
-          <h3 class="text-xl font-semibold text-brand-text mt-6">{step.title}</h3>
-          <p class="text-base leading-7 text-brand-text-secondary mt-3">{step.description}</p>
+          <h3 class="text-xl font-semibold text-brand-navy mt-6">{step.title}</h3>
+          <p class="text-base leading-7 text-brand-text-secondary mt-3 max-w-xs mx-auto">{step.description}</p>
         </div>
       ))}
     </div>

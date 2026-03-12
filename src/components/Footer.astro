@@ -3,13 +3,17 @@
 const currentYear = new Date().getFullYear();
 ---
 
-<footer class="bg-gray-900 py-12">
+<footer class="bg-brand-navy-dark py-12 border-t border-brand-navy">
   <div class="max-w-7xl mx-auto px-6 flex flex-col items-center gap-4">
-    <p class="text-sm text-gray-400">
+    <!-- Logo -->
+    <a href="/" class="text-lg font-extrabold tracking-tight mb-2">
+      <span class="text-brand-pink">ABSEN</span><span class="text-white">KOK</span>
+    </a>
+    <p class="text-sm text-brand-teal-light/60">
       &copy; {currentYear} ABSENKOK. Sistem Absensi NFC untuk Restoran.
     </p>
-    <p class="text-xs text-gray-500">
-      Dibuat oleh <span class="font-semibold text-gray-400">Akmal</span>
+    <p class="text-xs text-brand-teal-light/40">
+      Dibuat oleh <span class="font-semibold text-brand-teal-light/70">Akmal</span>
     </p>
   </div>
 </footer>
