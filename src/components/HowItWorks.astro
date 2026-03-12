@@ -1,5 +1,8 @@
 ---
-// HowItWorks.astro — 3 numbered steps explaining usage with animations
+import { Image } from 'astro:assets';
+import attendanceImg from '../assets/images/attendance-selection.png';
+import loginImg from '../assets/images/login-success.png';
+import monitoringImg from '../assets/images/monitoring-screen.png';
 
 const steps = [
   {
@@ -7,18 +10,24 @@ const steps = [
     title: "Pasang Tablet",
     description: "Letakkan tablet Android di area masuk restoran. Buka ABSENKOK dalam mode kiosk.",
     accent: "bg-brand-teal text-white",
+    image: attendanceImg,
+    imageAlt: "Layar pilihan mode absensi otomatis pada ABSENKOK",
   },
   {
     number: "2",
     title: "Tap Kartu NFC",
     description: "Karyawan tap kartu NFC masing-masing ke tablet saat masuk dan pulang kerja.",
     accent: "bg-brand-pink text-white",
+    image: loginImg,
+    imageAlt: "Konfirmasi berhasil login setelah tap kartu NFC",
   },
   {
     number: "3",
     title: "Pantau & Kelola",
     description: "Admin lihat dashboard kehadiran real-time, atur jadwal shift, dan export laporan PDF.",
     accent: "bg-brand-navy text-white",
+    image: monitoringImg,
+    imageAlt: "Dashboard monitoring kehadiran karyawan real-time",
   },
 ];
 ---
@@ -39,12 +48,19 @@ const steps = [
     <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
       {steps.map((step, i) => (
         <div class="text-center group" style={`animation: fade-in-up 0.6s ease-out ${0.2 + i * 0.2}s both;`}>
-          <!-- Connector line (hidden on mobile, shown between items on desktop) -->
           <div class={`h-16 w-16 rounded-full ${step.accent} text-2xl font-bold shadow-lg mx-auto flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
             {step.number}
           </div>
           <h3 class="text-xl font-semibold text-brand-navy mt-6">{step.title}</h3>
           <p class="text-base leading-7 text-brand-text-secondary mt-3 max-w-xs mx-auto">{step.description}</p>
+          <div class="mt-6">
+            <Image
+              src={step.image}
+              alt={step.imageAlt}
+              width={320}
+              class="rounded-xl shadow-md mx-auto ring-1 ring-brand-border"
+            />
+          </div>
         </div>
       ))}
     </div>
