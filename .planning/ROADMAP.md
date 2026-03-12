@@ -83,7 +83,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 17. Schedule Grid UI Redesign | 2/2 | Complete   | 2026-03-12 | - |
+| 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
 | 18. ABSENKOK Landing Website | v3.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
