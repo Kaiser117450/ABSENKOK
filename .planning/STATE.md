@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
-current_plan: Not started
-status: roadmap_complete
-stopped_at: Roadmap created — 2 phases (17-18), 20 requirements mapped
-last_updated: "2026-03-12T16:00:00.000Z"
+current_plan: Plan 02 of Phase 17
+status: in_progress
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-03-12T17:08:50.134Z"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** v3.0 — Schedule Grid + Landing Website
-- **Active Phase:** Phase 17 (ready to plan)
-- **Current Plan:** —
+- **Active Phase:** Phase 17 — Schedule Grid UI Redesign
+- **Current Plan:** Plan 02 of 02 (Phase 17)
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T16:00:00Z
-- **Stopped At:** Roadmap created — 2 phases, 20 requirements mapped, ready for `/gsd-plan-phase 17`
+- **Last Session:** 2026-03-12T17:08:50.130Z
+- **Stopped At:** Completed 17-01-PLAN.md
 
 ## Progress
 
 ```
-v3.0 Schedule Grid + Landing Website — READY TO PLAN
-[░░░░░░░░░░] 0/0 plans · 0/2 phases
+v3.0 Schedule Grid + Landing Website — IN PROGRESS
+[█████░░░░░] 1/2 plans · 0/2 phases
 ```
 
 ## Project Reference
@@ -55,6 +55,8 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 | 22 | Grid first, website second | Higher risk (existing code refactor) before greenfield |
 | 23 | Astro 5 (not 6) + Tailwind v4 | Stable versions, Astro 6 too new |
 | 24 | Website in separate repo | Zero coupling with Flutter app |
+| 25 | `withValues(alpha:)` over `withOpacity()` | Modern Dart API, avoids deprecation warnings |
+| 26 | Cell builders as top-level functions | Composable, importable without widget instantiation |
 
 ### Key Constraints
 - Production database serving 4 outlets — NO destructive migrations

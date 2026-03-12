@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
   2. Admin tap cell untuk assign shift type (Pagi/Siang/Sore/Libur), setiap shift ditampilkan sebagai chip berwarna berbeda; status Sakit/Izin tampil sebagai overlay pada cell
   3. Admin navigasi antar minggu (← →), menggunakan bulk assign untuk set shift yang sama ke beberapa karyawan sekaligus, dan auto-generate jadwal dari template shift
   4. Semua perubahan jadwal tersimpan ke Supabase + SQLite cache — data layer tetap utuh, zero regression dari fungsionalitas yang sudah ada
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 17-01-PLAN.md — Widget architecture: add `two_dimensional_scrollables`, create cell builders, TableView wrapper, legend widget
@@ -83,7 +83,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 17. Schedule Grid UI Redesign | v3.0 | 0/2 | Planned | - |
+| 17. Schedule Grid UI Redesign | 1/2 | In Progress|  | - |
 | 18. ABSENKOK Landing Website | v3.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
