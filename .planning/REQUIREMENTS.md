@@ -33,6 +33,13 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 - [x] **WEB-09**: SEO meta tags + sitemap.xml
 - [x] **WEB-10**: Deploy ke Vercel
 
+### Website Polish (WEB-P)
+
+- [ ] **WEB-P01**: Hero section menggunakan gambar asli "enakko hero.png" (bukan CSS mockup)
+- [ ] **WEB-P02**: Screenshot asli dari app dipakai di section HowItWorks sebagai companion per step
+- [ ] **WEB-P03**: Section About/Architecture baru — tech stack (Flutter, Supabase, NFC), dev story (solo + vibe coding + AI), deployment (Android Kiosk)
+- [ ] **WEB-P04**: Icon SVG Supabase dan Flutter ditampilkan di section architecture
+
 ## Future Requirements
 
 ### Schedule Differentiators (Deferred to v3.1+)
@@ -86,9 +93,13 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 | WEB-08 | Phase 18 | Complete |
 | WEB-09 | Phase 18 | Complete |
 | WEB-10 | Phase 18 | Complete |
+| WEB-P01 | Phase 19 | Planned |
+| WEB-P02 | Phase 19 | Planned |
+| WEB-P03 | Phase 19 | Planned |
+| WEB-P04 | Phase 19 | Planned |
 
 **Coverage:**
-- v3.0 requirements: 20 total
+- v3.0 requirements: 24 total
 - Mapped to phases: 20 ✓
 - Unmapped: 0
 
