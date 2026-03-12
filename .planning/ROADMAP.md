@@ -45,7 +45,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 - [x] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate (completed 2026-03-12)
 - [x] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel (completed 2026-03-12)
-- [ ] **Phase 19: Website Polish** — Screenshot asli dari app, section About/Architecture, ikon tech stack (Supabase, Flutter)
+- [x] **Phase 19: Website Polish** — Screenshot asli dari app, section About/Architecture, ikon tech stack (Supabase, Flutter) (completed 2026-03-12)
 
 ## Phase Details
 
@@ -87,7 +87,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
 | 18. ABSENKOK Landing Website | 2/2 | Complete    | 2026-03-12 | - |
-| 19. Website Polish | 1/2 | In Progress|  | - |
+| 19. Website Polish | 2/2 | Complete   | 2026-03-12 | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
@@ -112,7 +112,7 @@ Plans:
   2. Screenshot asli dari app dipakai di section Features atau HowItWorks
   3. Section About/Architecture baru yang menjelaskan tech stack (Flutter, Supabase, NFC), development story (solo project, vibe coding with AI), dan deployment (Android Kiosk)
   4. Icon SVG Supabase dan Flutter ditampilkan di section architecture
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 19-01-PLAN.md — Image migration + Hero real screenshot + HowItWorks screenshot companions
