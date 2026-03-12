@@ -66,32 +66,32 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRID-01 | — | Pending |
-| GRID-02 | — | Pending |
-| GRID-03 | — | Pending |
-| GRID-04 | — | Pending |
-| GRID-05 | — | Pending |
-| GRID-06 | — | Pending |
-| GRID-07 | — | Pending |
-| GRID-08 | — | Pending |
-| GRID-09 | — | Pending |
-| GRID-10 | — | Pending |
-| WEB-01 | — | Pending |
-| WEB-02 | — | Pending |
-| WEB-03 | — | Pending |
-| WEB-04 | — | Pending |
-| WEB-05 | — | Pending |
-| WEB-06 | — | Pending |
-| WEB-07 | — | Pending |
-| WEB-08 | — | Pending |
-| WEB-09 | — | Pending |
-| WEB-10 | — | Pending |
+| GRID-01 | Phase 17 | Pending |
+| GRID-02 | Phase 17 | Pending |
+| GRID-03 | Phase 17 | Pending |
+| GRID-04 | Phase 17 | Pending |
+| GRID-05 | Phase 17 | Pending |
+| GRID-06 | Phase 17 | Pending |
+| GRID-07 | Phase 17 | Pending |
+| GRID-08 | Phase 17 | Pending |
+| GRID-09 | Phase 17 | Pending |
+| GRID-10 | Phase 17 | Pending |
+| WEB-01 | Phase 18 | Pending |
+| WEB-02 | Phase 18 | Pending |
+| WEB-03 | Phase 18 | Pending |
+| WEB-04 | Phase 18 | Pending |
+| WEB-05 | Phase 18 | Pending |
+| WEB-06 | Phase 18 | Pending |
+| WEB-07 | Phase 18 | Pending |
+| WEB-08 | Phase 18 | Pending |
+| WEB-09 | Phase 18 | Pending |
+| WEB-10 | Phase 18 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️ (awaiting roadmap creation)
+- Mapped to phases: 20 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-12*
-*Last updated: 2026-03-12 after initial definition*
+*Last updated: 2026-03-12 after roadmap creation*

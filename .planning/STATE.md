@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
 current_plan: Not started
-status: defining_requirements
-stopped_at: Milestone v3.0 started — defining requirements
-last_updated: "2026-03-12T15:42:00.000Z"
+status: roadmap_complete
+stopped_at: Roadmap created — 2 phases (17-18), 20 requirements mapped
+last_updated: "2026-03-12T16:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Current Status
 - **Active Milestone:** v3.0 — Schedule Grid + Landing Website
-- **Active Phase:** None (defining requirements)
+- **Active Phase:** Phase 17 (ready to plan)
 - **Current Plan:** —
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T15:42:00Z
-- **Stopped At:** Milestone v3.0 started — defining requirements
+- **Last Session:** 2026-03-12T16:00:00Z
+- **Stopped At:** Roadmap created — 2 phases, 20 requirements mapped, ready for `/gsd-plan-phase 17`
 
 ## Progress
 
 ```
-v3.0 Schedule Grid + Landing Website — DEFINING REQUIREMENTS
-[░░░░░░░░░░] 0/0 plans · 0/0 phases
+v3.0 Schedule Grid + Landing Website — READY TO PLAN
+[░░░░░░░░░░] 0/0 plans · 0/2 phases
 ```
 
 ## Project Reference
@@ -35,40 +35,32 @@ v3.0 Schedule Grid + Landing Website — DEFINING REQUIREMENTS
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Milestone v2.0 complete and archived. Ready for next milestone.
+**Current focus:** Phase 17 — Schedule Grid UI Redesign
 
 ## What's Done (v2.0)
-- ✅ Phase 13: Soft-Archive Karyawan + Riwayat (3 plans, archive/restore/history)
-- ✅ Phase 14: Batch CSV Import (2 plans, service + wizard UI)
-- ✅ Phase 15: Kepala Gerai SQL Setup (SQL scripts)
-- ✅ Phase 16: Persistent Live Activity Pill (2 plans, LiveContentProvider + overlay wiring)
-- ✅ Bug fixes: UI overflow, CSV template outlet names
+- ✅ Phase 13-16: Archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
 - ✅ Release APK built and deployed to tablet
 
 ## What's Next
-Start next milestone with `/gsd-new-milestone`
+- Phase 17: Schedule Grid UI Redesign (refactor `shift_scheduler_screen.dart` → `TableView` with pinned headers)
+- Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4 → Vercel)
+- Both phases independent — can be planned/executed in any order
 
 ## Accumulated Context
 
-### Key Decisions (v2.0)
+### Key Decisions (v3.0)
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 11 | Archive first, Live Activity last | Data model change is foundational |
-| 12 | Only 2 new packages (csv + file_picker) | Minimize dependencies |
-| 13 | Kepala Gerai = SQL script only | 4 outlets doesn't justify admin UI |
-| 14 | Overlay data via shareData() only | Separate isolate can't access Supabase |
-| 15 | Additive migrations only | Production DB at 4 outlets |
-| 16 | archivedAt as DateTime? | Type-safe timestamp handling |
-| 17 | ZONA BERBAHAYA pattern | Clear separation for destructive actions |
-| 18 | Pure-function CSV validation | Testable without Supabase |
-| 19 | Custom step indicator wizard | Lighter than Material Stepper |
-| 20 | Injectable callbacks for LiveContentProvider | Clean testability |
+| 21 | `two_dimensional_scrollables ^0.3.8` for grid | Official Flutter team package, replaces manual scroll sync |
+| 22 | Grid first, website second | Higher risk (existing code refactor) before greenfield |
+| 23 | Astro 5 (not 6) + Tailwind v4 | Stable versions, Astro 6 too new |
+| 24 | Website in separate repo | Zero coupling with Flutter app |
 
 ### Key Constraints
-- Production database serving 4 outlets, 14 employees — NO destructive migrations
-- Overlay isolate: data via `FlutterOverlayWindow.shareData()` string serialization only
+- Production database serving 4 outlets — NO destructive migrations
+- Grid redesign: data layer (Supabase + SQLite) UNTOUCHED — rendering layer only
+- Website: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 - Kotlin 1.9.25 — no upgrade (breaks nfc_manager)
-- minSdk 24, compileSdk 35, targetSdk 35
 
 ### Open Blockers
 - None
@@ -86,6 +78,7 @@ Start next milestone with `/gsd-new-milestone`
 ## File Locations
 - Flutter project: `absensi apk/absensi_enakko_flutter/`
 - Planning: `absensi apk/absensi_enakko_flutter/.planning/`
+- Website project: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 - Codebase map: `.planning/codebase/`
 - Milestones archive: `.planning/milestones/`
 - SQL scripts: `sql/`

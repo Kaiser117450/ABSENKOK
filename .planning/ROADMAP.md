@@ -4,6 +4,7 @@
 
 - ✅ **v1.1 Bug Fix + Edge Cases + Features** — Phases 1-12 (shipped 2026-03-05)
 - ✅ **v2.0 Admin Tools + Live Activity** — Phases 13-16 (shipped 2026-03-12)
+- 🚧 **v3.0 Schedule Grid + Landing Website** — Phases 17-18 (in progress)
 
 ## Phases
 
@@ -38,8 +39,54 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 
 </details>
 
+### 🚧 v3.0 Schedule Grid + Landing Website (In Progress)
+
+**Milestone Goal:** Redesign schedule management UI to week-view grid layout, and create a marketing landing website for ABSENKOK.
+
+- [ ] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate
+- [ ] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel
+
+## Phase Details
+
+### Phase 17: Schedule Grid UI Redesign
+**Goal**: Admin mengelola jadwal karyawan dalam grid mingguan yang proper — karyawan di baris, hari di kolom, tap cell untuk assign shift
+**Depends on**: Phase 16 (v2.0 complete)
+**Requirements**: GRID-01, GRID-02, GRID-03, GRID-04, GRID-05, GRID-06, GRID-07, GRID-08, GRID-09, GRID-10
+**Success Criteria** (what must be TRUE):
+  1. Admin melihat jadwal mingguan dalam format grid (karyawan di baris, Senin-Minggu di kolom); kolom nama karyawan tetap pinned saat scroll horizontal dan header hari tetap pinned saat scroll vertikal
+  2. Admin tap cell untuk assign shift type (Pagi/Siang/Sore/Libur), setiap shift ditampilkan sebagai chip berwarna berbeda; status Sakit/Izin tampil sebagai overlay pada cell
+  3. Admin navigasi antar minggu (← →), menggunakan bulk assign untuk set shift yang sama ke beberapa karyawan sekaligus, dan auto-generate jadwal dari template shift
+  4. Semua perubahan jadwal tersimpan ke Supabase + SQLite cache — data layer tetap utuh, zero regression dari fungsionalitas yang sudah ada
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: TBD
+- [ ] 17-02: TBD
+
+### Phase 18: ABSENKOK Landing Website
+**Goal**: Pengunjung membuka website marketing ABSENKOK yang cepat, informatif, dan bisa langsung download APK
+**Depends on**: Nothing (independent dari Phase 17 — repo terpisah, zero code coupling)
+**Requirements**: WEB-01, WEB-02, WEB-03, WEB-04, WEB-05, WEB-06, WEB-07, WEB-08, WEB-09, WEB-10
+**Success Criteria** (what must be TRUE):
+  1. Pengunjung melihat hero section dengan tablet mockup + tagline ABSENKOK, feature showcase 4-6 fitur utama dengan ikon, dan "How It Works" section 3 langkah penggunaan
+  2. Pengunjung tap tombol download APK yang mengarah ke GitHub Releases
+  3. Website responsive di mobile/tablet/desktop, semua copy dalam Bahasa Indonesia, page load < 2 detik dengan zero JavaScript shipped ke browser
+  4. Website memiliki SEO meta tags + sitemap.xml, credit developer "Akmal" di footer, dan deployed live di Vercel
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: TBD
+
+## Progress
+
+**Execution Order:** Phase 17 → Phase 18 (or parallel — zero coupling)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 17. Schedule Grid UI Redesign | v3.0 | 0/TBD | Not started | - |
+| 18. ABSENKOK Landing Website | v3.0 | 0/TBD | Not started | - |
+
 ## Future Backlog (Not Scheduled)
-- Schedule UI full grid redesign (week-view grid, tap-to-assign cells)
 - Time-off request approval workflow
 - Keterlambatan (late arrival) automatic flagging vs shift start time
 - Overtime tracking (> 8h kerja → overtime flag)
