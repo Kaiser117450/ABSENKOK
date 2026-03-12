@@ -1,12 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import HowItWorks from '../components/HowItWorks.astro';
+import Download from '../components/Download.astro';
+import Footer from '../components/Footer.astro';
 ---
 
 <BaseLayout
   title="ABSENKOK — Sistem Absensi NFC untuk Restoran"
   description="Kelola kehadiran karyawan restoran dengan NFC tap, jadwal shift otomatis, dan laporan real-time. Download gratis."
 >
+  <Header />
   <main>
-    <p class="p-8 text-brand-text-secondary">Placeholder — content sections coming in Plan 02</p>
+    <Hero />
+    <Features />
+    <HowItWorks />
+    <Download />
   </main>
+  <Footer />
 </BaseLayout>

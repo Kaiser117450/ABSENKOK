@@ -1,0 +1,48 @@
+---
+// HowItWorks.astro — 3 numbered steps explaining usage
+
+const steps = [
+  {
+    number: "1",
+    title: "Pasang Tablet",
+    description: "Letakkan tablet Android di area masuk restoran. Buka ABSENKOK dalam mode kiosk.",
+  },
+  {
+    number: "2",
+    title: "Tap Kartu NFC",
+    description: "Karyawan tap kartu NFC masing-masing ke tablet saat masuk dan pulang kerja.",
+  },
+  {
+    number: "3",
+    title: "Pantau & Kelola",
+    description: "Admin lihat dashboard kehadiran real-time, atur jadwal shift, dan export laporan PDF.",
+  },
+];
+---
+
+<section id="cara-kerja" class="bg-white py-20 lg:py-28">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <!-- Section header -->
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <h2 class="text-3xl font-bold tracking-tight text-brand-text sm:text-4xl">
+        Cara Kerja
+      </h2>
+      <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
+        Tiga langkah sederhana untuk memulai absensi digital.
+      </p>
+    </div>
+
+    <!-- Steps -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+      {steps.map((step) => (
+        <div class="text-center">
+          <div class="h-16 w-16 rounded-full bg-brand-primary text-white text-2xl font-bold shadow-lg mx-auto flex items-center justify-center">
+            {step.number}
+          </div>
+          <h3 class="text-xl font-semibold text-brand-text mt-6">{step.title}</h3>
+          <p class="text-base leading-7 text-brand-text-secondary mt-3">{step.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,87 @@
+---
+// Features.astro — 4 feature cards with inline SVG icons
+
+const features = [
+  {
+    title: "Absensi NFC Otomatis",
+    description: "Karyawan cukup tap kartu NFC di tablet — hadir langsung tercatat. Tanpa username, tanpa password.",
+    icon: "nfc",
+  },
+  {
+    title: "Jadwal Shift Cerdas",
+    description: "Atur jadwal Pagi, Siang, Sore untuk semua karyawan dalam satu tampilan grid mingguan.",
+    icon: "calendar",
+  },
+  {
+    title: "Laporan Real-Time",
+    description: "Pantau siapa yang sudah masuk, sedang break, atau sudah pulang — langsung dari dashboard admin.",
+    icon: "chart",
+  },
+  {
+    title: "Mode Kiosk 24/7",
+    description: "Tablet berjalan non-stop sebagai kiosk absensi. Tidak perlu pengawasan, tidak perlu restart.",
+    icon: "device",
+  },
+];
+---
+
+<section id="fitur" class="bg-brand-surface py-20 lg:py-28">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <!-- Section header -->
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <h2 class="text-3xl font-bold tracking-tight text-brand-text sm:text-4xl">
+        Fitur Unggulan
+      </h2>
+      <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
+        Semua yang dibutuhkan untuk mengelola kehadiran karyawan restoran.
+      </p>
+    </div>
+
+    <!-- Feature cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      {features.map((feature) => (
+        <div class="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-md transition-shadow">
+          <!-- Icon -->
+          <div class="h-12 w-12 rounded-xl bg-brand-light text-brand-primary flex items-center justify-center">
+            {feature.icon === "nfc" && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/>
+                <path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/>
+                <path d="M12.91 4.1a16.07 16.07 0 0 1 0 15.8"/>
+                <path d="M16.37 2a20.4 20.4 0 0 1 0 20"/>
+              </svg>
+            )}
+            {feature.icon === "calendar" && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+                <rect x="7" y="14" width="3" height="3" rx="0.5"/>
+                <rect x="14" y="14" width="3" height="3" rx="0.5"/>
+              </svg>
+            )}
+            {feature.icon === "chart" && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+                <line x1="3" y1="20" x2="21" y2="20"/>
+              </svg>
+            )}
+            {feature.icon === "device" && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12" y2="18.01"/>
+              </svg>
+            )}
+          </div>
+
+          <!-- Text -->
+          <h3 class="mt-6 text-lg font-semibold text-brand-text">{feature.title}</h3>
+          <p class="mt-2 text-sm leading-6 text-brand-text-secondary">{feature.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,126 @@
+---
+// Hero.astro — Two-column hero with headline + CSS tablet mockup
+---
+
+<section class="bg-white py-20 lg:py-32 overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 lg:items-center">
+      
+      <!-- Left Column: Text -->
+      <div class="max-w-xl">
+        <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-brand-text">
+          Absensi NFC untuk <span class="text-brand-primary">Restoran Modern</span>
+        </h1>
+        <p class="mt-6 text-lg leading-8 text-brand-text-secondary">
+          Tap kartu, hadir tercatat. ABSENKOK mengelola kehadiran karyawan dengan NFC, jadwal shift otomatis, dan laporan real-time.
+        </p>
+        <div class="mt-10">
+          <a
+            href="https://github.com/user/absenkok/releases/latest"
+            class="inline-flex items-center gap-2 rounded-full bg-brand-primary text-white px-8 py-3.5 font-semibold shadow-lg hover:bg-brand-dark transition-colors"
+          >
+            <!-- Download arrow icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download APK
+          </a>
+        </div>
+      </div>
+
+      <!-- Right Column: CSS Tablet Mockup -->
+      <div class="relative flex justify-center lg:justify-end">
+        <!-- Decorative gradient glow -->
+        <div class="absolute -inset-4 -z-10 rounded-[2.5rem] bg-gradient-to-br from-brand-primary/20 via-brand-accent/10 to-transparent blur-2xl"></div>
+        
+        <!-- Tablet frame -->
+        <div class="w-[320px] sm:w-[360px] rounded-[2rem] bg-gray-900 p-3 shadow-2xl ring-1 ring-white/10">
+          <!-- Screen -->
+          <div class="rounded-[1.5rem] overflow-hidden bg-brand-surface">
+            <!-- App header bar -->
+            <div class="bg-brand-primary px-4 py-3 flex items-center gap-3">
+              <div class="h-3 w-3 rounded-full bg-white/30"></div>
+              <div class="h-2.5 w-20 rounded-full bg-white/40"></div>
+              <div class="ml-auto h-2.5 w-8 rounded-full bg-white/30"></div>
+            </div>
+            
+            <!-- Schedule grid mockup -->
+            <div class="p-3 space-y-2">
+              <!-- Day headers -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+                <div class="h-5 rounded bg-gray-200"></div>
+              </div>
+              <!-- Row 1 -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-gray-100"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+              </div>
+              <!-- Row 2 -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-gray-100"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+              </div>
+              <!-- Row 3 -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-gray-100"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+              </div>
+              <!-- Row 4 -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-8 rounded bg-gray-100"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-gray-100"></div>
+              </div>
+              <!-- Row 5 -->
+              <div class="grid grid-cols-7 gap-1.5">
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-gray-100"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+                <div class="h-8 rounded bg-brand-light"></div>
+                <div class="h-8 rounded bg-brand-accent-light"></div>
+                <div class="h-8 rounded bg-brand-primary/20"></div>
+              </div>
+            </div>
+
+            <!-- Bottom nav bar -->
+            <div class="bg-white border-t border-gray-200 px-6 py-2.5 flex items-center justify-around">
+              <div class="h-4 w-4 rounded bg-brand-primary/40"></div>
+              <div class="h-4 w-4 rounded bg-gray-300"></div>
+              <div class="h-4 w-4 rounded bg-gray-300"></div>
+              <div class="h-4 w-4 rounded bg-gray-300"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>

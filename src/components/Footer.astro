@@ -1,0 +1,15 @@
+---
+// Footer.astro — Dark footer with copyright + developer credit
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="bg-gray-900 py-12">
+  <div class="max-w-7xl mx-auto px-6 flex flex-col items-center gap-4">
+    <p class="text-sm text-gray-400">
+      &copy; {currentYear} ABSENKOK. Sistem Absensi NFC untuk Restoran.
+    </p>
+    <p class="text-xs text-gray-500">
+      Dibuat oleh <span class="font-semibold text-gray-400">Akmal</span>
+    </p>
+  </div>
+</footer>

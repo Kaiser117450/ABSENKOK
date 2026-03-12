@@ -1,0 +1,31 @@
+---
+// Header.astro — Sticky navigation with brand logo + anchor links
+---
+
+<header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border">
+  <nav class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+    <!-- Brand Logo -->
+    <a href="/" class="flex items-center gap-0.5 text-xl font-extrabold tracking-tight">
+      <span class="text-brand-primary">ABSEN</span><span class="text-brand-text">KOK</span>
+    </a>
+
+    <!-- Nav Links (hidden on mobile) -->
+    <ul class="hidden md:flex items-center gap-8">
+      <li>
+        <a href="#fitur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-primary transition-colors">
+          Fitur
+        </a>
+      </li>
+      <li>
+        <a href="#cara-kerja" class="text-sm font-medium text-brand-text-secondary hover:text-brand-primary transition-colors">
+          Cara Kerja
+        </a>
+      </li>
+      <li>
+        <a href="#download" class="text-sm font-medium text-brand-text-secondary hover:text-brand-primary transition-colors">
+          Download
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>
