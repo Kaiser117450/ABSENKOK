@@ -87,7 +87,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
 | 18. ABSENKOK Landing Website | 2/2 | Complete    | 2026-03-12 | - |
-| 19. Website Polish | 0/2 | Planned    | -          | - |
+| 19. Website Polish | 1/2 | In Progress|  | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
@@ -112,7 +112,7 @@ Plans:
   2. Screenshot asli dari app dipakai di section Features atau HowItWorks
   3. Section About/Architecture baru yang menjelaskan tech stack (Flutter, Supabase, NFC), development story (solo project, vibe coding with AI), dan deployment (Android Kiosk)
   4. Icon SVG Supabase dan Flutter ditampilkan di section architecture
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 19-01-PLAN.md — Image migration + Hero real screenshot + HowItWorks screenshot companions

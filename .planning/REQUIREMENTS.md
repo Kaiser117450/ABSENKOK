@@ -35,8 +35,8 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 
 ### Website Polish (WEB-P)
 
-- [ ] **WEB-P01**: Hero section menggunakan gambar asli "enakko hero.png" (bukan CSS mockup)
-- [ ] **WEB-P02**: Screenshot asli dari app dipakai di section HowItWorks sebagai companion per step
+- [x] **WEB-P01**: Hero section menggunakan gambar asli "enakko hero.png" (bukan CSS mockup)
+- [x] **WEB-P02**: Screenshot asli dari app dipakai di section HowItWorks sebagai companion per step
 - [ ] **WEB-P03**: Section About/Architecture baru — tech stack (Flutter, Supabase, NFC), dev story (solo + vibe coding + AI), deployment (Android Kiosk)
 - [ ] **WEB-P04**: Icon SVG Supabase dan Flutter ditampilkan di section architecture
 

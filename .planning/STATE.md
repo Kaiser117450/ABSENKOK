@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
-current_plan: Not started
-status: unknown
-stopped_at: Completed 18-02-PLAN.md
-last_updated: "2026-03-12T18:35:54.584Z"
+current_plan: Plan 1 of 2 complete
+status: in-progress
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-03-12T19:55:38.909Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Active Milestone:** v3.0 — Schedule Grid + Landing Website
-- **Active Phase:** Phase 18 — ABSENKOK Landing Website
-- **Current Plan:** Not started
+- **Active Phase:** Phase 19 — Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
+- **Current Plan:** Plan 1 of 2 complete
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T18:33:22.607Z
-- **Stopped At:** Completed 18-02-PLAN.md
+- **Last Session:** 2026-03-12T19:55:38.904Z
+- **Stopped At:** Completed 19-01-PLAN.md
 
 ## Progress
 
 ```
-v3.0 Schedule Grid + Landing Website — COMPLETE
-[██████████] 4/4 plans · 2/2 phases
+v3.0 Schedule Grid + Landing Website — IN PROGRESS
+[████████░░] 5/6 plans · 2/3 phases
 ```
 
 ## Project Reference
@@ -35,7 +35,7 @@ v3.0 Schedule Grid + Landing Website — COMPLETE
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 18 — ABSENKOK Landing Website (Astro 5 + Tailwind v4)
+**Current focus:** Phase 19 — Website Polish (Real screenshots, About/Architecture, Tech Icons)
 
 ## What's Done (v2.0)
 - ✅ Phase 13-16: Archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
@@ -67,6 +67,8 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 | 29 | Manual npm init to avoid Astro 6; Tailwind v4 via @tailwindcss/vite | npm create astro@latest scaffolds Astro 6; @astrojs/tailwind is v3 only |
 | 30 | CSS-only tablet mockup with colored grid cells | More visually interesting than blank placeholder, matches app's schedule grid |
 | 31 | Inline SVG icons per feature card | Avoids icon library dependency, keeps zero-JS promise |
+| 32 | Replaced 90-line CSS tablet mockup with single Astro Image | Real screenshot more authentic, simpler code |
+| 33 | Image pipeline: PNG src/assets → ESM import → Astro Image → WebP dist | 17MB PNG → 65KB WebP (99.6% reduction) |
 
 ### Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
