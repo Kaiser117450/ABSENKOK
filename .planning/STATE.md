@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
-current_plan: Not started
+current_plan: Plan 02 of 02
 status: unknown
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-03-12T18:17:49.987Z"
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-03-12T18:33:22.612Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # STATE.md — Project Memory
@@ -20,14 +20,14 @@ progress:
 - **Active Phase:** Phase 18 — ABSENKOK Landing Website
 - **Current Plan:** Plan 02 of 02
 - **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T18:17:49.984Z
-- **Stopped At:** Completed 18-01-PLAN.md
+- **Last Session:** 2026-03-12T18:33:22.607Z
+- **Stopped At:** Completed 18-02-PLAN.md
 
 ## Progress
 
 ```
-v3.0 Schedule Grid + Landing Website — IN PROGRESS
-[████████░░] 3/4 plans · 1/2 phases
+v3.0 Schedule Grid + Landing Website — COMPLETE
+[██████████] 4/4 plans · 2/2 phases
 ```
 
 ## Project Reference
@@ -43,9 +43,10 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 
 ## What's Done (v3.0)
 - ✅ Phase 17: Schedule Grid UI Redesign (TableView with pinned headers, extracted widgets, screen integration)
+- ✅ Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4, 6 content sections, zero-JS static build)
 
 ## What's Next
-- Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4 → Vercel)
+- v3.0 milestone complete — all phases done
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 | 27 | Removed unused imports during rendering extraction | dart:io, supabase_flutter, outlet.dart, time_off_request.dart no longer needed |
 | 28 | Parent screen keeps state+data, delegates rendering via callbacks | Clean separation: ~943 lines state+data, widgets handle all rendering |
 | 29 | Manual npm init to avoid Astro 6; Tailwind v4 via @tailwindcss/vite | npm create astro@latest scaffolds Astro 6; @astrojs/tailwind is v3 only |
+| 30 | CSS-only tablet mockup with colored grid cells | More visually interesting than blank placeholder, matches app's schedule grid |
+| 31 | Inline SVG icons per feature card | Avoids icon library dependency, keeps zero-JS promise |
 
 ### Key Constraints
 - Production database serving 4 outlets — NO destructive migrations

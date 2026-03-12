@@ -44,7 +44,7 @@ Full details: `.planning/milestones/v2.0-ROADMAP.md`
 **Milestone Goal:** Redesign schedule management UI to week-view grid layout, and create a marketing landing website for ABSENKOK.
 
 - [x] **Phase 17: Schedule Grid UI Redesign** — Refactor jadwal mingguan ke format grid proper dengan pinned headers, tap-to-assign, bulk assign, dan auto-generate (completed 2026-03-12)
-- [ ] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel
+- [x] **Phase 18: ABSENKOK Landing Website** — Website marketing statis dengan Astro 5 + Tailwind v4, deploy ke Vercel (completed 2026-03-12)
 
 ## Phase Details
 
@@ -85,7 +85,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
-| 18. ABSENKOK Landing Website | 1/2 | In Progress|  | - |
+| 18. ABSENKOK Landing Website | 2/2 | Complete   | 2026-03-12 | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
