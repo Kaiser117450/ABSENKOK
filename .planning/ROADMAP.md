@@ -72,10 +72,11 @@ Plans:
   2. Pengunjung tap tombol download APK yang mengarah ke GitHub Releases
   3. Website responsive di mobile/tablet/desktop, semua copy dalam Bahasa Indonesia, page load < 2 detik dengan zero JavaScript shipped ke browser
   4. Website memiliki SEO meta tags + sitemap.xml, credit developer "Akmal" di footer, dan deployed live di Vercel
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 18-01: TBD
+- [ ] 18-01-PLAN.md — Project scaffolding + configuration (Astro 5, Tailwind v4, Vercel, sitemap, BaseLayout)
+- [ ] 18-02-PLAN.md — Content sections + page assembly + visual verification (Hero, Features, HowItWorks, Download, Footer)
 
 ## Progress
 
@@ -84,7 +85,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 17. Schedule Grid UI Redesign | 2/2 | Complete    | 2026-03-12 | - |
-| 18. ABSENKOK Landing Website | v3.0 | 0/TBD | Not started | - |
+| 18. ABSENKOK Landing Website | v3.0 | 0/2 | Not started | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
