@@ -1,22 +1,20 @@
 // LENGKAP - ShiftSchedulerScreen dengan Time Off & Synchronized Scroll
 // [File lengkap akan saya tulis di response berikut karena terlalu panjang]
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
-import '../../models/outlet.dart';
 import '../../models/shift_schedule.dart';
-import '../../models/time_off_request.dart';
 import '../../providers/app_provider.dart';
 import '../../services/pdf_service.dart';
 import '../../services/schedule_sqlite_service.dart';
+import 'widgets/schedule_table_view.dart';
+import 'widgets/schedule_legend.dart';
 
 class ShiftSchedulerScreen extends ConsumerStatefulWidget {
   final String? outletId;
@@ -45,19 +43,11 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   
   // Settings
   DateTime _startDate = _getStartOfWeek(DateTime.now());
-  bool _isWeekly = true;
   ShiftTemplate? _template;
-  
-  // SYNCHRONIZED SCROLL
-  final ScrollController _employeeListController = ScrollController();
-  final ScrollController _scheduleGridController = ScrollController();
-  final ScrollController _horizontalScrollController = ScrollController();
-  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
-    _setupScrollSync();
     _loadData();
   }
 
@@ -65,32 +55,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     // Normalisasi ke Senin 00:00:00
     final d = DateTime(date.year, date.month, date.day);
     return d.subtract(Duration(days: d.weekday - 1));
-  }
-
-  void _setupScrollSync() {
-    _employeeListController.addListener(() {
-      if (!_isSyncing && _scheduleGridController.hasClients) {
-        _isSyncing = true;
-        _scheduleGridController.jumpTo(_employeeListController.offset);
-        _isSyncing = false;
-      }
-    });
-    
-    _scheduleGridController.addListener(() {
-      if (!_isSyncing && _employeeListController.hasClients) {
-        _isSyncing = true;
-        _employeeListController.jumpTo(_scheduleGridController.offset);
-        _isSyncing = false;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _employeeListController.dispose();
-    _scheduleGridController.dispose();
-    _horizontalScrollController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -846,8 +810,34 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       body: _isLoading ? const Center(child: CircularProgressIndicator()) 
           : Column(children: [
               _buildHeader(),
-              _buildLegend(),
-              Expanded(child: _buildTable()),
+              const ScheduleLegend(),
+              Expanded(
+                child: ScheduleTableView(
+                  employees: _employees,
+                  currentSchedule: _currentSchedule,
+                  startDate: _startDate,
+                  sakitIzinMap: _sakitIzinMap,
+                  timeOffMap: _timeOffMap,
+                  leaveBalance: _leaveBalance,
+                  isBulkMode: _isBulkMode,
+                  selectedEmployeeIds: _selectedEmployeeIds,
+                  onCellTap: (emp, date) => _showShiftPicker(emp, date),
+                  onEntryRemove: (entryId) => _removeEntry(entryId),
+                  onTimeOffTap: (emp) => _showTimeOffDialog(emp),
+                  onToggleSelectAll: _toggleSelectAll,
+                  onToggleEmployee: (empId) {
+                    setState(() {
+                      if (_selectedEmployeeIds.contains(empId)) {
+                        _selectedEmployeeIds.remove(empId);
+                      } else {
+                        _selectedEmployeeIds.add(empId);
+                      }
+                    });
+                  },
+                  getSakitIzin: _getSakitIzin,
+                  getHasTimeOff: _hasTimeOff,
+                ),
+              ),
             ]),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
@@ -918,247 +908,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     );
   }
 
-  Widget _buildLegend() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      color: Colors.white,
-      child: SingleChildScrollView(scrollDirection: Axis.horizontal,
-        child: Row(children: [
-          _legendChip('Pagi', const Color(0xFF3B82F6)),
-          _legendChip('Siang', const Color(0xFFF59E0B)),
-          _legendChip('Sore', const Color(0xFFF97316)),
-          _legendChip('Libur', const Color(0xFFDC2626)),
-          _legendChip('Sakit', const Color(0xFF991B1B)),
-          _legendChip('Izin', const Color(0xFF2563EB)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _legendChip(String label, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(right: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3))),
-      child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
-    );
-  }
-
-  // ===========================================================================
-  // SYNCHRONIZED TABLE
-  // ===========================================================================
-
-  Widget _buildTable() {
-    if (_employees.isEmpty) return const Center(child: Text('Tidak ada karyawan'));
-    final days = List.generate(7, (i) => _startDate.add(Duration(days: i)));
-
-    return Row(children: [
-      // FIXED: Employee Column - COMPACT
-      Container(
-        width: 110,
-        decoration: BoxDecoration(color: Colors.grey.shade50, border: Border(right: BorderSide(color: Colors.grey.shade300))),
-        child: Column(children: [
-          Container(height: 40, alignment: Alignment.center,
-            decoration: BoxDecoration(color: _isBulkMode ? Colors.orange.withOpacity(0.15) : AppColors.primary.withOpacity(0.1), border: Border(bottom: BorderSide(color: Colors.grey.shade300))),
-            child: _isBulkMode
-              ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  SizedBox(
-                    width: 24, height: 24,
-                    child: Checkbox(
-                      value: _selectedEmployeeIds.length == _employees.length && _employees.isNotEmpty,
-                      onChanged: (_) => _toggleSelectAll(),
-                      activeColor: Colors.orange,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Text('Semua', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-                ])
-              : const Text('KARYAWAN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: _employeeListController,
-              itemCount: _employees.length,
-              itemBuilder: (ctx, i) => _buildEmployeeCell(_employees[i]),
-            ),
-          ),
-        ]),
-      ),
-      // SCROLLABLE: Schedule Grid - COMPACT
-      Expanded(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final colWidth = (constraints.maxWidth / days.length).clamp(65.0, double.infinity);
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              controller: _horizontalScrollController,
-              child: SizedBox(
-                width: days.length * colWidth,
-                child: Column(children: [
-                  // Date Header - COMPACT
-                  Container(height: 40, color: AppColors.primary.withOpacity(0.05),
-                    child: Row(children: days.map((d) => Container(
-                      width: colWidth, alignment: Alignment.center,
-                      decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade200))),
-                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Text(['Sen','Sel','Rab','Kam','Jum','Sab','Min'][d.weekday%7], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                        Text('${d.day}', style: TextStyle(fontSize: 9, color: Colors.grey.shade600)),
-                      ]),
-                    )).toList()),
-                  ),
-                  // Schedule Rows (SYNCHRONIZED)
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scheduleGridController,
-                      itemCount: _employees.length,
-                      itemBuilder: (ctx, i) => _buildScheduleRow(_employees[i], days, colWidth),
-                    ),
-                  ),
-                ]),
-              ),
-            );
-          }
-        ),
-      ),
-    ]);
-  }
-
-  Widget _buildEmployeeCell(Employee emp) {
-    final isSelected = _selectedEmployeeIds.contains(emp.id);
-    return Container(
-      height: 52, // COMPACT
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      decoration: BoxDecoration(
-        color: _isBulkMode && isSelected ? Colors.orange.withOpacity(0.08) : null,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(children: [
-        // Bulk mode checkbox
-        if (_isBulkMode)
-          SizedBox(
-            width: 28, height: 28,
-            child: Checkbox(
-              value: isSelected,
-              onChanged: (_) => setState(() {
-                if (isSelected) {
-                  _selectedEmployeeIds.remove(emp.id);
-                } else {
-                  _selectedEmployeeIds.add(emp.id);
-                }
-              }),
-              activeColor: Colors.orange,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        if (!_isBulkMode) const SizedBox(width: 4),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(emp.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-            // Show leave balance indicator
-            if ((_leaveBalance[emp.id] ?? 0) > 0)
-              Container(margin: const EdgeInsets.only(top: 2), padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(3)),
-                child: Text('+${_leaveBalance[emp.id]}', style: TextStyle(fontSize: 8, color: Colors.orange.shade800)),
-              ),
-          ])),
-        // Time off button - COMPACT (hidden in bulk mode)
-        if (!_isBulkMode)
-          Material(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(6),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(6),
-              onTap: () => _showTimeOffDialog(emp),
-              child: Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                child: Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade700),
-              ),
-            ),
-          ),
-      ]),
-    );
-  }
-
-  Widget _buildScheduleRow(Employee emp, List<DateTime> days, double colWidth) {
-    return Container(
-      height: 52, // COMPACT
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
-      child: Row(children: days.map((d) => _buildDayCell(emp, d, colWidth)).toList()),
-    );
-  }
-
-  Widget _buildDayCell(Employee emp, DateTime date, double colWidth) {
-    final width = colWidth;
-    
-    // Check sakit/izin
-    final sakitIzin = _getSakitIzin(emp.id, date);
-    if (sakitIzin != null) {
-      return Container(width: width, padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade200))),
-        child: _chip(sakitIzin.label, sakitIzin.color, Icons.medical_services),
-      );
-    }
-    
-    // Check time off
-    if (_hasTimeOff(emp.id, date)) {
-      return Container(width: width, padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade200))),
-        child: _chip('Libur', const Color(0xFFDC2626), Icons.beach_access),
-      );
-    }
-    
-    // Get shift entry
-    final entries = _currentSchedule!.entries.where((e) => 
-      e.employeeId == emp.id && e.date.year == date.year && e.date.month == date.month && e.date.day == date.day).toList();
-    
-    if (entries.isEmpty) {
-      return Container(width: width, padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade200))),
-        child: GestureDetector(
-          onTap: () => _showShiftPicker(emp, date),
-          child: Container(decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.grey.shade300)),
-            child: Icon(Icons.add, size: 18, color: Colors.grey.shade400)),
-        ),
-      );
-    }
-    
-    final entry = entries.first;
-    final shiftName = entry.shift.name.toLowerCase();
-    final (bg, fg, icon) = switch(shiftName) {
-      'pagi' => (const Color(0xFFDBEAFE), const Color(0xFF1E40AF), Icons.wb_sunny),
-      'siang' => (const Color(0xFFFEF3C7), const Color(0xFF92400E), Icons.wb_twilight),
-      'sore' => (const Color(0xFFFFEDD5), const Color(0xFFC2410C), Icons.nights_stay),
-      'libur' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), Icons.beach_access),
-      _ => (Colors.grey.shade200, Colors.grey.shade800, Icons.work),
-    };
-    
-    return Container(width: width, padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(border: Border(right: BorderSide(color: Colors.grey.shade200))),
-      child: GestureDetector(
-        onTap: () => _removeEntry(entry.id),
-        child: _chip(entry.shift.name, fg, icon, bg: bg),
-      ),
-    );
-  }
-
-  Widget _chip(String label, Color color, IconData icon, {Color? bg}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-      decoration: BoxDecoration(color: bg ?? color.withOpacity(0.15), borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3))),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, size: 10, color: color),
-        const SizedBox(width: 2),
-        Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color), overflow: TextOverflow.ellipsis),
-      ]),
-    );
-  }
-
   void _showShiftPicker(Employee emp, DateTime date) {
     if (_getSakitIzin(emp.id, date) != null || _hasTimeOff(emp.id, date)) return;
     
@@ -1181,7 +930,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
   Widget _shiftOption(Employee emp, DateTime date, BuildContext dialogContext, ShiftSlot shift, IconData icon, String name, String time) {
     return ListTile(
-      leading: CircleAvatar(backgroundColor: shift.color.withOpacity(0.2),
+      leading: CircleAvatar(backgroundColor: shift.color.withValues(alpha: 0.2),
         child: Icon(icon, color: shift.color, size: 18)),
       title: Text(name),
       subtitle: Text(time, style: TextStyle(fontSize: 12)),
