@@ -1,0 +1,83 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../core/supabase_client.dart';
+import '../models/attendance_log.dart';
+import 'sqlite_service.dart';
+
+typedef SyncResult = ({int synced, int failed});
+
+/// Background sync service: uploads local SQLite queue to Supabase.
+///
+/// Flow per pending log:
+/// 1. Check network connectivity
+/// 2. INSERT attendance_log record to Supabase
+/// 3. markLogSynced in SQLite
+class SyncService {
+  static Future<SyncResult> syncPendingLogs() async {
+    // Skip if offline
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none) ||
+        connectivity.isEmpty) {
+      return (synced: 0, failed: 0);
+    }
+
+    final client = SupabaseClientFactory.kiosk;
+    final pending = await SqliteService.getPendingLogs();
+
+    if (pending.isEmpty) {
+      await SqliteService.cleanOldSyncedLogs();
+      return (synced: 0, failed: 0);
+    }
+
+    int synced = 0;
+    int failed = 0;
+
+    await Future.wait(pending.map((log) async {
+      try {
+        // INSERT attendance log to Supabase
+        await client.from('attendance_logs').insert({
+          'employee_id': log.employeeId,
+          'scan_outlet_id': log.scanOutletId,
+          'type': log.type.value,
+          'lat': log.lat,
+          'lng': log.lng,
+          'device_id': log.deviceId,
+          'scanned_at': log.scannedAt,
+          'synced_at': DateTime.now().toIso8601String(),
+          'local_id': log.localId,
+          'is_backup': log.isBackup,
+          'notes': log.notes,
+        });
+
+        // Mark synced in local DB
+        await SqliteService.markLogSynced(log.localId);
+        synced++;
+      } on PostgrestException catch (e) {
+        if (e.code == '23505') {
+          // Duplicate local_id — already synced, treat as success
+          await SqliteService.markLogSynced(log.localId);
+          synced++;
+        } else {
+          // ignore: avoid_print
+          print('[Sync] Supabase error for ${log.localId}: ${e.message}');
+          await SqliteService.markLogFailed(log.localId);
+          failed++;
+        }
+      } catch (e, stack) {
+        // ignore: avoid_print
+        print('[Sync] Failed to sync ${log.localId}: $e\n$stack');
+        await SqliteService.markLogFailed(log.localId);
+        failed++;
+      }
+    }));
+
+    if (synced > 0) {
+      await SqliteService.cleanOldSyncedLogs();
+    }
+
+    // ignore: avoid_print
+    print('[Sync] Done: $synced synced, $failed failed');
+    return (synced: synced, failed: failed);
+  }
+}

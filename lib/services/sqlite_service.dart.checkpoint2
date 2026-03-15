@@ -1,0 +1,167 @@
+import 'dart:math';
+
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../core/constants.dart';
+import '../models/attendance_log.dart';
+import '../models/pending_log.dart';
+
+/// Manages the local SQLite offline queue for attendance logs.
+class SqliteService {
+  static Database? _db;
+
+  static Future<Database> getDatabase() async {
+    if (_db != null) return _db!;
+    final dbPath = await getDatabasesPath();
+    _db = await openDatabase(
+      join(dbPath, AppConstants.dbName),
+      version: AppConstants.dbVersion,
+      onCreate: _initSchema,
+      onUpgrade: _onUpgrade,
+    );
+    // WAL mode for better concurrent read performance
+    await _db!.rawQuery('PRAGMA journal_mode = WAL;');
+    return _db!;
+  }
+
+  static Future<void> _initSchema(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS pending_logs (
+        local_id          TEXT PRIMARY KEY,
+        employee_id       TEXT NOT NULL,
+        scan_outlet_id    TEXT NOT NULL,
+        type              TEXT NOT NULL CHECK (type IN ('masuk', 'break', 'pulang', 'kembali')),
+        lat               REAL,
+        lng               REAL,
+        device_id         TEXT NOT NULL,
+        scanned_at        TEXT NOT NULL,
+        sync_status       TEXT NOT NULL DEFAULT 'pending'
+                          CHECK (sync_status IN ('pending','uploading','synced','failed')),
+        retry_count       INTEGER NOT NULL DEFAULT 0,
+        is_backup         INTEGER NOT NULL DEFAULT 0,
+        notes             TEXT,
+        created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sync_status ON pending_logs(sync_status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_created_at ON pending_logs(created_at DESC)',
+    );
+  }
+
+  /// Migration from v1 (with selfie columns) to v2 (without selfie).
+  /// Since this is a local offline queue with best-effort data,
+  /// it's safe to drop and recreate the table.
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('DROP TABLE IF EXISTS pending_logs');
+      await _initSchema(db, newVersion);
+    } else if (oldVersion < 3) {
+      // v3: CHECK constraint cannot be altered in SQLite — recreate table,
+      // migrating any unsynced pending rows first.
+      await db.execute('ALTER TABLE pending_logs RENAME TO pending_logs_old');
+      await _initSchema(db, newVersion);
+      await db.execute('''
+        INSERT INTO pending_logs SELECT * FROM pending_logs_old
+        WHERE sync_status IN ('pending','failed')
+      ''');
+      await db.execute('DROP TABLE pending_logs_old');
+    } else if (oldVersion < 4) {
+      // v4: Add is_backup and notes columns
+      await db.execute('ALTER TABLE pending_logs ADD COLUMN is_backup INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE pending_logs ADD COLUMN notes TEXT');
+    }
+  }
+
+  /// Insert a new attendance event into the offline queue.
+  static Future<String> insertPendingLog({
+    required String employeeId,
+    required String scanOutletId,
+    required AttendanceType type,
+    double? lat,
+    double? lng,
+    required String deviceId,
+    required String scannedAt,
+    bool isBackup = false,
+    String? notes,
+  }) async {
+    final db = await getDatabase();
+    final localId = _generateLocalId();
+
+    await db.insert('pending_logs', {
+      'local_id': localId,
+      'employee_id': employeeId,
+      'scan_outlet_id': scanOutletId,
+      'type': type.value,
+      'lat': lat,
+      'lng': lng,
+      'device_id': deviceId,
+      'scanned_at': scannedAt,
+      'sync_status': 'pending',
+      'retry_count': 0,
+      'is_backup': isBackup ? 1 : 0,
+      'notes': notes,
+    });
+
+    return localId;
+  }
+
+  /// Get all logs eligible for sync (pending or failed with retries < max).
+  static Future<List<PendingLog>> getPendingLogs() async {
+    final db = await getDatabase();
+    final rows = await db.query(
+      'pending_logs',
+      where: "sync_status IN ('pending','failed') AND retry_count < ?",
+      whereArgs: [AppConstants.syncMaxRetries],
+      orderBy: 'created_at ASC',
+      limit: AppConstants.syncBatchSize,
+    );
+    return rows.map(PendingLog.fromMap).toList();
+  }
+
+  /// Mark a log as successfully synced.
+  static Future<void> markLogSynced(String localId) async {
+    final db = await getDatabase();
+    await db.update(
+      'pending_logs',
+      {'sync_status': 'synced'},
+      where: 'local_id = ?',
+      whereArgs: [localId],
+    );
+  }
+
+  /// Mark a log as failed and increment retry count.
+  static Future<void> markLogFailed(String localId) async {
+    final db = await getDatabase();
+    await db.rawUpdate(
+      'UPDATE pending_logs SET sync_status = ?, retry_count = retry_count + 1 WHERE local_id = ?',
+      ['failed', localId],
+    );
+  }
+
+  /// Count logs that are not yet synced — used for the UI badge.
+  static Future<int> countPendingLogs() async {
+    final db = await getDatabase();
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) as count FROM pending_logs WHERE sync_status IN ('pending','failed')",
+    );
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  /// Delete synced logs older than 7 days to prevent DB bloat.
+  static Future<void> cleanOldSyncedLogs() async {
+    final db = await getDatabase();
+    await db.rawDelete(
+      "DELETE FROM pending_logs WHERE sync_status = 'synced' AND created_at < datetime('now', '-7 days')",
+    );
+  }
+
+  static String _generateLocalId() {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final rand = Random().nextInt(99999999).toRadixString(36);
+    return '$ts-$rand';
+  }
+}

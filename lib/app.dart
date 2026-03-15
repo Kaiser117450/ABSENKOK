@@ -1,0 +1,259 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toastification/toastification.dart';
+
+import 'services/kiosk_background_service.dart';
+
+import 'core/theme.dart';
+import 'main.dart' show supabaseReady;
+import 'providers/app_provider.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_employees_screen.dart';
+import 'screens/admin/admin_login_screen.dart';
+import 'screens/admin/admin_outlets_screen.dart';
+import 'screens/admin/admin_reports_screen.dart';
+import 'screens/admin/admin_shell.dart';
+import 'screens/admin/archived_employees_screen.dart';
+import 'screens/admin/csv_import_screen.dart';
+import 'screens/kiosk/kiosk_idle_screen.dart';
+import 'screens/kiosk/kiosk_scan_screen.dart';
+import 'screens/setup/setup_screen.dart';
+
+// ---------------------------------------------------------------------------
+// Router
+// ---------------------------------------------------------------------------
+
+/// A ChangeNotifier that GoRouter uses to reactively re-evaluate redirects
+/// whenever the Riverpod AppState changes.
+class _AppStateListenable extends ChangeNotifier {
+  _AppStateListenable(this._ref) {
+    _ref.listen<AppState>(appProvider, (_, __) => notifyListeners());
+  }
+
+  final Ref _ref;
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final listenable = _AppStateListenable(ref);
+
+  return GoRouter(
+    initialLocation: '/setup',
+    refreshListenable: listenable,
+    redirect: (context, state) {
+      final appState = ref.read(appProvider);
+
+      final loc = state.uri.path;
+
+      // STRICT GUARD: Don't allow access to protected routes while session is loading.
+      // This prevents redirect loops and async gap errors where a protected route
+      // tries to access unloaded session data.
+      if (appState.isLoading) {
+        if (loc == '/setup' || loc == '/admin/login') return null;
+        return '/setup'; // Force wait at setup screen
+      }
+      final isAdmin = appState.isAdmin;
+      final isKepalaGerai = appState.isKepalaGerai;
+      final hasKiosk = appState.kioskSession != null;
+
+      // /admin/login is ALWAYS reachable regardless of session state.
+      // This lets kiosk operators tap "Admin" button and navigate to login
+      // even when a kiosk session is already active (hasKiosk == true).
+      // Without this, GoRouter immediately redirects back to /kiosk.
+      if (loc == '/admin/login') return null;
+
+      if (isAdmin) {
+        // Admin penuh → akses semua halaman admin
+        if (!loc.startsWith('/admin')) return '/admin/dashboard';
+      } else if (isKepalaGerai) {
+        // Kepala gerai → akses dashboard/karyawan/laporan saja, TIDAK bisa ke /admin/outlets
+        if (!loc.startsWith('/admin')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
+      } else if (hasKiosk) {
+        // Kiosk session exists → stay on kiosk screens
+        if (!loc.startsWith('/kiosk')) return '/kiosk';
+      } else {
+        // No session at all → only /setup is allowed, redirect everything else
+        if (loc != '/setup') return '/setup';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/setup',
+        builder: (_, __) => const SetupScreen(),
+      ),
+      GoRoute(
+        path: '/kiosk',
+        builder: (_, __) => const KioskIdleScreen(),
+        routes: [
+          GoRoute(
+            path: 'scan',
+            builder: (_, __) => const KioskScanScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/admin/login',
+        builder: (_, __) => const AdminLoginScreen(),
+      ),
+      ShellRoute(
+        builder: (_, __, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/admin/dashboard',
+            builder: (_, __) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/admin/employees',
+            builder: (_, __) => const AdminEmployeesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/reports',
+            builder: (_, __) => const AdminReportsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/outlets',
+            builder: (_, __) => const AdminOutletsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/archived-employees',
+            builder: (_, __) => const ArchivedEmployeesScreen(),
+          ),
+          GoRoute(
+            path: '/admin/csv-import',
+            builder: (_, __) => const CsvImportScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Root App Widget
+// ---------------------------------------------------------------------------
+
+class AbsensiEnakkoApp extends ConsumerStatefulWidget {
+  const AbsensiEnakkoApp({super.key});
+
+  @override
+  ConsumerState<AbsensiEnakkoApp> createState() => _AbsensiEnakkoAppState();
+}
+
+class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Load kiosk session from SharedPreferences
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(appProvider.notifier).loadSession();
+
+      // Safety net: if loadSession hangs for any reason, unblock after 5s
+      Future.delayed(const Duration(seconds: 5), () {
+        if (!mounted) return;
+        final s = ref.read(appProvider);
+        if (s.isLoading) {
+          ref.read(appProvider.notifier).forceUnblockLoading();
+        }
+      });
+
+      // Request overlay permission proaktif saat pertama launch (Android only)
+      if (Platform.isAndroid) {
+        KioskBackgroundService.requestOverlayPermission();
+      }
+    });
+
+    // Subscribe to Supabase admin auth state changes
+    if (supabaseReady) {
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        final session = data.session;
+        if (session != null) {
+          final user = session.user;
+          final role = (user.userMetadata?['app_role'] as String?) ??
+              (user.appMetadata['app_role'] as String?);
+
+          if (role == 'admin') {
+            ref.read(appProvider.notifier).setAdminMode(true);
+            ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+          } else if (role == 'kepala_gerai') {
+            final outletId =
+                (user.appMetadata['managed_outlet_id'] as String?) ??
+                    (user.userMetadata?['managed_outlet_id'] as String?);
+            ref.read(appProvider.notifier).setAdminMode(false);
+            ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
+          } else {
+            ref.read(appProvider.notifier).setAdminMode(false);
+            ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+          }
+        } else {
+          // Logout — clear semua role
+          ref.read(appProvider.notifier).setAdminMode(false);
+          ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  bool _isBackgroundLifecycleState(AppLifecycleState state) {
+    return state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused;
+  }
+
+  Future<void> _applyLifecyclePolicy(AppLifecycleState state) async {
+    if (!Platform.isAndroid) return;
+
+    final appState = ref.read(appProvider);
+    final session = appState.kioskSession;
+    if (session == null) return;
+
+    if (_isBackgroundLifecycleState(state)) {
+      await KioskBackgroundService.showLiveNotification(
+        outletName: session.outletName,
+      );
+      await KioskBackgroundService.showOverlayPill(
+        outletName: session.outletName,
+      );
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed &&
+        !appState.keepOverlayInForeground) {
+      await KioskBackgroundService.hideOverlayPill();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    unawaited(_applyLifecyclePolicy(state));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final router = ref.watch(routerProvider);
+    return ToastificationWrapper(
+      child: MaterialApp.router(
+        title: 'Absensi Enakko',
+        theme: buildAppTheme(),
+        routerConfig: router,
+        debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}

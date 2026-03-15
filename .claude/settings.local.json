@@ -2,7 +2,29 @@
   "permissions": {
     "allow": [
       "mcp__Claude_Preview__preview_start",
-      "Bash(where npm:*)"
+      "Bash(where npm:*)",
+      "Bash(grep -E '\\(sk-[a-zA-Z0-9]{20,}|sk_live_[a-zA-Z0-9]+|sk_test_[a-zA-Z0-9]+|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|glpat-[a-zA-Z0-9_-]+|AKIA[A-Z0-9]{16}|xox[baprs]-[a-zA-Z0-9-]+|-----BEGIN.*PRIVATE KEY|eyJ[a-zA-Z0-9_-]+\\\\.eyJ[a-zA-Z0-9_-]+\\\\.\\)' \".planning/codebase/\"*.md)",
+      "mcp__e8520fae-d325-4c01-bcf0-9ba3a5c47717__list_projects",
+      "mcp__e8520fae-d325-4c01-bcf0-9ba3a5c47717__list_tables",
+      "mcp__e8520fae-d325-4c01-bcf0-9ba3a5c47717__execute_sql",
+      "mcp__e8520fae-d325-4c01-bcf0-9ba3a5c47717__apply_migration",
+      "Bash(git add .planning/phases/02-kiosk-scan-cycle-edge-cases/02-03-SUMMARY.md)",
+      "Bash(git commit:*)",
+      "Bash(C:flutterbinflutter.bat analyze lib/screens/kiosk/kiosk_scan_screen.dart lib/screens/admin/admin_reports_screen.dart lib/screens/admin/admin_dashboard_screen.dart)",
+      "Bash(\"C:\\\\flutter\\\\bin\\\\flutter.bat\" analyze lib/screens/admin/admin_reports_screen.dart)",
+      "Bash(git add lib/screens/admin/admin_reports_screen.dart)",
+      "Bash(git add .planning/phases/02-kiosk-scan-cycle-edge-cases/02-VERIFICATION.md .planning/STATE.md)",
+      "Bash(adb devices:*)",
+      "Bash(node:*)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash($env:JAVA_HOME =:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(adb install:*)",
+      "Bash(grep:*)",
+      "Skill(gsd:plan-milestone-gaps)",
+      "Skill(gsd:execute-phase)"
     ]
   }
 }
