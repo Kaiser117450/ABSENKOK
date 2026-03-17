@@ -161,22 +161,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         notes: backupNotes,
       );
 
-      // Auto-assign sudah ditangani di idle screen saat konfirmasi outlet
-      // Hanya lakukan assign ulang jika bukan mode backup dan outlet berbeda
-      if (!isBackup && employee.homeOutletId != session.outletId) {
-        try {
-          await SupabaseClientFactory.admin.from('employees').update({
-            'home_outlet_id': session.outletId,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          }).eq('id', employee.id);
-          debugPrint(
-              '[AutoAssign] ${employee.name} moved to outlet ${session.outletId}');
-        } catch (e) {
-          debugPrint('[AutoAssign] Failed: $e');
-          // Continue - absensi tetap tercatat meski auto-assign gagal
-        }
-      }
-
       // Update pending badge count
       final count = await SqliteService.countPendingLogs();
       ref.read(appProvider.notifier).setPendingCount(count);
