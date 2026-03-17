@@ -68,11 +68,20 @@ class EmployeeBadge {
 
   static Color _parseHex(String hex) {
     final cleaned = hex.replaceAll('#', '').trim();
+    final normalized = cleaned.toUpperCase();
     if (cleaned.length == 6) {
-      return Color(int.parse('FF$cleaned', radix: 16));
+      final parsed = int.tryParse('FF$normalized', radix: 16);
+      if (parsed != null) {
+        return Color(parsed);
+      }
+      return const Color(0xFF9CA3AF);
     }
     if (cleaned.length == 8) {
-      return Color(int.parse(cleaned, radix: 16));
+      final parsed = int.tryParse(normalized, radix: 16);
+      if (parsed != null) {
+        return Color(parsed);
+      }
+      return const Color(0xFF9CA3AF);
     }
     return const Color(0xFF9CA3AF); // fallback gray
   }
