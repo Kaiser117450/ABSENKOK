@@ -180,16 +180,13 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
         final session = data.session;
         if (session != null) {
           final user = session.user;
-          final role = (user.userMetadata?['app_role'] as String?) ??
-              (user.appMetadata['app_role'] as String?);
+          final role = user.appMetadata['app_role'] as String?;
 
           if (role == 'admin') {
             ref.read(appProvider.notifier).setAdminMode(true);
             ref.read(appProvider.notifier).setKepalaGeraiMode(null);
           } else if (role == 'kepala_gerai') {
-            final outletId =
-                (user.appMetadata['managed_outlet_id'] as String?) ??
-                    (user.userMetadata?['managed_outlet_id'] as String?);
+            final outletId = user.appMetadata['managed_outlet_id'] as String?;
             ref.read(appProvider.notifier).setAdminMode(false);
             ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
           } else {
