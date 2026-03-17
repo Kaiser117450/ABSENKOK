@@ -266,6 +266,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final filtered = _filtered;
     final activeCount = _employees.where((e) => e.isActive).length;
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
+    final canImportCsv = ref.watch(appProvider).isAdmin;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -319,26 +320,31 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        // CSV Import navigation button
-                        GestureDetector(
-                          onTap: () => context.push('/admin/csv-import'),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.textMuted.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.textMuted.withValues(alpha: 0.2)),
-                            ),
-                            child: const Tooltip(
-                              message: 'Import CSV',
-                              child: Icon(Icons.upload_file_outlined,
-                                  size: 16, color: AppColors.textSecondary),
+                        if (canImportCsv) ...[
+                          const SizedBox(width: 6),
+                          // CSV Import navigation button
+                          GestureDetector(
+                            onTap: () => context.push('/admin/csv-import'),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.textMuted.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      AppColors.textMuted.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Tooltip(
+                                message: 'Import CSV',
+                                child: Icon(Icons.upload_file_outlined,
+                                    size: 16, color: AppColors.textSecondary),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
