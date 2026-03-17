@@ -35,16 +35,15 @@
 - Color picker preset palette — deferred, visual picker is sufficient
 
 ## Traceability
-<!-- Filled by roadmapper -->
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-01 | — | — |
-| AUTH-02 | — | — |
-| AUTH-03 | — | — |
-| AUTH-04 | — | — |
-| BADGE-01 | — | — |
-| BADGE-02 | — | — |
-| BADGE-03 | — | — |
-| REL-01 | — | — |
-| REL-02 | — | — |
+| AUTH-01 | Phase 20 | Pending |
+| AUTH-02 | Phase 20 | Pending |
+| AUTH-03 | Phase 20 | Pending |
+| AUTH-04 | Phase 20 | Pending |
+| BADGE-01 | Phase 21 | Pending |
+| BADGE-02 | Phase 21 | Pending |
+| BADGE-03 | Phase 21 | Pending |
+| REL-01 | Phase 22 | Pending |
+| REL-02 | Phase 22 | Pending |
