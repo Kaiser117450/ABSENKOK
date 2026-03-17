@@ -161,22 +161,19 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   void _showSakitIzinDialog(Employee employee) {
-    final appState = ref.read(appProvider);
-    final outletId = appState.isKepalaGerai 
-        ? appState.managedOutletId! 
-        : employee.homeOutletId ?? _outlets.first.id;
-    final outletName = _outlets
-        .where((o) => o.id == outletId)
-        .map((o) => o.name)
-        .firstOrNull ?? 'Unknown';
-    
+    final outletInfo = _resolveSakitIzinOutlet(employee);
+    if (outletInfo == null) {
+      AppToast.error(context, 'Outlet tidak tersedia untuk karyawan ini');
+      return;
+    }
+
     showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => SakitIzinDialog(
         employee: employee,
-        outletId: outletId,
-        outletName: outletName,
+        outletId: outletInfo.id,
+        outletName: outletInfo.name,
       ),
     ).then((result) {
       if (result == true) {
@@ -186,24 +183,40 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   void _showSakitIzinHistory(Employee employee) {
-    final appState = ref.read(appProvider);
-    final outletId = appState.isKepalaGerai
-        ? appState.managedOutletId!
-        : employee.homeOutletId ?? _outlets.first.id;
-    final outletName = _outlets
-        .where((o) => o.id == outletId)
-        .map((o) => o.name)
-        .firstOrNull ?? 'Unknown';
+    final outletInfo = _resolveSakitIzinOutlet(employee);
+    if (outletInfo == null) {
+      AppToast.error(context, 'Outlet tidak tersedia untuk karyawan ini');
+      return;
+    }
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => SakitIzinListScreen(
           employee: employee,
-          outletId: outletId,
-          outletName: outletName,
+          outletId: outletInfo.id,
+          outletName: outletInfo.name,
         ),
       ),
     );
+  }
+
+  ({String id, String name})? _resolveSakitIzinOutlet(Employee employee) {
+    final appState = ref.read(appProvider);
+    final outletId = appState.isKepalaGerai
+        ? appState.managedOutletId
+        : employee.homeOutletId ?? _outlets.firstOrNull?.id;
+
+    if (outletId == null) {
+      return null;
+    }
+
+    final outletName = _outlets
+            .where((o) => o.id == outletId)
+            .map((o) => o.name)
+            .firstOrNull ??
+        'Unknown';
+
+    return (id: outletId, name: outletName);
   }
 
   Future<void> _showBadgePicker(Employee employee) async {
@@ -266,6 +279,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final filtered = _filtered;
     final activeCount = _employees.where((e) => e.isActive).length;
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
+    final canImportCsv = ref.watch(appProvider).isAdmin;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -319,26 +333,31 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        // CSV Import navigation button
-                        GestureDetector(
-                          onTap: () => context.push('/admin/csv-import'),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.textMuted.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.textMuted.withValues(alpha: 0.2)),
-                            ),
-                            child: const Tooltip(
-                              message: 'Import CSV',
-                              child: Icon(Icons.upload_file_outlined,
-                                  size: 16, color: AppColors.textSecondary),
+                        if (canImportCsv) ...[
+                          const SizedBox(width: 6),
+                          // CSV Import navigation button
+                          GestureDetector(
+                            onTap: () => context.push('/admin/csv-import'),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.textMuted.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      AppColors.textMuted.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: const Tooltip(
+                                message: 'Import CSV',
+                                child: Icon(Icons.upload_file_outlined,
+                                    size: 16, color: AppColors.textSecondary),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -824,7 +843,7 @@ class _EmployeeCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.store_outlined,
-                          size: 11, 
+                          size: 11,
                           color: outletName != null ? AppColors.textMuted : const Color(0xFFF59E0B)),
                       const SizedBox(width: 3),
                       Text(

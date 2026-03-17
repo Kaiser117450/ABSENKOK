@@ -41,7 +41,7 @@ class Employee {
         updatedAt: json['updated_at'] as String? ?? '',
         archivedAt: json['archived_at'] == null
             ? null
-            : DateTime.parse(json['archived_at'] as String),
+            : DateTime.tryParse(json['archived_at'] as String),
         activeBadgeId: json['active_badge_id'] as String?,
       );
 

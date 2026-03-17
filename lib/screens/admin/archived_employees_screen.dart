@@ -6,6 +6,7 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
+import '../../providers/app_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
@@ -34,19 +35,29 @@ class _ArchivedEmployeesScreenState
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
+      final appState = ref.read(appProvider);
+      final isKepalaGerai = appState.isKepalaGerai;
+      final managedOutletId = appState.managedOutletId;
+
       // Query archived employees only
-      final empData = await SupabaseClientFactory.admin
+      var empFilter = SupabaseClientFactory.admin
           .from('employees')
           .select('*')
           .eq('is_active', false)
-          .not('archived_at', 'is', null)
-          .order('archived_at', ascending: false);
+          .not('archived_at', 'is', null);
+      if (isKepalaGerai && managedOutletId != null) {
+        empFilter = empFilter.eq('home_outlet_id', managedOutletId);
+      }
+      final empData = await empFilter.order('archived_at', ascending: false);
 
       // Load outlets for display
-      final outData = await SupabaseClientFactory.admin
+      var outFilter = SupabaseClientFactory.admin
           .from('outlets')
-          .select('*')
-          .order('name');
+          .select('*');
+      if (isKepalaGerai && managedOutletId != null) {
+        outFilter = outFilter.eq('id', managedOutletId);
+      }
+      final outData = await outFilter.order('name');
 
       if (mounted) {
         setState(() {
@@ -69,13 +80,21 @@ class _ArchivedEmployeesScreenState
 
   Future<void> _restoreEmployee(Employee employee) async {
     try {
-      await SupabaseClientFactory.admin
+      final appState = ref.read(appProvider);
+      final isKepalaGerai = appState.isKepalaGerai;
+      final managedOutletId = appState.managedOutletId;
+
+      var updateFilter = SupabaseClientFactory.admin
           .from('employees')
           .update({
             'is_active': true,
             'archived_at': null,
           })
           .eq('id', employee.id);
+      if (isKepalaGerai && managedOutletId != null) {
+        updateFilter = updateFilter.eq('home_outlet_id', managedOutletId);
+      }
+      await updateFilter;
 
       if (mounted) {
         AppToast.success(context, '${employee.name} berhasil dipulihkan');

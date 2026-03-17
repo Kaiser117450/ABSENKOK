@@ -388,12 +388,14 @@ class KioskBackgroundService {
         var active = await _waitForOverlayActive();
         if (!active) {
           // OEM fallback: some devices reject compact sizing on first open.
+          // Retry the compact overlay to avoid creating a full-screen,
+          // touch-intercepting window.
           debugPrint(
-            '[BgService] ensureOverlayVisible compact show not active, retrying with matchParent fallback',
+            '[BgService] ensureOverlayVisible compact show not active, retrying compact overlay',
           );
           await FlutterOverlayWindow.showOverlay(
-            height: WindowSize.matchParent,
-            width: WindowSize.matchParent,
+            height: _kOverlayWindowHeight,
+            width: _kOverlayWindowWidth,
             alignment: OverlayAlignment.topCenter,
             flag: OverlayFlag.focusPointer,
             enableDrag: false,
@@ -479,9 +481,16 @@ class KioskBackgroundService {
       return;
     }
     try {
-      debugPrint('[BgService] _pollContent polling outletId=${session.outletId}');
+      assert(() {
+        debugPrint('[BgService] _pollContent polling');
+        return true;
+      }());
       await _liveContent.poll(session.outletId);
-      debugPrint('[BgService] _pollContent OK, hasBreaks=${_liveContent.hasActiveBreaks}');
+      assert(() {
+        debugPrint(
+            '[BgService] _pollContent OK, hasBreaks=${_liveContent.hasActiveBreaks}');
+        return true;
+      }());
     } catch (e) {
       debugPrint('[BgService] _pollContent error: $e');
     }
@@ -509,7 +518,10 @@ class KioskBackgroundService {
     final displayText = _liveContent.nextDisplayText();
     final hasBreak = _liveContent.hasActiveBreaks;
 
-    debugPrint('[BgService] _rotateNotification: "$displayText" hasBreak=$hasBreak');
+    assert(() {
+      debugPrint('[BgService] _rotateNotification hasBreak=$hasBreak');
+      return true;
+    }());
 
     // Accent: amber when someone is on break, green otherwise
     final accentHex = hasBreak ? '#F59E0B' : '#22C55E';
