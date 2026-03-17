@@ -70,7 +70,10 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
   2. If biometric fails or is cancelled, the email/password login form appears and works normally
   3. User can toggle "Remember me" on/off from settings, and disabling it requires password on next login
   4. On a device with no biometric sensor, the app skips biometric setup entirely and uses standard login
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — Android platform setup + BiometricService + AppProvider extensions + tests
+- [ ] 20-02-PLAN.md — Login screen biometric UI + admin shell settings dialog
 
 ### Phase 21: Badge Color Picker
 **Goal**: Admin can visually select badge border colors using an interactive color picker UI
@@ -97,7 +100,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Biometric Login | v3.1 | 0/TBD | Not started | - |
+| 20. Biometric Login | v3.1 | 0/2 | Planned | - |
 | 21. Badge Color Picker | v3.1 | 0/TBD | Not started | - |
 | 22. Production Release | v3.1 | 0/TBD | Not started | - |
 
