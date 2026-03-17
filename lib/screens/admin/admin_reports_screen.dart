@@ -371,10 +371,15 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   String _escapeCsv(String val) {
-    if (val.contains(',') || val.contains('"') || val.contains('\n')) {
-      return '"${val.replaceAll('"', '""')}"';
+    var sanitized = val;
+    if (sanitized.isNotEmpty && '=+-@'.contains(sanitized[0])) {
+      sanitized = "'$sanitized";
     }
-    return val;
+
+    if (sanitized.contains(',') || sanitized.contains('"') || sanitized.contains('\n')) {
+      return '"${sanitized.replaceAll('"', '""')}"';
+    }
+    return sanitized;
   }
 
   DateTime _safeDateTime(String isoStr) {
