@@ -34,14 +34,14 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon-to-text gap in checkbox row |
-| sm | 8px | Compact element spacing, inner padding of small containers |
+| sm | 8px | Compact element spacing, inner padding of small containers, subtitle spacing below heading |
 | md | 16px | Form field vertical spacing (matches existing login form) |
-| lg | 24px | Section spacing between logo, greeting, form, and CTA |
+| lg | 24px | Section spacing between logo, greeting, form, and CTA; form-to-button gap |
 | xl | 32px | Page-level padding (matches existing `EdgeInsets.all(32)` in login) |
 | 2xl | 40px | Gap between form section and primary CTA (matches existing `SizedBox(height: 40)`) |
 | 3xl | 48px | Not used in this phase |
 
-Exceptions: 6px used for subtitle spacing below heading (matches existing `SizedBox(height: 6)` in login screen). 28px used for form-to-button gap (matches existing pattern). 44px minimum touch target for biometric button and checkbox.
+Exceptions: 44px minimum touch target for biometric button and checkbox (accessibility requirement, not layout spacing).
 
 ---
 
@@ -53,10 +53,12 @@ All values inherit from existing `buildAppTheme()` in `lib/core/theme.dart`. Plu
 |------|------|--------|-------------|---------------------|
 | Body | 14px | 400 (regular) | 1.5 | Subtitle text, error messages, checkbox label |
 | Label | 15px | 700 (bold) | 1.4 | Button text ("Masuk", biometric CTA) |
-| Heading | 24px | 800 (extrabold) | 1.2 | Login greeting "Halo, Akmal" |
+| Heading | 24px | 700 (bold) | 1.2 | Login greeting "Halo, Akmal" |
 | Caption | 13px | 400 (regular) | 1.4 | Error container text, helper text |
 
-Source: Existing `headlineSmall` (w800), `bodyMedium` (w400), `labelLarge` (w600) in theme.dart. Button text uses 15px w700 per `elevatedButtonTheme`.
+Weights used: 400 (regular) for body text and captions, 700 (bold) for headings and button labels. Two weights only.
+
+Source: Existing `headlineSmall` and `elevatedButtonTheme` in theme.dart. Heading consolidated from w800 to w700 to match button weight and maintain a 2-weight constraint.
 
 ---
 
@@ -85,6 +87,12 @@ Additional semantic colors used:
 
 ---
 
+## Focal Point
+
+The primary visual anchor is the "Masuk" CTA button. It is the only element using accent color as a filled background, making it the strongest focal point on the login screen. All other elements (form fields, biometric button, checkbox) use neutral or outlined treatments to direct attention toward the primary CTA.
+
+---
+
 ## Component Inventory
 
 ### New UI Elements for This Phase
@@ -108,7 +116,7 @@ Additional semantic colors used:
 - **Only visible when:** Device has biometric hardware (AUTH-04)
 
 #### 3. Settings Dialog Toggle (admin shell)
-- **Location:** Gear icon (`Icons.settings_outlined`) in admin shell AppBar actions, opens a SimpleDialog/AlertDialog
+- **Location:** Gear icon (`Icons.settings_outlined`, `semanticLabel: 'Pengaturan'`) in admin shell AppBar actions, opens a SimpleDialog/AlertDialog
 - **Dialog content:** Single SwitchListTile for "Login Biometrik"
 - **Switch subtitle:** "Gunakan sidik jari atau wajah untuk masuk" in bodySmall (13px, AppColors.textSecondary)
 - **Dialog shape:** RoundedRectangleBorder(borderRadius: 20) -- matches existing logout dialog
@@ -131,7 +139,7 @@ Additional semantic colors used:
 #### 6. Admin Shell AppBar Addition
 - **Current:** Title + logout icon button
 - **New:** Title + settings gear icon + logout icon button
-- **Gear icon:** `Icons.settings_outlined`, 22px, Colors.white (matches existing icon theme)
+- **Gear icon:** `Icons.settings_outlined`, 22px, Colors.white (matches existing icon theme), `semanticLabel: 'Pengaturan'`
 - **Position:** To the left of the existing logout icon in AppBar actions list
 
 ---
@@ -235,6 +243,7 @@ No third-party registries. No shadcn (Flutter project, not React). Registry safe
 | Touch targets | All interactive elements minimum 44px height (biometric button 48px via padding) |
 | Biometric fallback | `biometricOnly: false` allows device PIN/pattern as fallback (AUTH-02) |
 | Screen reader | Biometric button uses semantic label; fingerprint icon has `semanticLabel: 'Sidik jari'` |
+| Settings icon | Gear icon uses `semanticLabel: 'Pengaturan'` for screen reader identification |
 | No biometric hardware | Checkbox and biometric button hidden entirely (AUTH-04), standard login works |
 | Error visibility | Error container uses red border + light red background + 13px text for readability |
 
