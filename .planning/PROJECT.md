@@ -11,6 +11,15 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
+## Current Milestone: v3.1 Biometric Login + Badge Polish + Release
+
+**Goal:** Add biometric fast-login for admin/kepala gerai, visual badge color picker, and publish production APK to GitHub Releases.
+
+**Target features:**
+- Biometric (fingerprint/face) login for admin and kepala gerai
+- Color picker UI for badge border color selection
+- Production APK build + GitHub Release publish
+
 ## Current State
 
 **Shipped:** v3.0 Schedule Grid + Landing Website (2026-03-13)
@@ -184,4 +193,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-18 after v3.0 milestone*
+*Last updated: 2026-03-18 — v3.1 milestone started*
