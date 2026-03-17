@@ -4,30 +4,41 @@
 NFC attendance kiosk app for **Ayam Guling Enakko** restaurant chain — Android tablet deployed
 at each outlet. Replaces paper attendance. Features: real-time reports with PDF/CSV export,
 persistent floating pill overlay (Dynamic Island-style), employee badge system, Supabase-synced
-schedules, employee archive/restore, batch CSV import, and premium kiosk UI. Admin can manage
-employees, attendance, schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+schedule grid (week-view TableView), employee archive/restore, batch CSV import, and premium
+kiosk UI. Marketing website at absenkok.vercel.app. Admin can manage employees, attendance,
+schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
 ## Current State
 
-**Shipped:** v2.0 Admin Tools + Live Activity (2026-03-12)
+**Shipped:** v3.0 Schedule Grid + Landing Website (2026-03-13)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~22,000+ LOC Dart across 50+ files
+**Codebase:** ~22,000+ LOC Dart across 50+ files; Astro website at `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 
-### What v2.0 Added
-- ✅ Soft-archive karyawan with Riwayat Karyawan history page
-- ✅ Batch CSV import for multi-outlet employee onboarding (4-step wizard)
-- ✅ Quick SQL setup for promoting Kepala Gerai admin
-- ✅ Dynamic Island-style overlay pill with break detection + fun facts rotation
-- ✅ 56+ new unit tests (CSV service, live content provider, overlay model)
+### What v3.0 Added
+- ✅ Schedule UI grid redesign — week-view TableView with pinned row/column headers, color-coded shift chips
+- ✅ Bulk assign mode and auto-generate schedule from 2/3-shift templates
+- ✅ ABSENKOK marketing website (Astro 5 + Tailwind v4, deployed to Vercel)
+- ✅ Website polished with real app screenshots, About/Architecture section, 4 inline SVG tech icons
 
 ### Known Tech Debt
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
 - Dual PDF service files (pdf_report_service.dart + pdf_service.dart)
-- Missing VERIFICATION.md on most phases
 - Phase 15 has no formal PLAN/SUMMARY files (SQL-only phase)
+
+<details>
+<summary>v2.0 Context (shipped 2026-03-12)</summary>
+
+- Soft-archive karyawan with Riwayat Karyawan history page
+- Batch CSV import for multi-outlet employee onboarding (4-step wizard)
+- Quick SQL setup for promoting Kepala Gerai admin
+- Dynamic Island-style overlay pill with break detection + fun facts rotation
+- 56+ new unit tests (CSV service, live content provider, overlay model)
+- ~22,000 LOC Dart across 50+ files
+
+</details>
 
 <details>
 <summary>v1.1 Context (shipped 2026-03-05)</summary>
@@ -40,6 +51,17 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 </details>
 
 ## Requirements
+
+### Validated (v3.0)
+- ✓ Schedule UI grid redesign — week-view TableView, pinned headers, color-coded shift chips — v3.0
+- ✓ Tap-to-assign shift (Pagi/Siang/Sore/Libur) per cell — v3.0
+- ✓ Bulk assign mode (multi-karyawan, same shift) — v3.0
+- ✓ Auto-generate jadwal dari template shift — v3.0
+- ✓ ABSENKOK landing website (Astro 5 + Tailwind v4, zero JS, Bahasa Indonesia) — v3.0
+- ✓ Download APK button → GitHub Releases — v3.0
+- ✓ SEO meta tags + sitemap.xml + Vercel deploy — v3.0
+- ✓ Real app screenshots in Hero + HowItWorks — v3.0
+- ✓ About/Architecture section with tech stack story + 4 SVG icons — v3.0
 
 ### Validated (v2.0)
 - ✓ Soft-archive karyawan (arsip ke Riwayat Karyawan, hilang dari daftar aktif & jadwal, log tetap utuh)
@@ -58,9 +80,6 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sakit/Izin direct input by Kepala Gerai
 - ✓ Employee badge system
 
-### Validated (v3.0)
-- ✓ Schedule UI grid redesign — week-view TableView with pinned headers, extracted widgets (Phase 17)
-
 ### Deferred (Future)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
@@ -75,6 +94,9 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - iOS app — Android-only kiosk, no iOS target
 - Employee self-service portal — kiosk-only workflow
 - WhatsApp/email daily summary — external integration, low priority
+- Blog/pricing on website — internal tool, not SaaS
+- Drag-and-drop shift assignment — wrong for tablet touch
+- Monthly view (30-day grid) — cognitive overload on tablet
 
 ## Product Context
 - **Type:** B2B internal tool (restaurant chain HR/ops)
@@ -83,6 +105,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - **Platform:** Android only (tablet kiosk) — no iOS target
 - **Connectivity:** Must work offline-first; syncs when internet returns (SQLite queue → Supabase)
 - **Uptime:** 24/7 kiosk — never hangs, never blocks startup
+- **Website:** absenkok.vercel.app — Astro 5 static site, Vercel hosted
 
 ## Tech Stack
 - **Framework:** Flutter 3.x / Dart (Kotlin 1.9.25 — cannot upgrade to 2.x, breaks nfc_manager)
@@ -97,6 +120,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - **CSV:** `csv` ^6.0.0 + `file_picker` ^8.1.0 — batch employee import
 - **Schedule Grid:** `two_dimensional_scrollables ^0.3.8` — TableView with pinned row/column, cell builder architecture
 - **UI System:** AppCard, ShimmerSkeleton, AppEmptyState, AppBadge, AppToast, BadgeAvatar
+- **Website:** Astro 5 + Tailwind v4 + @astrojs/vercel + @astrojs/sitemap
 
 ## Database Schema (Supabase — `tmapxdftdhxovthgbhww`)
 ```
@@ -138,12 +162,18 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 8 | CSV pure-function validation | ✓ Testable without Supabase |
 | 9 | LiveContentProvider injectable callbacks | ✓ Clean testability |
 | 10 | displayLabel backward compat (empty = enum label) | ✓ No breaking changes |
+| 11 | two_dimensional_scrollables for schedule grid | ✓ Pinned headers work on Android tablet, diagonal scroll |
+| 12 | Top-level cell builder functions (not methods) | ✓ Clean widget extraction, no context binding |
+| 13 | Astro 5 website in separate repo (absenkok-website/) | ✓ Zero coupling to Flutter codebase |
+| 14 | Tailwind v4 CSS-first config (no tailwind.config.js) | ✓ Simpler, no config file overhead |
+| 15 | Inline SVG tech icons (no external library) | ✓ Zero bundle overhead, color-customizable |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
 - **Color:** `AppColors.primary` — warm amber/orange tones (restaurant brand)
 - **Design language:** Minimalist-professional, luxury "polished" feel
 - **Logo:** Ayam Guling Enakko brand logo in kiosk idle screen header
+- **Website:** ABSENKOK brand, white minimalist, Apple/Stripe-inspired
 
 ## Constraints
 - Kotlin 1.9.25 — NO upgrade to 2.x
@@ -153,17 +183,5 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - minSdk 24, compileSdk 35, targetSdk 35
 - Additive migrations only (production DB live)
 
-## Current Milestone: v3.0 Schedule Grid + Landing Website
-
-**Goal:** Redesign schedule management UI to week-view grid layout, and create a marketing landing website for ABSENKOK using Astro.js (deployed to Vercel).
-
-**Target features:**
-- Schedule UI grid redesign (karyawan di baris, hari Senin-Minggu di kolom, tap cell assign shift)
-- Astro.js landing website (clean white minimalis, Apple/Stripe style)
-- Download APK button → GitHub releases
-- Feature showcase sections
-- Developer watermark (Akmal)
-- Website in separate repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
-
 ---
-*Last updated: 2026-03-12 after Phase 17*
+*Last updated: 2026-03-18 after v3.0 milestone*

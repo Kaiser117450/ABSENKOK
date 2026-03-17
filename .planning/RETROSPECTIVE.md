@@ -53,6 +53,81 @@
 
 ---
 
+## Milestone: v2.0 — Admin Tools + Live Activity
+
+**Shipped:** 2026-03-12
+**Phases:** 4 (13-16) | **Plans:** 9 | **Timeline:** ~1 day
+
+### What Was Built
+- Soft-archive karyawan with Riwayat Karyawan history page (soft-delete pattern)
+- Batch CSV import wizard (4-step: upload → validate → preview → import) with pure-function validation
+- SQL scripts for Kepala Gerai role promotion (no code changes needed)
+- Persistent live activity pill with break detection, fun facts rotation, and displayLabel system
+- 56+ new unit tests covering CSV service, live content provider, overlay model
+
+### What Worked
+- **Injectable callbacks for testability:** LiveContentProvider with callbacks instead of direct state access = clean unit testing
+- **displayLabel backward compat:** Empty string falls back to enum label — no migration needed for existing data
+- **Pure-function CSV validation:** CsvImportService stateless validate() = trivially testable without Supabase
+
+### What Was Inefficient
+- **Phase 15 SQL-only:** No PLAN/SUMMARY files — work was ad-hoc SQL scripts. For structured tracking, even SQL-only phases should have a minimal PLAN.md.
+
+### Patterns Established
+- **Injectable callback pattern:** For any service that needs testable side-effects, pass callbacks at construction time rather than reading from a singleton.
+- **4-step import wizard:** Upload → Validate → Preview → Confirm is the right UX pattern for destructive bulk operations.
+
+### Key Lessons
+1. **SQL-only phases still need structure:** Phase 15 delivered real value but left no traceable artifacts. A 5-line PLAN.md would have been enough.
+2. **Testability-first on services:** LiveContentProvider's injectable design made 56 tests easy to write. Design for testability upfront.
+
+### Cost Observations
+- Model mix: 100% quality profile
+- Sessions: ~3-4 sessions
+- Notable: v2.0 shipped in a single day — tight scope made execution very fast
+
+---
+
+## Milestone: v3.0 — Schedule Grid + Landing Website
+
+**Shipped:** 2026-03-13
+**Phases:** 3 (17-19) | **Plans:** 6 | **Timeline:** 1 day
+
+### What Was Built
+- ScheduleTableView widget with `two_dimensional_scrollables` — pinned employee column + day headers, diagonal scroll, color-coded shift chips, 6-type legend
+- shift_scheduler_screen.dart refactored: removed 282 lines of dual-ListView scroll sync, replaced with widget composition
+- ABSENKOK marketing website (Astro 5 + Tailwind v4) — zero JS, Bahasa Indonesia, SEO + sitemap, Vercel deployed
+- 6 content sections: Header, Hero, Features (4 cards), HowItWorks (3 steps), Download CTA, Footer
+- Real app screenshots replacing CSS mockup in Hero — 5 WebP screenshots via Astro `<Image>`
+- About/Architecture section with 4 inline SVG tech icons (Flutter, Supabase, NFC, Android)
+
+### What Worked
+- **two_dimensional_scrollables was the right call:** Pinned row+column out-of-the-box, no custom scroll controller hacking needed
+- **Top-level cell builder functions:** Non-method functions for cell building kept the widget file flat and testable
+- **Separate repo for website:** Zero coupling to Flutter codebase — website can deploy independently, no shared pubspec/gradle complexity
+- **Astro 5 zero-JS constraint:** Forced correct architecture — all state in HTML, no JS hydration footgun
+
+### What Was Inefficient
+- **Phase 19 was underplanned:** WEB-P requirements were added at the end without updating the traceability table — left "Planned" status in table after completion
+- **No device testing for schedule grid:** ScheduleTableView looks correct in code but hasn't been tested on physical Android tablet — pinned scroll behavior needs device verification
+
+### Patterns Established
+- **Cell builder extraction:** For complex data grids, extract each cell type as a top-level function (corner, header, employee, shift, _chip). Easy to test and compose.
+- **Astro <Image> for screenshots:** Import images from src/assets/images/ for automatic WebP conversion + srcset optimization. Don't put screenshots in public/.
+- **CSS-first Tailwind v4:** No tailwind.config.js — all config in global.css @theme block. Simpler, fewer files.
+
+### Key Lessons
+1. **Phase 19 added mid-stream:** WEB-P requirements were added after the roadmap was created. This is fine but the traceability table should be updated at plan creation time, not just when requirements are defined.
+2. **Device testing is a separate phase:** Schedule grid and website both need on-device/browser verification that wasn't done in this milestone. Add explicit verification plans.
+3. **Astro website scope could grow:** About section is compelling but raises the question of future blog posts, pricing, etc. Explicitly defer these in requirements to avoid scope creep.
+
+### Cost Observations
+- Model mix: 100% quality profile
+- Sessions: ~3-4 sessions
+- Notable: Website phases (18-19) were extremely fast to execute — Astro components are very predictable to generate
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -60,14 +135,21 @@
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
+| v2.0 | 1 day | 4 | Tight scope = very fast execution; SQL-only phase lacks artifacts |
+| v3.0 | 1 day | 3 | First cross-domain milestone (Flutter + website); phase added mid-stream |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
-| v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items across 5 phases |
+| v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items |
+| v2.0 | 127+ | Extended (CSV, live content, overlay model) | 9 items |
+| v3.0 | 127+ | Unchanged (no new Flutter tests) | 10 items (+ schedule grid device testing needed) |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Plan one milestone at a time — premature multi-milestone roadmaps waste context
 2. Verification debt compounds — always create VERIFICATION.md even if brief
+3. Injectable dependencies (callbacks, not singletons) = fast unit tests
+4. Top-level functions beat methods for widget extraction — less context binding, more composable
+5. Device verification is a separate concern — add it as an explicit plan, not an afterthought

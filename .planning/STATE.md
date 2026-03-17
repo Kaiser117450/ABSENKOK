@@ -2,10 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Schedule Grid + Landing Website
-current_plan: Not started
-status: unknown
-stopped_at: Completed 19-02-PLAN.md
-last_updated: "2026-03-12T20:03:27.029Z"
+current_plan: Milestone complete
+status: between_milestones
+last_updated: "2026-03-18T00:00:00.000Z"
 progress:
   total_phases: 3
   completed_phases: 3
@@ -16,66 +15,52 @@ progress:
 # STATE.md — Project Memory
 
 ## Current Status
-- **Active Milestone:** v3.0 — Schedule Grid + Landing Website
-- **Active Phase:** Phase 19 — Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-12
-- **Last Session:** 2026-03-12T20:02:06.308Z
-- **Stopped At:** Completed 19-02-PLAN.md
+- **Last Milestone:** v3.0 — Schedule Grid + Landing Website — **SHIPPED 2026-03-13**
+- **Next Action:** `/gsd:new-milestone` — plan v4.0
+- **Last Updated:** 2026-03-18
 
 ## Progress
 
 ```
-v3.0 Schedule Grid + Landing Website — COMPLETE
+v3.0 Schedule Grid + Landing Website — COMPLETE ✅
 [██████████] 6/6 plans · 3/3 phases
 ```
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-12)
+See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 19 — Website Polish (Real screenshots, About/Architecture, Tech Icons)
+**Current focus:** Planning next milestone
 
-## What's Done (v2.0)
-- ✅ Phase 13-16: Archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
-- ✅ Release APK built and deployed to tablet
+## What Was Shipped
 
-## What's Done (v3.0)
+### v3.0 (2026-03-13)
 - ✅ Phase 17: Schedule Grid UI Redesign (TableView with pinned headers, extracted widgets, screen integration)
 - ✅ Phase 18: ABSENKOK Landing Website (Astro 5 + Tailwind v4, 6 content sections, zero-JS static build)
-- ✅ Phase 19: Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
+- ✅ Phase 19: Website Polish — Real Screenshots, About/Architecture Section, 4 SVG Tech Icons
 
-## What's Next
-- v3.0 milestone complete — all phases delivered
+### v2.0 (2026-03-12)
+- ✅ Phase 13-16: Soft-archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
 
-### Roadmap Evolution
-- Phase 19 added: Website Polish — Real Screenshots, About/Architecture Section, Tech Icons
+### v1.1 (2026-03-05)
+- ✅ Phase 1-12: Bug fixes, overlay pill, PDF/CSV reports, kiosk polish, admin UI, badges, logout resilience
 
-## Accumulated Context
+## Key Decisions (Cumulative)
 
-### Key Decisions (v3.0)
 | # | Decision | Rationale |
 |---|----------|-----------|
-| 21 | `two_dimensional_scrollables ^0.3.8` for grid | Official Flutter team package, replaces manual scroll sync |
-| 22 | Grid first, website second | Higher risk (existing code refactor) before greenfield |
-| 23 | Astro 5 (not 6) + Tailwind v4 | Stable versions, Astro 6 too new |
-| 24 | Website in separate repo | Zero coupling with Flutter app |
-| 25 | `withValues(alpha:)` over `withOpacity()` | Modern Dart API, avoids deprecation warnings |
-| 26 | Cell builders as top-level functions | Composable, importable without widget instantiation |
-| 27 | Removed unused imports during rendering extraction | dart:io, supabase_flutter, outlet.dart, time_off_request.dart no longer needed |
-| 28 | Parent screen keeps state+data, delegates rendering via callbacks | Clean separation: ~943 lines state+data, widgets handle all rendering |
-| 29 | Manual npm init to avoid Astro 6; Tailwind v4 via @tailwindcss/vite | npm create astro@latest scaffolds Astro 6; @astrojs/tailwind is v3 only |
-| 30 | CSS-only tablet mockup with colored grid cells | More visually interesting than blank placeholder, matches app's schedule grid |
-| 31 | Inline SVG icons per feature card | Avoids icon library dependency, keeps zero-JS promise |
-| 32 | Replaced 90-line CSS tablet mockup with single Astro Image | Real screenshot more authentic, simpler code |
-| 33 | Image pipeline: PNG src/assets → ESM import → Astro Image → WebP dist | 17MB PNG → 65KB WebP (99.6% reduction) |
+| 4 | SharedPreferences over FlutterSecureStorage | Eliminates ANR |
+| 11 | two_dimensional_scrollables for grid | Official Flutter team package, pinned headers out-of-box |
+| 12 | Cell builders as top-level functions | Composable, importable without widget context |
+| 13 | Website in separate repo (absenkok-website/) | Zero coupling with Flutter app |
+| 14 | Astro 5 + Tailwind v4 CSS-first config | Zero-JS constraint enforced by framework |
+| 15 | Inline SVG tech icons | No icon library, zero bundle overhead |
 
-### Key Constraints
+## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
-- Grid redesign: data layer (Supabase + SQLite) UNTOUCHED — rendering layer only
-- Website: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 - Kotlin 1.9.25 — no upgrade (breaks nfc_manager)
+- Website: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 
 ### Open Blockers
 - None
