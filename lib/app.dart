@@ -70,9 +70,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Admin penuh → akses semua halaman admin
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
       } else if (isKepalaGerai) {
-        // Kepala gerai → akses dashboard/karyawan/laporan saja, TIDAK bisa ke /admin/outlets
+        // Kepala gerai → akses dashboard/karyawan/laporan saja, TIDAK bisa ke halaman admin sensitif
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/archived-employees')) return '/admin/dashboard';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
         if (!loc.startsWith('/kiosk')) return '/kiosk';
