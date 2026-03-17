@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -131,22 +132,25 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   Future<List<_ReportRow>> _fetchAllRowsForExport({
     bool ascending = true,
     int batchSize = 1000,
+    int maxRows = 5000,
   }) async {
     final allRows = <_ReportRow>[];
     var offset = 0;
 
-    while (true) {
+    while (allRows.length < maxRows) {
+      final remaining = maxRows - allRows.length;
+      final currentBatchSize = math.min(batchSize, remaining);
       final data = await _buildAttendanceBaseQuery()
           .order('scanned_at', ascending: ascending)
-          .range(offset, offset + batchSize - 1);
+          .range(offset, offset + currentBatchSize - 1);
 
       final batch = (data as List)
           .map((e) => _ReportRow.fromJson(e as Map<String, dynamic>))
           .toList();
       allRows.addAll(batch);
 
-      if (batch.length < batchSize) break;
-      offset += batchSize;
+      if (batch.length < currentBatchSize) break;
+      offset += currentBatchSize;
     }
 
     return allRows;
