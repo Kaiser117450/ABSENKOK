@@ -48,6 +48,7 @@ class _SakitIzinListScreenState extends ConsumerState<SakitIzinListScreen> {
           .from('attendance_logs')
           .select('*')
           .eq('employee_id', widget.employee.id)
+          .eq('scan_outlet_id', widget.outletId)
           .inFilter('type', ['sakit', 'izin'])
           .order('scanned_at', ascending: false)
           .limit(100);
@@ -123,7 +124,10 @@ class _SakitIzinListScreenState extends ConsumerState<SakitIzinListScreen> {
       await SupabaseClientFactory.admin
           .from('attendance_logs')
           .delete()
-          .eq('id', record.id);
+          .eq('id', record.id)
+          .eq('employee_id', widget.employee.id)
+          .eq('scan_outlet_id', widget.outletId)
+          .inFilter('type', ['sakit', 'izin']);
 
       if (mounted) {
         AppToast.success(context, '${record.type.label} berhasil dihapus');
