@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LiveContentProvider break detection', () {
-    test('poll() with one employee having break log and no kembali → breakNames contains that employee', () async {
+    test('poll() with one employee having break log and no kembali → returns generic break message', () async {
       final provider = LiveContentProvider(
         fetchLogs: (outletId) async => [
           {
@@ -26,9 +26,7 @@ void main() {
 
       expect(provider.hasActiveBreaks, isTrue);
       final text = provider.nextDisplayText();
-      expect(text, contains('Budi'));
-      expect(text, contains('istirahat'));
-      expect(text, contains('🍽️'));
+      expect(text, '🍽️ Ada karyawan sedang istirahat');
     });
 
     test('poll() with employee having break then kembali → breakNames is empty', () async {
@@ -55,7 +53,7 @@ void main() {
       expect(provider.hasActiveBreaks, isFalse);
     });
 
-    test('poll() with multiple employees on break → breakNames has all names', () async {
+    test('poll() with multiple employees on break → returns aggregated break count message', () async {
       final provider = LiveContentProvider(
         fetchLogs: (outletId) async => [
           {
@@ -77,18 +75,12 @@ void main() {
       await provider.poll('outlet1');
 
       expect(provider.hasActiveBreaks, isTrue);
-      // Collect two calls to get both names
-      final texts = <String>[
-        provider.nextDisplayText(),
-        provider.nextDisplayText(),
-      ];
-      expect(texts.any((t) => t.contains('Budi')), isTrue);
-      expect(texts.any((t) => t.contains('Sari')), isTrue);
+      expect(provider.nextDisplayText(), '🍽️ 2 karyawan sedang istirahat');
     });
   });
 
   group('LiveContentProvider nextDisplayText', () {
-    test('when breakNames not empty → returns "🍽️ {name} istirahat" format', () async {
+    test('when breakNames not empty → returns non-PII break format', () async {
       final provider = LiveContentProvider(
         fetchLogs: (outletId) async => [
           {
@@ -104,10 +96,10 @@ void main() {
       await provider.poll('outlet1');
       final text = provider.nextDisplayText();
 
-      expect(text, '🍽️ Budi istirahat');
+      expect(text, '🍽️ Ada karyawan sedang istirahat');
     });
 
-    test('rotates through multiple break names on successive calls', () async {
+    test('for multiple breaks returns stable non-PII aggregate message on successive calls', () async {
       final provider = LiveContentProvider(
         fetchLogs: (outletId) async => [
           {
@@ -136,15 +128,11 @@ void main() {
       final first = provider.nextDisplayText();
       final second = provider.nextDisplayText();
       final third = provider.nextDisplayText();
-      // Should cycle back
       final fourth = provider.nextDisplayText();
 
-      // All three names should appear in the first three calls
-      final names = [first, second, third];
-      expect(names.any((t) => t.contains('Budi')), isTrue);
-      expect(names.any((t) => t.contains('Sari')), isTrue);
-      expect(names.any((t) => t.contains('Dewi')), isTrue);
-      // Fourth should cycle back to first
+      expect(first, '🍽️ 3 karyawan sedang istirahat');
+      expect(second, '🍽️ 3 karyawan sedang istirahat');
+      expect(third, '🍽️ 3 karyawan sedang istirahat');
       expect(fourth, first);
     });
 
@@ -169,6 +157,8 @@ void main() {
       expect(text, isNotEmpty);
       // Should NOT contain break format
       expect(text, isNot(contains('istirahat')));
+      // Should not contain employee names
+      expect(text, isNot(contains('Budi')));
     });
 
     test('in idle mode → interleaves live stats with motivational messages', () async {
@@ -260,7 +250,7 @@ void main() {
       // Second poll fails — should keep cached data
       await provider.poll('outlet1');
       expect(provider.hasActiveBreaks, isTrue);
-      expect(provider.nextDisplayText(), contains('Budi'));
+      expect(provider.nextDisplayText(), '🍽️ Ada karyawan sedang istirahat');
     });
   });
 
@@ -326,7 +316,7 @@ void main() {
           reason: 'Should have "Kehadiran hari ini 40% 📊" stat');
     });
 
-    test('generates "{name} datang pertama {time} 🏆" earliest arrival stat', () async {
+    test('generates non-PII earliest arrival stat', () async {
       final provider = LiveContentProvider(
         fetchLogs: (outletId) async => [
           {
@@ -352,8 +342,10 @@ void main() {
         texts.add(provider.nextDisplayText());
       }
 
-      expect(texts.any((t) => t.contains('Budi') && t.contains('pertama') && t.contains('🏆')), isTrue,
-          reason: 'Should have earliest arrival stat for Budi');
+      expect(texts.any((t) => t.contains('Absensi pertama') && t.contains('🏆')), isTrue,
+          reason: 'Should have non-PII earliest arrival stat');
+      expect(texts.any((t) => t.contains('Budi')), isFalse,
+          reason: 'Should not leak employee names in stats');
     });
   });
 }
