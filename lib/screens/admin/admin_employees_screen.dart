@@ -207,6 +207,11 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   Future<void> _showBadgePicker(Employee employee) async {
+    if (!ref.read(appProvider).isAdmin) {
+      AppToast.info(context, 'Hanya admin yang dapat mengatur badge.');
+      return;
+    }
+
     final changed = await BadgeManagementScreen.showBadgePicker(
       context,
       employee: employee,
@@ -217,6 +222,11 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   void _openBadgeManagement() {
+    if (!ref.read(appProvider).isAdmin) {
+      AppToast.info(context, 'Hanya admin yang dapat mengatur badge.');
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const BadgeManagementScreen(),
@@ -266,6 +276,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final filtered = _filtered;
     final activeCount = _employees.where((e) => e.isActive).length;
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
+    final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -426,21 +437,22 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                 ),
                 const SizedBox(width: 10),
                 // Badge management button — compact circle
-                GestureDetector(
-                  onTap: _openBadgeManagement,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withOpacity(0.08),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: const Color(0xFFF59E0B).withOpacity(0.18)),
+                if (isFullAdmin)
+                  GestureDetector(
+                    onTap: _openBadgeManagement,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withOpacity(0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: const Color(0xFFF59E0B).withOpacity(0.18)),
+                      ),
+                      child: const Icon(Icons.workspace_premium,
+                          size: 20, color: Color(0xFFF59E0B)),
                     ),
-                    child: const Icon(Icons.workspace_premium,
-                        size: 20, color: Color(0xFFF59E0B)),
                   ),
-                ),
               ],
             ),
           ),
@@ -525,6 +537,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                                 onAssignNfc: () => _showAssignNfcDialog(emp),
                                 onSakitIzin: () => _showSakitIzinDialog(emp),
                                 onSakitIzinHistory: () => _showSakitIzinHistory(emp),
+                                canAssignBadge: isFullAdmin,
                                 onAssignBadge: () => _showBadgePicker(emp),
                               );
                             },
@@ -698,6 +711,7 @@ class _EmployeeCard extends StatelessWidget {
   final VoidCallback onAssignNfc;
   final VoidCallback onSakitIzin;
   final VoidCallback onSakitIzinHistory;
+  final bool canAssignBadge;
   final VoidCallback onAssignBadge;
 
   const _EmployeeCard({
@@ -707,6 +721,7 @@ class _EmployeeCard extends StatelessWidget {
     required this.onAssignNfc,
     required this.onSakitIzin,
     required this.onSakitIzinHistory,
+    required this.canAssignBadge,
     required this.onAssignBadge,
   });
 
@@ -869,7 +884,7 @@ class _EmployeeCard extends StatelessWidget {
                       onSakitIzin();
                     } else if (value == 'sakit_izin_history') {
                       onSakitIzinHistory();
-                    } else if (value == 'assign_badge') {
+                    } else if (value == 'assign_badge' && canAssignBadge) {
                       onAssignBadge();
                     }
                   },
@@ -908,18 +923,20 @@ class _EmployeeCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'assign_badge',
-                      child: Row(
-                        children: [
-                          Icon(Icons.workspace_premium_outlined,
-                              size: 18, color: const Color(0xFFF59E0B)),
-                          const SizedBox(width: 12),
-                          const Text('Assign Badge'),
-                        ],
+                    if (canAssignBadge) ...[
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'assign_badge',
+                        child: Row(
+                          children: [
+                            Icon(Icons.workspace_premium_outlined,
+                                size: 18, color: const Color(0xFFF59E0B)),
+                            const SizedBox(width: 12),
+                            const Text('Assign Badge'),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                   child: Container(
                     width: 36,
