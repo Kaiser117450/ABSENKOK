@@ -220,6 +220,11 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   Future<void> _showBadgePicker(Employee employee) async {
+    if (!ref.read(appProvider).isAdmin) {
+      AppToast.info(context, 'Hanya admin yang dapat mengatur badge.');
+      return;
+    }
+
     final changed = await BadgeManagementScreen.showBadgePicker(
       context,
       employee: employee,
@@ -230,6 +235,11 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   }
 
   void _openBadgeManagement() {
+    if (!ref.read(appProvider).isAdmin) {
+      AppToast.info(context, 'Hanya admin yang dapat mengatur badge.');
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const BadgeManagementScreen(),
@@ -280,6 +290,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final activeCount = _employees.where((e) => e.isActive).length;
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
     final canImportCsv = ref.watch(appProvider).isAdmin;
+    final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -444,7 +455,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Badge management button — compact circle
+                // Badge management button — compact circle (admin only)
+                if (isFullAdmin)
                 GestureDetector(
                   onTap: _openBadgeManagement,
                   child: Container(

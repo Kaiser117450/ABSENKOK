@@ -75,6 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
         if (loc.startsWith('/admin/csv-import')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/archived-employees')) return '/admin/dashboard';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
         if (!loc.startsWith('/kiosk')) return '/kiosk';
