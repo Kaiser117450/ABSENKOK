@@ -23,24 +23,25 @@ class LiveContentProvider {
   final FetchActiveCountCallback _fetchActiveCount;
 
   // --- Cached content pools ---
-  List<String> _breakNames = [];
+  List<String> _activeBreakEmployeeIds = [];
   List<String> _funFacts = List<String>.from(_defaultMotivationalMessages);
   int _breakIndex = 0;
   int _funFactIndex = 0;
 
   /// Whether any employees are currently on break.
-  bool get hasActiveBreaks => _breakNames.isNotEmpty;
+  bool get hasActiveBreaks => _activeBreakEmployeeIds.isNotEmpty;
 
   /// Returns the next display text for the overlay attendance label.
   ///
-  /// When employees are on break, rotates through break names:
-  ///   "🍽️ Budi istirahat" → "🍽️ Sari istirahat"
+  /// When employees are on break, shows a generic non-PII status message.
   /// When idle, rotates through interleaved stats + motivational messages.
   String nextDisplayText() {
-    if (_breakNames.isNotEmpty) {
-      final name = _breakNames[_breakIndex % _breakNames.length];
+    if (_activeBreakEmployeeIds.isNotEmpty) {
+      final breakCount = _activeBreakEmployeeIds.length;
       _breakIndex++;
-      return '🍽️ $name istirahat';
+      return breakCount == 1
+          ? '🍽️ Ada karyawan sedang istirahat'
+          : '🍽️ $breakCount karyawan sedang istirahat';
     }
     final fact = _funFacts[_funFactIndex % _funFacts.length];
     _funFactIndex++;
@@ -59,7 +60,7 @@ class LiveContentProvider {
 
       _computeBreakNames(logs);
       _computeFunFacts(logs, activeCount);
-      debugPrint('[LiveContent] poll result: ${_breakNames.length} breaks, ${_funFacts.length} facts');
+      debugPrint('[LiveContent] poll result: ${_activeBreakEmployeeIds.length} breaks, ${_funFacts.length} facts');
     } catch (e) {
       // Keep last cached data — don't clear on error (Pitfall from RESEARCH.md)
       debugPrint('[LiveContent] poll error: $e');
@@ -72,28 +73,23 @@ class LiveContentProvider {
   /// `type == 'kembali'` sets onBreak=false.
   /// CRITICAL: DB stores 'break' (NOT 'istirahat') — see AttendanceType.breakTime.value.
   void _computeBreakNames(List<dynamic> logs) {
-    final Map<String, ({String name, bool onBreak})> employees = {};
+    final Map<String, bool> employeesOnBreak = {};
 
     for (final log in logs) {
       final empId = (log as Map<String, dynamic>)['employee_id'] as String;
       final type = log['type'] as String;
-      final empData = log['employees'] as Map<String, dynamic>?;
-      final name = empData?['name'] as String? ?? '-';
 
       if (type == 'break') {
-        employees[empId] = (name: name, onBreak: true);
+        employeesOnBreak[empId] = true;
       } else if (type == 'kembali') {
-        final existing = employees[empId];
-        if (existing != null) {
-          employees[empId] = (name: existing.name, onBreak: false);
-        }
+        employeesOnBreak[empId] = false;
       }
     }
 
     // Replace list completely — don't append (Pitfall 3: memory growth)
-    _breakNames = employees.entries
-        .where((e) => e.value.onBreak)
-        .map((e) => e.value.name)
+    _activeBreakEmployeeIds = employeesOnBreak.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
         .toList();
     _breakIndex = 0;
   }
@@ -120,18 +116,14 @@ class LiveContentProvider {
       stats.add('Kehadiran hari ini $rate% 📊');
     }
 
-    // Stat 3: Earliest arrival — "{name} datang pertama {time} 🏆"
+    // Stat 3: Earliest arrival (non-PII) — "Absensi pertama {time} 🏆"
     final masukLogs = logs
         .where((l) => (l as Map<String, dynamic>)['type'] == 'masuk')
         .toList();
     if (masukLogs.isNotEmpty) {
       final earliest = masukLogs.first as Map<String, dynamic>;
-      final empData = earliest['employees'] as Map<String, dynamic>?;
-      final name = empData?['name'] as String? ?? '';
       final time = _extractTime(earliest['scanned_at'] as String? ?? '');
-      if (name.isNotEmpty) {
-        stats.add('$name datang pertama $time 🏆');
-      }
+      stats.add('Absensi pertama $time 🏆');
     }
 
     // Interleave stats with motivational messages
@@ -167,7 +159,7 @@ class LiveContentProvider {
 
     final data = await SupabaseClientFactory.kiosk
         .from('attendance_logs')
-        .select('employee_id, type, scanned_at, employees(name)')
+        .select('employee_id, type, scanned_at')
         .eq('scan_outlet_id', outletId)
         .gte('scanned_at', startOfDay)
         .order('scanned_at', ascending: true);
