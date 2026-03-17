@@ -388,12 +388,14 @@ class KioskBackgroundService {
         var active = await _waitForOverlayActive();
         if (!active) {
           // OEM fallback: some devices reject compact sizing on first open.
+          // Retry the compact overlay to avoid creating a full-screen,
+          // touch-intercepting window.
           debugPrint(
-            '[BgService] ensureOverlayVisible compact show not active, retrying with matchParent fallback',
+            '[BgService] ensureOverlayVisible compact show not active, retrying compact overlay',
           );
           await FlutterOverlayWindow.showOverlay(
-            height: WindowSize.matchParent,
-            width: WindowSize.matchParent,
+            height: _kOverlayWindowHeight,
+            width: _kOverlayWindowWidth,
             alignment: OverlayAlignment.topCenter,
             flag: OverlayFlag.focusPointer,
             enableDrag: false,
