@@ -38,10 +38,15 @@ Declared values (must be multiples of 4):
 | md | 16px | Form field vertical spacing (matches existing login form) |
 | lg | 24px | Section spacing between logo, greeting, form, and CTA; form-to-button gap |
 | xl | 32px | Page-level padding (matches existing `EdgeInsets.all(32)` in login) |
-| 2xl | 40px | Gap between form section and primary CTA (matches existing `SizedBox(height: 40)`) |
-| 3xl | 48px | Not used in this phase |
+| 2xl | 48px | Large section separation (reserved for major layout gaps if needed) |
 
-Exceptions: 44px minimum touch target for biometric button and checkbox (accessibility requirement, not layout spacing).
+### Legacy Exceptions
+
+| Value | Justification |
+|-------|---------------|
+| 40px | 40px -- matches existing `SizedBox(height: 40)` in admin_login_screen.dart -- retained for zero-diff upgrade, not a new spacing value. |
+
+Accessibility note: 44px minimum touch target for biometric button and checkbox (accessibility requirement, not layout spacing).
 
 ---
 
