@@ -155,17 +155,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     if (!supabaseReady) return;
     if (mounted) setState(() => _loadingOpenShifts = true);
     try {
+      final appState = ref.read(appProvider);
       // 32h window catches overnight shifts from yesterday evening
       final cutoff = DateTime.now()
           .subtract(const Duration(hours: 32))
           .toUtc()
           .toIso8601String();
 
-      final data = await SupabaseClientFactory.admin
+      var q = SupabaseClientFactory.admin
           .from('attendance_logs')
           .select('employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url, active_badge_id)')
-          .gte('scanned_at', cutoff)
-          .order('scanned_at', ascending: true);
+          .gte('scanned_at', cutoff);
+
+      // Kepala gerai: strictly limited to managed outlet.
+      // Full admin: follow selected outlet filter if any.
+      if (appState.isKepalaGerai && appState.managedOutletId != null) {
+        q = q.eq('scan_outlet_id', appState.managedOutletId!);
+      } else if (_selectedOutletId != null) {
+        q = q.eq('scan_outlet_id', _selectedOutletId!);
+      }
+
+      final data = await q.order('scanned_at', ascending: true);
 
       // Group by employee_id, detect open sessions (masuk with no subsequent pulang)
       final Map<String, List<Map<String, dynamic>>> byEmployee = {};
@@ -213,6 +223,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Future<void> _manualPulang(_OpenShift shift) async {
+    final appState = ref.read(appProvider);
+    if (appState.isKepalaGerai && appState.managedOutletId != shift.outletId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak diizinkan menutup shift di outlet lain.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+      return;
+    }
+
     // Show dialog for notes input
     final notesCtrl = TextEditingController();
     final confirmed = await showDialog<bool>(
