@@ -4,7 +4,7 @@ milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
 current_plan: Not started
 status: unknown
-last_updated: "2026-03-18T19:27:16Z"
+last_updated: "2026-03-18T19:32:20.845Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -18,7 +18,7 @@ progress:
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
 - **Phase:** 25 of 26 (Dashboard UI + Visualization) — ready to plan
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-18 — Phase 24 Plan 02 complete: MissingClockoutService + timer integration
+- **Last Updated:** 2026-03-19 — Phase 24 Plan 01 executed: AnalyticsService + SQL RPCs + widgets + 14 tests
 
 ## Progress
 
@@ -62,6 +62,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 20 | Keep biometric_enabled on logout, clear remembered role | User shouldn't re-enable after re-login |
 | 22 | Keep badge color storage as #RRGGBB strings | Allows visual picker UI without changing badge model |
 | 23 | Phase 23 SQL must scope employees by `home_outlet_id` | The real employees schema has no `outlet_id` column |
+| 24-01 | Time-based overtime threshold (8h default) instead of schedule-aware join | Avoids SQLite/Supabase cross-system join complexity |
+| 24-01 | iconsax_flutter not in pubspec — use Material Icons.timer_outlined in OvertimeAlertRow | Package not available, Material Icon is functionally equivalent |
 | 24-02 | Direct RPC call from MissingClockoutService (not AnalyticsService) | Wave 1 plan — avoids build-order dependency between services |
 
 ## Key Constraints
@@ -85,6 +87,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Attendance analytics widgets and pattern detection now rely on live RPCs in production
 - Phase 24 Plan 02: MissingClockoutService (lib/services/missing_clockout_service.dart) checks every 30 min via get_missing_clockouts RPC, sends batched notification per outlet
 - AttendanceRateCard and OvertimeAlertRow widgets created (lib/widgets/) — required for admin_dashboard_screen.dart to compile
+- Phase 24 Plan 01 (24-01): AnalyticsService with 3 RPC methods (getAttendanceRates, getOvertimeFlags, getMissingClockouts), 2 SQL RPCs, 14 unit tests, spec-compliant widgets
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)

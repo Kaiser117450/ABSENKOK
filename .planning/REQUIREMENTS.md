@@ -18,8 +18,8 @@
 
 ### Core Analytics (BETA)
 
-- [ ] **ANLYT-01**: Admin/Kepala Gerai can see attendance rate card on dashboard showing daily/weekly/monthly hadir percentage with concrete counts (e.g., "Hadir 14/16 hari — 87.5%")
-- [ ] **ANLYT-02**: Admin/Kepala Gerai can see overtime tracking — hours worked vs shift template duration, flagged when exceeding threshold
+- [x] **ANLYT-01**: Admin/Kepala Gerai can see attendance rate card on dashboard showing daily/weekly/monthly hadir percentage with concrete counts (e.g., "Hadir 14/16 hari — 87.5%")
+- [x] **ANLYT-02**: Admin/Kepala Gerai can see overtime tracking — hours worked vs shift template duration, flagged when exceeding threshold
 - [x] **ANLYT-03**: Admin/Kepala Gerai receives notification when employee has not scanned pulang after configurable threshold (default 10 hours from masuk)
 - [x] **ANLYT-04**: Missing clock-out notifications are batched per outlet ("3 karyawan belum pulang di Outlet A") not individual alerts
 
@@ -80,8 +80,8 @@
 | ADMIN-02 | Phase 26 | Pending |
 | ADMIN-03 | Phase 26 | Pending |
 | ADMIN-04 | Phase 26 | Pending |
-| ANLYT-01 | Phase 24 | Pending |
-| ANLYT-02 | Phase 24 | Pending |
+| ANLYT-01 | Phase 24 | Complete |
+| ANLYT-02 | Phase 24 | Complete |
 | ANLYT-03 | Phase 24 | Complete |
 | ANLYT-04 | Phase 24 | Complete |
 | SMART-01 | Phase 24 | Pending |

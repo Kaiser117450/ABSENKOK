@@ -98,7 +98,7 @@ Plans:
   3. Admin receives a single batched notification per outlet when employees have not scanned pulang after the configurable threshold ("3 karyawan belum pulang di Outlet A")
   4. Smart pattern detection computes median arrival times from last 30 days per employee per day-of-week, and admin receives notification when employee is late vs their usual pattern
   5. Pattern detection runs in background isolate and never blocks NFC scan handling (scan response stays under 2 seconds)
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 24-01-PLAN.md — Analytics service + attendance rate card + overtime alert UI (ANLYT-01, ANLYT-02)
@@ -135,7 +135,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
-| 24. Core Services + Analytics | 1/3 | In Progress|  | 2026-03-18 |
+| 24. Core Services + Analytics | 2/3 | In Progress|  | 2026-03-18 |
 | 25. Dashboard UI + Visualization | v4.0 | 0/TBD | Not started | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
 
