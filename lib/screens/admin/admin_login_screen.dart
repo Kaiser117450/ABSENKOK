@@ -9,6 +9,14 @@ import '../../main.dart' show supabaseReady;
 import '../../providers/app_provider.dart';
 import '../../services/biometric_service.dart';
 
+bool canUseBiometricLogin({
+  required bool hasBiometricHardware,
+  required bool biometricEnabled,
+  required bool hasSupabaseSession,
+}) {
+  return hasBiometricHardware && biometricEnabled && hasSupabaseSession;
+}
+
 class AdminLoginScreen extends ConsumerStatefulWidget {
   const AdminLoginScreen({super.key});
 
@@ -29,6 +37,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
   bool _hasBiometric = false;
   bool _biometricAutoTriggered = false;
   bool _showBiometricLoading = false;
+  bool _canUseBiometricLogin = false;
 
   @override
   void initState() {
@@ -45,39 +54,71 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
   Future<void> _checkBiometricAndAutoTrigger() async {
     final hasBio = await BiometricService.isAvailable();
-    if (mounted) setState(() => _hasBiometric = hasBio);
-
-    // Auto-trigger biometric if: has hardware + biometric enabled in prefs + Supabase session exists
-    if (!hasBio) return;
-
     final prefs = await SharedPreferences.getInstance();
     final bioEnabled = prefs.getBool(AppConstants.biometricEnabledKey) ?? false;
-    if (!bioEnabled) return;
-
-    // Check Supabase session
+    bool hasSession = false;
     try {
-      if (!supabaseReady) return;
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) return;
+      if (supabaseReady) {
+        hasSession = Supabase.instance.client.auth.currentSession != null;
+      }
     } catch (_) {
-      return;
+      hasSession = false;
     }
 
-    if (!mounted || _biometricAutoTriggered) return;
+    final canUseBiometric = canUseBiometricLogin(
+      hasBiometricHardware: hasBio,
+      biometricEnabled: bioEnabled,
+      hasSupabaseSession: hasSession,
+    );
+
+    if (mounted) {
+      setState(() {
+        _hasBiometric = hasBio;
+        _canUseBiometricLogin = canUseBiometric;
+      });
+    }
+
+    if (!canUseBiometric || !mounted || _biometricAutoTriggered) return;
     _biometricAutoTriggered = true;
     await _triggerBiometricLogin();
   }
 
   Future<void> _triggerBiometricLogin() async {
-    setState(() => _showBiometricLoading = true);
+    Session? session;
+    try {
+      if (supabaseReady) {
+        session = Supabase.instance.client.auth.currentSession;
+      }
+    } catch (_) {
+      session = null;
+    }
+
+    if (session == null) {
+      if (!mounted) return;
+      setState(() {
+        _showBiometricLoading = false;
+        _canUseBiometricLogin = false;
+        _error = 'Sesi admin sudah berakhir. Masuk dengan email & password dulu.';
+      });
+      return;
+    }
+
+    setState(() {
+      _showBiometricLoading = true;
+      _error = null;
+    });
     final success = await BiometricService.authenticate();
     if (!mounted) return;
 
     if (success) {
-      // Read remembered role from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      final role = prefs.getString(AppConstants.rememberedUserRoleKey);
-      final outletId = prefs.getString(AppConstants.rememberedManagedOutletKey);
+      final user = session.user;
+      final role = (user.appMetadata['app_role'] as String?) ??
+          (user.userMetadata?['app_role'] as String?) ??
+          prefs.getString(AppConstants.rememberedUserRoleKey);
+      final outletId = (user.appMetadata['managed_outlet_id'] as String?) ??
+          (user.userMetadata?['managed_outlet_id'] as String?) ??
+          prefs.getString(AppConstants.rememberedManagedOutletKey);
 
       if (role == 'admin') {
         ref.read(appProvider.notifier).setAdminMode(true);
@@ -86,8 +127,11 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         ref.read(appProvider.notifier).setAdminMode(false);
         ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
       } else {
-        // No remembered role -- fallback to login form
-        setState(() => _showBiometricLoading = false);
+        setState(() {
+          _showBiometricLoading = false;
+          _canUseBiometricLogin = false;
+          _error = 'Sesi biometrik tidak valid. Masuk dengan email & password dulu.';
+        });
         return;
       }
       // Router redirect will handle navigation to dashboard
@@ -338,10 +382,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withOpacity(0.1),
+                        color: AppColors.danger.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: AppColors.danger.withOpacity(0.3)),
+                            color: AppColors.danger.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         _error!,
@@ -354,7 +398,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   ],
 
                   // Biometric button (only if device has biometric + biometric is enabled)
-                  if (_hasBiometric && ref.watch(appProvider).biometricEnabled) ...[
+                  if (_canUseBiometricLogin) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
