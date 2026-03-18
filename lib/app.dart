@@ -60,11 +60,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isKepalaGerai = appState.isKepalaGerai;
       final hasKiosk = appState.kioskSession != null;
 
-      // /admin/login is ALWAYS reachable regardless of session state.
-      // This lets kiosk operators tap "Admin" button and navigate to login
-      // even when a kiosk session is already active (hasKiosk == true).
-      // Without this, GoRouter immediately redirects back to /kiosk.
-      if (loc == '/admin/login') return null;
+      // /admin/login: allow unauthenticated users (kiosk operators can tap
+      // "Admin" button anytime), but redirect already-authenticated users
+      // to dashboard (e.g. after biometric login sets admin mode).
+      if (loc == '/admin/login') {
+        if (isAdmin || isKepalaGerai) return '/admin/dashboard';
+        return null;
+      }
 
       if (isAdmin) {
         // Admin penuh → akses semua halaman admin
