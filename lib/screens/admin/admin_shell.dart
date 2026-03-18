@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/app_provider.dart';
+import '../../services/biometric_service.dart';
 
 class AdminShell extends ConsumerWidget {
   final Widget child;
@@ -34,6 +37,7 @@ class AdminShell extends ConsumerWidget {
         child: _EnakkoAppBar(
           subtitle: isKepalaGerai ? 'KEPALA GERAI' : 'ADMIN DASHBOARD',
           onLogout: () => _confirmLogout(context, ref),
+          onSettings: () => _showSettingsDialog(context, ref),
         ),
       ),
       body: child,
@@ -57,6 +61,13 @@ class AdminShell extends ConsumerWidget {
           }
         },
       ),
+    );
+  }
+
+  void _showSettingsDialog(BuildContext context, WidgetRef ref) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => const _SettingsDialog(),
     );
   }
 
@@ -93,6 +104,13 @@ class AdminShell extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               await Supabase.instance.client.auth.signOut();
+
+              // Clear biometric remembered role (keep biometric_enabled flag —
+              // user chose to enable it, shouldn't need to re-enable after re-login)
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove(AppConstants.rememberedUserRoleKey);
+              await prefs.remove(AppConstants.rememberedManagedOutletKey);
+
               ref.read(appProvider.notifier).setAdminMode(false);
             },
             child: const Text('Keluar'),
@@ -104,15 +122,131 @@ class AdminShell extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Settings Dialog — biometric toggle
+// ---------------------------------------------------------------------------
+
+class _SettingsDialog extends ConsumerStatefulWidget {
+  const _SettingsDialog();
+
+  @override
+  ConsumerState<_SettingsDialog> createState() => _SettingsDialogState();
+}
+
+class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
+  bool _toggling = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = ref.watch(appProvider);
+    final bioEnabled = appState.biometricEnabled;
+    final hasBio = appState.hasBiometricHardware;
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: const Row(
+        children: [
+          Icon(Icons.settings_outlined, color: AppColors.textPrimary, size: 22),
+          SizedBox(width: 10),
+          Text('Pengaturan',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasBio)
+            SwitchListTile(
+              title: const Text('Login Biometrik'),
+              subtitle: Text(
+                'Gunakan sidik jari atau wajah untuk masuk',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              value: bioEnabled,
+              activeColor: AppColors.primary,
+              contentPadding: EdgeInsets.zero,
+              onChanged: _toggling
+                  ? null
+                  : (value) async {
+                      if (value) {
+                        // Toggle ON: require biometric confirmation
+                        setState(() => _toggling = true);
+                        final success = await BiometricService.authenticate(
+                          reason: 'Verifikasi untuk mengaktifkan login biometrik',
+                        );
+                        if (!mounted) return;
+                        setState(() => _toggling = false);
+                        if (success) {
+                          await ref.read(appProvider.notifier).setBiometricEnabled(true);
+                          // Save current role for biometric re-login
+                          final user = Supabase.instance.client.auth.currentUser;
+                          final role = (user?.appMetadata['app_role'] as String?) ??
+                              (user?.userMetadata?['app_role'] as String?);
+                          final outletId = (user?.appMetadata['managed_outlet_id'] as String?) ??
+                              (user?.userMetadata?['managed_outlet_id'] as String?);
+                          if (role != null) {
+                            await ref.read(appProvider.notifier).saveRememberedRole(role, outletId);
+                          }
+                          if (mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Login biometrik diaktifkan')),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Verifikasi gagal')),
+                            );
+                          }
+                        }
+                      } else {
+                        // Toggle OFF: no confirmation needed
+                        await ref.read(appProvider.notifier).setBiometricEnabled(false);
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Login biometrik dinonaktifkan')),
+                          );
+                        }
+                      }
+                    },
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Perangkat ini tidak mendukung login biometrik',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Tutup'),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Custom AppBar — merah + 2 garis kuning bawah
 // ---------------------------------------------------------------------------
 
 class _EnakkoAppBar extends StatelessWidget {
   final VoidCallback onLogout;
+  final VoidCallback onSettings;
   final String subtitle;
 
   const _EnakkoAppBar({
     required this.onLogout,
+    required this.onSettings,
     this.subtitle = 'ADMIN DASHBOARD',
   });
 
@@ -182,6 +316,29 @@ class _EnakkoAppBar extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
+
+                  // Settings button
+                  GestureDetector(
+                    onTap: onSettings,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0x26FFFFFF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0x40FFFFFF),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.settings_outlined,
+                        color: Colors.white,
+                        size: 18,
+                        semanticLabel: 'Pengaturan',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
 
                   // Logout button
                   GestureDetector(
