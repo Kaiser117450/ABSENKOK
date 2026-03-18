@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 - [x] **Phase 20: Biometric Login** — Admin/kepala gerai can unlock app with fingerprint or face after first login (completed 2026-03-18)
 - [x] **Phase 21: Badge Color Picker** — Admin picks badge border colors visually instead of typing hex codes (completed 2026-03-18)
-- [ ] **Phase 22: Production Release** — Build obfuscated APK and publish to GitHub Releases as v3.1
+- [x] **Phase 22: Production Release** — Build obfuscated APK and publish to GitHub Releases as v3.1 (completed 2026-03-18)
 
 ## Phase Details
 
@@ -106,7 +106,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 20. Biometric Login | v3.1 | 2/2 | Complete | 2026-03-18 |
 | 21. Badge Color Picker | v3.1 | 1/1 | Complete | 2026-03-18 |
-| 22. Production Release | v3.1 | 0/1 | Not started | - |
+| 22. Production Release | 1/1 | Complete   | 2026-03-18 | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow

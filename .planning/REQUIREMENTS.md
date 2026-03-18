@@ -14,8 +14,8 @@
 - [x] **BADGE-03**: Admin sees a live badge preview while selecting colors
 
 ### Production Release (REL)
-- [ ] **REL-01**: Build production-ready release APK with obfuscation and ProGuard
-- [ ] **REL-02**: Publish APK to GitHub Releases with version tag v3.1
+- [x] **REL-01**: Build production-ready release APK with obfuscation and ProGuard
+- [x] **REL-02**: Publish APK to GitHub Releases with version tag v3.1
 
 ## Future Requirements (Deferred)
 - Preset color palette (12-16 curated brand colors) — nice-to-have for future
@@ -45,5 +45,5 @@
 | BADGE-01 | Phase 21 | Complete |
 | BADGE-02 | Phase 21 | Complete |
 | BADGE-03 | Phase 21 | Complete |
-| REL-01 | Phase 22 | Pending |
-| REL-02 | Phase 22 | Pending |
+| REL-01 | Phase 22 | Complete |
+| REL-02 | Phase 22 | Complete |

@@ -2,29 +2,29 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Biometric Login + Badge Polish + Release
-current_plan: Not started
-status: executing
-last_updated: "2026-03-18T05:22:58Z"
+current_plan: Done
+status: complete
+last_updated: "2026-03-18T05:50:11Z"
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Milestone:** v3.1 — Biometric Login + Badge Polish + Release
-- **Phase:** 21 of 22 (Badge Color Picker) — COMPLETE (1/1 plan done)
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-18 — Completed 21-01 (Badge Color Picker UI)
+- **Phase:** 22 of 22 (Production Release) — COMPLETE (1/1 plan done)
+- **Current Plan:** Done
+- **Last Updated:** 2026-03-18 — Completed 22-01 (Production Release APK + GitHub Release)
 
 ## Progress
 
 ```
-v3.1 Biometric Login + Badge Polish + Release — EXECUTING
-[██████████] 3/3 plans · 2/3 phases
+v3.1 Biometric Login + Badge Polish + Release — COMPLETE
+[██████████] 4/4 plans · 3/3 phases — COMPLETE
 ```
 
 ## Project Reference
@@ -36,9 +36,10 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## What Was Shipped
 
-### v3.1 (In Progress, 2026-03-18)
+### v3.1 (Released, 2026-03-18)
 - Phase 20: Biometric Login
 - Phase 21: Badge Color Picker
+- Phase 22: Production Release (GitHub Release v3.1 with ABSENKOK-v3.1.0.apk)
 
 ### v3.0 (2026-03-13)
 - Phase 17: Schedule Grid UI Redesign
@@ -67,6 +68,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 20 | Keep biometric_enabled on logout, clear remembered role | User shouldn't re-enable after re-login |
 | 21 | Persist borderColor2 only for gradient style | Prevents hidden secondary color data from leaking into solid/glow badges |
 | 22 | Keep badge color storage as #RRGGBB strings | Allows visual picker UI without changing badge model or service contracts |
+| 23 | APK output path is build/app/outputs/apk/release/ not flutter-apk/ | Gradle applicationVariants rename outputs to different directory |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
