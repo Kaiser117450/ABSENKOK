@@ -24,6 +24,9 @@ dependencies:
   # Simple key-value storage for session data (replaced SecureStorage which causes ANR)
   shared_preferences: ^2.3.3
 
+  # Biometric authentication (fingerprint, face)
+  local_auth: ^3.0.1
+
   # GPS best-effort
   geolocator: ^13.0.2
 
