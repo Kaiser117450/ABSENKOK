@@ -178,6 +178,55 @@ class NfcService {
     };
   }
 
+  /// Starts a one-shot NFC session for employee card registration.
+  ///
+  /// The first supported card stops the session before notifying the UI.
+  /// Duplicate discovery events from the same tap are ignored.
+  static Future<void> Function() startRegistrationListener(
+    void Function(String uid) onTag,
+    void Function(Object err)? onError,
+  ) {
+    bool active = true;
+    bool registered = false;
+
+    NfcManager.instance
+        .startSession(
+      onDiscovered: (NfcTag tag) async {
+        if (!active || registered) return;
+        registered = true;
+        try {
+          final uid = extractUid(tag);
+          if (uid != null && uid.isNotEmpty) {
+            try {
+              await NfcManager.instance.stopSession();
+            } catch (_) {}
+            if (active) onTag(uid);
+          } else {
+            registered = false;
+            throw Exception('Tipe kartu NFC tidak didukung');
+          }
+        } catch (e) {
+          if (active && !registered) {
+            onError?.call(e);
+          }
+        }
+      },
+      onError: (error) async {
+        if (active) onError?.call(error);
+      },
+    )
+        .catchError((Object e) {
+      if (active) onError?.call(e);
+    });
+
+    return () async {
+      active = false;
+      try {
+        await NfcManager.instance.stopSession();
+      } catch (_) {}
+    };
+  }
+
   /// Convert a byte array to colon-separated uppercase hex: "04:AB:CD:EF"
   static String _formatUid(Uint8List bytes) {
     return bytes
