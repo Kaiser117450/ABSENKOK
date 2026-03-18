@@ -34,7 +34,7 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon-to-label gaps inside stat badges |
-| sm | 8px | Compact spacing between stat rows inside rate card |
+| sm | 8px | Compact spacing between stat rows inside rate card, chip padding |
 | md | 16px | Card internal padding, gap between card sections |
 | lg | 24px | Gap between attendance rate card and next dashboard section |
 | xl | 32px | Not used in Phase 24 |
@@ -50,11 +50,13 @@ Exceptions: none. Existing dashboard uses `EdgeInsets.symmetric(horizontal: 16, 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 12px | 600 (semibold) | 1.4 |
+| Label | 12px | 700 (bold) | 1.4 |
 | Heading | 20px | 700 (bold) | 1.2 |
-| Display (rate percentage) | 28px | 800 (extra-bold) | 1.1 |
+| Display (rate percentage) | 28px | 700 (bold) | 1.1 |
 
-Source: existing theme uses `bodyMedium` at w400, `labelLarge` at w600, `titleLarge` at w700, `displaySmall` at w700. Phase 24 follows these weights. The 28px display size is for the prominent attendance rate percentage on the card.
+2 weights declared: 400 (regular) for body and muted text, 700 (bold) for labels, headings, and the display percentage. The 28px display size provides sufficient visual prominence at w700 without requiring w800. The label role at 12px uses w700 — visually distinct from body at w400 due to both size and weight contrast.
+
+Source: existing theme uses `bodyMedium` at w400, `titleLarge` at w700, `displaySmall` at w700. Phase 24 aligns to these two weight stops.
 
 ---
 
@@ -101,8 +103,8 @@ A single Material Card inserted at the top of the admin dashboard scroll body, a
 - Left accent stripe: 4px wide vertical bar, color = success green if rate >= 80%, danger red if < 80%
 
 **Content structure (top to bottom):**
-1. **Header row:** "Tingkat Kehadiran" label (12px semibold, `textSecondary`) + period toggle chips (Hari / Minggu / Bulan)
-2. **Rate display:** Large percentage "87.5%" (28px extra-bold, color based on threshold) + concrete count "Hadir 14/16 hari" (14px regular, `textSecondary`)
+1. **Header row:** "Tingkat Kehadiran" label (12px bold, `textSecondary`) + period toggle chips (Hari / Minggu / Bulan)
+2. **Rate display:** Large percentage "87.5%" (28px bold, color based on threshold) + concrete count "Hadir 14/16 hari" (14px regular, `textSecondary`)
 3. **Comparison indicator:** Small arrow icon + delta text "vs minggu lalu" (12px, `textMuted`) — only when weekly or monthly period is selected
 
 **Period toggle:** 3 `ChoiceChip` widgets using existing `chipTheme`. Default selection: "Minggu" (weekly).
@@ -113,9 +115,9 @@ A horizontal scrollable row of compact alert chips below the attendance rate car
 
 **Layout:**
 - Horizontal `ListView` with 8px gaps between chips
-- Each chip: `warningLight` background, 8px vertical / 12px horizontal padding, 20px border radius
+- Each chip: `warningLight` background, 8px vertical / 8px horizontal padding, 20px border radius
 - Icon: `Iconsax.timer_1` at 16px in `AppColors.warning`
-- Text: employee name + "+Xj" (e.g., "Budi +2j") in 12px semibold, `AppColors.textPrimary`
+- Text: employee name + "+Xj" (e.g., "Budi +2j") in 12px bold, `AppColors.textPrimary`
 
 **Empty state:** Row is completely hidden (not rendered) when no overtime flags exist.
 
