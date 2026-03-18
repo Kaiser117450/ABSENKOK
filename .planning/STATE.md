@@ -1,30 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.1
-milestone_name: Biometric Login + Badge Polish + Release
+milestone: v4.0
+milestone_name: Smart Attendance + Admin Dashboard
 current_plan: Not started
-status: unknown
-last_updated: "2026-03-18T05:53:38.074Z"
+status: defining_requirements
+last_updated: "2026-03-18T06:00:00.000Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
-- **Milestone:** v3.1 — Biometric Login + Badge Polish + Release
-- **Phase:** 22 of 22 (Production Release) — COMPLETE (1/1 plan done)
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-18 — Completed 22-01 (Production Release APK + GitHub Release)
+- **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
+- **Phase:** Not started (defining requirements)
+- **Current Plan:** —
+- **Last Updated:** 2026-03-18 — Milestone v4.0 started
 
 ## Progress
 
 ```
-v3.1 Biometric Login + Badge Polish + Release — COMPLETE
-[██████████] 4/4 plans · 3/3 phases — COMPLETE
+v4.0 Smart Attendance + Admin Dashboard — DEFINING REQUIREMENTS
+[░░░░░░░░░░] 0/0 plans · 0/0 phases
 ```
 
 ## Project Reference
@@ -32,7 +32,7 @@ v3.1 Biometric Login + Badge Polish + Release — COMPLETE
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 22 — Production release packaging and GitHub Releases publication
+**Current focus:** Defining requirements for v4.0
 
 ## What Was Shipped
 
@@ -77,6 +77,12 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ### Open Blockers
 - None
+
+## Accumulated Context
+- Cross-day shift noon rule works correctly — "belum pulang" cases are employees forgetting to scan out, not a system bug
+- Push notification for missing clock-out will address the forgotten scan-out problem
+- Smart attendance algorithm is BETA — some outlets have variable schedules
+- Kepala Gerai onboarding switches from SQL script to in-app Supabase Auth creation
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)

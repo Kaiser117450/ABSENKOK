@@ -11,18 +11,24 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v3.1 Biometric Login + Badge Polish + Release
+## Current Milestone: v4.0 Smart Attendance + Admin Dashboard
 
-**Goal:** Add biometric fast-login for admin/kepala gerai, visual badge color picker, and publish production APK to GitHub Releases.
+**Goal:** Solidify core attendance system with smart pattern detection, streamline admin onboarding for kepala gerai, and build comprehensive dashboard with charts and gamification.
 
 **Target features:**
-- Biometric (fingerprint/face) login for admin and kepala gerai
-- Color picker UI for badge border color selection
-- Production APK build + GitHub Release publish
+- Fix NFC double-scan crash during employee registration
+- Kepala Gerai onboarding via app (Supabase Auth, auto-generate credentials, copy to WA)
+- Smart attendance pattern algorithm (BETA) — detect usual check-in times from historical data, late notification
+- Overtime tracking based on pattern detection
+- Push notification for missing clock-out
+- Attendance rate card on admin dashboard
+- Gamification streak (employee attendance streaks)
+- Mini chart dashboard for kepala gerai (recap 1 layar)
+- Cross-outlet attendance comparison report
 
 ## Current State
 
-**Shipped:** v3.0 Schedule Grid + Landing Website (2026-03-13)
+**Shipped:** v3.1 Biometric Login + Badge Polish + Release (2026-03-18)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Codebase:** ~22,000+ LOC Dart across 50+ files; Astro website at `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
 
@@ -89,15 +95,23 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sakit/Izin direct input by Kepala Gerai
 - ✓ Employee badge system
 
+### Active (v4.0)
+- [ ] Fix NFC double-scan crash during employee registration
+- [ ] Kepala Gerai onboarding via app (Supabase Auth auto-generate)
+- [ ] Smart attendance pattern detection (BETA)
+- [ ] Overtime tracking based on pattern detection
+- [ ] Push notification for missing clock-out
+- [ ] Attendance rate card on admin dashboard
+- [ ] Gamification streak (employee attendance streaks)
+- [ ] Mini chart dashboard for kepala gerai
+- [ ] Cross-outlet attendance comparison report
+
 ### Deferred (Future)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
 - [ ] Time-off request approval workflow
 - [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
-- [ ] Overtime tracking (> 8h kerja → overtime flag)
-- [ ] Push notification for missing clock-out
-- [ ] Attendance rate card on admin dashboard
 
 ### Out of Scope
 - iOS app — Android-only kiosk, no iOS target
@@ -193,4 +207,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-18 — v3.1 milestone started*
+*Last updated: 2026-03-18 — v4.0 milestone started*
