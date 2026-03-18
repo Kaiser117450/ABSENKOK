@@ -56,7 +56,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 **Milestone Goal:** Add biometric fast-login for admin/kepala gerai, visual badge color picker, and publish production APK to GitHub Releases.
 
 - [x] **Phase 20: Biometric Login** — Admin/kepala gerai can unlock app with fingerprint or face after first login (completed 2026-03-18)
-- [ ] **Phase 21: Badge Color Picker** — Admin picks badge border colors visually instead of typing hex codes
+- [x] **Phase 21: Badge Color Picker** — Admin picks badge border colors visually instead of typing hex codes (completed 2026-03-18)
 - [ ] **Phase 22: Production Release** — Build obfuscated APK and publish to GitHub Releases as v3.1
 
 ## Phase Details
@@ -70,7 +70,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
   2. If biometric fails or is cancelled, the email/password login form appears and works normally
   3. User can toggle "Remember me" on/off from settings, and disabling it requires password on next login
   4. On a device with no biometric sensor, the app skips biometric setup entirely and uses standard login
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 Plans:
 - [ ] 20-01-PLAN.md — Android platform setup + BiometricService + AppProvider extensions + tests
 - [ ] 20-02-PLAN.md — Login screen biometric UI + admin shell settings dialog
@@ -83,7 +83,7 @@ Plans:
   1. Admin can tap a color field and choose a badge border color from a visual color wheel or grid (no hex typing required)
   2. Admin can independently pick color1 and color2 for gradient badge styles
   3. While selecting colors, the badge preview updates in real time showing the exact result
-**Plans**: 1 plan
+**Plans**: 1/1 plans complete
 Plans:
 - [ ] 21-01-PLAN.md — Add flutter_colorpicker dependency + replace hex TextFields with visual color picker UI
 
@@ -102,8 +102,8 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Biometric Login | 2/2 | Complete    | 2026-03-18 | - |
-| 21. Badge Color Picker | v3.1 | 0/1 | Not started | - |
+| 20. Biometric Login | v3.1 | 2/2 | Complete | 2026-03-18 |
+| 21. Badge Color Picker | v3.1 | 1/1 | Complete | 2026-03-18 |
 | 22. Production Release | v3.1 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)

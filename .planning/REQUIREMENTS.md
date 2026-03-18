@@ -9,9 +9,9 @@
 - [x] **AUTH-04**: App auto-detects biometric capability and skips biometric setup if no sensor is available
 
 ### Badge Color Picker (BADGE)
-- [ ] **BADGE-01**: Admin can pick badge border color using a visual color wheel/grid instead of typing hex
-- [ ] **BADGE-02**: Admin can pick both color1 and color2 for gradient badge styles
-- [ ] **BADGE-03**: Admin sees a live badge preview while selecting colors
+- [x] **BADGE-01**: Admin can pick badge border color using a visual color wheel/grid instead of typing hex
+- [x] **BADGE-02**: Admin can pick both color1 and color2 for gradient badge styles
+- [x] **BADGE-03**: Admin sees a live badge preview while selecting colors
 
 ### Production Release (REL)
 - [ ] **REL-01**: Build production-ready release APK with obfuscation and ProGuard
@@ -42,8 +42,8 @@
 | AUTH-02 | Phase 20 | Complete |
 | AUTH-03 | Phase 20 | Complete |
 | AUTH-04 | Phase 20 | Complete |
-| BADGE-01 | Phase 21 | Pending |
-| BADGE-02 | Phase 21 | Pending |
-| BADGE-03 | Phase 21 | Pending |
+| BADGE-01 | Phase 21 | Complete |
+| BADGE-02 | Phase 21 | Complete |
+| BADGE-03 | Phase 21 | Complete |
 | REL-01 | Phase 22 | Pending |
 | REL-02 | Phase 22 | Pending |

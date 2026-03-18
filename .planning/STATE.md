@@ -3,28 +3,28 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Biometric Login + Badge Polish + Release
 current_plan: Not started
-status: unknown
-last_updated: "2026-03-18T04:23:49.829Z"
+status: executing
+last_updated: "2026-03-18T05:22:58Z"
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Milestone:** v3.1 — Biometric Login + Badge Polish + Release
-- **Phase:** 20 of 22 (Biometric Login) — COMPLETE (2/2 plans done)
+- **Phase:** 21 of 22 (Badge Color Picker) — COMPLETE (1/1 plan done)
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-18 — Completed 20-02 (Biometric Login UI)
+- **Last Updated:** 2026-03-18 — Completed 21-01 (Badge Color Picker UI)
 
 ## Progress
 
 ```
 v3.1 Biometric Login + Badge Polish + Release — EXECUTING
-[██████████] 2/2 plans · 1/3 phases
+[██████████] 3/3 plans · 2/3 phases
 ```
 
 ## Project Reference
@@ -32,9 +32,13 @@ v3.1 Biometric Login + Badge Polish + Release — EXECUTING
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 20 — Biometric fast-login for admin/kepala gerai
+**Current focus:** Phase 22 — Production release packaging and GitHub Releases publication
 
 ## What Was Shipped
+
+### v3.1 (In Progress, 2026-03-18)
+- Phase 20: Biometric Login
+- Phase 21: Badge Color Picker
 
 ### v3.0 (2026-03-13)
 - Phase 17: Schedule Grid UI Redesign
@@ -61,6 +65,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 18 | local_auth v3.0.1 direct params API | AuthenticationOptions removed in v3; use biometricOnly/persistAcrossBackgrounding |
 | 19 | Auto-trigger biometric only when session+pref+hardware all present | Prevents prompting users who haven't opted in |
 | 20 | Keep biometric_enabled on logout, clear remembered role | User shouldn't re-enable after re-login |
+| 21 | Persist borderColor2 only for gradient style | Prevents hidden secondary color data from leaking into solid/glow badges |
+| 22 | Keep badge color storage as #RRGGBB strings | Allows visual picker UI without changing badge model or service contracts |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
