@@ -3,10 +3,10 @@
 ## v3.1 Requirements
 
 ### Biometric Login (AUTH)
-- [ ] **AUTH-01**: Admin/kepala gerai can unlock the app using fingerprint or face recognition after first successful login
+- [x] **AUTH-01**: Admin/kepala gerai can unlock the app using fingerprint or face recognition after first successful login
 - [ ] **AUTH-02**: App falls back to email/password form if biometric fails, is cancelled, or is unavailable
-- [ ] **AUTH-03**: User can toggle "Remember me" to enable/disable biometric login on the device
-- [ ] **AUTH-04**: App auto-detects biometric capability and skips biometric setup if no sensor is available
+- [x] **AUTH-03**: User can toggle "Remember me" to enable/disable biometric login on the device
+- [x] **AUTH-04**: App auto-detects biometric capability and skips biometric setup if no sensor is available
 
 ### Badge Color Picker (BADGE)
 - [ ] **BADGE-01**: Admin can pick badge border color using a visual color wheel/grid instead of typing hex
@@ -38,10 +38,10 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| AUTH-01 | Phase 20 | Pending |
+| AUTH-01 | Phase 20 | Complete |
 | AUTH-02 | Phase 20 | Pending |
-| AUTH-03 | Phase 20 | Pending |
-| AUTH-04 | Phase 20 | Pending |
+| AUTH-03 | Phase 20 | Complete |
+| AUTH-04 | Phase 20 | Complete |
 | BADGE-01 | Phase 21 | Pending |
 | BADGE-02 | Phase 21 | Pending |
 | BADGE-03 | Phase 21 | Pending |

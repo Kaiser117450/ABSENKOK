@@ -100,7 +100,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Biometric Login | v3.1 | 0/2 | Planned | - |
+| 20. Biometric Login | 1/2 | In Progress|  | - |
 | 21. Badge Color Picker | v3.1 | 0/TBD | Not started | - |
 | 22. Production Release | v3.1 | 0/TBD | Not started | - |
 

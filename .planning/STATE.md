@@ -2,28 +2,29 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Biometric Login + Badge Polish + Release
-current_plan: —
-status: roadmap_complete
-last_updated: "2026-03-18T00:00:00.000Z"
+current_plan: 20-02
+status: executing
+last_updated: "2026-03-18T04:15:39.000Z"
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Milestone:** v3.1 — Biometric Login + Badge Polish + Release
-- **Phase:** 20 of 22 (Biometric Login) — ready to plan
-- **Last Updated:** 2026-03-18 — Roadmap created (3 phases: 20-22)
+- **Phase:** 20 of 22 (Biometric Login) — Plan 2 of 2
+- **Current Plan:** 20-02 (Biometric Login UI)
+- **Last Updated:** 2026-03-18 — Completed 20-01 (Biometric Foundation)
 
 ## Progress
 
 ```
-v3.1 Biometric Login + Badge Polish + Release — READY TO PLAN
-[░░░░░░░░░░] 0/0 plans · 0/3 phases
+v3.1 Biometric Login + Badge Polish + Release — EXECUTING
+[█████░░░░░] 1/2 plans · 0/3 phases
 ```
 
 ## Project Reference
@@ -56,6 +57,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 4 | SharedPreferences over FlutterSecureStorage | Eliminates ANR |
 | 11 | two_dimensional_scrollables for grid | Official Flutter team package |
 | 16 | Codex security fixes merged before v3.1 | Clean baseline for new features |
+| 17 | Catch Exception broadly in BiometricService | local_auth v3 throws different types than PlatformException |
+| 18 | local_auth v3.0.1 direct params API | AuthenticationOptions removed in v3; use biometricOnly/persistAcrossBackgrounding |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
