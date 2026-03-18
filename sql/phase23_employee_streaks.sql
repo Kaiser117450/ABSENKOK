@@ -17,13 +17,13 @@ DROP POLICY IF EXISTS "streaks_select_admin" ON employee_streaks;
 CREATE POLICY "streaks_select_admin" ON employee_streaks
   FOR SELECT
   USING (
-    (auth.jwt() -> 'app_metadata' ->> 'app_role') = 'admin'
+    ((SELECT auth.jwt() -> 'app_metadata' ->> 'app_role')) = 'admin'
     OR (
-      (auth.jwt() -> 'app_metadata' ->> 'app_role') = 'kepala_gerai'
+      ((SELECT auth.jwt() -> 'app_metadata' ->> 'app_role')) = 'kepala_gerai'
       AND employee_id IN (
         SELECT id
         FROM employees
-        WHERE home_outlet_id = (auth.jwt() -> 'app_metadata' ->> 'managed_outlet_id')::UUID
+        WHERE home_outlet_id = ((SELECT auth.jwt() -> 'app_metadata' ->> 'managed_outlet_id'))::UUID
       )
     )
   );
