@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
 current_plan: Not started
-status: ready_to_plan
-last_updated: "2026-03-18T12:35:12.000Z"
+status: unknown
+last_updated: "2026-03-18T19:27:16Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -16,25 +16,26 @@ progress:
 
 ## Current Status
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
-- **Phase:** 24 of 26 (Core Services + Analytics) — ready to plan
+- **Phase:** 25 of 26 (Dashboard UI + Visualization) — ready to plan
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-18 — Phase 23 complete, production RPC/streak foundation deployed
+- **Last Updated:** 2026-03-18 — Phase 24 Plan 02 complete: MissingClockoutService + timer integration
 
 ## Progress
 
 ```
 v4.0 Smart Attendance + Admin Dashboard — IN PROGRESS
-[██░░░░░░░░] 25% · 1/4 phases
+[█████░░░░░] 50% · 2/4 phases
 ```
 
 - **Phase 23 progress:** 2/2 plans complete
+- **Phase 24 progress:** 3/3 plans complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 24 — Core Services + Analytics
+**Current focus:** Phase 25 — Dashboard UI + Visualization
 
 ## What Was Shipped
 
@@ -61,6 +62,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 20 | Keep biometric_enabled on logout, clear remembered role | User shouldn't re-enable after re-login |
 | 22 | Keep badge color storage as #RRGGBB strings | Allows visual picker UI without changing badge model |
 | 23 | Phase 23 SQL must scope employees by `home_outlet_id` | The real employees schema has no `outlet_id` column |
+| 24-02 | Direct RPC call from MissingClockoutService (not AnalyticsService) | Wave 1 plan — avoids build-order dependency between services |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -79,6 +81,10 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - fl_chart is the single new dependency for v4.0
 - Dashboard and streak SQL must use `employees.home_outlet_id`, not the stale `outlet_id` placeholder from earlier notes
 - Phase 23 production migrations applied: `phase_23_dashboard_foundation_20260318` and `phase_23_employee_streaks_rls_perf_20260318`
+- Phase 24 production migrations applied: `phase_24_overtime_missing_rpc_20260318` and `phase_24_arrival_patterns_rpc_20260318`
+- Attendance analytics widgets and pattern detection now rely on live RPCs in production
+- Phase 24 Plan 02: MissingClockoutService (lib/services/missing_clockout_service.dart) checks every 30 min via get_missing_clockouts RPC, sends batched notification per outlet
+- AttendanceRateCard and OvertimeAlertRow widgets created (lib/widgets/) — required for admin_dashboard_screen.dart to compile
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
