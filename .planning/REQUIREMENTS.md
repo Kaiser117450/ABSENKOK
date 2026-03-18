@@ -4,7 +4,7 @@
 
 ### Biometric Login (AUTH)
 - [x] **AUTH-01**: Admin/kepala gerai can unlock the app using fingerprint or face recognition after first successful login
-- [ ] **AUTH-02**: App falls back to email/password form if biometric fails, is cancelled, or is unavailable
+- [x] **AUTH-02**: App falls back to email/password form if biometric fails, is cancelled, or is unavailable
 - [x] **AUTH-03**: User can toggle "Remember me" to enable/disable biometric login on the device
 - [x] **AUTH-04**: App auto-detects biometric capability and skips biometric setup if no sensor is available
 
@@ -39,7 +39,7 @@
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
 | AUTH-01 | Phase 20 | Complete |
-| AUTH-02 | Phase 20 | Pending |
+| AUTH-02 | Phase 20 | Complete |
 | AUTH-03 | Phase 20 | Complete |
 | AUTH-04 | Phase 20 | Complete |
 | BADGE-01 | Phase 21 | Pending |

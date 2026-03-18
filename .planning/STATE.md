@@ -2,29 +2,29 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Biometric Login + Badge Polish + Release
-current_plan: 20-02
-status: executing
-last_updated: "2026-03-18T04:15:39.000Z"
+current_plan: 20-02 (Biometric Login UI) COMPLETED
+status: phase-complete
+last_updated: "2026-03-18T04:22:14.384Z"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Milestone:** v3.1 — Biometric Login + Badge Polish + Release
-- **Phase:** 20 of 22 (Biometric Login) — Plan 2 of 2
-- **Current Plan:** 20-02 (Biometric Login UI)
-- **Last Updated:** 2026-03-18 — Completed 20-01 (Biometric Foundation)
+- **Phase:** 20 of 22 (Biometric Login) — COMPLETE (2/2 plans done)
+- **Current Plan:** 20-02 (Biometric Login UI) -- COMPLETED
+- **Last Updated:** 2026-03-18 — Completed 20-02 (Biometric Login UI)
 
 ## Progress
 
 ```
 v3.1 Biometric Login + Badge Polish + Release — EXECUTING
-[█████░░░░░] 1/2 plans · 0/3 phases
+[██████████] 2/2 plans · 1/3 phases
 ```
 
 ## Project Reference
@@ -59,6 +59,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 16 | Codex security fixes merged before v3.1 | Clean baseline for new features |
 | 17 | Catch Exception broadly in BiometricService | local_auth v3 throws different types than PlatformException |
 | 18 | local_auth v3.0.1 direct params API | AuthenticationOptions removed in v3; use biometricOnly/persistAcrossBackgrounding |
+| 19 | Auto-trigger biometric only when session+pref+hardware all present | Prevents prompting users who haven't opted in |
+| 20 | Keep biometric_enabled on logout, clear remembered role | User shouldn't re-enable after re-login |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations

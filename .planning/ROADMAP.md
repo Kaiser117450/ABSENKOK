@@ -55,7 +55,7 @@ Full details: `.planning/milestones/v3.0-ROADMAP.md`
 
 **Milestone Goal:** Add biometric fast-login for admin/kepala gerai, visual badge color picker, and publish production APK to GitHub Releases.
 
-- [ ] **Phase 20: Biometric Login** — Admin/kepala gerai can unlock app with fingerprint or face after first login
+- [x] **Phase 20: Biometric Login** — Admin/kepala gerai can unlock app with fingerprint or face after first login (completed 2026-03-18)
 - [ ] **Phase 21: Badge Color Picker** — Admin picks badge border colors visually instead of typing hex codes
 - [ ] **Phase 22: Production Release** — Build obfuscated APK and publish to GitHub Releases as v3.1
 
@@ -100,7 +100,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 20. Biometric Login | 1/2 | In Progress|  | - |
+| 20. Biometric Login | 2/2 | Complete   | 2026-03-18 | - |
 | 21. Badge Color Picker | v3.1 | 0/TBD | Not started | - |
 | 22. Production Release | v3.1 | 0/TBD | Not started | - |
 
