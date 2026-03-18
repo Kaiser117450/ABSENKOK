@@ -34,7 +34,7 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, chip internal padding, inline spacing between icon + text |
-| sm | 8px | Compact element spacing (chip row separators, overtime chip gaps) |
+| sm | 8px | Compact element spacing (chip row separators, overtime chip gaps, intra-card gaps between label and content) |
 | md | 16px | Default card padding, section internal padding (matches existing `AppCard` default) |
 | lg | 24px | Section padding between dashboard sections (rate card -> trend chart -> leaderboard) |
 | xl | 32px | Top/bottom page padding for the scrollable dashboard |
@@ -46,7 +46,7 @@ Exceptions:
 - Leaderboard row height: 56px (comfortable touch target with avatar + text)
 - Streak badge on kiosk scan: 44px diameter circle (touch-target compliant)
 
-**Source:** Existing patterns — `AppCard` uses 16px padding, `AttendanceRateCard` uses 12px/16px gaps, card margin is `EdgeInsets.symmetric(horizontal: 16, vertical: 4)`.
+**Source:** Existing patterns — `AppCard` uses 16px padding, card margin is `EdgeInsets.symmetric(horizontal: 16, vertical: 4)`. All intra-card gaps standardized to 8px (sm token).
 
 ---
 
@@ -55,11 +55,13 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage in This Phase |
 |------|------|--------|-------------|---------------------|
 | Body | 14px | 400 (regular) | 1.5 | Leaderboard employee names, chart labels, descriptive text |
-| Label | 12px | 600 (semibold) | 1.4 | Section headers ("Tingkat Kehadiran", "Tren Mingguan"), chart axis labels, overtime chip text |
+| Label | 12px | 700 (bold) | 1.4 | Section headers ("Tingkat Kehadiran", "Tren Mingguan"), chart axis labels, overtime chip text |
 | Heading | 20px | 700 (bold) | 1.2 | Screen title ("Dashboard"), section titles |
 | Display | 28px | 700 (bold) | 1.1 | Hero metric numbers (attendance rate percentage, streak count on kiosk) |
 
-**Source:** Existing `AttendanceRateCard` uses 28px/w700 for rate display, 12px/w700 for section headers, 14px for body text. These are not new choices — they match the established pattern.
+**Weights used: 2 (regular 400 + bold 700).** Label role uses bold (700) instead of semibold (600) to stay within the 2-weight constraint. This is consistent with existing `AttendanceRateCard` which uses w700 for section headers.
+
+**Source:** Existing `AttendanceRateCard` uses 28px/w700 for rate display, 12px/w700 for section headers, 14px for body text.
 
 ---
 
@@ -81,15 +83,16 @@ Exceptions:
 
 ### Semantic Colors for Charts
 
-| Color | Hex | Chart Usage |
-|-------|-----|-------------|
-| Success green | `#16A34A` (AppColors.success) | Attendance rate >= 80%, streak fire icon, "hadir" bar segments |
-| Warning amber | `#F59E0B` (AppColors.warning) | Overtime chips, attendance rate < 80% but >= 60% |
-| Danger red | `#DC2626` (AppColors.danger) | Attendance rate < 60%, late arrival indicators |
-| Accent amber | `#F59E0B` (AppColors.accent) | Streak milestone badge glow (7-day, 30-day, 90-day) |
-| Blue info | `#3B82F6` | Cross-outlet comparison: Outlet B bar color (Outlet A uses primary red) |
-| Purple | `#8B5CF6` | Cross-outlet comparison: Outlet C bar color |
-| Teal | `#14B8A6` | Cross-outlet comparison: Outlet D bar color |
+| Color | Hex | AppColors Field | Chart Usage |
+|-------|-----|-----------------|-------------|
+| Success green | `#16A34A` | `AppColors.success` | Attendance rate >= 80%, streak fire icon, "hadir" bar segments |
+| Warning amber | `#F59E0B` | `AppColors.warning` | Overtime chips, attendance rate < 80% but >= 60%, streak milestone badge glow (7-day, 30-day, 90-day) |
+| Danger red | `#DC2626` | `AppColors.danger` | Attendance rate < 60%, late arrival indicators |
+| Blue info | `#3B82F6` | (local constant) | Cross-outlet comparison: Outlet B bar color (Outlet A uses primary red) |
+| Purple | `#8B5CF6` | (local constant) | Cross-outlet comparison: Outlet C bar color |
+| Teal | `#14B8A6` | (local constant) | Cross-outlet comparison: Outlet D bar color |
+
+**`#F59E0B` consolidation:** A single `AppColors.warning` field serves both the "warning" semantic role (overtime chips, mid-range attendance) and the streak milestone badge glow. There is no separate `AppColors.accent` field at `#F59E0B` — all amber uses reference `AppColors.warning`. The 10% accent role in the 60/30/10 split is fulfilled by `AppColors.primary` (`#DC2626` red), not by amber.
 
 **Multi-outlet bar chart color assignment:** Outlets are assigned colors in alphabetical order from the palette: `[#DC2626, #3B82F6, #8B5CF6, #14B8A6]`. Maximum 4 outlets (production constraint).
 
@@ -137,70 +140,72 @@ Single scrollable `ListView` with the following sections in order:
 
 ```
 [AppBar: "Dashboard Kehadiran" — red, back arrow]
-│
-├── [16px top padding]
-│
-├── Section 1: AttendanceRateCard (existing widget, reused as-is)
-│   └── Card with period toggle (Hari/Minggu/Bulan) + rate display
-│
-├── [24px gap]
-│
-├── Section 2: Donut Chart — "Ringkasan Kehadiran"
-│   └── AppCard containing:
-│       ├── Label: "Ringkasan Kehadiran" (12px, w600, textSecondary)
-│       ├── [12px gap]
-│       ├── PieChart (fl_chart) — 200px height, centered
-│       │   ├── Hadir arc: AppColors.success
-│       │   ├── Tidak Hadir arc: AppColors.danger
-│       │   └── Center text: "{rate}%" (28px, w700)
-│       └── Legend row below chart: [green dot] Hadir  [red dot] Tidak Hadir
-│
-├── [24px gap]
-│
-├── Section 3: Weekly Trend — "Tren Mingguan"
-│   └── AppCard containing:
-│       ├── Label: "Tren Mingguan" (12px, w600, textSecondary)
-│       ├── [12px gap]
-│       └── BarChart (fl_chart) — 180px height
-│           ├── X-axis: Sen, Sel, Rab, Kam, Jum, Sab, Min (last 7 days)
-│           ├── Y-axis: employee count (integer)
-│           └── Bar color: AppColors.success (single color, one outlet)
-│
-├── [24px gap]
-│
-├── Section 4: Overtime Alerts — "Lembur Hari Ini"
-│   └── AppCard containing:
-│       ├── Label: "Lembur Hari Ini" (12px, w600, textSecondary)
-│       ├── [12px gap]
-│       └── OvertimeAlertRow (existing widget, reused as-is)
-│
-├── [24px gap]
-│
-├── Section 5: Streak Leaderboard — "Top 5 Streak Kehadiran"
-│   └── AppCard containing:
-│       ├── Label: "Top 5 Streak Kehadiran" (12px, w600, textSecondary)
-│       ├── [12px gap]
-│       └── Column of 5 LeaderboardRow widgets:
-│           ├── Row: [Rank badge] [BadgeAvatar 40px] [Name 14px] [Spacer] [fire icon + streak count]
-│           ├── Rank 1: gold background (#FEF3C7), rank text amber
-│           ├── Rank 2: light gray background (#F3F4F6), rank text gray
-│           ├── Rank 3: light gray background (#F3F4F6), rank text gray
-│           └── Rank 4-5: no background highlight
-│
-├── [24px gap]
-│
-├── Section 6 (ADMIN ONLY): Cross-Outlet Comparison — "Perbandingan Outlet"
-│   └── AppCard containing:
-│       ├── Label: "Perbandingan Outlet" (12px, w600, textSecondary)
-│       ├── [12px gap]
-│       └── BarChart (fl_chart) — 200px height, grouped bars
-│           ├── X-axis: outlet names (abbreviated if > 10 chars)
-│           ├── Y-axis: attendance rate percentage (0-100%)
-│           ├── Bar colors: per-outlet from palette [red, blue, purple, teal]
-│           └── Legend row below chart with outlet color dots
-│
-├── [32px bottom padding]
-└── End
+|  (Back arrow uses Flutter default semantic label:
+|   MaterialLocalizations.of(context).backButtonTooltip)
+|
++-- [16px top padding]
+|
++-- Section 1: AttendanceRateCard (existing widget, reused as-is)
+|   +-- Card with period toggle (Hari/Minggu/Bulan) + rate display
+|
++-- [24px gap]
+|
++-- Section 2: Donut Chart — "Ringkasan Kehadiran"
+|   +-- AppCard containing:
+|       +-- Label: "Ringkasan Kehadiran" (12px, w700, textSecondary)
+|       +-- [8px gap]
+|       +-- PieChart (fl_chart) — 200px height, centered
+|       |   +-- Hadir arc: AppColors.success
+|       |   +-- Tidak Hadir arc: AppColors.danger
+|       |   +-- Center text: "{rate}%" (28px, w700)
+|       +-- Legend row below chart: [green dot] Hadir  [red dot] Tidak Hadir
+|
++-- [24px gap]
+|
++-- Section 3: Weekly Trend — "Tren Mingguan"
+|   +-- AppCard containing:
+|       +-- Label: "Tren Mingguan" (12px, w700, textSecondary)
+|       +-- [8px gap]
+|       +-- BarChart (fl_chart) — 180px height
+|           +-- X-axis: Sen, Sel, Rab, Kam, Jum, Sab, Min (last 7 days)
+|           +-- Y-axis: employee count (integer)
+|           +-- Bar color: AppColors.success (single color, one outlet)
+|
++-- [24px gap]
+|
++-- Section 4: Overtime Alerts — "Lembur Hari Ini"
+|   +-- AppCard containing:
+|       +-- Label: "Lembur Hari Ini" (12px, w700, textSecondary)
+|       +-- [8px gap]
+|       +-- OvertimeAlertRow (existing widget, reused as-is)
+|
++-- [24px gap]
+|
++-- Section 5: Streak Leaderboard — "Top 5 Streak Kehadiran"
+|   +-- AppCard containing:
+|       +-- Label: "Top 5 Streak Kehadiran" (12px, w700, textSecondary)
+|       +-- [8px gap]
+|       +-- Column of 5 LeaderboardRow widgets:
+|           +-- Row: [Rank badge] [BadgeAvatar 40px] [Name 14px] [Spacer] [fire icon + streak count]
+|           +-- Rank 1: gold background (#FEF3C7), rank text amber
+|           +-- Rank 2: light gray background (#F3F4F6), rank text gray
+|           +-- Rank 3: light gray background (#F3F4F6), rank text gray
+|           +-- Rank 4-5: no background highlight
+|
++-- [24px gap]
+|
++-- Section 6 (ADMIN ONLY): Cross-Outlet Comparison — "Perbandingan Outlet"
+|   +-- AppCard containing:
+|       +-- Label: "Perbandingan Outlet" (12px, w700, textSecondary)
+|       +-- [8px gap]
+|       +-- BarChart (fl_chart) — 200px height, grouped bars
+|           +-- X-axis: outlet names (abbreviated if > 10 chars)
+|           +-- Y-axis: attendance rate percentage (0-100%)
+|           +-- Bar colors: per-outlet from palette [red, blue, purple, teal]
+|           +-- Legend row below chart with outlet color dots
+|
++-- [32px bottom padding]
++-- End
 ```
 
 **Visibility rule:** Section 6 is rendered only when `appState.role == 'admin'`. Kepala Gerai sees sections 1-5 scoped to their own outlet.
@@ -213,14 +218,14 @@ After successful masuk scan, the existing success screen adds:
 
 ```
 [Existing success content: checkmark + confetti + employee name + "Masuk berhasil"]
-│
-├── [16px gap]
-│
-└── Streak Row (new):
-    ├── Fire icon (Icons.local_fire_department, 24px, AppColors.accent amber)
-    ├── [8px gap]
-    ├── Text: "{N} hari berturut-turut!" (16px, w600, AppColors.textPrimary)
-    └── Visibility: only shown when streak >= 2 days
+|
++-- [16px gap]
+|
++-- Streak Row (new):
+    +-- Fire icon (Icons.local_fire_department, 24px, AppColors.warning amber)
+    +-- [8px gap]
+    +-- Text: "{N} hari berturut-turut!" (16px, w700, AppColors.textPrimary)
+    +-- Visibility: only shown when streak >= 2 days
 ```
 
 **Streak milestone celebration (GAME-03):**
@@ -278,11 +283,14 @@ After successful masuk scan, the existing success screen adds:
 ### Chart Interactions (fl_chart)
 - Donut chart: static (no tap interaction) — center text shows current rate
 - Bar charts: tap on bar shows tooltip with exact value (fl_chart `BarTouchData` with `touchTooltipData`)
-- Tooltip style: dark background (`#111827`), white text (12px, w600), rounded corners (8px), auto-dismiss after 2s
+- Tooltip style: dark background (`#111827`), white text (12px, w700), rounded corners (8px), auto-dismiss after 2s
 
 ### Navigation
 - `AdminDashboardScreen` -> "Lihat Dashboard" button -> `ChartDashboardScreen` via GoRouter push
 - `ChartDashboardScreen` AppBar back arrow -> pop back to admin dashboard
+
+### Accessibility
+- AppBar back arrow uses Flutter's built-in semantic label: `MaterialLocalizations.of(context).backButtonTooltip` (resolves to localized "Back" string). No custom `Semantics` wrapper needed.
 
 ### Memory Safety (DASH-04)
 - `ChartDashboardScreen` uses `AutomaticKeepAliveClientMixin` to survive tab switches without rebuilding
