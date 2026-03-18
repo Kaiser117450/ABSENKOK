@@ -16,6 +16,7 @@ import '../../providers/app_provider.dart';
 import '../../services/badge_service.dart';
 import '../../services/kiosk_background_service.dart';
 import '../../services/location_service.dart';
+import '../../services/pattern_detection_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/badge_avatar.dart';
@@ -147,7 +148,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             .timeout(const Duration(seconds: 1), onTimeout: () => null);
       } catch (_) {}
 
-      final now = DateTime.now().toUtc().toIso8601String();
+      final scanTime = DateTime.now();
+      final now = scanTime.toUtc().toIso8601String();
 
       await SqliteService.insertPendingLog(
         employeeId: employee.id,
@@ -182,6 +184,19 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         // Start confetti + bounce animation
         _confettiCtrl.play();
         _successScaleCtrl.forward();
+        if (type == AttendanceType.masuk) {
+          unawaited(
+            PatternDetectionService.instance
+                .checkAndNotifyIfLate(
+                  employeeId: employee.id,
+                  outletId: session.outletId,
+                  scanTime: scanTime,
+                )
+                .catchError((Object error) {
+              debugPrint('[KioskScan] pattern check error: $error');
+            }),
+          );
+        }
         // Auto-close after success
         _scheduleReset(
             const Duration(milliseconds: AppConstants.successScreenDurationMs));
