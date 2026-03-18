@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import '../../core/theme.dart';
 import '../../models/employee.dart';
@@ -47,6 +48,39 @@ class BadgeManagementScreen extends StatefulWidget {
 class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
   List<EmployeeBadge> _badges = [];
   bool _loading = true;
+
+  String _colorToHex(Color color) {
+    final rgbHex = color.value.toRadixString(16).padLeft(8, '0').substring(2);
+    return '#${rgbHex.toUpperCase()}';
+  }
+
+  Color _safeParseHex(
+    String hex, {
+    Color fallback = const Color(0xFF9CA3AF),
+  }) {
+    final cleaned = hex.replaceAll('#', '').trim().toUpperCase();
+    final normalized = cleaned.length == 6 ? 'FF$cleaned' : cleaned;
+    final value =
+        normalized.length == 8 ? int.tryParse(normalized, radix: 16) : null;
+    return value != null ? Color(value) : fallback;
+  }
+
+  Widget _buildColorPickerField({
+    required BuildContext dialogContext,
+    required String label,
+    required Color currentColor,
+    required ValueChanged<Color> onColorSelected,
+    required StateSetter setDialogState,
+  }) {
+    return BadgeColorPickerField(
+      label: label,
+      currentColor: currentColor,
+      onColorSelected: (color) {
+        onColorSelected(color);
+        setDialogState(() {});
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -126,27 +160,33 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
                   onChanged: (_) => setDialogState(() {}),
                 ),
                 const SizedBox(height: 12),
-                // Color 1 field (hex)
-                TextField(
-                  controller: color1Ctrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Warna Utama (hex)',
-                    hintText: '#FFD700',
-                    border: OutlineInputBorder(),
+                _buildColorPickerField(
+                  dialogContext: ctx,
+                  label: 'Warna Utama',
+                  currentColor: _safeParseHex(
+                    color1Ctrl.text,
+                    fallback: const Color(0xFFFFD700),
                   ),
-                  onChanged: (_) => setDialogState(() {}),
+                  onColorSelected: (color) {
+                    color1Ctrl.text = _colorToHex(color);
+                  },
+                  setDialogState: setDialogState,
                 ),
-                const SizedBox(height: 12),
-                // Color 2 field (hex, optional)
-                TextField(
-                  controller: color2Ctrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Warna Gradient (hex, opsional)',
-                    hintText: '#FFA500',
-                    border: OutlineInputBorder(),
+                if (selectedStyle == 'gradient') ...[
+                  const SizedBox(height: 12),
+                  _buildColorPickerField(
+                    dialogContext: ctx,
+                    label: 'Warna Gradient',
+                    currentColor: _safeParseHex(
+                      color2Ctrl.text,
+                      fallback: const Color(0xFFFFA500),
+                    ),
+                    onColorSelected: (color) {
+                      color2Ctrl.text = _colorToHex(color);
+                    },
+                    setDialogState: setDialogState,
                   ),
-                  onChanged: (_) => setDialogState(() {}),
-                ),
+                ],
                 const SizedBox(height: 12),
                 // Style selector
                 DropdownButtonFormField<String>(
@@ -196,7 +236,8 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
                           : null,
                       emoji: emojiCtrl.text.trim(),
                       borderColor: color1Ctrl.text.trim(),
-                      borderColor2: color2Ctrl.text.trim().isNotEmpty
+                      borderColor2: selectedStyle == 'gradient' &&
+                              color2Ctrl.text.trim().isNotEmpty
                           ? color2Ctrl.text.trim()
                           : null,
                       borderStyle: selectedStyle,
@@ -209,7 +250,8 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
                           : null,
                       emoji: emojiCtrl.text.trim(),
                       borderColor: color1Ctrl.text.trim(),
-                      borderColor2: color2Ctrl.text.trim().isNotEmpty
+                      borderColor2: selectedStyle == 'gradient' &&
+                              color2Ctrl.text.trim().isNotEmpty
                           ? color2Ctrl.text.trim()
                           : null,
                       borderStyle: selectedStyle,
@@ -371,6 +413,97 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
                     },
                   ),
                 ),
+    );
+  }
+}
+
+class BadgeColorPickerField extends StatelessWidget {
+  final String label;
+  final Color currentColor;
+  final ValueChanged<Color> onColorSelected;
+
+  const BadgeColorPickerField({
+    super.key,
+    required this.label,
+    required this.currentColor,
+    required this.onColorSelected,
+  });
+
+  static String colorToHex(Color color) {
+    final rgbHex = color.value.toRadixString(16).padLeft(8, '0').substring(2);
+    return '#${rgbHex.toUpperCase()}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: ValueKey('badge-color-picker-field-$label'),
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Color tempColor = currentColor;
+        showDialog<void>(
+          context: context,
+          builder: (pickerCtx) => StatefulBuilder(
+            builder: (pickerCtx, setPickerState) => AlertDialog(
+              title: Text(label),
+              content: SingleChildScrollView(
+                child: ColorPicker(
+                  pickerColor: tempColor,
+                  onColorChanged: (color) {
+                    tempColor = color;
+                    setPickerState(() {});
+                    onColorSelected(color);
+                  },
+                  enableAlpha: false,
+                  hexInputBar: true,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(pickerCtx),
+                  child: const Text('Pilih'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        child: Row(
+          children: [
+            Container(
+              key: ValueKey('badge-color-picker-swatch-$label'),
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: currentColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                colorToHex(currentColor),
+                key: ValueKey('badge-color-picker-hex-$label'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.color_lens_outlined,
+              size: 18,
+              color: Colors.grey.shade700,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
