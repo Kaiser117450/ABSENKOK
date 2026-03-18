@@ -94,7 +94,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Release APK builds successfully with ProGuard minification and obfuscation enabled
   2. GitHub Releases page shows v3.1 tag with the APK attached and a changelog describing biometric login and badge color picker
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 22-01-PLAN.md — Bump version to 3.1.0, build release APK, publish to GitHub Releases with changelog
 
 ## Progress
 
@@ -104,7 +106,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 20. Biometric Login | v3.1 | 2/2 | Complete | 2026-03-18 |
 | 21. Badge Color Picker | v3.1 | 1/1 | Complete | 2026-03-18 |
-| 22. Production Release | v3.1 | 0/TBD | Not started | - |
+| 22. Production Release | v3.1 | 0/1 | Not started | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
