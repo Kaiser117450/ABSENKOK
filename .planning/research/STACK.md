@@ -1,299 +1,188 @@
-# Technology Stack — v3.0 Schedule Grid + Landing Website
+# Stack Research — v4.0 Smart Attendance + Admin Dashboard
 
 **Project:** Absensi Enakko (ABSENKOK)
-**Researched:** 2026-03-12
-**Scope:** NEW additions only — Schedule Grid UI (Flutter) + Astro.js Marketing Website
+**Researched:** 2026-03-18
+**Confidence:** MEDIUM-HIGH
+**Scope:** NEW additions only for smart attendance patterns, charts/dashboard, gamification, push notifications, Supabase Auth user management, and cross-outlet reporting.
 
 ---
 
-## Part 1: Flutter Schedule Grid Redesign
+## Recommended Stack Additions
 
-### Recommended Addition
+### Charts & Data Visualization
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `two_dimensional_scrollables` | ^0.3.8 | 2D scrolling grid with pinned rows/columns | Official Flutter team package. Replaces manual dual-ListView sync with true 2D scrolling. Pinned left employee column + pinned top day header = exactly the schedule grid pattern needed. Eliminates 40+ lines of manual `ScrollController` sync code. |
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `fl_chart` | ^0.70.2 | Line charts, bar charts, pie charts for attendance dashboard | Most popular open-source Flutter chart library (6,200+ GitHub stars). Supports line, bar, pie, radar charts -- exactly what's needed for attendance rate cards, mini chart dashboard, and cross-outlet comparison. Declarative API integrates cleanly with Riverpod state. No commercial license needed (MIT). Lightweight compared to Syncfusion. |
 
-**Confidence:** HIGH — verified on pub.dev, SDK ^3.9.0 compatible with project's Dart 3.11.0, Flutter >=3.35.0 compatible with 3.41.1
+**Why fl_chart over Syncfusion:** This project serves 4 outlets / 14 employees. We need 3-4 simple chart types (bar chart for daily attendance, line chart for trends, pie chart for on-time/late ratios). fl_chart handles all of these. Syncfusion's 30+ chart types and commercial licensing are unnecessary overhead. The free community license has revenue/employee caps that create future ambiguity.
 
-### What NOT to Add
+**Why fl_chart over graphic/charts_flutter:** `charts_flutter` is abandoned (Google archived it). `graphic` is newer but has a smaller community and less documentation. fl_chart has the best balance of features, maintenance, and community support.
 
-| Rejected Package | Why Not |
-|------------------|---------|
-| `pluto_grid` v8.1.0 | Heavy data-grid overkill for a 14-employee × 7-day grid. Designed for Excel-like spreadsheets, not shift scheduling. |
-| `data_table_2` v2.7.2 | Wraps Material `DataTable` — no 2D scroll support, limited to single-axis scrolling with fixed headers. |
-| `syncfusion_flutter_datagrid` v32.2.9 | Requires commercial license. Way too heavy for this simple use case. |
-| `linked_scroll_controller` v0.2.0 | SDK constraint `>=2.12.0-0 <3.0.0` — **incompatible with Dart 3.x**. Abandoned package. |
-| `flutter_animate` v4.5.2 | Nice-to-have but unnecessary. Built-in `AnimatedContainer`, `AnimatedSwitcher`, `AnimatedScale` provide all the cell transition animations needed. Already have `confetti` for celebrations. |
-| `table_calendar` v3.2.0 | Calendar widget, not a schedule grid. Wrong abstraction. |
-| `flutter_staggered_grid_view` v0.7.0 | SDK `>=2.12.0 <3.0.0` — incompatible with Dart 3.x. Also designed for Pinterest-style layouts, not data grids. |
+**Confidence:** MEDIUM -- version 0.70.2 found via pub.dev search results; version 1.1.0 also exists but may be a pre-release or fork. Pin to `^0.70.2` as the stable line. Verify exact latest stable with `flutter pub add fl_chart` at implementation time.
 
-### Architecture: Why `two_dimensional_scrollables` Over Current Approach
+---
 
-The existing `shift_scheduler_screen.dart` (1,123 lines) manually synchronizes two `ListView.builder` widgets with a `bool _isSyncing` flag and paired `ScrollController.jumpTo()` calls. This works but is fragile:
+### Push Notifications (Missing Clock-Out Alert)
 
-```dart
-// CURRENT: Manual sync (fragile, 40+ lines of boilerplate)
-_employeeListController.addListener(() {
-  if (!_isSyncing && _scheduleGridController.hasClients) {
-    _isSyncing = true;
-    _scheduleGridController.jumpTo(_employeeListController.offset);
-    _isSyncing = false;
-  }
-});
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `firebase_core` | ^3.13.0 | Firebase initialization (required by firebase_messaging) | Required base dependency for any Firebase service in Flutter. |
+| `firebase_messaging` | ^15.2.3 | FCM push notification token management + foreground handling | Industry standard for Android push notifications. Supabase has no native push notification service -- FCM is the recommended integration path per Supabase's own documentation. |
+
+**Architecture for missing clock-out notifications:**
+
+1. **Flutter app** registers FCM device token on admin login, stores token in Supabase `device_tokens` table
+2. **Supabase Database Webhook** triggers on attendance_logs INSERT -- a pg_cron job or Edge Function checks at shift-end time if employee has `masuk` but no `pulang`
+3. **Supabase Edge Function** (`push-missing-clockout`) calls FCM HTTP v1 API with the admin's device token to send the alert
+4. **Flutter app** receives push via `firebase_messaging` and shows notification using existing `KioskNotificationHelper.kt` or `flutter_local_notifications`
+
+**Important:** Firebase requires `google-services.json` in `android/app/`. This is the first time Firebase is introduced to this project. Requires creating a Firebase project and registering the Android app.
+
+**Alternative considered -- local-only notification:** For MVP, could skip Firebase entirely and use a local periodic check with `flutter_foreground_task` (already installed) + `flutter_local_notifications` (already installed). The foreground service already runs 24/7. Add a periodic timer that checks at shift-end times if clock-out is missing, then fire a local notification. This avoids Firebase setup entirely.
+
+**Recommendation:** Start with the **local-only approach** (zero new dependencies). Add Firebase later only if remote push from server is truly needed (e.g., kepala gerai needs notification on their personal phone, not the kiosk tablet).
+
+**Confidence:** HIGH for local approach (uses existing dependencies), MEDIUM for Firebase approach (versions from training data, verify at implementation).
+
+---
+
+### Supabase Auth User Management (Kepala Gerai Onboarding)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Supabase Edge Functions (Deno) | N/A (server-side) | Secure admin user creation endpoint | `supabase.auth.admin.createUser()` requires `service_role` key which MUST NEVER be in the Flutter app. Edge Function is the official Supabase-recommended pattern for client-initiated admin operations. |
+| `supabase` CLI | latest | Deploy Edge Functions, manage migrations | Required for creating and deploying Edge Functions. Install via `npm install -g supabase` or `scoop install supabase` on Windows. |
+
+**Architecture for kepala gerai onboarding:**
+
+```
+Flutter App                    Supabase Edge Function
+    |                               |
+    |-- POST /create-kepala-gerai ->|
+    |   { email, outlet_id }        |
+    |                               |-- auth.admin.createUser()
+    |                               |-- Set app_role: 'kepala_gerai'
+    |                               |-- Generate random password
+    |                               |<- { email, password }
+    |<- { email, password } --------|
+    |
+    |-- Copy to WhatsApp (share_plus)
 ```
 
-`two_dimensional_scrollables` provides `TableView` which handles this natively:
+**No new Flutter dependencies needed.** The existing `supabase_flutter: ^2.8.4` can invoke Edge Functions via `Supabase.instance.client.functions.invoke('create-kepala-gerai', body: {...})`. The `share_plus: ^10.1.4` (already installed) handles copy-to-WhatsApp.
+
+**Confidence:** HIGH -- this is the documented Supabase pattern for admin user creation from client apps. Verified via official Supabase docs.
+
+---
+
+### Smart Attendance Pattern Algorithm
+
+**No new dependencies needed.** Pure Dart computation.
+
+The pattern detection algorithm operates on `attendance_logs` data already available via Supabase and SQLite:
+
+| Component | Implementation | Dependencies |
+|-----------|---------------|--------------|
+| Usual check-in time calculation | Statistical mean/median of last N scan times per employee | Pure Dart (`DateTime` math) |
+| Late detection | Compare scan time vs calculated pattern or scheduled shift start | Pure Dart |
+| Overtime calculation | `pulang` time minus `masuk` time minus break duration, compare to shift template duration | Pure Dart |
+| Streak calculation | Count consecutive days with attendance, reset on absence | Pure Dart |
+
+**Why no ML/stats library:** The "pattern" is a simple median of historical clock-in times. For 14 employees with ~90 attendance records, this is basic arithmetic. No need for `ml_linalg`, `statistics`, or any stats package. Keep it simple:
 
 ```dart
-// NEW: True 2D scrolling with pinned row/column
-TableView(
-  pinnedRowCount: 1,    // Header row (Sen, Sel, Rab...)
-  pinnedColumnCount: 1, // Employee name column
-  cellBuilder: (context, vicinity) {
-    // vicinity.row = employee index, vicinity.column = day index
-    return _buildCell(vicinity);
-  },
-  columnCount: 8, // 1 name + 7 days
-  rowCount: employees.length + 1, // +1 header
-  columnBuilder: (index) => TableSpan(extent: index == 0
-    ? FixedTableSpanExtent(120) // employee column
-    : FractionalTableSpanExtent(1/7)), // day columns
-  rowBuilder: (index) => TableSpan(extent: FixedTableSpanExtent(56)),
-)
+// Pseudocode for pattern detection
+List<DateTime> recentCheckins = logs
+    .where((l) => l.type == 'masuk' && l.employeeId == id)
+    .map((l) => l.scannedAt)
+    .toList();
+
+Duration medianTime = _calculateMedianTimeOfDay(recentCheckins);
+bool isLate = todayCheckin.timeOfDay > medianTime + tolerance;
 ```
 
-**Benefits:**
-- Eliminates manual scroll sync entirely
-- True diagonal scrolling (current impl only syncs vertical)
-- Better performance — single viewport instead of two competing ListViews
-- Pinned columns/rows are first-class features
-- From Flutter team = maintained long-term
+**Confidence:** HIGH -- pure Dart, no external dependencies.
 
-### Use Built-In Flutter for Everything Else
+---
 
-| Built-in Feature | Use For |
-|-------------------|---------|
-| `AnimatedContainer` | Smooth color/size transitions when shift assigned to cell |
-| `AnimatedSwitcher` | Cross-fade between empty cell → shift chip |
-| `AnimatedScale` | Pop-in effect on tap-assign |
-| `showModalBottomSheet` | Shift picker (Pagi/Siang/Sore/Libur) — already using this |
-| `GestureDetector` + `InkWell` | Tap-to-assign cells — already using this |
-| `LayoutBuilder` | Responsive column widths — already using this |
+### Gamification (Attendance Streaks)
 
-### Existing Dependencies That Stay Unchanged
+**No new dependencies needed.**
 
-These are already in `pubspec.yaml` and remain as-is for the schedule grid:
-- `flutter_riverpod: ^2.6.1` — state management (AppProvider for schedule data)
-- `supabase_flutter: ^2.8.4` — schedule CRUD to Supabase
-- `sqflite: ^2.4.1` — ScheduleSQLiteService offline cache
-- `intl: ^0.19.0` — date formatting for grid headers
-- `pdf: ^3.10.8` + `printing: ^5.13.4` — PDF export of schedule
-- `screenshot: ^3.0.0` — schedule screenshot export
-- `google_fonts: ^6.2.1` — typography
-- `uuid: ^4.5.1` — entry ID generation
+| Component | Implementation | Dependencies |
+|-----------|---------------|--------------|
+| Streak counter | Query attendance_logs for consecutive days | Pure Dart + existing Supabase |
+| Streak display | Custom widget with existing `confetti: ^0.8.0` for milestone celebrations | Already installed |
+| Streak badge | Extend existing badge system (`badges` table) | Existing `flutter_colorpicker`, `cached_network_image` |
 
-### Installation (Flutter)
+The existing badge system (`badges` table + `active_badge_id` on employees) already supports visual rewards. Streaks just add a new data source for badge assignment.
+
+**Confidence:** HIGH -- leverages existing systems entirely.
+
+---
+
+### Cross-Outlet Reporting
+
+**No new dependencies needed.**
+
+| Component | Implementation | Dependencies |
+|-----------|---------------|--------------|
+| Multi-outlet data query | Supabase query joining `attendance_logs` + `outlets` | Existing `supabase_flutter` |
+| Comparison bar chart | fl_chart grouped bar chart | `fl_chart` (new, see above) |
+| PDF export of comparison | Extend existing `PdfReportService` | Existing `pdf` + `printing` |
+| CSV export | Extend existing CSV service | Existing `csv` |
+
+**Confidence:** HIGH -- only new dependency is fl_chart.
+
+---
+
+## Summary: What to Add
+
+### New Dependencies (pubspec.yaml)
 
 ```yaml
-# Add to pubspec.yaml under dependencies:
 dependencies:
-  # ... existing deps unchanged ...
-  
-  # Schedule grid 2D scrolling (official Flutter team)
-  two_dimensional_scrollables: ^0.3.8
+  # Charts for attendance dashboard, rate cards, cross-outlet comparison
+  fl_chart: ^0.70.2
 ```
 
-```bash
-flutter pub get
-```
+That's it. **One new dependency** for all v4.0 features.
 
----
+### Server-Side Additions (Not Flutter)
 
-## Part 2: Astro.js Landing Website
+| Addition | Purpose | Setup Required |
+|----------|---------|----------------|
+| Supabase Edge Function: `create-kepala-gerai` | Secure user creation | `supabase init` + `supabase functions new` + deploy |
+| Supabase DB migration: `device_tokens` table | FCM token storage (only if Firebase push is added) | SQL migration |
+| Supabase DB migration: `employee_patterns` table or view | Cache computed attendance patterns | SQL migration |
+| Supabase DB migration: `streaks` column or table | Track current/longest streaks | SQL migration |
 
-### Recommended Stack
+### Conditional Dependencies (Only If Firebase Push Needed)
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `astro` | ^5.18.0 | Static site framework | Astro 5 is battle-tested with 100+ minor releases. Astro 6 (6.0.4) just launched — too new, integrations not all updated yet. Zero JS by default = fastest possible landing page. |
-| `tailwindcss` | ^4.2.0 | CSS framework | Current major version. CSS-first config (no `tailwind.config.js`) is simpler for static sites. Just `@import "tailwindcss"` in CSS. |
-| `@tailwindcss/vite` | ^4.2.0 | Tailwind v4 Vite integration | Astro runs on Vite. This is the official way to use Tailwind v4 with Vite-based frameworks. No `@astrojs/tailwind` needed. |
-| `@astrojs/vercel` | ^9.0.5 | Vercel deployment adapter | Peer dependency: `astro ^5.0.0`. Handles static + SSR deploy to Vercel. For a landing page, use `output: 'static'` (default). |
-| `@astrojs/sitemap` | ^3.7.0 | SEO sitemap generation | Auto-generates sitemap.xml. Essential for discoverability. |
-| `sharp` | ^0.34.0 | Image optimization | Powers Astro's built-in `<Image>` component. Auto-generates WebP/AVIF, responsive sizes. Install as devDependency. |
-| `@fontsource/inter` | ^5.2.0 | Typography | Self-hosted Inter font. Clean sans-serif matching Apple/Stripe minimalist aesthetic. No Google Fonts network request. |
-
-**Confidence:** HIGH — all versions verified via `npm view`, peer dependencies checked
-
-### Why Astro 5, Not Astro 6
-
-| Factor | Astro 5 (^5.18.0) | Astro 6 (6.0.4) |
-|--------|-------------------|------------------|
-| Stability | 120+ releases, battle-tested | 4 releases, brand new |
-| `@astrojs/tailwind` | ✅ Compatible (peers ^3-5) | ❌ Not compatible |
-| `@astrojs/vercel` | ✅ v9.0.5 (stable) | ⚠️ v10.0.0 (just released) |
-| Community resources | Extensive tutorials, templates | Minimal |
-| Risk | Low | Medium-High |
-| Dist tag | Available as `astro@5.18.1` | `latest` tag |
-
-**Decision:** Astro 5. The landing page is simple — we don't need Astro 6's new features. Pin to `^5.18.0` for stability.
-
-### Why Tailwind v4, Not v3
-
-| Factor | Tailwind v4 | Tailwind v3 |
-|--------|-------------|-------------|
-| Config | CSS-first (`@import "tailwindcss"`) | JS config file (`tailwind.config.js`) |
-| Setup with Astro | `@tailwindcss/vite` as Vite plugin | `@astrojs/tailwind` integration |
-| Performance | Faster builds (Rust-based) | Slower (JS-based) |
-| Status | Current major version | Legacy |
-| Learning curve | Simpler for new projects | More docs/examples available |
-
-**Decision:** Tailwind v4. New project, no migration burden. CSS-first config is cleaner. Works natively via Vite plugin.
-
-### What NOT to Add
-
-| Rejected Tech | Why Not |
-|---------------|---------|
-| React / Svelte / Vue | Static landing page — no interactive components needed. Astro's `.astro` components + scoped CSS + Tailwind handle everything. Zero JS shipped = fastest page. |
-| `@astrojs/tailwind` | This integration targets Tailwind v3. We're using v4 with `@tailwindcss/vite` directly. |
-| Any CMS (Contentful, Sanity, etc.) | Marketing copy is hardcoded. 5 sections on one page — no dynamic content. |
-| `framer-motion` / animation library | CSS animations + Tailwind's built-in `animate-*` utilities + `@keyframes` are sufficient for a landing page. Keep JS bundle at zero. |
-| `astro-icon` v1.1.5 | Adds dependency complexity. Inline SVGs or a small icon sprite are simpler for <10 icons on a marketing page. |
-| `@astrojs/mdx` | No blog, no markdown content. Pure `.astro` components. |
-| Headless UI / Radix | No interactive components (no dropdowns, modals, etc.). Static content only. |
-
-### Astro Configuration
-
-```javascript
-// astro.config.mjs
-import { defineConfig } from 'astro/config';
-import tailwindcss from '@tailwindcss/vite';
-import vercel from '@astrojs/vercel';
-import sitemap from '@astrojs/sitemap';
-
-export default defineConfig({
-  site: 'https://absenkok.vercel.app', // Update with real domain
-  output: 'static',
-  adapter: vercel(),
-  integrations: [sitemap()],
-  vite: {
-    plugins: [tailwindcss()],
-  },
-  image: {
-    service: { entrypoint: 'astro/assets/services/sharp' },
-  },
-});
-```
-
-### Project Structure
-
-```
-absenkok-website/
-├── astro.config.mjs
-├── package.json
-├── tsconfig.json
-├── public/
-│   ├── favicon.svg
-│   ├── og-image.png          # Open Graph social preview
-│   └── absenkok-logo.svg     # Brand logo
-├── src/
-│   ├── assets/
-│   │   └── images/           # Optimized via <Image>
-│   │       ├── hero-mockup.png
-│   │       ├── feature-nfc.png
-│   │       ├── feature-schedule.png
-│   │       └── feature-reports.png
-│   ├── components/
-│   │   ├── Header.astro
-│   │   ├── Hero.astro
-│   │   ├── Features.astro
-│   │   ├── Download.astro
-│   │   ├── Footer.astro
-│   │   └── DeveloperWatermark.astro
-│   ├── layouts/
-│   │   └── BaseLayout.astro
-│   ├── pages/
-│   │   └── index.astro
-│   └── styles/
-│       └── global.css         # @import "tailwindcss"; + custom
-└── vercel.json                # Optional: redirects, headers
-```
-
-### Installation (Astro Website)
-
-```bash
-# Create project directory
-mkdir absenkok-website && cd absenkok-website
-
-# Init Astro project
-npm create astro@latest . -- --template minimal --typescript strict
-
-# Install core (pin to Astro 5)
-npm install astro@^5.18.0
-
-# Install Tailwind v4
-npm install tailwindcss@^4.2.0 @tailwindcss/vite@^4.2.0
-
-# Install integrations
-npm install @astrojs/vercel@^9.0.5 @astrojs/sitemap@^3.7.0
-
-# Install font
-npm install @fontsource/inter@^5.2.0
-
-# Install image optimizer (dev dep)
-npm install -D sharp@^0.34.0
-
-# TypeScript checking (dev dep)
-npm install -D @astrojs/check@^0.9.0 typescript
-```
-
-### Full `package.json` Dependencies
-
-```json
-{
-  "dependencies": {
-    "astro": "^5.18.0",
-    "tailwindcss": "^4.2.0",
-    "@tailwindcss/vite": "^4.2.0",
-    "@astrojs/vercel": "^9.0.5",
-    "@astrojs/sitemap": "^3.7.0",
-    "@fontsource/inter": "^5.2.0"
-  },
-  "devDependencies": {
-    "sharp": "^0.34.0",
-    "@astrojs/check": "^0.9.0",
-    "typescript": "^5.7.0"
-  }
-}
+```yaml
+# ONLY add if local notification approach is insufficient:
+dependencies:
+  firebase_core: ^3.13.0
+  firebase_messaging: ^15.2.3
 ```
 
 ---
 
-## Integration Points
+## What NOT to Add
 
-### Flutter ↔ Website Integration
-
-| Touch Point | How |
-|-------------|-----|
-| APK download | Website "Download" button → GitHub Releases URL (e.g., `github.com/user/repo/releases/latest/download/absenkok.apk`) |
-| Brand consistency | Website uses same `AppColors.primary` (#DC2626 red) and warm amber accents from Flutter app's `theme.dart` |
-| Feature screenshots | Capture app screenshots from Flutter, optimize with `sharp` in Astro |
-| No API connection | Website is 100% static. No Supabase calls, no backend connection. Completely independent deployment. |
-
-### Color Token Mapping (Flutter → Tailwind)
-
-```css
-/* global.css — map Flutter AppColors to Tailwind custom properties */
-@theme {
-  --color-brand-primary: #DC2626;     /* AppColors.primary */
-  --color-brand-dark: #B91C1C;        /* AppColors.primaryDark */
-  --color-brand-light: #FEE2E2;       /* AppColors.primaryLight */
-  --color-brand-accent: #F59E0B;      /* AppColors.accent */
-  --color-brand-accent-dark: #D97706; /* AppColors.accentDark */
-  --color-brand-accent-light: #FEF3C7; /* AppColors.accentLight */
-}
-```
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `syncfusion_flutter_charts` | Commercial license complexity, massive package for simple charts | `fl_chart` -- open source, lightweight, sufficient for 4 chart types |
+| `charts_flutter` | Archived/abandoned by Google | `fl_chart` |
+| `firebase_analytics` | No analytics requirement, adds Firebase bloat | Nothing -- not needed |
+| `flutter_chart` (not fl_chart) | Unmaintained, confused naming | `fl_chart` (by imaNNeo) |
+| Any statistics/ML library | Pattern detection is simple median calculation on small dataset | Pure Dart `DateTime` arithmetic |
+| `awesome_notifications` | Already have 3-tier notification system that works | Existing `flutter_local_notifications` + `KioskNotificationHelper.kt` |
+| `onesignal_flutter` | Alternative push service -- unnecessary if using FCM or local approach | Local notifications (existing) or Firebase (if needed) |
+| `supabase_auth_ui` | Pre-built auth widgets -- wrong for kepala gerai onboarding which is admin-initiated, not self-service | Custom form + Edge Function |
+| `flutter_sparkline` | Abandoned, Dart 2 only | `fl_chart` has sparkline-style mini charts built in |
+| `percent_indicator` | For progress rings/gauges | fl_chart's `PieChart` or custom `CustomPainter` -- avoid adding dependency for one widget |
 
 ---
 
@@ -301,50 +190,91 @@ npm install -D @astrojs/check@^0.9.0 typescript
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Flutter grid | `two_dimensional_scrollables` | Manual dual-ListView sync (current) | Current approach works but fragile. The official package is cleaner, more performant, and eliminates manual sync code. This is a redesign — take the opportunity. |
-| Flutter grid | `two_dimensional_scrollables` | `pluto_grid` v8.1.0 | Massive dependency (300+ KB) for a 14×7 grid. Enterprise spreadsheet features we don't need. |
-| Flutter animation | Built-in (`AnimatedContainer` etc.) | `flutter_animate` v4.5.2 | Extra dependency for simple fade/scale effects. Built-in animations are sufficient and already used elsewhere in the app. |
-| Web framework | Astro 5 | Astro 6 | Too new (6.0.4), integration ecosystem not updated. `@astrojs/tailwind` breaks. |
-| Web framework | Astro 5 | Next.js | Massive overkill for a static marketing page. Astro ships zero JS by default. Next.js ships React runtime. |
-| Web framework | Astro 5 | Plain HTML/CSS | Works but no image optimization, no component reuse, no sitemap generation. Astro gives these for free. |
-| CSS framework | Tailwind v4 | Tailwind v3 | v3 works but is legacy. New project = use current version. CSS-first config is simpler. |
-| CSS framework | Tailwind v4 | Vanilla CSS | More code, no utility classes, slower development. For a marketing page with responsive design, Tailwind is 3-5x faster. |
-| Deployment | Vercel | Netlify | Both work. Vercel has better Astro integration (`@astrojs/vercel`), faster builds, better analytics. |
-| Font | Inter (self-hosted) | Google Fonts CDN | Self-hosted = no external network requests = faster FCP. `@fontsource` makes this trivial. |
+| Charts | `fl_chart` | `syncfusion_flutter_charts` | Commercial license, 10x heavier, 30+ chart types we don't need |
+| Charts | `fl_chart` | `graphic` ^2.4.0 | Newer, smaller community, less documentation, grammar-of-graphics API is overkill |
+| Push notifications | Local approach (existing deps) | Firebase FCM | Firebase adds 2 dependencies + google-services.json + Firebase project setup. Local approach works since the kiosk tablet is always-on |
+| User creation | Supabase Edge Function | Direct `service_role` in app | SECURITY RISK -- service_role key bypasses RLS entirely. Never expose in client app |
+| User creation | Supabase Edge Function | Supabase RPC (PostgreSQL function) | RPC runs as the calling user's role. Creating auth users requires `service_role` privileges that RPC cannot safely provide |
+| Pattern algorithm | Pure Dart | `ml_linalg` or stats package | 14 employees, ~90 records. Simple median/mean. Adding ML library is absurd overkill |
+| Streak display | Existing badge system + confetti | `gamification` package | No mature Flutter gamification package exists. Custom implementation with existing tools is cleaner |
 
 ---
 
-## Version Compatibility Matrix
-
-### Flutter (Verified)
+## Version Compatibility
 
 | Package | Version | Dart SDK | Flutter SDK | Project Compatible? |
 |---------|---------|----------|-------------|---------------------|
-| `two_dimensional_scrollables` | 0.3.8 | ^3.9.0 | >=3.35.0 | ✅ Dart 3.11.0 + Flutter 3.41.1 |
+| `fl_chart` | ^0.70.2 | >=3.0.0 | >=3.7.0 | YES -- project uses Dart >=3.3.0, Flutter 3.41.1 |
+| `firebase_core` | ^3.13.0 | >=3.2.0 | >=3.16.0 | YES (if added) |
+| `firebase_messaging` | ^15.2.3 | >=3.2.0 | >=3.16.0 | YES (if added) |
 
-### Astro Website (Verified)
+**Kotlin compatibility note:** Firebase packages use Kotlin. Project is locked to Kotlin 1.9.25 (cannot upgrade due to nfc_manager). Firebase 3.x/15.x should be compatible with Kotlin 1.9.x but verify at integration time -- Firebase sometimes pulls in Kotlin 2.x transitive dependencies. If conflict arises, pin Kotlin version in `android/build.gradle.kts`.
 
-| Package | Version | Peers | Compatible? |
-|---------|---------|-------|-------------|
-| `astro` | ^5.18.0 | — | ✅ Base |
-| `@tailwindcss/vite` | ^4.2.0 | Vite (bundled with Astro) | ✅ |
-| `@astrojs/vercel` | ^9.0.5 | astro ^5.0.0 | ✅ |
-| `@astrojs/sitemap` | ^3.7.0 | (no peer constraint) | ✅ |
-| `sharp` | ^0.34.0 | (native binary) | ✅ |
-| `@astrojs/check` | ^0.9.0 | (dev tool) | ✅ |
+---
+
+## Installation
+
+```yaml
+# Add to pubspec.yaml under dependencies:
+dependencies:
+  # ... existing deps unchanged ...
+
+  # Charts for attendance dashboard (mini charts, rate cards, cross-outlet comparison)
+  fl_chart: ^0.70.2
+```
+
+```bash
+# Install
+C:\flutter\bin\flutter.bat pub get
+
+# Server-side (one-time setup for Edge Functions)
+npx supabase init
+npx supabase functions new create-kepala-gerai
+npx supabase functions deploy create-kepala-gerai
+```
+
+---
+
+## Stack Patterns by Feature
+
+**For mini chart dashboard:**
+- Use fl_chart `LineChart` for attendance trend (7-day/30-day)
+- Use fl_chart `BarChart` for daily check-in distribution
+- Use fl_chart `PieChart` for on-time vs late ratio
+
+**For attendance rate cards:**
+- Use `Card` + `Column` with fl_chart sparkline-style `LineChart` (small, no axis labels)
+- Keep cards in a `GridView` or horizontal `ListView`
+
+**For cross-outlet comparison:**
+- Use fl_chart grouped `BarChart` with one group per outlet
+- Color-code by outlet using existing `AppColors`
+
+**For gamification streaks:**
+- Store streak data in Supabase (new column or table)
+- Display with custom widget + fire `confetti` on milestone (7-day, 30-day)
+- Award badges from existing badge system
+
+**For push notification (local approach):**
+- Add periodic check in existing `flutter_foreground_task` callback
+- At configurable time (e.g., 30 min after shift end), query today's logs
+- If `masuk` exists without `pulang`, fire `flutter_local_notifications` with channel `absensi_enakko_missing_clockout`
 
 ---
 
 ## Sources
 
-- pub.dev API: `two_dimensional_scrollables` v0.3.8 — verified SDK/Flutter constraints across all versions
-- pub.dev API: `linked_scroll_controller` v0.2.0 — confirmed SDK <3.0.0 incompatibility
-- pub.dev API: `flutter_animate` v4.5.2, `pluto_grid` v8.1.0, `data_table_2` v2.7.2
-- npm registry: `astro` 6.0.4 (latest), 5.18.1 (last v5), dist-tags confirmed
-- npm registry: `@astrojs/vercel` 9.0.5 peers `astro ^5.0.0`, 10.0.0 peers `astro ^6.0.0-alpha.0`
-- npm registry: `@astrojs/tailwind` 6.0.2 peers `astro ^3-5, tailwindcss ^3.0.24`
-- npm registry: `tailwindcss` 4.2.1, `@tailwindcss/vite` 4.2.1
-- npm registry: `sharp` 0.34.5, `@astrojs/sitemap` 3.7.1, `@astrojs/check` 0.9.7
-- Project `pubspec.yaml`: SDK `>=3.3.0 <4.0.0`, existing dependencies catalog
-- Project `flutter --version`: Flutter 3.41.1, Dart 3.11.0
-- Existing `shift_scheduler_screen.dart`: 1,123 lines, manual scroll sync pattern analyzed
+- [fl_chart on pub.dev](https://pub.dev/packages/fl_chart) -- version 0.70.2 and 1.1.0 found in search results (MEDIUM confidence on exact latest stable)
+- [Syncfusion Flutter Charts](https://pub.dev/packages/syncfusion_flutter_charts) -- evaluated and rejected for commercial license complexity
+- [Supabase: Create a user (Dart)](https://supabase.com/docs/reference/dart/auth-admin-createuser) -- confirms service_role requirement
+- [Supabase: Edge Functions](https://supabase.com/docs/guides/functions) -- server-side Deno functions for secure admin operations
+- [Supabase: Database Webhooks](https://supabase.com/docs/guides/database/webhooks) -- trigger Edge Functions from DB events
+- [Supabase: Push Notifications guide](https://supabase.com/docs/guides/functions/examples/push-notifications) -- FCM integration via Edge Functions
+- [Firebase Messaging on pub.dev](https://pub.dev/packages/firebase_messaging) -- requires firebase_core
+- [Supabase Discussion #20790](https://github.com/orgs/supabase/discussions/20790) -- confirms Edge Function as recommended pattern for client-initiated user creation
+- Project `pubspec.yaml` -- verified existing dependencies and SDK constraints
+- Project `CLAUDE.md` -- architecture rules, notification system, Kotlin constraints
+
+---
+*Stack research for: Absensi Enakko v4.0 Smart Attendance + Admin Dashboard*
+*Researched: 2026-03-18*
