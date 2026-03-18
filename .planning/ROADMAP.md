@@ -67,7 +67,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 **Milestone Goal:** Solidify core attendance system with smart pattern detection, streamline admin onboarding for kepala gerai, and build comprehensive dashboard with charts and gamification.
 
-- [ ] **Phase 23: Bug Fix + Database Foundation** - Fix NFC double-scan crash and deploy all Supabase RPC functions and schema needed by downstream phases
+- [x] **Phase 23: Bug Fix + Database Foundation** - Fix NFC double-scan crash and deploy all Supabase RPC functions and schema needed by downstream phases (completed 2026-03-18)
 - [ ] **Phase 24: Core Services + Analytics** - Build service layer (streak, pattern, chart data, missing clock-out) and attendance rate card with overtime tracking
 - [ ] **Phase 25: Dashboard UI + Visualization** - Chart dashboard screen with fl_chart, streak leaderboard, cross-outlet comparison, and gamification milestone badges
 - [ ] **Phase 26: Admin Onboarding + Notification Polish** - Kepala Gerai creation via Edge Function with credential sharing and notification batching
@@ -82,11 +82,11 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
   1. Admin can register a new employee NFC card by scanning it twice in quick succession without the app crashing or freezing
   2. Four Supabase RPC functions are deployed and return correct data when called from the Flutter app (get_attendance_rates, get_weekly_trend, get_outlet_comparison, update_employee_streak)
   3. The employee_streaks table exists in Supabase with correct schema and RLS policies that scope data per outlet
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 23-01-PLAN.md — NFC double-scan crash fix (BUG-01)
-- [ ] 23-02-PLAN.md — Supabase RPC functions, employee_streaks table, and indexes (DASH-05, GAME-01)
+- [x] 23-02-PLAN.md — Supabase RPC functions, employee_streaks table, and indexes (DASH-05, GAME-01)
 
 ### Phase 24: Core Services + Analytics
 **Goal**: Admin/Kepala Gerai can see attendance rate metrics, overtime flags, and receive missing clock-out notifications — all powered by testable service layer
@@ -129,7 +129,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 23. Bug Fix + Database Foundation | v4.0 | 1/2 | In Progress | - |
+| 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
 | 24. Core Services + Analytics | v4.0 | 0/TBD | Not started | - |
 | 25. Dashboard UI + Visualization | v4.0 | 0/TBD | Not started | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |

@@ -32,7 +32,7 @@
 
 ### Gamification
 
-- [ ] **GAME-01**: System tracks consecutive on-time attendance streak per employee using noon-rule logical days
+- [x] **GAME-01**: System tracks consecutive on-time attendance streak per employee using noon-rule logical days
 - [ ] **GAME-02**: Streak counter is visible on kiosk scan result screen after successful masuk
 - [ ] **GAME-03**: Auto-badge awards at streak milestones (7-day, 30-day, 90-day) using existing badge system
 - [ ] **GAME-04**: Streak leaderboard visible on admin dashboard (top 5 employees by current streak)
@@ -43,7 +43,7 @@
 - [ ] **DASH-02**: Dashboard uses fl_chart for chart rendering — lightweight, pure Dart, suitable for 24/7 kiosk
 - [ ] **DASH-03**: Admin can see cross-outlet attendance comparison as grouped bar chart (admin-only, kepala gerai sees own outlet only)
 - [ ] **DASH-04**: Chart dashboard handles memory properly for 24/7 kiosk operation (AutomaticKeepAliveClientMixin, proper disposal)
-- [ ] **DASH-05**: All chart aggregations computed via Supabase RPC functions (server-side PostgreSQL), not fetch-all-and-compute-in-Dart
+- [x] **DASH-05**: All chart aggregations computed via Supabase RPC functions (server-side PostgreSQL), not fetch-all-and-compute-in-Dart
 
 ## Future Requirements
 
@@ -88,7 +88,7 @@
 | SMART-02 | Phase 24 | Pending |
 | SMART-03 | Phase 24 | Pending |
 | SMART-04 | Phase 24 | Pending |
-| GAME-01 | Phase 23 | Pending |
+| GAME-01 | Phase 23 | Complete |
 | GAME-02 | Phase 25 | Pending |
 | GAME-03 | Phase 25 | Pending |
 | GAME-04 | Phase 25 | Pending |
@@ -96,7 +96,7 @@
 | DASH-02 | Phase 25 | Pending |
 | DASH-03 | Phase 25 | Pending |
 | DASH-04 | Phase 25 | Pending |
-| DASH-05 | Phase 23 | Pending |
+| DASH-05 | Phase 23 | Complete |
 
 **Coverage:**
 - v4.0 requirements: 20 total

@@ -2,39 +2,39 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
-current_plan: 23-02 checkpoint
-status: phase_in_progress
-last_updated: "2026-03-18T11:11:29.000Z"
+current_plan: Not started
+status: ready_to_plan
+last_updated: "2026-03-18T12:35:12.000Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
 
 ## Current Status
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
-- **Phase:** 23 of 26 (Bug Fix + Database Foundation) — in progress
-- **Current Plan:** 23-02 checkpoint — Supabase SQL deployment pending
-- **Last Updated:** 2026-03-18 — 23-01 complete, 23-02 waiting on production SQL execution
+- **Phase:** 24 of 26 (Core Services + Analytics) — ready to plan
+- **Current Plan:** Not started
+- **Last Updated:** 2026-03-18 — Phase 23 complete, production RPC/streak foundation deployed
 
 ## Progress
 
 ```
 v4.0 Smart Attendance + Admin Dashboard — IN PROGRESS
-[░░░░░░░░░░] 0% · 0/4 phases
+[██░░░░░░░░] 25% · 1/4 phases
 ```
 
-- **Phase 23 progress:** 1/2 plans complete
+- **Phase 23 progress:** 2/2 plans complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 23 — Bug Fix + Database Foundation
+**Current focus:** Phase 24 — Core Services + Analytics
 
 ## What Was Shipped
 
@@ -68,7 +68,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Android only — no iOS target
 
 ### Open Blockers
-- Waiting for manual SQL execution in Supabase production for phase 23-02
+- None
 
 ## Accumulated Context
 - NFC double-scan crash is a production bug — must fix before new features
@@ -78,6 +78,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - service_role key must NEVER be in APK — Edge Function required for user creation
 - fl_chart is the single new dependency for v4.0
 - Dashboard and streak SQL must use `employees.home_outlet_id`, not the stale `outlet_id` placeholder from earlier notes
+- Phase 23 production migrations applied: `phase_23_dashboard_foundation_20260318` and `phase_23_employee_streaks_rls_perf_20260318`
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
