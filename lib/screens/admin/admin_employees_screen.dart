@@ -1073,7 +1073,8 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
   _NfcDialogState _state = _NfcDialogState.waiting;
   String? _scannedUid;
   String? _errorMsg;
-  void Function()? _nfcCleanup;
+  Future<void> Function()? _nfcCleanup;
+  bool _isProcessing = false;
   bool _saving = false;
 
   @override
@@ -1083,34 +1084,36 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
   }
 
   void _startNfc() {
+    if (_isProcessing) return;
+    _isProcessing = true;
     setState(() => _state = _NfcDialogState.scanning);
-    _nfcCleanup = NfcService.startListener(
-      (uid) async {
+    _nfcCleanup = NfcService.startRegistrationListener(
+      (uid) {
+        _isProcessing = false;
+        if (!mounted) return;
         if (_state != _NfcDialogState.scanning) return;
-        if (mounted) {
-          setState(() {
-            _scannedUid = uid;
-            _state = _NfcDialogState.waiting;
-          });
-        }
-        _stopNfc();
+        setState(() {
+          _scannedUid = uid;
+          _state = _NfcDialogState.waiting;
+        });
       },
       (err) {
-        if (mounted) {
-          setState(() {
-            _errorMsg = 'Gagal membaca kartu. Coba lagi.';
-            _state = _NfcDialogState.error;
-          });
-        }
+        _isProcessing = false;
+        if (!mounted) return;
+        setState(() {
+          _errorMsg = 'Gagal membaca kartu. Coba lagi.';
+          _state = _NfcDialogState.error;
+        });
       },
-    ) as void Function()?;
+    );
   }
 
   void _stopNfc() {
+    _isProcessing = false;
     final cleanup = _nfcCleanup;
     if (cleanup != null) {
-      cleanup();
       _nfcCleanup = null;
+      cleanup();
     }
   }
 
@@ -1300,9 +1303,9 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
         return [
           TextButton(
             onPressed: () {
+              _stopNfc();
               setState(() {
                 _scannedUid = null;
-                _state = _NfcDialogState.scanning;
               });
               _startNfc();
             },
@@ -1334,9 +1337,9 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
           ),
           ElevatedButton(
             onPressed: () {
+              _stopNfc();
               setState(() {
                 _errorMsg = null;
-                _state = _NfcDialogState.scanning;
               });
               _startNfc();
             },
