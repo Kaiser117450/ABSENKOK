@@ -106,7 +106,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 20. Biometric Login | v3.1 | 2/2 | Complete | 2026-03-18 |
 | 21. Badge Color Picker | v3.1 | 1/1 | Complete | 2026-03-18 |
-| 22. Production Release | 1/1 | Complete   | 2026-03-18 | - |
+| 22. Production Release | 1/1 | Complete    | 2026-03-18 | - |
 
 ## Future Backlog (Not Scheduled)
 - Time-off request approval workflow
