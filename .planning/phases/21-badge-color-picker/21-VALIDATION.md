@@ -40,7 +40,7 @@ created: 2026-03-18
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
 | 21-01-01 | 01 | 1 | BADGE-01 | widget | `flutter test test/widgets/color_picker_field_test.dart` | No - W0 | pending |
 | 21-01-02 | 01 | 1 | BADGE-02 | widget | `flutter test test/widgets/color_picker_field_test.dart` | No - W0 | pending |
-| 21-01-03 | 01 | 1 | BADGE-03 | widget | `flutter test test/screens/badge_form_test.dart` | No - W0 | pending |
+| 21-01-03 | 01 | 1 | BADGE-03 | widget | `flutter test test/widgets/color_picker_field_test.dart` | No - W0 | pending |
 
 *Status: pending / green / red / flaky*
 
@@ -48,8 +48,7 @@ created: 2026-03-18
 
 ## Wave 0 Requirements
 
-- [ ] `test/widgets/color_picker_field_test.dart` — stubs for BADGE-01, BADGE-02
-- [ ] `test/screens/badge_form_test.dart` — stubs for BADGE-03
+- [ ] `test/widgets/color_picker_field_test.dart` — stubs for BADGE-01, BADGE-02, BADGE-03 (including live preview test)
 
 *Note: Widget tests for dialogs with flutter_colorpicker may require pumpAndSettle and finding picker by type*
 
