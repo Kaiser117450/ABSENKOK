@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
-current_plan: Not started
-status: unknown
-last_updated: "2026-03-18T19:32:20.845Z"
+current_plan: "24-03 complete"
+status: in_progress
+last_updated: "2026-03-19T03:56:28.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -18,7 +18,7 @@ progress:
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
 - **Phase:** 25 of 26 (Dashboard UI + Visualization) — ready to plan
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-19 — Phase 24 Plan 01 executed: AnalyticsService + SQL RPCs + widgets + 14 tests
+- **Last Updated:** 2026-03-19 — Phase 24 Plan 03 executed: PatternDetectionService + compute() isolate + get_arrival_patterns RPC + 14 unit tests
 
 ## Progress
 
@@ -65,6 +65,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 24-01 | Time-based overtime threshold (8h default) instead of schedule-aware join | Avoids SQLite/Supabase cross-system join complexity |
 | 24-01 | iconsax_flutter not in pubspec — use Material Icons.timer_outlined in OvertimeAlertRow | Package not available, Material Icon is functionally equivalent |
 | 24-02 | Direct RPC call from MissingClockoutService (not AnalyticsService) | Wave 1 plan — avoids build-order dependency between services |
+| 24-03 | isLate threshold is exclusive (>5 min, not >=) — exactly 5 min is not flagged | Matches plan spec: "late >5 minutes" |
+| 24-03 | Pattern cache TTL 6 hours + compute() isolate for off-thread processing | Avoids blocking NFC scan (SMART-03) |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -88,6 +90,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 24 Plan 02: MissingClockoutService (lib/services/missing_clockout_service.dart) checks every 30 min via get_missing_clockouts RPC, sends batched notification per outlet
 - AttendanceRateCard and OvertimeAlertRow widgets created (lib/widgets/) — required for admin_dashboard_screen.dart to compile
 - Phase 24 Plan 01 (24-01): AnalyticsService with 3 RPC methods (getAttendanceRates, getOvertimeFlags, getMissingClockouts), 2 SQL RPCs, 14 unit tests, spec-compliant widgets
+- Phase 24 Plan 03 (24-03): PatternDetectionService with compute() isolate (first use), get_arrival_patterns RPC (PERCENTILE_CONT, HAVING >= 5), 14 unit tests, integrated into kiosk scan as fire-and-forget
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)

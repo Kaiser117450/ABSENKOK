@@ -25,10 +25,10 @@
 
 ### Smart Attendance (BETA)
 
-- [ ] **SMART-01**: System analyzes last 30 days of masuk timestamps per employee and computes median arrival time per day-of-week
-- [ ] **SMART-02**: Admin/Kepala Gerai receives notification when employee is late >5 minutes from their usual pattern time
-- [ ] **SMART-03**: Pattern detection runs in background isolate and caches results — never blocks NFC scan handler
-- [ ] **SMART-04**: Employees with fewer than 5 data points for a day-of-week are skipped (insufficient data)
+- [x] **SMART-01**: System analyzes last 30 days of masuk timestamps per employee and computes median arrival time per day-of-week
+- [x] **SMART-02**: Admin/Kepala Gerai receives notification when employee is late >5 minutes from their usual pattern time
+- [x] **SMART-03**: Pattern detection runs in background isolate and caches results — never blocks NFC scan handler
+- [x] **SMART-04**: Employees with fewer than 5 data points for a day-of-week are skipped (insufficient data)
 
 ### Gamification
 
@@ -84,10 +84,10 @@
 | ANLYT-02 | Phase 24 | Complete |
 | ANLYT-03 | Phase 24 | Complete |
 | ANLYT-04 | Phase 24 | Complete |
-| SMART-01 | Phase 24 | Pending |
-| SMART-02 | Phase 24 | Pending |
-| SMART-03 | Phase 24 | Pending |
-| SMART-04 | Phase 24 | Pending |
+| SMART-01 | Phase 24 | Complete |
+| SMART-02 | Phase 24 | Complete |
+| SMART-03 | Phase 24 | Complete |
+| SMART-04 | Phase 24 | Complete |
 | GAME-01 | Phase 23 | Complete |
 | GAME-02 | Phase 25 | Pending |
 | GAME-03 | Phase 25 | Pending |
