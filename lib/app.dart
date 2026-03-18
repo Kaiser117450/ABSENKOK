@@ -177,29 +177,37 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
       }
     });
 
-    // Subscribe to Supabase admin auth state changes
+    // Subscribe to Supabase admin auth state changes.
+    // Only set admin mode on EXPLICIT sign-in (signedIn event), not on
+    // session restore (initialSession / tokenRefreshed). This ensures
+    // biometric gate isn't bypassed when the app restarts with a saved session.
     if (supabaseReady) {
       Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-        final session = data.session;
-        if (session != null) {
-          final user = session.user;
-          final role = user.appMetadata['app_role'] as String?;
+        final event = data.event;
 
-          if (role == 'admin') {
-            ref.read(appProvider.notifier).setAdminMode(true);
-            ref.read(appProvider.notifier).setKepalaGeraiMode(null);
-          } else if (role == 'kepala_gerai') {
-            final outletId = user.appMetadata['managed_outlet_id'] as String?;
-            ref.read(appProvider.notifier).setAdminMode(false);
-            ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
-          } else {
-            ref.read(appProvider.notifier).setAdminMode(false);
-            ref.read(appProvider.notifier).setKepalaGeraiMode(null);
-          }
-        } else {
-          // Logout — clear semua role
+        if (event == AuthChangeEvent.signedOut) {
+          // Full logout — clear all roles
           ref.read(appProvider.notifier).setAdminMode(false);
           ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+          return;
+        }
+
+        // Only auto-set admin on explicit sign-in (email/password login).
+        // Biometric login sets admin mode itself in _triggerBiometricLogin().
+        if (event != AuthChangeEvent.signedIn) return;
+
+        final session = data.session;
+        if (session == null) return;
+        final user = session.user;
+        final role = user.appMetadata['app_role'] as String?;
+
+        if (role == 'admin') {
+          ref.read(appProvider.notifier).setAdminMode(true);
+          ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+        } else if (role == 'kepala_gerai') {
+          final outletId = user.appMetadata['managed_outlet_id'] as String?;
+          ref.read(appProvider.notifier).setAdminMode(false);
+          ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
         }
       });
     }

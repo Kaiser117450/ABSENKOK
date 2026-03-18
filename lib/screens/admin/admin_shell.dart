@@ -101,17 +101,12 @@ class AdminShell extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(ctx);
-              await Supabase.instance.client.auth.signOut();
-
-              // Clear biometric remembered role (keep biometric_enabled flag —
-              // user chose to enable it, shouldn't need to re-enable after re-login)
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove(AppConstants.rememberedUserRoleKey);
-              await prefs.remove(AppConstants.rememberedManagedOutletKey);
-
+              // Just clear admin mode — keep Supabase session alive
+              // so biometric login can re-authenticate next time.
               ref.read(appProvider.notifier).setAdminMode(false);
+              ref.read(appProvider.notifier).setKepalaGeraiMode(null);
             },
             child: const Text('Keluar'),
           ),
@@ -155,6 +150,28 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Full sign-out (destroys Supabase session + clears biometric)
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppColors.danger),
+            title: const Text('Logout Penuh'),
+            subtitle: Text(
+              'Hapus sesi — harus login ulang dengan email & password',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            contentPadding: EdgeInsets.zero,
+            onTap: () async {
+              Navigator.pop(context);
+              await Supabase.instance.client.auth.signOut();
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove(AppConstants.rememberedUserRoleKey);
+              await prefs.remove(AppConstants.rememberedManagedOutletKey);
+              await prefs.setBool(AppConstants.biometricEnabledKey, false);
+              ref.read(appProvider.notifier).setAdminMode(false);
+              ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+              ref.read(appProvider.notifier).setBiometricEnabled(false);
+            },
+          ),
+          const Divider(),
           if (hasBio)
             SwitchListTile(
               title: const Text('Login Biometrik'),
