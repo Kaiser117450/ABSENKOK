@@ -83,7 +83,9 @@ Plans:
   1. Admin can tap a color field and choose a badge border color from a visual color wheel or grid (no hex typing required)
   2. Admin can independently pick color1 and color2 for gradient badge styles
   3. While selecting colors, the badge preview updates in real time showing the exact result
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Add flutter_colorpicker dependency + replace hex TextFields with visual color picker UI
 
 ### Phase 22: Production Release
 **Goal**: Ship v3.1 as a production-ready APK on GitHub Releases
@@ -101,7 +103,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 20. Biometric Login | 2/2 | Complete    | 2026-03-18 | - |
-| 21. Badge Color Picker | v3.1 | 0/TBD | Not started | - |
+| 21. Badge Color Picker | v3.1 | 0/1 | Not started | - |
 | 22. Production Release | v3.1 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
