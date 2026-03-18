@@ -80,6 +80,7 @@ dependencies:
   # PDF generation for schedule export
   pdf: ^3.10.8
   printing: ^5.13.4
+  flutter_colorpicker: ^1.1.0
 
   cached_network_image: ^3.3.1
   cupertino_icons: ^1.0.8
