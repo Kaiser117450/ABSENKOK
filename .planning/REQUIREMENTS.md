@@ -73,17 +73,36 @@
 
 ## Traceability
 
-*Populated during roadmap creation.*
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| BUG-01 | Phase 23 | Pending |
+| ADMIN-01 | Phase 26 | Pending |
+| ADMIN-02 | Phase 26 | Pending |
+| ADMIN-03 | Phase 26 | Pending |
+| ADMIN-04 | Phase 26 | Pending |
+| ANLYT-01 | Phase 24 | Pending |
+| ANLYT-02 | Phase 24 | Pending |
+| ANLYT-03 | Phase 24 | Pending |
+| ANLYT-04 | Phase 24 | Pending |
+| SMART-01 | Phase 24 | Pending |
+| SMART-02 | Phase 24 | Pending |
+| SMART-03 | Phase 24 | Pending |
+| SMART-04 | Phase 24 | Pending |
+| GAME-01 | Phase 23 | Pending |
+| GAME-02 | Phase 25 | Pending |
+| GAME-03 | Phase 25 | Pending |
+| GAME-04 | Phase 25 | Pending |
+| DASH-01 | Phase 25 | Pending |
+| DASH-02 | Phase 25 | Pending |
+| DASH-03 | Phase 25 | Pending |
+| DASH-04 | Phase 25 | Pending |
+| DASH-05 | Phase 23 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 20 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 20
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 — Traceability populated during roadmap creation*
