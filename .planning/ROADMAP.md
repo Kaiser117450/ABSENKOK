@@ -115,7 +115,11 @@ Plans:
   3. Employee sees their current attendance streak count on the kiosk scan result screen after successful masuk
   4. Employees receive auto-badge awards at streak milestones (7-day, 30-day, 90-day) using the existing badge system
   5. Dashboard navigated 100+ times in a 4-hour stress test without memory leak or performance degradation (AutomaticKeepAliveClientMixin + proper disposal)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 25-01-PLAN.md — Chart dashboard screen with fl_chart + StreakService + GoRouter route + admin nav (DASH-01, DASH-02, DASH-03, DASH-04, GAME-04)
+- [ ] 25-02-PLAN.md — Kiosk streak display + auto-badge milestone service (GAME-02, GAME-03)
 
 ### Phase 26: Admin Onboarding + Notification Polish
 **Goal**: Admin can create new Kepala Gerai accounts directly from the app with secure server-side user creation and share credentials via WhatsApp
@@ -135,8 +139,8 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
-| 24. Core Services + Analytics | 3/3 | Complete   | 2026-03-18 | 2026-03-18 |
-| 25. Dashboard UI + Visualization | v4.0 | 0/TBD | Not started | - |
+| 24. Core Services + Analytics | 3/3 | Complete    | 2026-03-18 | 2026-03-18 |
+| 25. Dashboard UI + Visualization | v4.0 | 0/2 | Planned | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
