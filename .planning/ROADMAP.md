@@ -115,9 +115,10 @@ Plans:
   3. Employee sees their current attendance streak count on the kiosk scan result screen after successful masuk
   4. Employees receive auto-badge awards at streak milestones (7-day, 30-day, 90-day) using the existing badge system
   5. Dashboard navigated 100+ times in a 4-hour stress test without memory leak or performance degradation (AutomaticKeepAliveClientMixin + proper disposal)
-**Plans:** 2 plans
+**Plans:** 3 plans
 
 Plans:
+- [ ] 25-00-PLAN.md — Wave 0 test stubs for all phase requirements (DASH-01..04, GAME-02..04)
 - [ ] 25-01-PLAN.md — Chart dashboard screen with fl_chart + StreakService + GoRouter route + admin nav (DASH-01, DASH-02, DASH-03, DASH-04, GAME-04)
 - [ ] 25-02-PLAN.md — Kiosk streak display + auto-badge milestone service (GAME-02, GAME-03)
 
