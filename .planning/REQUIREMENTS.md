@@ -7,7 +7,7 @@
 
 ### Bug Fix
 
-- [ ] **BUG-01**: NFC registration flow prevents double-scan crash — if NFC card is scanned twice during registration, app handles it gracefully without force close
+- [x] **BUG-01**: NFC registration flow prevents double-scan crash — if NFC card is scanned twice during registration, app handles it gracefully without force close
 
 ### Admin Onboarding
 
@@ -75,7 +75,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 23 | Pending |
+| BUG-01 | Phase 23 | Complete |
 | ADMIN-01 | Phase 26 | Pending |
 | ADMIN-02 | Phase 26 | Pending |
 | ADMIN-03 | Phase 26 | Pending |

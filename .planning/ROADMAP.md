@@ -82,10 +82,10 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
   1. Admin can register a new employee NFC card by scanning it twice in quick succession without the app crashing or freezing
   2. Four Supabase RPC functions are deployed and return correct data when called from the Flutter app (get_attendance_rates, get_weekly_trend, get_outlet_comparison, update_employee_streak)
   3. The employee_streaks table exists in Supabase with correct schema and RLS policies that scope data per outlet
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 23-01-PLAN.md — NFC double-scan crash fix (BUG-01)
+- [x] 23-01-PLAN.md — NFC double-scan crash fix (BUG-01)
 - [ ] 23-02-PLAN.md — Supabase RPC functions, employee_streaks table, and indexes (DASH-05, GAME-01)
 
 ### Phase 24: Core Services + Analytics
@@ -129,7 +129,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 23. Bug Fix + Database Foundation | v4.0 | 0/2 | Planned | - |
+| 23. Bug Fix + Database Foundation | v4.0 | 1/2 | In Progress | - |
 | 24. Core Services + Analytics | v4.0 | 0/TBD | Not started | - |
 | 25. Dashboard UI + Visualization | v4.0 | 0/TBD | Not started | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
