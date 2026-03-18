@@ -4,6 +4,11 @@ class AppConstants {
   static const String kioskSessionKey = 'kiosk_session_v1';
   static const String overlayKeepForegroundKey = 'overlay_keep_foreground_v1';
 
+  // Biometric login
+  static const String biometricEnabledKey = 'biometric_enabled_v1';
+  static const String rememberedUserRoleKey = 'remembered_user_role_v1';
+  static const String rememberedManagedOutletKey = 'remembered_managed_outlet_v1';
+
   // SQLite
   static const String dbName = 'absensi_enakko.db';
   static const int dbVersion = 5; // v5: added sakit/izin attendance types

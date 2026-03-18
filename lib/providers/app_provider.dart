@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants.dart';
 import '../models/employee.dart';
 import '../models/kiosk_session.dart';
+import '../services/biometric_service.dart';
 
 /// Global application state — mirrors appStore.ts from React Native
 class AppState {
@@ -23,6 +24,8 @@ class AppState {
   final String? backupNotes; // keterangan backup
   final String? backupOutletId; // outlet ID tempat backup
   final bool keepOverlayInForeground;
+  final bool biometricEnabled;
+  final bool hasBiometricHardware;
 
   const AppState({
     this.kioskSession,
@@ -36,6 +39,8 @@ class AppState {
     this.backupNotes,
     this.backupOutletId,
     this.keepOverlayInForeground = false,
+    this.biometricEnabled = false,
+    this.hasBiometricHardware = false,
   });
 
   /// true jika user sedang login sebagai admin atau kepala gerai
@@ -56,6 +61,8 @@ class AppState {
     String? backupNotes,
     String? backupOutletId,
     bool? keepOverlayInForeground,
+    bool? biometricEnabled,
+    bool? hasBiometricHardware,
     bool clearBackup = false,
   }) =>
       AppState(
@@ -75,6 +82,9 @@ class AppState {
             clearBackup ? null : (backupOutletId ?? this.backupOutletId),
         keepOverlayInForeground:
             keepOverlayInForeground ?? this.keepOverlayInForeground,
+        biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+        hasBiometricHardware:
+            hasBiometricHardware ?? this.hasBiometricHardware,
       );
 }
 
@@ -103,6 +113,9 @@ class AppNotifier extends StateNotifier<AppState> {
       state = state.copyWith(
         keepOverlayInForeground: keepOverlayInForeground,
       );
+
+      // Load biometric preference
+      await loadBiometricPreference();
     } catch (_) {
       // SharedPreferences gagal — lanjut tanpa session
     } finally {
@@ -162,6 +175,40 @@ class AppNotifier extends StateNotifier<AppState> {
 
   void resetScanFlow() =>
       state = state.copyWith(clearEmployee: true, clearBackup: true);
+
+  /// Load biometric preference from SharedPreferences + check hardware.
+  Future<void> loadBiometricPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(AppConstants.biometricEnabledKey) ?? false;
+    final hasHardware = await BiometricService.isAvailable();
+    state = state.copyWith(
+      biometricEnabled: enabled,
+      hasBiometricHardware: hasHardware,
+    );
+  }
+
+  /// Toggle biometric login on/off.
+  Future<void> setBiometricEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(AppConstants.biometricEnabledKey, value);
+    if (!value) {
+      // Clear remembered role info when disabling biometric
+      await prefs.remove(AppConstants.rememberedUserRoleKey);
+      await prefs.remove(AppConstants.rememberedManagedOutletKey);
+    }
+    state = state.copyWith(biometricEnabled: value);
+  }
+
+  /// Save user role info for biometric re-login (avoids re-querying Supabase).
+  Future<void> saveRememberedRole(String role, String? managedOutletId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.rememberedUserRoleKey, role);
+    if (managedOutletId != null) {
+      await prefs.setString(AppConstants.rememberedManagedOutletKey, managedOutletId);
+    } else {
+      await prefs.remove(AppConstants.rememberedManagedOutletKey);
+    }
+  }
 }
 
 final appProvider = StateNotifierProvider<AppNotifier, AppState>(
