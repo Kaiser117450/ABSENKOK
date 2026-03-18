@@ -41,7 +41,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int _todayPulang = 0;
   int _todayBackup = 0; // Total backup hari ini
   int _totalEmployees = 0;
-    RealtimeChannel? _employeeChannel;
+  RealtimeChannel? _employeeChannel;
 
   List<_OpenShift> _openShifts = [];
   bool _loadingOpenShifts = false;
@@ -222,6 +222,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _refreshDashboardData({bool includeEmployeeCount = false}) async {
+    await Future.wait([
+      _loadLogs(),
+      _loadOpenShifts(),
+      if (includeEmployeeCount) _loadEmployeeCount(),
+    ]);
+  }
+
   Future<void> _manualPulang(_OpenShift shift) async {
     final appState = ref.read(appProvider);
     if (appState.isKepalaGerai && appState.managedOutletId != shift.outletId) {
@@ -342,7 +350,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'attendance_logs',
-          callback: (_) => _loadLogs(),
+          callback: (_) => _refreshDashboardData(),
         )
         .subscribe();
   }
@@ -358,10 +366,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'employees',
-          callback: (payload) {
+          callback: (_) {
             // Refresh employee count dan list saat ada perubahan
-            _loadEmployeeCount();
-            _loadLogs();
+            _refreshDashboardData(includeEmployeeCount: true);
           },
         );
     _employeeChannel = builder.subscribe();
@@ -411,7 +418,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       backgroundColor: const Color(0xFFF3F4F6),
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: _loadLogs,
+        onRefresh: _refreshDashboardData,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -685,7 +692,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               label: 'Refresh',
               color: AppColors.primary,
               textColor: Colors.white,
-              onTap: _loadLogs,
+              onTap: _refreshDashboardData,
             ),
             // Belum Pulang button — only visible when open shifts exist
             if (_openShifts.isNotEmpty) ...[
@@ -878,7 +885,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Outlet Filter ─────────────────────────────────────────────────────────
 
   Widget _buildOutletFilter() {
- final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
 
     // Kepala gerai: tampilkan nama outlet sebagai label statis (tidak bisa ganti)
     if (isKepalaGerai) {
@@ -958,7 +965,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 selected: _selectedOutletId == null,
                 onTap: () {
                   setState(() => _selectedOutletId = null);
-                  _loadLogs();
+                  _refreshDashboardData();
                 },
               ),
               ..._outlets.map((o) => Padding(
@@ -968,7 +975,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       selected: _selectedOutletId == o.id,
                       onTap: () {
                         setState(() => _selectedOutletId = o.id);
-                        _loadLogs();
+                        _refreshDashboardData();
                       },
                     ),
                   )),
