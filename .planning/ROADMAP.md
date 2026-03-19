@@ -115,7 +115,7 @@ Plans:
   3. Employee sees their current attendance streak count on the kiosk scan result screen after successful masuk
   4. Employees receive auto-badge awards at streak milestones (7-day, 30-day, 90-day) using the existing badge system
   5. Dashboard navigated 100+ times in a 4-hour stress test without memory leak or performance degradation (AutomaticKeepAliveClientMixin + proper disposal)
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 25-00-PLAN.md — Wave 0 test stubs for all phase requirements (DASH-01..04, GAME-02..04)
@@ -141,7 +141,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
 | 24. Core Services + Analytics | 3/3 | Complete    | 2026-03-18 | 2026-03-18 |
-| 25. Dashboard UI + Visualization | v4.0 | 0/2 | Planned | - |
+| 25. Dashboard UI + Visualization | 1/3 | In Progress|  | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)

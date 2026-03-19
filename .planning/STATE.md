@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
-current_plan: "24-03 complete"
-status: in_progress
-last_updated: "2026-03-19T03:56:28.000Z"
+current_plan: "25-01"
+status: in-progress
+last_updated: "2026-03-19T08:16:49.261Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -16,9 +16,9 @@ progress:
 
 ## Current Status
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
-- **Phase:** 25 of 26 (Dashboard UI + Visualization) — ready to plan
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-19 — Phase 24 Plan 03 executed: PatternDetectionService + compute() isolate + get_arrival_patterns RPC + 14 unit tests
+- **Phase:** 25 of 26 (Dashboard UI + Visualization) — in progress
+- **Current Plan:** 25-01 (next)
+- **Last Updated:** 2026-03-19 — Phase 25 Plan 00 executed: 24 Wave 0 TDD stubs for DASH-01..04 and GAME-02..04
 
 ## Progress
 
@@ -29,6 +29,7 @@ v4.0 Smart Attendance + Admin Dashboard — IN PROGRESS
 
 - **Phase 23 progress:** 2/2 plans complete
 - **Phase 24 progress:** 3/3 plans complete
+- **Phase 25 progress:** 1/3 plans complete
 
 ## Project Reference
 
@@ -67,6 +68,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 24-02 | Direct RPC call from MissingClockoutService (not AnalyticsService) | Wave 1 plan — avoids build-order dependency between services |
 | 24-03 | isLate threshold is exclusive (>5 min, not >=) — exactly 5 min is not flagged | Matches plan spec: "late >5 minutes" |
 | 24-03 | Pattern cache TTL 6 hours + compute() isolate for off-thread processing | Avoids blocking NFC scan (SMART-03) |
+| 25-00 | Wave 0 stubs use pure flutter_test imports only — no app imports until implementation | Keeps stubs compilable before implementation classes exist |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
