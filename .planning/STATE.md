@@ -1,31 +1,32 @@
 ---
 gsd_state_version: 1.0
 milestone: v5.0
-milestone_name: Ops hardening + reliability
+milestone_name: milestone
 current_plan: —
-status: roadmap_created
-last_updated: "2026-03-19T23:10:00.000Z"
+status: planning
+last_updated: "2026-03-19T16:16:22.674Z"
+last_activity: 2026-03-19 — Phase 27 context gathered
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 27 (Ready to plan)
-Plan: —
-Status: Roadmap created
-Last activity: 2026-03-19 — Milestone v5.0 roadmap generated
+Phase: 27 (In progress)
+Plan: 01 complete, moving to 02
+Status: Executing
+Last activity: 2026-03-20 — Phase 27 Plan 01 complete
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** Not started
-- **Current Plan:** —
-- **Last Updated:** 2026-03-19 — Milestone v5.0 started
+- **Phase:** 27 — Foundation & Kiosk Heartbeat
+- **Current Plan:** 02 (HeartbeatService)
+- **Last Updated:** 2026-03-20 — 27-01 heartbeat foundation complete
 
 ## Progress
 
@@ -44,7 +45,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 25 — Dashboard UI + Visualization
+**Current focus:** Phase 27 — Foundation & Kiosk Heartbeat
 
 ## What Was Shipped
 
@@ -78,6 +79,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 24-03 | Pattern cache TTL 6 hours + compute() isolate for off-thread processing | Avoids blocking NFC scan (SMART-03) |
 | 25-00 | Wave 0 stubs use pure flutter_test imports only — no app imports until implementation | Keeps stubs compilable before implementation classes exist |
 | 25-02 | Exact match milestone check (== not >=) to avoid re-awarding streak badges | Prevents duplicate badge awards on subsequent days |
+| 27-01 | battery_plus ^6.2.3 (not ^7.x) — v7 requires Kotlin 2.2.0 which breaks nfc_manager | Kotlin version constraint |
+| 27-01 | All 5 heartbeat columns nullable with no DEFAULT | Existing production rows unaffected |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -102,6 +105,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - AttendanceRateCard and OvertimeAlertRow widgets created (lib/widgets/) — required for admin_dashboard_screen.dart to compile
 - Phase 24 Plan 01 (24-01): AnalyticsService with 3 RPC methods (getAttendanceRates, getOvertimeFlags, getMissingClockouts), 2 SQL RPCs, 14 unit tests, spec-compliant widgets
 - Phase 24 Plan 03 (24-03): PatternDetectionService with compute() isolate (first use), get_arrival_patterns RPC (PERCENTILE_CONT, HAVING >= 5), 14 unit tests, integrated into kiosk scan as fire-and-forget
+- Phase 27 context captured: heartbeat sends immediately on kiosk start, rolls every 15 minutes, retries on reconnect, uses SQLite pending+failed count, and stores app version as version+build
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
