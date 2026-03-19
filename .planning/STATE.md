@@ -1,24 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Smart Attendance + Admin Dashboard
-current_plan: All plans complete (01, 02, 03)
-status: milestone_complete
-last_updated: "2026-03-19T00:00:00.000Z"
+milestone: v5.0
+milestone_name: Ops hardening + reliability
+current_plan: —
+status: Defining requirements
+last_updated: "2026-03-19T23:04:13.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-19 — Milestone v5.0 started
+
 ## Current Status
-- **Milestone:** v4.0 — Smart Attendance + Admin Dashboard — **SHIPPED** ✅
-- **Phase:** All 4 phases complete (23-26)
-- **Current Plan:** Milestone archived
-- **Last Updated:** 2026-03-19 — v4.0 milestone complete and archived
+- **Milestone:** v5.0 — Ops hardening + reliability
+- **Phase:** Not started
+- **Current Plan:** —
+- **Last Updated:** 2026-03-19 — Milestone v5.0 started
 
 ## Progress
 

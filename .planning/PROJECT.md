@@ -13,6 +13,16 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 ## Current State
 
+## Current Milestone: v5.0 Ops hardening + reliability
+
+**Goal:** Make the system safer to trust every day.
+
+**Target features:**
+- Sync visibility
+- Kiosk/device health
+- Recovery / reconciliation
+- Failure surfaces and repair tools
+
 **Shipped:** v4.0 Smart Attendance + Admin Dashboard (2026-03-19)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Codebase:** ~26,000+ LOC Dart across 60+ files; Supabase Edge Functions: `create-admin-user`
@@ -111,9 +121,16 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Employee badge system
 
 ### Active (v5.0)
-*(to be defined — run /gsd:new-milestone)*
+- Goal: Make the system safer to trust every day (Ops hardening + reliability)
+- Sync visibility
+- Kiosk/device health
+- Recovery / reconciliation
+- Failure surfaces and repair tools
+*(Requirements to be defined)*
 
 ### Deferred (Future)
+- M005 — Multi-outlet control center (Chain-level oversight)
+- M006 — Employee-facing web app (Astro self-service)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
@@ -222,4 +239,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-19 — v4.0 milestone complete*
+*Last updated: 2026-03-19 — v5.0 milestone started*
