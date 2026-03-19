@@ -17,6 +17,7 @@ import '../../services/badge_service.dart';
 import '../../services/kiosk_background_service.dart';
 import '../../services/location_service.dart';
 import '../../services/pattern_detection_service.dart';
+import '../../services/streak_badge_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/badge_avatar.dart';
@@ -42,6 +43,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
 
   // Submitted type — shown in success screen
   AttendanceType? _submittedType;
+
+  // Streak display
+  int _currentStreak = 0;
+  int? _milestoneCelebration; // 7, 30, or 90 if just hit
 
   // Confetti & success animation
   late final ConfettiController _confettiCtrl;
@@ -196,6 +201,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
               debugPrint('[KioskScan] pattern check error: $error');
             }),
           );
+          // Fire-and-forget streak update
+          unawaited(_updateStreakAfterMasuk(employee.id));
         }
         // Auto-close after success
         _scheduleReset(
@@ -265,6 +272,33 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         context.go('/kiosk');
       }
     });
+  }
+
+  // ── Streak update after masuk ────────────────────────────────────────────
+
+  Future<void> _updateStreakAfterMasuk(String employeeId) async {
+    try {
+      final result = await SupabaseClientFactory.admin.rpc(
+        'update_employee_streak',
+        params: {'p_employee_id': employeeId},
+      );
+      if (result != null && mounted) {
+        final streak = (result['current_streak'] as num?)?.toInt() ?? 0;
+        setState(() => _currentStreak = streak);
+
+        // Check for milestone badge award
+        final milestone = await StreakBadgeService.instance.checkAndAwardMilestone(
+          employeeId: employeeId,
+          currentStreak: streak,
+        );
+        if (milestone != null && mounted) {
+          setState(() => _milestoneCelebration = milestone);
+          _confettiCtrl.play(); // Celebrate milestone
+        }
+      }
+    } catch (e) {
+      debugPrint('[KioskScan] Streak update failed: $e');
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -775,6 +809,12 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                   }),
                 ],
 
+                // Streak display (only shown for masuk with streak >= 2)
+                if (_submittedType == AttendanceType.masuk && _currentStreak >= 2) ...[
+                  const SizedBox(height: 16),
+                  _buildStreakRow(),
+                ],
+
                 const SizedBox(height: 32),
 
                 // Subtle returning indicator
@@ -801,6 +841,46 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                 ),
               ],
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStreakRow() {
+    // Check if this is a milestone celebration
+    if (_milestoneCelebration != null) {
+      final milestoneText = _milestoneCelebration == 90
+          ? 'Streak 90 Hari! Luar Biasa!'
+          : 'Streak $_milestoneCelebration Hari!';
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.local_fire_department, size: 24, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 8),
+          Text(
+            milestoneText,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFF59E0B),
+            ),
+          ),
+        ],
+      );
+    }
+    // Normal streak display
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.local_fire_department, size: 24, color: Color(0xFFF59E0B)),
+        const SizedBox(width: 8),
+        Text(
+          '$_currentStreak hari berturut-turut!',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
           ),
         ),
       ],
