@@ -92,6 +92,10 @@ dependencies:
   # Charts for dashboard visualization
   fl_chart: ^0.69.0
 
+  # Kiosk heartbeat: battery status and app version reporting (Phase 27)
+  battery_plus: ^6.2.3
+  package_info_plus: ^8.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -8,6 +8,13 @@ class Outlet {
   final bool isActive;
   final String createdAt;
 
+  // Heartbeat fields (Phase 27) — all nullable, populated by HeartbeatService
+  final DateTime? lastHeartbeatAt;
+  final int? batteryLevel;
+  final bool? isCharging;
+  final int? pendingSyncCount;
+  final String? appVersion;
+
   const Outlet({
     required this.id,
     required this.name,
@@ -17,6 +24,11 @@ class Outlet {
     this.deviceId,
     required this.isActive,
     required this.createdAt,
+    this.lastHeartbeatAt,
+    this.batteryLevel,
+    this.isCharging,
+    this.pendingSyncCount,
+    this.appVersion,
   });
 
   factory Outlet.fromJson(Map<String, dynamic> json) => Outlet(
@@ -28,6 +40,13 @@ class Outlet {
         deviceId: json['device_id'] as String?,
         isActive: json['is_active'] as bool? ?? true,
         createdAt: json['created_at'] as String? ?? '',
+        lastHeartbeatAt: json['last_heartbeat_at'] != null
+            ? DateTime.parse(json['last_heartbeat_at'] as String)
+            : null,
+        batteryLevel: json['battery_level'] as int?,
+        isCharging: json['is_charging'] as bool?,
+        pendingSyncCount: json['pending_sync_count'] as int?,
+        appVersion: json['app_version'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,5 +58,10 @@ class Outlet {
         'device_id': deviceId,
         'is_active': isActive,
         'created_at': createdAt,
+        'last_heartbeat_at': lastHeartbeatAt?.toIso8601String(),
+        'battery_level': batteryLevel,
+        'is_charging': isCharging,
+        'pending_sync_count': pendingSyncCount,
+        'app_version': appVersion,
       };
 }
