@@ -86,6 +86,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   two_dimensional_scrollables: ^0.3.8
 
+  # Charts for dashboard visualization
+  fl_chart: ^0.69.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
