@@ -22,6 +22,10 @@ Plans:
 ### Phase 28: Failure Surfaces & Crash Reporting
 **Goal:** Integrate Sentry for crash reporting to catch silent native/isolate failures.
 **Requirements:** FAIL-01, FAIL-02, FAIL-03
+**Plans:** 1 plan
+
+Plans:
+- [ ] 28-01-PLAN.md — Sentry integration, NFC noise filter, background failure capture with throttle
 
 **Success Criteria:**
 1. `sentry_flutter` is initialized in `main()`.
