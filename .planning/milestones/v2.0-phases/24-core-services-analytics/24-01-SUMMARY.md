@@ -143,3 +143,16 @@ None — SQL RPCs are included in sql/phase24_rpc_overtime_missing.sql for deplo
 ---
 *Phase: 24-core-services-analytics*
 *Completed: 2026-03-19*
+
+## Self-Check: PASSED
+
+- lib/services/analytics_service.dart: FOUND
+- sql/phase24_rpc_overtime_missing.sql: FOUND
+- lib/widgets/attendance_rate_card.dart: FOUND
+- lib/widgets/overtime_alert_row.dart: FOUND
+- test/services/analytics_service_test.dart: FOUND
+- .planning/milestones/v2.0-phases/24-core-services-analytics/24-01-SUMMARY.md: FOUND
+- Commit 1c33d79 (TDD RED tests): FOUND
+- Commit 30ae5ad (AnalyticsService + SQL): FOUND
+- Commit 4105ab8 (docs/summary): FOUND
+- 14/14 tests passing: VERIFIED

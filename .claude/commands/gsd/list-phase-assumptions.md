@@ -17,7 +17,7 @@ Output: Conversational output only (no file creation) - ends with "What do you t
 </objective>
 
 <execution_context>
-@./.claude/get-shit-done/workflows/list-phase-assumptions.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/workflows/list-phase-assumptions.md
 </execution_context>
 
 <context>

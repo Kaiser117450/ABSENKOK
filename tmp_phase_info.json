@@ -1,0 +1,13 @@
+{
+  "found": true,
+  "phase_number": "26",
+  "phase_name": "Admin Onboarding + Notification Polish",
+  "goal": "Admin can create new Kepala Gerai accounts directly from the app with secure server-side user creation and share credentials via WhatsApp",
+  "success_criteria": [
+    "Admin can create a new Kepala Gerai user account from within the app by entering name, email, and outlet assignment — password is auto-generated",
+    "After creation, admin can tap a button to share the generated credentials (email + password) to WhatsApp",
+    "Admin can generate a PDF document with the new account details, creation timestamp, outlet assignment, and audit trail",
+    "User creation happens server-side via Supabase Edge Function — grep for \"service_role\" in lib/ returns zero hits"
+  ],
+  "section": "### Phase 26: Admin Onboarding + Notification Polish\n**Goal**: Admin can create new Kepala Gerai accounts directly from the app with secure server-side user creation and share credentials via WhatsApp\n**Depends on**: Phase 23 (Edge Function infrastructure), Phase 24 (notification system)\n**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04\n**Success Criteria** (what must be TRUE):\n  1. Admin can create a new Kepala Gerai user account from within the app by entering name, email, and outlet assignment — password is auto-generated\n  2. After creation, admin can tap a button to share the generated credentials (email + password) to WhatsApp\n  3. Admin can generate a PDF document with the new account details, creation timestamp, outlet assignment, and audit trail\n  4. User creation happens server-side via Supabase Edge Function — grep for \"service_role\" in lib/ returns zero hits\n**Plans**: TBD\n\n## Progress\n\n**Execution Order:** 23 → 24 → 25 → 26 (sequential dependency chain; Phase 26 can start after Phase 23 + 24)\n\n| Phase | Milestone | Plans Complete | Status | Completed |\n|-------|-----------|----------------|--------|-----------|\n| 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |\n| 24. Core Services + Analytics | 3/3 | Complete    | 2026-03-18 | 2026-03-18 |\n| 25. Dashboard UI + Visualization | 3/3 | Complete    | 2026-03-19 | - |\n| 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |\n\n## Future Backlog (Not Scheduled)\n- Schedule grid tap-to-cycle shift (SCHED-01)\n- Schedule grid copy-week (SCHED-02)\n- Schedule grid today-column highlight (SCHED-03)\n- Time-off request approval workflow (FLOW-01)\n- Keterlambatan automatic flagging vs shift start time (FLOW-02)\n- Employee-facing mobile app (ADV-01)\n- QR code backup when NFC fails (ADV-02)\n- Live Activity pill device debugging (code delivered, needs on-device verification)"
+}
