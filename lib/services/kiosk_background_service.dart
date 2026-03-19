@@ -9,9 +9,10 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import '../models/kiosk_session.dart';
 import '../models/overlay_pill_state.dart';
-import 'live_content_provider.dart';
 import 'heartbeat_service.dart';
+import 'live_content_provider.dart';
 import 'missing_clockout_service.dart';
+import 'sentry_service.dart';
 
 // ---------------------------------------------------------------------------
 // Notification IDs
@@ -502,8 +503,14 @@ class KioskBackgroundService {
             '[BgService] _pollContent OK, hasBreaks=${_liveContent.hasActiveBreaks}');
         return true;
       }());
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('[BgService] _pollContent error: $e');
+      await SentryService.captureBackgroundFailure(
+        exception: e,
+        stackTrace: stack,
+        operation: 'pollContent',
+        session: _session,
+      );
     }
   }
 

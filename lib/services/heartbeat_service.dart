@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../main.dart' show supabaseReady;
 import '../models/kiosk_session.dart';
+import 'sentry_service.dart';
 import 'sqlite_service.dart';
 
 /// Sends a heartbeat to the `outlets` table every 15 minutes.
@@ -140,10 +141,16 @@ class HeartbeatService {
             .update(payload)
             .eq('id', outletId);
         return; // success
-      } catch (e) {
+      } catch (e, stack) {
         if (attempt == 2) {
           debugPrint(
               '[Heartbeat] _sendWithRetry failed after 3 attempts: $e');
+          await SentryService.captureBackgroundFailure(
+            exception: e,
+            stackTrace: stack,
+            operation: 'heartbeat',
+            session: _session,
+          );
           return;
         }
         final delaySeconds = 2 * (attempt + 1); // 2s, 4s
