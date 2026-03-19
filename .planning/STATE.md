@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Smart Attendance + Admin Dashboard
-current_plan: "25-01"
+current_plan: "25-02"
 status: in-progress
-last_updated: "2026-03-19T08:16:49.261Z"
+last_updated: "2026-03-19T08:22:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -17,8 +17,8 @@ progress:
 ## Current Status
 - **Milestone:** v4.0 — Smart Attendance + Admin Dashboard
 - **Phase:** 25 of 26 (Dashboard UI + Visualization) — in progress
-- **Current Plan:** 25-01 (next)
-- **Last Updated:** 2026-03-19 — Phase 25 Plan 00 executed: 24 Wave 0 TDD stubs for DASH-01..04 and GAME-02..04
+- **Current Plan:** 25-02 (complete)
+- **Last Updated:** 2026-03-19 — Phase 25 Plan 02 executed: StreakBadgeService + kiosk streak display
 
 ## Progress
 
@@ -29,7 +29,7 @@ v4.0 Smart Attendance + Admin Dashboard — IN PROGRESS
 
 - **Phase 23 progress:** 2/2 plans complete
 - **Phase 24 progress:** 3/3 plans complete
-- **Phase 25 progress:** 1/3 plans complete
+- **Phase 25 progress:** 2/3 plans complete
 
 ## Project Reference
 
@@ -69,6 +69,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 24-03 | isLate threshold is exclusive (>5 min, not >=) — exactly 5 min is not flagged | Matches plan spec: "late >5 minutes" |
 | 24-03 | Pattern cache TTL 6 hours + compute() isolate for off-thread processing | Avoids blocking NFC scan (SMART-03) |
 | 25-00 | Wave 0 stubs use pure flutter_test imports only — no app imports until implementation | Keeps stubs compilable before implementation classes exist |
+| 25-02 | Exact match milestone check (== not >=) to avoid re-awarding streak badges | Prevents duplicate badge awards on subsequent days |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
