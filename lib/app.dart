@@ -22,6 +22,7 @@ import 'screens/admin/admin_shell.dart';
 import 'screens/admin/archived_employees_screen.dart';
 import 'screens/admin/create_admin_screen.dart';
 import 'screens/admin/csv_import_screen.dart';
+import 'screens/kiosk/kiosk_diagnostics_screen.dart';
 import 'screens/kiosk/kiosk_idle_screen.dart';
 import 'screens/kiosk/kiosk_scan_screen.dart';
 import 'screens/setup/setup_screen.dart';
@@ -103,6 +104,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'scan',
             builder: (_, __) => const KioskScanScreen(),
+          ),
+          GoRoute(
+            path: 'diagnostics',
+            builder: (_, __) => const KioskDiagnosticsScreen(),
           ),
         ],
       ),
