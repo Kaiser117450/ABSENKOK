@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -428,6 +429,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // ── STAT GRID 2×2 ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildStatGrid()),
 
+            // ── LIHAT DASHBOARD BUTTON ────────────────────────────────────
+            SliverToBoxAdapter(child: _buildDashboardButton()),
+
             // ── QUICK ACTIONS ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildQuickActions()),
 
@@ -653,6 +657,35 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Lihat Dashboard Button ────────────────────────────────────────────────
+
+  Widget _buildDashboardButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () {
+            final outletId = _selectedOutletId ?? '';
+            context.push('/admin/chart-dashboard?outletId=$outletId');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text(
+            'Lihat Dashboard',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ),
       ),
     );
   }

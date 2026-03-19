@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/theme.dart';
 import '../services/analytics_service.dart';
@@ -121,14 +122,7 @@ class AttendanceRateCardState extends State<AttendanceRateCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dashboard lengkap segera hadir'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
+      onTap: () => context.push('/admin/chart-dashboard?outletId=${widget.outletId}'),
       child: Card(
         color: AppColors.surface,
         shape: RoundedRectangleBorder(
