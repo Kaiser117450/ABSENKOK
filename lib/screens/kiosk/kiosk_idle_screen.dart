@@ -51,6 +51,13 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   // Subtle ambient glow animation for white background
   late final AnimationController _glowController;
 
+  // Sync indicator slide animation
+  late final AnimationController _syncSlideController;
+  late final Animation<Offset> _syncSlideAnim;
+
+  // Periodic pending count refresh timer
+  Timer? _pendingRefreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +65,10 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     _checkNfcThenListen();
     _syncOnMount();
     _startBackgroundService();
+    _pendingRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshPendingCount(),
+    );
   }
 
   /// Start foreground service notification so kiosk is visible in notification bar.
@@ -210,6 +221,15 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     }
   }
 
+  Future<void> _refreshPendingCount() async {
+    try {
+      final count = await SqliteService.countPendingLogs();
+      if (mounted) {
+        ref.read(appProvider.notifier).setPendingCount(count);
+      }
+    } catch (_) {}
+  }
+
   void _initAnimations() {
     _pulseController = AnimationController(
       vsync: this,
@@ -231,6 +251,16 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       vsync: this,
       duration: const Duration(seconds: 6),
     )..repeat(reverse: true);
+
+    _syncSlideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _syncSlideAnim = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(
+        CurvedAnimation(parent: _syncSlideController, curve: Curves.easeOut));
   }
 
   void _startNfcListener() {
@@ -646,6 +676,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     _pulseController.dispose();
     _fadeController.dispose();
     _glowController.dispose();
+    _syncSlideController.dispose();
+    _pendingRefreshTimer?.cancel();
     _nfcCheckTimer?.cancel();
     final cleanup = _nfcCleanup;
     if (cleanup != null) {
@@ -663,6 +695,14 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     final appState = ref.watch(appProvider);
     final session = appState.kioskSession;
     final pendingCount = appState.pendingCount;
+
+    // Trigger slide animation based on pending count
+    if (pendingCount > 0) {
+      _syncSlideController.forward();
+    } else {
+      _syncSlideController.reverse();
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -690,6 +730,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
                   const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
 
+                  // ── SYNC INDICATOR (hanya muncul jika ada pending) ─────────
+                  _buildSyncIndicator(pendingCount),
+
                   // ── NFC WARNING BANNER (hanya muncul jika NFC mati) ────────
                   if (!_nfcAvailable) _buildNfcOffBanner(),
 
@@ -714,6 +757,47 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   }
 
   // ---------------------------------------------------------------------------
+  // Sync Indicator Strip
+  // ---------------------------------------------------------------------------
+
+  Widget _buildSyncIndicator(int pendingCount) {
+    if (pendingCount <= 0) return const SizedBox.shrink();
+
+    return SlideTransition(
+      position: _syncSlideAnim,
+      child: Container(
+        width: double.infinity,
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          border: Border(
+            bottom: BorderSide(
+              color: const Color(0xFFF59E0B).withOpacity(0.4),
+              width: 1,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_upload_outlined,
+                size: 14, color: Color(0xFFD97706)),
+            const SizedBox(width: 6),
+            Text(
+              '$pendingCount data belum tersinkron',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF92400E),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Header
   // ---------------------------------------------------------------------------
 
@@ -722,8 +806,13 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       child: Row(
         children: [
-          // Brand
-          Column(
+          // Brand (long-press opens diagnostics screen)
+          GestureDetector(
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              context.push('/kiosk/diagnostics');
+            },
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -776,6 +865,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               ],
             ],
           ),
+          ), // end GestureDetector
 
           const Spacer(),
 
