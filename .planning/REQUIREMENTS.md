@@ -1,108 +1,73 @@
-# Requirements: Absensi Enakko v4.0 — Smart Attendance + Admin Dashboard
+# Requirements: Absensi Enakko v5.0 — Ops hardening + reliability
 
-**Defined:** 2026-03-18
-**Core Value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
+**Defined:** 2026-03-19
+**Core Value:** Make the system safer to trust every day.
 
-## v4.0 Requirements
+## v5.0 Requirements
 
-### Bug Fix
+### Kiosk/Device Health (HLTH)
+- [ ] **HLTH-01**: Kiosk tablet sends a background heartbeat to Supabase every 15 minutes.
+- [ ] **HLTH-02**: Heartbeat payload includes `battery_level` (%), `is_charging` (boolean), and `app_version` (string).
+- [ ] **HLTH-03**: Admin dashboard displays a warning (e.g. "Offline") if an outlet's kiosk has not sent a heartbeat in over 30 minutes.
+- [ ] **HLTH-04**: Admin dashboard displays low battery warning (< 20%) for any active kiosk.
 
-- [x] **BUG-01**: NFC registration flow prevents double-scan crash — if NFC card is scanned twice during registration, app handles it gracefully without force close
+### Sync Visibility (SYNC)
+- [ ] **SYNC-01**: System counts the number of pending offline scans currently queued in local SQLite.
+- [ ] **SYNC-02**: Pending sync count is sent as part of the 15-minute heartbeat payload (`pending_sync_count`).
+- [ ] **SYNC-03**: Admin dashboard displays the number of unsynced logs per outlet.
+- [ ] **SYNC-04**: Kiosk UI displays a visual indicator (icon or text) on the idle screen when there are pending offline syncs.
 
-### Admin Onboarding
+### Recovery & Repair (RECV)
+- [ ] **RECV-01**: Kiosk UI provides a hidden or admin-gated "Force Sync" button on the settings/diagnostic screen.
+- [ ] **RECV-02**: Force Sync bypasses the normal queue timer and immediately attempts to flush the offline SQLite queue to Supabase.
+- [ ] **RECV-03**: Success or failure of the Force Sync is communicated via a Toast or Snackbar.
 
-- [x] **ADMIN-01**: Admin can create a new Kepala Gerai user account directly from the app (Supabase Auth with auto-generated email and password)
-- [x] **ADMIN-02**: Admin can copy or share the generated credentials (email + password) to WhatsApp for the new Kepala Gerai
-- [x] **ADMIN-03**: Credential sharing generates a PDF document with account details, creation timestamp, outlet assignment, and audit trail info
-- [x] **ADMIN-04**: Supabase Edge Function handles user creation server-side (service_role key never in APK)
-
-### Core Analytics (BETA)
-
-- [x] **ANLYT-01**: Admin/Kepala Gerai can see attendance rate card on dashboard showing daily/weekly/monthly hadir percentage with concrete counts (e.g., "Hadir 14/16 hari — 87.5%")
-- [x] **ANLYT-02**: Admin/Kepala Gerai can see overtime tracking — hours worked vs shift template duration, flagged when exceeding threshold
-- [x] **ANLYT-03**: Admin/Kepala Gerai receives notification when employee has not scanned pulang after configurable threshold (default 10 hours from masuk)
-- [x] **ANLYT-04**: Missing clock-out notifications are batched per outlet ("3 karyawan belum pulang di Outlet A") not individual alerts
-
-### Smart Attendance (BETA)
-
-- [x] **SMART-01**: System analyzes last 30 days of masuk timestamps per employee and computes median arrival time per day-of-week
-- [x] **SMART-02**: Admin/Kepala Gerai receives notification when employee is late >5 minutes from their usual pattern time
-- [x] **SMART-03**: Pattern detection runs in background isolate and caches results — never blocks NFC scan handler
-- [x] **SMART-04**: Employees with fewer than 5 data points for a day-of-week are skipped (insufficient data)
-
-### Gamification
-
-- [x] **GAME-01**: System tracks consecutive on-time attendance streak per employee using noon-rule logical days
-- [x] **GAME-02**: Streak counter is visible on kiosk scan result screen after successful masuk
-- [x] **GAME-03**: Auto-badge awards at streak milestones (7-day, 30-day, 90-day) using existing badge system
-- [x] **GAME-04**: Streak leaderboard visible on admin dashboard (top 5 employees by current streak)
-
-### Dashboard & Visualization
-
-- [x] **DASH-01**: Kepala Gerai can see mini chart dashboard — single scrollable screen with attendance rate donut chart, weekly trend bar chart, streak leaderboard, overtime alerts
-- [x] **DASH-02**: Dashboard uses fl_chart for chart rendering — lightweight, pure Dart, suitable for 24/7 kiosk
-- [x] **DASH-03**: Admin can see cross-outlet attendance comparison as grouped bar chart (admin-only, kepala gerai sees own outlet only)
-- [x] **DASH-04**: Chart dashboard handles memory properly for 24/7 kiosk operation (AutomaticKeepAliveClientMixin, proper disposal)
-- [x] **DASH-05**: All chart aggregations computed via Supabase RPC functions (server-side PostgreSQL), not fetch-all-and-compute-in-Dart
+### Failure Surfaces (FAIL)
+- [ ] **FAIL-01**: App integrates `sentry_flutter` to automatically capture and report unhandled Dart and native exceptions.
+- [ ] **FAIL-02**: Sentry configuration explicitly filters out/ignores benign NFC `Tag lost` exceptions to prevent log spam.
+- [ ] **FAIL-03**: The `KioskBackgroundService` isolate wraps its periodic task in a try/catch that reports directly to Sentry if a background failure occurs.
 
 ## Future Requirements
 
-### Schedule UX Improvement
-- **SCHED-01**: Schedule grid tap-to-cycle shift assignment (GRID-D1)
-- **SCHED-02**: Schedule grid copy-week feature (GRID-D2)
-- **SCHED-03**: Schedule grid today-column highlight (GRID-D3)
-
 ### Workflow
-- **FLOW-01**: Time-off request approval workflow
-- **FLOW-02**: Keterlambatan (late arrival) automatic flagging vs shift start time
+- **FLOW-01**: Time-off request approval workflow.
+- **FLOW-02**: Keterlambatan (late arrival) automatic flagging vs shift start time.
 
-### Advanced
-- **ADV-01**: Employee-facing mobile app (view own attendance)
-- **ADV-02**: QR code backup scan when NFC fails
+### Roadmap Additions
+- **M005**: Multi-outlet control center (chain-level oversight).
+- **M006**: Employee-facing web app (self-service).
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| ML-based absence prediction | Insufficient data (89 logs, 14 employees) — need 200+ employees with 6+ months data |
-| Complex gamification (XP, levels, rewards shop) | Over-engineering for 14 restaurant employees |
-| Real-time push to employee personal phones | Employees use shared kiosk, don't have app on personal phones |
-| Automated schedule adjustment from patterns | Schedules are owner/kepala gerai decisions, not algorithmic |
-| GPS/geofencing validation | Fixed NFC kiosk = location proof; GPS adds zero value |
-| Firebase/FCM push notifications | Local notification via existing infrastructure sufficient for kiosk; avoids Kotlin 1.9.25 compatibility risk |
+| iOS App | Kiosk is Android tablet only. |
+| Aggressive < 1min heartbeat | Will silently drain tablet battery and hit Supabase rate limits. |
+| Automatic remote restart | Android restricts remote restart without device root/MDM. |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 23 | Complete |
-| ADMIN-01 | Phase 26 | Complete |
-| ADMIN-02 | Phase 26 | Complete |
-| ADMIN-03 | Phase 26 | Complete |
-| ADMIN-04 | Phase 26 | Complete |
-| ANLYT-01 | Phase 24 | Complete |
-| ANLYT-02 | Phase 24 | Complete |
-| ANLYT-03 | Phase 24 | Complete |
-| ANLYT-04 | Phase 24 | Complete |
-| SMART-01 | Phase 24 | Complete |
-| SMART-02 | Phase 24 | Complete |
-| SMART-03 | Phase 24 | Complete |
-| SMART-04 | Phase 24 | Complete |
-| GAME-01 | Phase 23 | Complete |
-| GAME-02 | Phase 25 | Complete |
-| GAME-03 | Phase 25 | Complete |
-| GAME-04 | Phase 25 | Complete |
-| DASH-01 | Phase 25 | Complete |
-| DASH-02 | Phase 25 | Complete |
-| DASH-03 | Phase 25 | Complete |
-| DASH-04 | Phase 25 | Complete |
-| DASH-05 | Phase 23 | Complete |
+| HLTH-01 | Phase 27 | Pending |
+| HLTH-02 | Phase 27 | Pending |
+| HLTH-03 | Phase 30 | Pending |
+| HLTH-04 | Phase 30 | Pending |
+| SYNC-01 | Phase 27 | Pending |
+| SYNC-02 | Phase 27 | Pending |
+| SYNC-03 | Phase 30 | Pending |
+| SYNC-04 | Phase 29 | Pending |
+| RECV-01 | Phase 29 | Pending |
+| RECV-02 | Phase 29 | Pending |
+| RECV-03 | Phase 29 | Pending |
+| FAIL-01 | Phase 28 | Pending |
+| FAIL-02 | Phase 28 | Pending |
+| FAIL-03 | Phase 28 | Pending |
 
 **Coverage:**
-- v4.0 requirements: 20 total
-- Mapped to phases: 20
+- v5.0 requirements: 14 total
+- Mapped to phases: 14
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 — Traceability populated during roadmap creation*
+*Requirements defined: 2026-03-19*
