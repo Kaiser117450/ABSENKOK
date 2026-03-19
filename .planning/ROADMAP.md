@@ -141,7 +141,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
 | 24. Core Services + Analytics | 3/3 | Complete    | 2026-03-18 | 2026-03-18 |
-| 25. Dashboard UI + Visualization | 3/3 | Complete   | 2026-03-19 | - |
+| 25. Dashboard UI + Visualization | 3/3 | Complete    | 2026-03-19 | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
