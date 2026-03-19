@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: 28-01
-status: planned
-last_updated: "2026-03-20T17:00:00Z"
-last_activity: 2026-03-20 — Phase 28 planned (1 plan, 1 wave)
+current_plan: 28-01-COMPLETE
+status: complete
+last_updated: "2026-03-20T17:14:09Z"
+last_activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC filter, background capture)
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 28 (Planned)
-Plan: 28-01
-Status: Ready to execute
-Last activity: 2026-03-20 — Phase 28 planned (1 plan, 1 wave)
+Phase: 28 (Complete)
+Plan: 28-01 (Complete)
+Status: Phase 28 all plans complete
+Last activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC filter, background capture)
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** 28 — Failure Surfaces & Crash Reporting
-- **Current Plan:** 28-01 — Sentry integration, NFC noise filter, background failure capture
-- **Last Updated:** 2026-03-20 — Phase 28 planned
+- **Phase:** 28 — Failure Surfaces & Crash Reporting (COMPLETE)
+- **Current Plan:** 28-01-COMPLETE — Sentry integration, NFC noise filter, background failure capture
+- **Last Updated:** 2026-03-20 — Phase 28 Plan 01 complete
 
 ## Progress
 
@@ -39,6 +39,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 - **Phase 24 progress:** 3/3 plans complete
 - **Phase 25 progress:** 3/3 plans complete
 - **Phase 26 progress:** 3/3 plans complete
+- **Phase 28 progress:** 1/1 plans complete
 
 ## Project Reference
 
@@ -82,6 +83,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 27-01 | battery_plus ^6.2.3 (not ^7.x) — v7 requires Kotlin 2.2.0 which breaks nfc_manager | Kotlin version constraint |
 | 27-01 | All 5 heartbeat columns nullable with no DEFAULT | Existing production rows unaffected |
 | 27-02 | HeartbeatService.stop() called first in KioskBackgroundService.stop() | Clean teardown order — stops heartbeat before other cleanup |
+| 28-01 | Release-only Sentry DSN via kReleaseMode — empty DSN in dev | No crash traffic during development or test runs |
+| 28-01 | Throttle fingerprint = operation:exceptionType (15-min window) | Prevents flood alerts from retry storms without losing distinct failure types |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations

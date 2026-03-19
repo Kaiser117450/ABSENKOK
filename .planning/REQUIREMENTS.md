@@ -23,9 +23,9 @@
 - [ ] **RECV-03**: Success or failure of the Force Sync is communicated via a Toast or Snackbar.
 
 ### Failure Surfaces (FAIL)
-- [ ] **FAIL-01**: App integrates `sentry_flutter` to automatically capture and report unhandled Dart and native exceptions.
-- [ ] **FAIL-02**: Sentry configuration explicitly filters out/ignores benign NFC `Tag lost` exceptions to prevent log spam.
-- [ ] **FAIL-03**: The `KioskBackgroundService` isolate wraps its periodic task in a try/catch that reports directly to Sentry if a background failure occurs.
+- [x] **FAIL-01**: App integrates `sentry_flutter` to automatically capture and report unhandled Dart and native exceptions.
+- [x] **FAIL-02**: Sentry configuration explicitly filters out/ignores benign NFC `Tag lost` exceptions to prevent log spam.
+- [x] **FAIL-03**: The `KioskBackgroundService` isolate wraps its periodic task in a try/catch that reports directly to Sentry if a background failure occurs.
 
 ## Future Requirements
 
@@ -60,9 +60,9 @@
 | RECV-01 | Phase 29 | Pending |
 | RECV-02 | Phase 29 | Pending |
 | RECV-03 | Phase 29 | Pending |
-| FAIL-01 | Phase 28 | Pending |
-| FAIL-02 | Phase 28 | Pending |
-| FAIL-03 | Phase 28 | Pending |
+| FAIL-01 | Phase 28 | Complete |
+| FAIL-02 | Phase 28 | Complete |
+| FAIL-03 | Phase 28 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 14 total
