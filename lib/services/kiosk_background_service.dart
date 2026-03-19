@@ -10,6 +10,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../models/kiosk_session.dart';
 import '../models/overlay_pill_state.dart';
 import 'live_content_provider.dart';
+import 'heartbeat_service.dart';
 import 'missing_clockout_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -173,6 +174,8 @@ class KioskBackgroundService {
       outletNames: {session.outletId: session.outletName},
     );
 
+    await HeartbeatService.start(session);
+
     return overlayResult;
   }
 
@@ -182,6 +185,7 @@ class KioskBackgroundService {
   /// Each step is individually wrapped in try-catch so one failure
   /// cannot block subsequent cleanup steps.
   static Future<void> stop() async {
+    HeartbeatService.stop();
     MissingClockoutService.instance.stopPeriodicCheck();
     _pollTimer?.cancel();
     _pollTimer = null;
