@@ -69,7 +69,7 @@ Full details: `.planning/milestones/v3.1-ROADMAP.md`
 
 - [x] **Phase 23: Bug Fix + Database Foundation** - Fix NFC double-scan crash and deploy all Supabase RPC functions and schema needed by downstream phases (completed 2026-03-18)
 - [x] **Phase 24: Core Services + Analytics** - Build service layer (streak, pattern, chart data, missing clock-out) and attendance rate card with overtime tracking (completed 2026-03-18)
-- [ ] **Phase 25: Dashboard UI + Visualization** - Chart dashboard screen with fl_chart, streak leaderboard, cross-outlet comparison, and gamification milestone badges
+- [x] **Phase 25: Dashboard UI + Visualization** - Chart dashboard screen with fl_chart, streak leaderboard, cross-outlet comparison, and gamification milestone badges (completed 2026-03-19)
 - [ ] **Phase 26: Admin Onboarding + Notification Polish** - Kepala Gerai creation via Edge Function with credential sharing and notification batching
 
 ## Phase Details
@@ -115,7 +115,7 @@ Plans:
   3. Employee sees their current attendance streak count on the kiosk scan result screen after successful masuk
   4. Employees receive auto-badge awards at streak milestones (7-day, 30-day, 90-day) using the existing badge system
   5. Dashboard navigated 100+ times in a 4-hour stress test without memory leak or performance degradation (AutomaticKeepAliveClientMixin + proper disposal)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 25-00-PLAN.md — Wave 0 test stubs for all phase requirements (DASH-01..04, GAME-02..04)
@@ -141,7 +141,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 23. Bug Fix + Database Foundation | v4.0 | 2/2 | Complete | 2026-03-18 |
 | 24. Core Services + Analytics | 3/3 | Complete    | 2026-03-18 | 2026-03-18 |
-| 25. Dashboard UI + Visualization | 2/3 | In Progress|  | - |
+| 25. Dashboard UI + Visualization | 3/3 | Complete   | 2026-03-19 | - |
 | 26. Admin Onboarding + Notification Polish | v4.0 | 0/TBD | Not started | - |
 
 ## Future Backlog (Not Scheduled)
