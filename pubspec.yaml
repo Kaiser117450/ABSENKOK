@@ -96,6 +96,9 @@ dependencies:
   battery_plus: ^6.2.3
   package_info_plus: ^8.1.0
 
+  # Crash reporting (Phase 28)
+  sentry_flutter: ^9.14.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
