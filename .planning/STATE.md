@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: 28-01-COMPLETE
-status: complete
-last_updated: "2026-03-20T17:14:09Z"
+current_plan: Not started
+status: completed
+last_updated: "2026-03-19T17:18:31.369Z"
 last_activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC filter, background capture)
 progress:
   total_phases: 4
@@ -25,7 +25,7 @@ Last activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
 - **Phase:** 28 — Failure Surfaces & Crash Reporting (COMPLETE)
-- **Current Plan:** 28-01-COMPLETE — Sentry integration, NFC noise filter, background failure capture
+- **Current Plan:** Not started
 - **Last Updated:** 2026-03-20 — Phase 28 Plan 01 complete
 
 ## Progress
