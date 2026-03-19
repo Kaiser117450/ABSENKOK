@@ -20,6 +20,7 @@ import 'screens/admin/admin_outlets_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/archived_employees_screen.dart';
+import 'screens/admin/create_admin_screen.dart';
 import 'screens/admin/csv_import_screen.dart';
 import 'screens/kiosk/kiosk_idle_screen.dart';
 import 'screens/kiosk/kiosk_scan_screen.dart';
@@ -79,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
         if (loc.startsWith('/admin/csv-import')) return '/admin/dashboard';
         if (loc.startsWith('/admin/archived-employees')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/create-account')) return '/admin/dashboard';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
         if (!loc.startsWith('/kiosk')) return '/kiosk';
@@ -134,6 +136,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/csv-import',
             builder: (_, __) => const CsvImportScreen(),
+          ),
+          GoRoute(
+            path: '/admin/create-account',
+            builder: (_, __) => const CreateAdminScreen(),
           ),
         ],
       ),
