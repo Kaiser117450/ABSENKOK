@@ -709,7 +709,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               onTap: _openShiftScheduler,
             ),
             const SizedBox(width: 10),
-            // Tombol "Tambah Gerai" hanya untuk admin penuh
+            // Tombol hanya untuk admin penuh
             if (!isKepalaGerai) ...[
               _QuickActionBtn(
                 icon: Icons.add_business_rounded,
@@ -717,6 +717,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 color: AppColors.accent,
                 textColor: const Color(0xFF1A0A00),
                 onTap: _showAddOutletSheet,
+              ),
+              const SizedBox(width: 10),
+              _QuickActionBtn(
+                icon: Icons.person_add_rounded,
+                label: 'Kep.\nGerai',
+                color: const Color(0xFF0369A1),
+                textColor: Colors.white,
+                onTap: () => context.push('/admin/create-account'),
               ),
               const SizedBox(width: 10),
             ],
