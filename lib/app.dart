@@ -13,6 +13,7 @@ import 'core/theme.dart';
 import 'main.dart' show supabaseReady;
 import 'providers/app_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/chart_dashboard_screen.dart';
 import 'screens/admin/admin_employees_screen.dart';
 import 'screens/admin/admin_login_screen.dart';
 import 'screens/admin/admin_outlets_screen.dart';
@@ -135,6 +136,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const CsvImportScreen(),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/admin/chart-dashboard',
+        builder: (context, state) => ChartDashboardScreen(
+          outletId: state.uri.queryParameters['outletId'] ?? '',
+        ),
       ),
     ],
   );
