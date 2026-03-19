@@ -15,12 +15,12 @@
 - [x] **SYNC-01**: System counts the number of pending offline scans currently queued in local SQLite.
 - [x] **SYNC-02**: Pending sync count is sent as part of the 15-minute heartbeat payload (`pending_sync_count`).
 - [ ] **SYNC-03**: Admin dashboard displays the number of unsynced logs per outlet.
-- [ ] **SYNC-04**: Kiosk UI displays a visual indicator (icon or text) on the idle screen when there are pending offline syncs.
+- [x] **SYNC-04**: Kiosk UI displays a visual indicator (icon or text) on the idle screen when there are pending offline syncs.
 
 ### Recovery & Repair (RECV)
-- [ ] **RECV-01**: Kiosk UI provides a hidden or admin-gated "Force Sync" button on the settings/diagnostic screen.
-- [ ] **RECV-02**: Force Sync bypasses the normal queue timer and immediately attempts to flush the offline SQLite queue to Supabase.
-- [ ] **RECV-03**: Success or failure of the Force Sync is communicated via a Toast or Snackbar.
+- [x] **RECV-01**: Kiosk UI provides a hidden or admin-gated "Force Sync" button on the settings/diagnostic screen.
+- [x] **RECV-02**: Force Sync bypasses the normal queue timer and immediately attempts to flush the offline SQLite queue to Supabase.
+- [x] **RECV-03**: Success or failure of the Force Sync is communicated via a Toast or Snackbar.
 
 ### Failure Surfaces (FAIL)
 - [x] **FAIL-01**: App integrates `sentry_flutter` to automatically capture and report unhandled Dart and native exceptions.
@@ -56,10 +56,10 @@
 | SYNC-01 | Phase 27 | Complete |
 | SYNC-02 | Phase 27 | Complete |
 | SYNC-03 | Phase 30 | Pending |
-| SYNC-04 | Phase 29 | Pending |
-| RECV-01 | Phase 29 | Pending |
-| RECV-02 | Phase 29 | Pending |
-| RECV-03 | Phase 29 | Pending |
+| SYNC-04 | Phase 29 | Complete |
+| RECV-01 | Phase 29 | Complete |
+| RECV-02 | Phase 29 | Complete |
+| RECV-03 | Phase 29 | Complete |
 | FAIL-01 | Phase 28 | Complete |
 | FAIL-02 | Phase 28 | Complete |
 | FAIL-03 | Phase 28 | Complete |

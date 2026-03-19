@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: Not started
-status: completed
-last_updated: "2026-03-19T17:18:31.369Z"
-last_activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC filter, background capture)
+current_plan: 29-01 (Complete)
+status: in_progress
+last_updated: "2026-03-20T00:00:00Z"
+last_activity: 2026-03-20 — Phase 29 Plan 01 complete (sync indicator, diagnostics screen, force sync)
 progress:
   total_phases: 4
   completed_phases: 2
@@ -17,16 +17,16 @@ progress:
 
 ## Current Position
 
-Phase: 28 (Complete)
-Plan: 28-01 (Complete)
-Status: Phase 28 all plans complete
-Last activity: 2026-03-20 — Phase 28 Plan 01 complete (Sentry integration, NFC filter, background capture)
+Phase: 29 (In Progress)
+Plan: 29-01 (Complete)
+Status: Phase 29 Plan 01 complete
+Last activity: 2026-03-20 — Phase 29 Plan 01 complete (sync indicator strip, diagnostics screen, force sync)
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** 28 — Failure Surfaces & Crash Reporting (COMPLETE)
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-20 — Phase 28 Plan 01 complete
+- **Phase:** 29 — Diagnostics & Recovery Tools (In Progress)
+- **Current Plan:** 29-01 Complete
+- **Last Updated:** 2026-03-20 — Phase 29 Plan 01 complete
 
 ## Progress
 
@@ -40,6 +40,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 - **Phase 25 progress:** 3/3 plans complete
 - **Phase 26 progress:** 3/3 plans complete
 - **Phase 28 progress:** 1/1 plans complete
+- **Phase 29 progress:** 1/1 plans complete
 
 ## Project Reference
 
@@ -85,6 +86,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 27-02 | HeartbeatService.stop() called first in KioskBackgroundService.stop() | Clean teardown order — stops heartbeat before other cleanup |
 | 28-01 | Release-only Sentry DSN via kReleaseMode — empty DSN in dev | No crash traffic during development or test runs |
 | 28-01 | Throttle fingerprint = operation:exceptionType (15-min window) | Prevents flood alerts from retry storms without losing distinct failure types |
+| 29-01 | SlideTransition from top for sync strip (not AnimatedSwitcher) | Matches UI spec exactly — directional slide is more natural for a banner |
+| 29-01 | Long-press only on brand logo column (not full header) | Intentionally hidden from employees — only operators who know will find it |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -112,6 +115,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 27 context captured: heartbeat sends immediately on kiosk start, rolls every 15 minutes, retries on reconnect, uses SQLite pending+failed count, and stores app version as version+build
 - Phase 27 Plan 02 (27-02): HeartbeatService created (lib/services/heartbeat_service.dart), wired into KioskBackgroundService start/stop lifecycle
 - Phase 28 context captured: release-only Sentry, whole-app plus background coverage, benign Tag-lost-family NFC filtering, and deduped background reporting with outlet/device context
+- Phase 29 Plan 01: KioskDiagnosticsScreen at /kiosk/diagnostics (battery, connectivity, version, pending/failed counts, Force Sync); amber sync indicator strip on idle screen slides in when pendingCount > 0; long-press logo opens diagnostics
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
