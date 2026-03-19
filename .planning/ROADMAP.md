@@ -8,7 +8,7 @@
 ### Phase 27: Foundation & Kiosk Heartbeat
 **Goal:** Expand `outlets` table and implement background heartbeat with device metrics.
 **Requirements:** HLTH-01, HLTH-02, SYNC-01, SYNC-02
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md — SQL migration, Outlet model expansion, battery_plus + package_info_plus deps

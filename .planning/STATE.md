@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: —
-status: planning
-last_updated: "2026-03-19T16:16:22.674Z"
-last_activity: 2026-03-19 — Phase 27 context gathered
+current_plan: 02 (HeartbeatService)
+status: executing
+last_updated: "2026-03-19T16:20:30.694Z"
+last_activity: 2026-03-20 — Phase 27 Plan 01 complete
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 27 (In progress)
-Plan: 01 complete, moving to 02
-Status: Executing
-Last activity: 2026-03-20 — Phase 27 Plan 01 complete
+Phase: 27 (Complete)
+Plan: 02 complete — all plans done
+Status: Complete
+Last activity: 2026-03-20 — Phase 27 Plan 02 complete
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
 - **Phase:** 27 — Foundation & Kiosk Heartbeat
-- **Current Plan:** 02 (HeartbeatService)
-- **Last Updated:** 2026-03-20 — 27-01 heartbeat foundation complete
+- **Current Plan:** 02 complete (HeartbeatService)
+- **Last Updated:** 2026-03-20 — 27-02 HeartbeatService implemented and wired
 
 ## Progress
 
@@ -81,6 +81,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 25-02 | Exact match milestone check (== not >=) to avoid re-awarding streak badges | Prevents duplicate badge awards on subsequent days |
 | 27-01 | battery_plus ^6.2.3 (not ^7.x) — v7 requires Kotlin 2.2.0 which breaks nfc_manager | Kotlin version constraint |
 | 27-01 | All 5 heartbeat columns nullable with no DEFAULT | Existing production rows unaffected |
+| 27-02 | HeartbeatService.stop() called first in KioskBackgroundService.stop() | Clean teardown order — stops heartbeat before other cleanup |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -106,6 +107,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 24 Plan 01 (24-01): AnalyticsService with 3 RPC methods (getAttendanceRates, getOvertimeFlags, getMissingClockouts), 2 SQL RPCs, 14 unit tests, spec-compliant widgets
 - Phase 24 Plan 03 (24-03): PatternDetectionService with compute() isolate (first use), get_arrival_patterns RPC (PERCENTILE_CONT, HAVING >= 5), 14 unit tests, integrated into kiosk scan as fire-and-forget
 - Phase 27 context captured: heartbeat sends immediately on kiosk start, rolls every 15 minutes, retries on reconnect, uses SQLite pending+failed count, and stores app version as version+build
+- Phase 27 Plan 02 (27-02): HeartbeatService created (lib/services/heartbeat_service.dart), wired into KioskBackgroundService start/stop lifecycle
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
