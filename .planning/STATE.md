@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: Not started
-status: completed
-last_updated: "2026-03-19T16:22:41.556Z"
-last_activity: 2026-03-20 — Phase 27 Plan 02 complete
+current_plan: 28-01
+status: planned
+last_updated: "2026-03-20T17:00:00Z"
+last_activity: 2026-03-20 — Phase 28 planned (1 plan, 1 wave)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
+  total_plans: 3
   completed_plans: 2
 ---
 
@@ -17,16 +17,16 @@ progress:
 
 ## Current Position
 
-Phase: 27 (Complete)
-Plan: 02 complete — all plans done
-Status: Complete
-Last activity: 2026-03-20 — Phase 27 Plan 02 complete
+Phase: 28 (Planned)
+Plan: 28-01
+Status: Ready to execute
+Last activity: 2026-03-20 — Phase 28 planned (1 plan, 1 wave)
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** 27 — Foundation & Kiosk Heartbeat
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-20 — 27-02 HeartbeatService implemented and wired
+- **Phase:** 28 — Failure Surfaces & Crash Reporting
+- **Current Plan:** 28-01 — Sentry integration, NFC noise filter, background failure capture
+- **Last Updated:** 2026-03-20 — Phase 28 planned
 
 ## Progress
 
@@ -45,7 +45,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 27 — Foundation & Kiosk Heartbeat
+**Current focus:** Phase 28 — Failure Surfaces & Crash Reporting
 
 ## What Was Shipped
 
@@ -108,6 +108,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 24 Plan 03 (24-03): PatternDetectionService with compute() isolate (first use), get_arrival_patterns RPC (PERCENTILE_CONT, HAVING >= 5), 14 unit tests, integrated into kiosk scan as fire-and-forget
 - Phase 27 context captured: heartbeat sends immediately on kiosk start, rolls every 15 minutes, retries on reconnect, uses SQLite pending+failed count, and stores app version as version+build
 - Phase 27 Plan 02 (27-02): HeartbeatService created (lib/services/heartbeat_service.dart), wired into KioskBackgroundService start/stop lifecycle
+- Phase 28 context captured: release-only Sentry, whole-app plus background coverage, benign Tag-lost-family NFC filtering, and deduped background reporting with outlet/device context
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
