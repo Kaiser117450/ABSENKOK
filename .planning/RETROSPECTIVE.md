@@ -128,6 +128,49 @@
 
 ---
 
+## Milestone: v4.0 — Smart Attendance + Admin Dashboard
+
+**Shipped:** 2026-03-19
+**Phases:** 4 (23-26) | **Plans:** 11 | **Timeline:** 2 days (Mar 18 → Mar 19)
+
+### What Was Built
+- Fixed NFC double-scan crash in employee registration flow (race condition on rapid scan)
+- Built AnalyticsService with 3 RPC methods — attendance rate card, overtime flagging, missing clock-out batched notification
+- Smart pattern detection with `compute()` isolate (first use) — median arrival times per day-of-week, late notification (>5 min threshold)
+- StreakService tracking consecutive on-time attendance with noon-rule logical days
+- ChartDashboardScreen with fl_chart — donut chart, weekly bar chart, streak leaderboard, overtime alerts
+- Cross-outlet attendance comparison (admin-only grouped bar chart)
+- Kiosk scan result displays current streak; StreakBadgeService auto-awards at 7/30/90-day milestones
+- CreateAdminScreen — 3-state UI (form→loading→success), WhatsApp deep link sharing, PDF audit trail
+- AdminOnboardingService + Supabase Edge Function `create-admin-user` (service_role server-side)
+- Edge Function deployed via Supabase MCP tool directly from Claude session
+
+### What Worked
+- **Wave-based parallelization:** Plans 02+03 merged into Plan 01 (all touching same .dart file) — avoided merge conflicts entirely
+- **Supabase MCP deployment:** Edge Function deployed without leaving the coding session — zero CLI friction
+- **compute() isolate for pattern detection:** Clean pattern established — heavy computation never touches the main thread
+- **Phase merging for simple plans:** Plans 02+03 (WhatsApp + PDF) were small enough that merging into Plan 01 saved a full wave cycle
+- **gsd-tools milestone complete:** CLI handled roadmap/requirements archival automatically — reduced manual steps
+
+### What Was Inefficient
+- **REQUIREMENTS.md checkboxes not auto-updated:** After Phase 26 execution, ADMIN-01..04 were still `[ ]` — required manual fix at milestone completion
+- **ROADMAP.md Phase 25 plans showed `[ ]`:** Plans 25-00, 25-01, 25-02 had unchecked boxes despite having SUMMARY.md files — roadmap analyze showed disk_status complete correctly but markdown was stale
+- **Phase 24 had 0 plan files on disk:** Plans existed as ROADMAP.md descriptions but not as physical PLAN.md files — gsd-tools reported 0 plans for phases 24-25
+
+### Patterns Established
+- **Edge Function via MCP:** `mcp__claude_ai_Supabase__deploy_edge_function` deploys directly — no Supabase CLI, no terminal friction
+- **compute() isolate pattern:** Use `compute(topLevelFunction, args)` for CPU-heavy analytics (pattern detection, streak calculations). Always cache results with TTL.
+- **3-state screen pattern:** `enum _ScreenState { form, loading, success }` + `AnimatedSwitcher` — clean, reusable pattern for wizard-style flows
+- **Merge sibling plans:** When 2+ plans modify the same file in sequence, merge them into one wave to avoid file conflicts
+
+### Key Lessons
+- **MCP > CLI for deployment:** Supabase Edge Function deployed in seconds via MCP — recommend for all future Edge Function deployments
+- **service_role security:** Always verify `grep -r "service_role" lib/` returns only comments — critical for APK security
+- **Checkbox hygiene:** Update REQUIREMENTS.md traceability immediately after each phase execution, not at milestone close
+- **fl_chart integration:** Add `dispose()` for all chart controllers; use `AutomaticKeepAliveClientMixin` on chart screens to prevent rebuild on tab switch
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -135,6 +178,10 @@
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
+| v2.0 | 1 day | 4 | Rapid iteration — admin tools + live activity |
+| v3.0 | 1 day | 3 | Website + schedule grid — separate Astro repo pattern |
+| v3.1 | 1 day | 3 | Biometric + badge polish + production release |
+| v4.0 | 2 days | 4 | Analytics + dashboard + Edge Function MCP deployment |
 | v2.0 | 1 day | 4 | Tight scope = very fast execution; SQL-only phase lacks artifacts |
 | v3.0 | 1 day | 3 | First cross-domain milestone (Flutter + website); phase added mid-stream |
 

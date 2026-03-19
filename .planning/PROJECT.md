@@ -11,37 +11,39 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v4.0 Smart Attendance + Admin Dashboard
-
-**Goal:** Solidify core attendance system with smart pattern detection, streamline admin onboarding for kepala gerai, and build comprehensive dashboard with charts and gamification.
-
-**Target features:**
-- Fix NFC double-scan crash during employee registration
-- Kepala Gerai onboarding via app (Supabase Auth, auto-generate credentials, copy to WA)
-- Smart attendance pattern algorithm (BETA) — detect usual check-in times from historical data, late notification
-- Overtime tracking based on pattern detection
-- Push notification for missing clock-out
-- Attendance rate card on admin dashboard
-- Gamification streak (employee attendance streaks)
-- Mini chart dashboard for kepala gerai (recap 1 layar)
-- Cross-outlet attendance comparison report
-
 ## Current State
 
-**Shipped:** v3.1 Biometric Login + Badge Polish + Release (2026-03-18)
+**Shipped:** v4.0 Smart Attendance + Admin Dashboard (2026-03-19)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~22,000+ LOC Dart across 50+ files; Astro website at `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
+**Codebase:** ~26,000+ LOC Dart across 60+ files; Supabase Edge Functions: `create-admin-user`
 
-### What v3.0 Added
-- ✅ Schedule UI grid redesign — week-view TableView with pinned row/column headers, color-coded shift chips
-- ✅ Bulk assign mode and auto-generate schedule from 2/3-shift templates
-- ✅ ABSENKOK marketing website (Astro 5 + Tailwind v4, deployed to Vercel)
-- ✅ Website polished with real app screenshots, About/Architecture section, 4 inline SVG tech icons
+### What v4.0 Added
+- ✅ NFC double-scan crash fix during employee registration
+- ✅ Smart attendance pattern detection (BETA) — median arrival time per day-of-week, late notification
+- ✅ Overtime tracking flags from shift template duration comparison
+- ✅ Missing clock-out batched notification per outlet ("3 karyawan belum pulang di Outlet A")
+- ✅ Attendance rate card on admin dashboard (hadir %, concrete counts)
+- ✅ Gamification streak system — consecutive on-time attendance, kiosk scan streak display
+- ✅ Auto-badge awards at 7/30/90-day streak milestones
+- ✅ Chart dashboard with fl_chart — donut chart, weekly trend bar, streak leaderboard, overtime alerts
+- ✅ Cross-outlet attendance comparison grouped bar chart (admin-only)
+- ✅ Kepala Gerai onboarding via app — CreateAdminScreen (3-state UI), Edge Function user creation, WhatsApp share, PDF audit trail
+- ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
 - Dual PDF service files (pdf_report_service.dart + pdf_service.dart)
 - Phase 15 has no formal PLAN/SUMMARY files (SQL-only phase)
+- Pattern detection `compute()` isolate: first use in this app — monitor production performance
+
+<details>
+<summary>v3.1 Context (shipped 2026-03-18)</summary>
+
+- Biometric login (fingerprint/face) with 5s timeout fallback
+- Badge color picker for visual customization
+- Production release: GitHub Release v3.1 with ABSENKOK-v3.1.0.apk
+
+</details>
 
 <details>
 <summary>v2.0 Context (shipped 2026-03-12)</summary>
@@ -66,6 +68,19 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 </details>
 
 ## Requirements
+
+### Validated (v4.0)
+- ✓ NFC double-scan crash fixed — v4.0
+- ✓ Smart attendance pattern detection (BETA, median arrival per day-of-week) — v4.0
+- ✓ Overtime tracking from shift template duration — v4.0
+- ✓ Missing clock-out batched notification per outlet — v4.0
+- ✓ Attendance rate card on admin dashboard (hadir %, concrete counts) — v4.0
+- ✓ Gamification streak — consecutive on-time attendance with kiosk display — v4.0
+- ✓ Auto-badge awards at 7/30/90-day streak milestones — v4.0
+- ✓ Chart dashboard (donut chart, weekly trend, streak leaderboard, overtime alerts) — v4.0
+- ✓ Cross-outlet attendance comparison (admin-only grouped bar chart) — v4.0
+- ✓ Kepala Gerai onboarding from app (Edge Function, WhatsApp share, PDF audit trail) — v4.0
+- ✓ All chart aggregations via Supabase RPC (server-side) — v4.0
 
 ### Validated (v3.0)
 - ✓ Schedule UI grid redesign — week-view TableView, pinned headers, color-coded shift chips — v3.0
@@ -95,16 +110,8 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sakit/Izin direct input by Kepala Gerai
 - ✓ Employee badge system
 
-### Active (v4.0)
-- [ ] Fix NFC double-scan crash during employee registration
-- [ ] Kepala Gerai onboarding via app (Supabase Auth auto-generate)
-- [ ] Smart attendance pattern detection (BETA)
-- [ ] Overtime tracking based on pattern detection
-- [ ] Push notification for missing clock-out
-- [ ] Attendance rate card on admin dashboard
-- [ ] Gamification streak (employee attendance streaks)
-- [ ] Mini chart dashboard for kepala gerai
-- [ ] Cross-outlet attendance comparison report
+### Active (v5.0)
+*(to be defined — run /gsd:new-milestone)*
 
 ### Deferred (Future)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
@@ -149,6 +156,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 ```
 outlets (4 rows)          — id, name, address, lat/lng, device_id, kiosk_password_hash, is_active
 employees (14 rows)       — id, name, employee_code, nfc_uid, home_outlet_id, position, photo_url, is_active, active_badge_id, archived_at
+employee_streaks          — employee_id, current_streak, longest_streak, last_attendance_date, last_updated
 attendance_logs (89+ rows)— id, employee_id, scan_outlet_id, type[masuk|break|pulang|kembali|sakit|izin],
                             lat/lng, scanned_at, local_id, is_backup, notes
 shift_templates (3 rows)  — id, outlet_id, name, slots(jsonb), is_default
@@ -190,6 +198,13 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 13 | Astro 5 website in separate repo (absenkok-website/) | ✓ Zero coupling to Flutter codebase |
 | 14 | Tailwind v4 CSS-first config (no tailwind.config.js) | ✓ Simpler, no config file overhead |
 | 15 | Inline SVG tech icons (no external library) | ✓ Zero bundle overhead, color-customizable |
+| 16 | Time-based overtime threshold (8h default), not schedule-aware join | ✓ Avoids SQLite/Supabase cross-system join complexity |
+| 17 | MissingClockoutService: direct RPC call (not via AnalyticsService) | ✓ Avoids build-order dependency between services |
+| 18 | Late detection threshold exclusive (>5 min, not >=) | ✓ Matches "late >5 minutes" UX spec |
+| 19 | Pattern detection via compute() isolate + 6h cache | ✓ Never blocks NFC scan handler |
+| 20 | Kepala Gerai creation via Edge Function (service_role server-side) | ✓ service_role key never in APK |
+| 21 | WhatsApp sharing via deep link + share_plus fallback | ✓ Works on all Android versions |
+| 22 | Plans 02+03 merged into 01 for same .dart file | ✓ Avoids merge conflicts, reduces build iterations |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -207,4 +222,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-18 — v4.0 milestone started*
+*Last updated: 2026-03-19 — v4.0 milestone complete*

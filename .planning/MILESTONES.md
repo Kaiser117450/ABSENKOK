@@ -1,4 +1,13 @@
 # Milestones
+## v4.0 Smart Attendance + Admin Dashboard (Shipped: 2026-03-19)
+
+**Phases completed:** 2 phases, 5 plans, 0 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## v3.0 Schedule Grid + Landing Website (Shipped: 2026-03-13)
 
 **Phases:** 17-19 (3 phases, 6 plans)
