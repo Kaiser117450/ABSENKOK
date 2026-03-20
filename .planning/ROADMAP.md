@@ -4,7 +4,7 @@
 
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
-| 31 | Device Identity Foundation | Establish persistent device tracking and decouple schema. | HEALTH-01, HEALTH-02 | 3 |
+| 31 | 2/2 | Complete   | 2026-03-20 | 3 |
 | 32 | Multi-Device Dashboard | Visualize and manage individual kiosk devices per outlet. | HEALTH-03, HEALTH-04, HEALTH-05 | 4 |
 | 33 | Multi-Outlet Control Center | Aggregated chain-wide dashboard for central admins. | ADMIN-01, ADMIN-02 | 3 |
 

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
-current_plan: Not started
-status: Context gathered
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-03-20T09:09:13.370Z"
-last_activity: 2026-03-20 — Phase 31 context gathered
+current_plan: 31-01 complete
+status: executing
+stopped_at: Completed 31-02-PLAN.md
+last_updated: "2026-03-20T09:15:56.717Z"
+last_activity: 2026-03-20 — Completed 31-01 (DeviceIdentityService + UUID persistence)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
@@ -21,13 +21,13 @@ progress:
 Phase: 31 — Device Identity Foundation
 Plan: 01 complete, 02 pending
 Status: In Progress
-Last activity: 2026-03-20 — Completed 31-01 (DeviceIdentityService + UUID persistence)
+Last activity: 2026-03-20 — Completed 31-02 (kiosk_devices migration + HeartbeatService dual-write)
 
 ## Current Status
 - **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
 - **Phase:** 31 — Device Identity Foundation (In Progress)
-- **Current Plan:** 31-01 complete
-- **Last Updated:** 2026-03-20 — Plan 31-01 complete
+- **Current Plan:** 31-02 complete (Phase 31 complete)
+- **Last Updated:** 2026-03-20 — Plan 31-02 complete
 
 ## Progress
 
@@ -92,6 +92,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 29-01 | Long-press only on brand logo column (not full header) | Intentionally hidden from employees — only operators who know will find it |
 | 30-01 | Use withValues(alpha:) in new widgets — not withOpacity() | Matches Flutter 3.x deprecation guidance and existing codebase pattern |
 | 31-01 | DeviceIdentityService as pure static class with SharedPreferences persistence | No instance state needed; uuid package already present at ^4.5.1 |
+| 31-02 | Dual-write pattern: RPC primary (kiosk_devices) + outlets bridge until Phase 32 admin dashboard migration | Backward compatible; admin dashboard still reads outlets heartbeat columns |
+| 31-02 | SECURITY DEFINER RPC (upsert_kiosk_heartbeat) for anon-key kiosk writes | Matches verify_kiosk_password pattern; anon key cannot direct-write with RLS |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -121,11 +123,12 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 28 context captured: release-only Sentry, whole-app plus background coverage, benign Tag-lost-family NFC filtering, and deduped background reporting with outlet/device context
 - Phase 29 Plan 01: KioskDiagnosticsScreen at /kiosk/diagnostics (battery, connectivity, version, pending/failed counts, Force Sync); amber sync indicator strip on idle screen slides in when pendingCount > 0; long-press logo opens diagnostics
 - Phase 31 context captured: installation identity must persist across logout/setup, existing admin health surfaces must stay accurate during the schema transition, and one physical device keeps one identity even when reassigned between outlets
+- Phase 31 Plan 02 (31-02): kiosk_devices table + upsert_kiosk_heartbeat SECURITY DEFINER RPC + HeartbeatService dual-write (RPC primary + outlets bridge). Migration file: sql/phase_31_kiosk_devices_20260320.sql — MUST be applied to Supabase before deploying updated APK
 
 ## Session Continuity
 
-**Last session:** 2026-03-20T09:09:13.367Z
-**Stopped at:** Completed 31-01-PLAN.md
+**Last session:** 2026-03-20T09:15:56.715Z
+**Stopped at:** Completed 31-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
