@@ -1,51 +1,63 @@
-# ROADMAP — v5.0 Ops hardening + reliability
+# Roadmap: Absensi Enakko
 
-**Starting Phase:** 27
-**Status:** Requirements Mapped
+## Milestones
+
+- ✅ **v1.1 Stability & Features** — Phases 1–10 (shipped 2026-03-05) — [archive](.planning/milestones/v1.1-ROADMAP.md)
+- ✅ **v2.0 Archive & Batch Import** — Phases 11–16 (shipped 2026-03-12) — [archive](.planning/milestones/v2.0-ROADMAP.md)
+- ✅ **v3.0 Schedule Grid & Website** — Phases 17–22 (shipped 2026-03-17) — [archive](.planning/milestones/v3.0-ROADMAP.md)
+- ✅ **v4.0 Smart Attendance + Analytics** — Phases 23–26 (shipped 2026-03-19) — [archive](.planning/milestones/v4.0-ROADMAP.md)
+- ✅ **v5.0 Observability & Recovery** — Phases 27–30 (shipped 2026-03-20) — [archive](.planning/milestones/v5.0-ROADMAP.md)
+- 📋 **v6.0** — (planned)
 
 ## Phases
 
-### Phase 27: Foundation & Kiosk Heartbeat
-**Goal:** Expand `outlets` table and implement background heartbeat with device metrics.
-**Requirements:** HLTH-01, HLTH-02, SYNC-01, SYNC-02
-**Plans:** 2/2 plans complete
+<details>
+<summary>✅ v5.0 Observability & Recovery (Phases 27–30) — SHIPPED 2026-03-20</summary>
 
-Plans:
-- [ ] 27-01-PLAN.md — SQL migration, Outlet model expansion, battery_plus + package_info_plus deps
-- [ ] 27-02-PLAN.md — HeartbeatService implementation + KioskBackgroundService wiring
+- [x] Phase 27: Foundation & Kiosk Heartbeat (2/2 plans) — completed 2026-03-20
+- [x] Phase 28: Failure Surfaces & Crash Reporting (1/1 plan) — completed 2026-03-20
+- [x] Phase 29: Diagnostics & Recovery Tools (1/1 plan) — completed 2026-03-20
+- [x] Phase 30: Multi-Outlet Admin Visibility (1/1 plan) — completed 2026-03-20
 
-**Success Criteria:**
-1. Supabase `outlets` table has `last_heartbeat_at`, `battery_level`, `is_charging`, `pending_sync_count`, and `app_version` columns.
-2. `battery_plus` package is integrated and successfully reads battery status on Android.
-3. Kiosk background isolate sends ping to Supabase every 15 minutes with all metrics.
+</details>
 
-### Phase 28: Failure Surfaces & Crash Reporting
-**Goal:** Integrate Sentry for crash reporting to catch silent native/isolate failures.
-**Requirements:** FAIL-01, FAIL-02, FAIL-03
-**Plans:** 1/1 plans complete
+<details>
+<summary>✅ v4.0 Smart Attendance + Analytics (Phases 23–26) — SHIPPED 2026-03-19</summary>
 
-Plans:
-- [ ] 28-01-PLAN.md — Sentry integration, NFC noise filter, background failure capture with throttle
+See [v4.0 archive](.planning/milestones/v4.0-ROADMAP.md)
 
-**Success Criteria:**
-1. `sentry_flutter` is initialized in `main()`.
-2. NFC `Tag lost` exceptions are filtered and not sent to Sentry.
-3. Errors inside the `KioskBackgroundService` isolate are explicitly captured and sent to Sentry.
+</details>
 
-### Phase 29: Diagnostics & Recovery Tools
-**Goal:** Expose sync visibility on the kiosk and provide tools to force reconcile.
-**Requirements:** SYNC-04, RECV-01, RECV-02, RECV-03
+<details>
+<summary>✅ v3.0 Schedule Grid & Website (Phases 17–22) — SHIPPED 2026-03-17</summary>
 
-**Success Criteria:**
-1. Kiosk idle screen displays a visual indicator when there are pending attendance logs in SQLite.
-2. Secret/Admin-gated Diagnostic screen contains a "Force Sync" button.
-3. Pressing "Force Sync" triggers `OfflineQueueService` to process queue immediately with visual UI feedback (Toast).
+See [v3.0 archive](.planning/milestones/v3.0-ROADMAP.md)
 
-### Phase 30: Multi-Outlet Admin Visibility
-**Goal:** Expose the health metrics and sync warnings on the Admin Dashboard.
-**Requirements:** HLTH-03, HLTH-04, SYNC-03
+</details>
 
-**Success Criteria:**
-1. Admin dashboard highlights outlets that haven't sent a heartbeat in >30 minutes ("Offline").
-2. Outlets with <20% battery show a clear warning icon.
-3. Outlets with pending offline syncs (`pending_sync_count > 0`) show the exact count on the dashboard.
+<details>
+<summary>✅ v2.0 Archive & Batch Import (Phases 11–16) — SHIPPED 2026-03-12</summary>
+
+See [v2.0 archive](.planning/milestones/v2.0-ROADMAP.md)
+
+</details>
+
+<details>
+<summary>✅ v1.1 Stability & Features (Phases 1–10) — SHIPPED 2026-03-05</summary>
+
+See [v1.1 archive](.planning/milestones/v1.1-ROADMAP.md)
+
+</details>
+
+### 📋 v6.0 (Planned)
+
+*(Define with /gsd:new-milestone)*
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status   | Completed  |
+|-------|-----------|----------------|----------|------------|
+| 27. Foundation & Kiosk Heartbeat | v5.0 | 2/2 | Complete | 2026-03-20 |
+| 28. Failure Surfaces & Crash Reporting | v5.0 | 1/1 | Complete | 2026-03-20 |
+| 29. Diagnostics & Recovery Tools | v5.0 | 1/1 | Complete | 2026-03-20 |
+| 30. Multi-Outlet Admin Visibility | v5.0 | 1/1 | Complete | 2026-03-20 |

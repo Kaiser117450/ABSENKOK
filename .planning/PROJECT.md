@@ -13,19 +13,16 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 ## Current State
 
-## Current Milestone: v5.0 Ops hardening + reliability
-
-**Goal:** Make the system safer to trust every day.
-
-**Target features:**
-- Sync visibility
-- Kiosk/device health
-- Recovery / reconciliation
-- Failure surfaces and repair tools
-
-**Shipped:** v4.0 Smart Attendance + Admin Dashboard (2026-03-19)
+**Shipped:** v5.0 Observability & Recovery (2026-03-20)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~26,000+ LOC Dart across 60+ files; Supabase Edge Functions: `create-admin-user`
+**Codebase:** ~31,000+ LOC Dart across 65+ files; Supabase Edge Functions: `create-admin-user`
+
+### What v5.0 Added
+- ✅ Background heartbeat — kiosk pings Supabase every 15 min with battery, charging state, app version, pending sync count
+- ✅ Sentry crash reporting — unhandled Dart/native exceptions captured; NFC "Tag lost" noise filtered; background isolate covered
+- ✅ Kiosk diagnostics screen (long-press logo) — shows outlet, battery, connectivity, pending/failed counts + Force Sync button
+- ✅ Sync indicator strip on kiosk idle screen — amber strip appears when pending logs > 0, auto-hides on clear
+- ✅ Admin dashboard "Status Kiosk" section — per-outlet online/offline, battery warning (<20%), sync badge
 
 ### What v4.0 Added
 - ✅ NFC double-scan crash fix during employee registration
@@ -120,13 +117,15 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sakit/Izin direct input by Kepala Gerai
 - ✓ Employee badge system
 
-### Active (v5.0)
-- Goal: Make the system safer to trust every day (Ops hardening + reliability)
-- Sync visibility
-- Kiosk/device health
-- Recovery / reconciliation
-- Failure surfaces and repair tools
-*(Requirements to be defined)*
+### Validated (v5.0)
+- ✓ Background heartbeat (15-min, battery + charging + version + pending count) — v5.0
+- ✓ Sentry crash reporting — unhandled Dart/native + NFC noise filter + background isolate — v5.0
+- ✓ Kiosk diagnostics screen + force sync button — v5.0
+- ✓ Sync indicator strip on kiosk idle screen — v5.0
+- ✓ Admin dashboard "Status Kiosk" section (online/offline, battery, sync count) — v5.0
+
+### Active (v6.0)
+*(Requirements to be defined — run /gsd:new-milestone)*
 
 ### Deferred (Future)
 - M005 — Multi-outlet control center (Chain-level oversight)
@@ -222,6 +221,9 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 20 | Kepala Gerai creation via Edge Function (service_role server-side) | ✓ service_role key never in APK |
 | 21 | WhatsApp sharing via deep link + share_plus fallback | ✓ Works on all Android versions |
 | 22 | Plans 02+03 merged into 01 for same .dart file | ✓ Avoids merge conflicts, reduces build iterations |
+| 23 | Sentry NFC noise filter via type+message check | ✓ Zero spam; real errors still captured |
+| 24 | HeartbeatService in background isolate (not main) | ✓ Never blocks NFC scan, survives app minimize |
+| 25 | Diagnostics screen behind long-press logo (hidden) | ✓ No UI clutter; ops can access without training |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -239,4 +241,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-19 — v5.0 milestone started*
+*Last updated: 2026-03-20 — v5.0 milestone shipped*

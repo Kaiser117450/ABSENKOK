@@ -2,6 +2,40 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v5.0 — Observability & Recovery
+
+**Shipped:** 2026-03-20
+**Phases:** 4 (27–30) | **Plans:** 5 | **Timeline:** 1 day
+
+### What Was Built
+- HeartbeatService — 15-min background ping with battery, charging state, app version, pending sync count
+- Sentry crash reporting — unhandled Dart + native exceptions, NFC noise filtered, background isolate covered
+- KioskDiagnosticsScreen — device info, connectivity, force sync with toast feedback (long-press logo entry)
+- Sync indicator strip on kiosk idle screen — amber strip animates in when pending > 0
+- Admin dashboard "Status Kiosk" section — per-outlet online/offline, battery (<20% warning), sync badge
+- Production Supabase migration: 5 heartbeat columns added to `outlets` table
+
+### What Worked
+- Plans were well-specified with exact interfaces — executors needed minimal inference
+- Single-plan phases executed in one shot with zero rework
+- Supabase MCP tool made the production migration trivial
+
+### What Was Inefficient
+- Rate limit hit between phases 29 and 30 — added a pause
+- Verifier was skipped for phase 29 due to rate limit, re-run next session was seamless
+
+### Patterns Established
+- Diagnostics entry via long-press on brand logo — zero UI footprint, ops-friendly
+- Sync indicator as a SlideTransition strip (not modal/alert) — non-intrusive, auto-hides
+- KioskHealthCard: status dot + outlet name + battery indicator + sync badge in one row
+
+### Key Lessons
+- Phase 27 had pending migration SQL pre-written — applying it in Phase 30 was instant via MCP
+- Sentry NFC noise filter is critical: without it, every lost tag floods Sentry quota
+- Background isolate heartbeat is the right architecture: never touches main thread, survives minimize
+
+---
+
 ## Milestone: v1.1 — Bug Fix + Edge Cases + Features
 
 **Shipped:** 2026-03-05

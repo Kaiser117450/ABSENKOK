@@ -1,4 +1,13 @@
 # Milestones
+## v5.0 Observability & Recovery (Shipped: 2026-03-20)
+
+**Phases completed:** 4 phases, 5 plans, 3 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
 ## v4.0 Smart Attendance + Admin Dashboard (Shipped: 2026-03-19)
 
 **Phases completed:** 2 phases, 5 plans, 0 tasks
