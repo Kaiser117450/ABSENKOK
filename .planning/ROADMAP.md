@@ -1,63 +1,41 @@
-# Roadmap: Absensi Enakko
+# Milestone v6.0 Roadmap
 
-## Milestones
+**Goal:** Provide chain-wide oversight for admins across all outlets and decouple device health tracking to support multiple devices natively.
 
-- ✅ **v1.1 Stability & Features** — Phases 1–10 (shipped 2026-03-05) — [archive](.planning/milestones/v1.1-ROADMAP.md)
-- ✅ **v2.0 Archive & Batch Import** — Phases 11–16 (shipped 2026-03-12) — [archive](.planning/milestones/v2.0-ROADMAP.md)
-- ✅ **v3.0 Schedule Grid & Website** — Phases 17–22 (shipped 2026-03-17) — [archive](.planning/milestones/v3.0-ROADMAP.md)
-- ✅ **v4.0 Smart Attendance + Analytics** — Phases 23–26 (shipped 2026-03-19) — [archive](.planning/milestones/v4.0-ROADMAP.md)
-- ✅ **v5.0 Observability & Recovery** — Phases 27–30 (shipped 2026-03-20) — [archive](.planning/milestones/v5.0-ROADMAP.md)
-- 📋 **v6.0** — (planned)
+| # | Phase | Goal | Requirements | Criteria |
+|---|-------|------|--------------|----------|
+| 31 | Device Identity Foundation | Establish persistent device tracking and decouple schema. | HEALTH-01, HEALTH-02 | 3 |
+| 32 | Multi-Device Dashboard | Visualize and manage individual kiosk devices per outlet. | HEALTH-03, HEALTH-04, HEALTH-05 | 4 |
+| 33 | Multi-Outlet Control Center | Aggregated chain-wide dashboard for central admins. | ADMIN-01, ADMIN-02 | 3 |
 
-## Phases
+---
 
-<details>
-<summary>✅ v5.0 Observability & Recovery (Phases 27–30) — SHIPPED 2026-03-20</summary>
+## Phase Details
 
-- [x] Phase 27: Foundation & Kiosk Heartbeat (2/2 plans) — completed 2026-03-20
-- [x] Phase 28: Failure Surfaces & Crash Reporting (1/1 plan) — completed 2026-03-20
-- [x] Phase 29: Diagnostics & Recovery Tools (1/1 plan) — completed 2026-03-20
-- [x] Phase 30: Multi-Outlet Admin Visibility (1/1 plan) — completed 2026-03-20
+### Phase 31: Device Identity Foundation
+**Goal:** Establish persistent device tracking via UUIDv4 and decouple the database schema to support multiple devices.
+**Requirements:** [HEALTH-01, HEALTH-02]
 
-</details>
+**Success Criteria:**
+1. App successfully generates and persists a random UUIDv4 in `SharedPreferences` upon first boot.
+2. `HeartbeatService` upserts device data into the new `kiosk_devices` table instead of updating the `outlets` table.
+3. RLS policies on `kiosk_devices` explicitly allow outlets to upsert their own device statuses.
 
-<details>
-<summary>✅ v4.0 Smart Attendance + Analytics (Phases 23–26) — SHIPPED 2026-03-19</summary>
+### Phase 32: Multi-Device Dashboard
+**Goal:** Redesign the Admin 'Status Kiosk' section to handle and display multiple devices natively.
+**Requirements:** [HEALTH-03, HEALTH-04, HEALTH-05]
 
-See [v4.0 archive](.planning/milestones/v4.0-ROADMAP.md)
+**Success Criteria:**
+1. Admin Dashboard lists every active device independently with its own real-time battery and sync status.
+2. Admins can tap a device to assign an intuitive nickname (e.g., "Kiosk Depan").
+3. Admins can archive/unlink a retired device so it no longer appears as permanently Offline.
+4. Overwriting race conditions from two separate devices logging into the same outlet are completely eliminated.
 
-</details>
+### Phase 33: Multi-Outlet Control Center
+**Goal:** Provide an overarching central view (M005) combining metrics from all outlets across the entire restaurant chain.
+**Requirements:** [ADMIN-01, ADMIN-02]
 
-<details>
-<summary>✅ v3.0 Schedule Grid & Website (Phases 17–22) — SHIPPED 2026-03-17</summary>
-
-See [v3.0 archive](.planning/milestones/v3.0-ROADMAP.md)
-
-</details>
-
-<details>
-<summary>✅ v2.0 Archive & Batch Import (Phases 11–16) — SHIPPED 2026-03-12</summary>
-
-See [v2.0 archive](.planning/milestones/v2.0-ROADMAP.md)
-
-</details>
-
-<details>
-<summary>✅ v1.1 Stability & Features (Phases 1–10) — SHIPPED 2026-03-05</summary>
-
-See [v1.1 archive](.planning/milestones/v1.1-ROADMAP.md)
-
-</details>
-
-### 📋 v6.0 (Planned)
-
-*(Define with /gsd:new-milestone)*
-
-## Progress
-
-| Phase | Milestone | Plans Complete | Status   | Completed  |
-|-------|-----------|----------------|----------|------------|
-| 27. Foundation & Kiosk Heartbeat | v5.0 | 2/2 | Complete | 2026-03-20 |
-| 28. Failure Surfaces & Crash Reporting | v5.0 | 1/1 | Complete | 2026-03-20 |
-| 29. Diagnostics & Recovery Tools | v5.0 | 1/1 | Complete | 2026-03-20 |
-| 30. Multi-Outlet Admin Visibility | v5.0 | 1/1 | Complete | 2026-03-20 |
+**Success Criteria:**
+1. A new primary "Central Dashboard" view aggregates total connected devices and overall battery health across *all* outlets.
+2. Firm-wide daily attendance rate is aggregated and presented in real-time.
+3. Central admin can drill down from the chain-wide view into an individual outlet's specific health.

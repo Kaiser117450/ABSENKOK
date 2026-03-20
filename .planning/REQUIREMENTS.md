@@ -1,73 +1,21 @@
-# Requirements: Absensi Enakko v5.0 — Ops hardening + reliability
+# Milestone v6.0 Requirements
 
-**Defined:** 2026-03-19
-**Core Value:** Make the system safer to trust every day.
+## 1. Multi-Device Health
+- [ ] **HEALTH-01**: System generates and persists a unique Device ID per installation (UUIDv4).
+- [ ] **HEALTH-02**: Kiosk syncs heartbeat metrics to a dedicated `kiosk_devices` table instead of `outlets`.
+- [ ] **HEALTH-03**: Admin Dashboard displays health status for all connected devices within an outlet.
+- [ ] **HEALTH-04**: Admins can manually unlink/remove retired devices from the dashboard.
+- [ ] **HEALTH-05**: Admins can assign custom nicknames to devices (e.g., "Kiosk Pintu Depan").
 
-## v5.0 Requirements
-
-### Kiosk/Device Health (HLTH)
-- [x] **HLTH-01**: Kiosk tablet sends a background heartbeat to Supabase every 15 minutes.
-- [x] **HLTH-02**: Heartbeat payload includes `battery_level` (%), `is_charging` (boolean), and `app_version` (string).
-- [x] **HLTH-03**: Admin dashboard displays a warning (e.g. "Offline") if an outlet's kiosk has not sent a heartbeat in over 30 minutes.
-- [x] **HLTH-04**: Admin dashboard displays low battery warning (< 20%) for any active kiosk.
-
-### Sync Visibility (SYNC)
-- [x] **SYNC-01**: System counts the number of pending offline scans currently queued in local SQLite.
-- [x] **SYNC-02**: Pending sync count is sent as part of the 15-minute heartbeat payload (`pending_sync_count`).
-- [x] **SYNC-03**: Admin dashboard displays the number of unsynced logs per outlet.
-- [x] **SYNC-04**: Kiosk UI displays a visual indicator (icon or text) on the idle screen when there are pending offline syncs.
-
-### Recovery & Repair (RECV)
-- [x] **RECV-01**: Kiosk UI provides a hidden or admin-gated "Force Sync" button on the settings/diagnostic screen.
-- [x] **RECV-02**: Force Sync bypasses the normal queue timer and immediately attempts to flush the offline SQLite queue to Supabase.
-- [x] **RECV-03**: Success or failure of the Force Sync is communicated via a Toast or Snackbar.
-
-### Failure Surfaces (FAIL)
-- [x] **FAIL-01**: App integrates `sentry_flutter` to automatically capture and report unhandled Dart and native exceptions.
-- [x] **FAIL-02**: Sentry configuration explicitly filters out/ignores benign NFC `Tag lost` exceptions to prevent log spam.
-- [x] **FAIL-03**: The `KioskBackgroundService` isolate wraps its periodic task in a try/catch that reports directly to Sentry if a background failure occurs.
-
-## Future Requirements
-
-### Workflow
-- **FLOW-01**: Time-off request approval workflow.
-- **FLOW-02**: Keterlambatan (late arrival) automatic flagging vs shift start time.
-
-### Roadmap Additions
-- **M005**: Multi-outlet control center (chain-level oversight).
-- **M006**: Employee-facing web app (self-service).
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| iOS App | Kiosk is Android tablet only. |
-| Aggressive < 1min heartbeat | Will silently drain tablet battery and hit Supabase rate limits. |
-| Automatic remote restart | Android restricts remote restart without device root/MDM. |
+## 2. Multi-Outlet Control Center
+- [ ] **ADMIN-01**: Admin Central Dashboard aggregates and displays health/status for ALL outlets in one view.
+- [ ] **ADMIN-02**: Admin Central Dashboard displays aggregate firm-wide daily attendance rate.
 
 ## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| HLTH-01 | Phase 27 | Complete |
-| HLTH-02 | Phase 27 | Complete |
-| HLTH-03 | Phase 30 | Complete |
-| HLTH-04 | Phase 30 | Complete |
-| SYNC-01 | Phase 27 | Complete |
-| SYNC-02 | Phase 27 | Complete |
-| SYNC-03 | Phase 30 | Complete |
-| SYNC-04 | Phase 29 | Complete |
-| RECV-01 | Phase 29 | Complete |
-| RECV-02 | Phase 29 | Complete |
-| RECV-03 | Phase 29 | Complete |
-| FAIL-01 | Phase 28 | Complete |
-| FAIL-02 | Phase 28 | Complete |
-| FAIL-03 | Phase 28 | Complete |
-
-**Coverage:**
-- v5.0 requirements: 14 total
-- Mapped to phases: 14
-- Unmapped: 0
-
----
-*Requirements defined: 2026-03-19*
+- **HEALTH-01** → Phase 31
+- **HEALTH-02** → Phase 31
+- **HEALTH-03** → Phase 32
+- **HEALTH-04** → Phase 32
+- **HEALTH-05** → Phase 32
+- **ADMIN-01**  → Phase 33
+- **ADMIN-02**  → Phase 33
