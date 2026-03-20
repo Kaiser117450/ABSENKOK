@@ -1,32 +1,32 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: milestone
+milestone: v6.0
+milestone_name: Multi-Outlet & Multi-Device Control
 current_plan: Not started
-status: completed
-last_updated: "2026-03-20T05:05:59.074Z"
-last_activity: 2026-03-20 — Phase 30 Plan 01 complete (heartbeat migration, KioskHealthCard, admin dashboard health section)
+status: Defining requirements
+last_updated: "2026-03-20T14:48:00.000Z"
+last_activity: 2026-03-20 — Milestone v6.0 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 30 (In Progress)
-Plan: 30-01 (Complete)
-Status: Phase 30 Plan 01 complete
-Last activity: 2026-03-20 — Phase 30 Plan 01 complete (heartbeat migration, KioskHealthCard, admin dashboard health section)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-20 — Milestone v6.0 started
 
 ## Current Status
-- **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** 30 — Multi-Outlet Admin Visibility (In Progress)
+- **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
+- **Phase:** Not started
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-20 — Phase 30 Plan 01 complete
+- **Last Updated:** 2026-03-20 — Milestone v6.0 started
 
 ## Progress
 

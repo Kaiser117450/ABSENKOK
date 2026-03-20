@@ -11,6 +11,14 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
+## Current Milestone: v6.0 Multi-Outlet & Multi-Device Control
+
+**Goal:** Provide chain-wide oversight for admins across all outlets and decouple device health tracking to support multiple devices natively.
+
+**Target features:**
+- Multi-device support per outlet (individual device heartbeats instead of outlet-level overwrites)
+- Multi-outlet control center (Chain-level oversight - M005)
+
 ## Current State
 
 **Shipped:** v5.0 Observability & Recovery (2026-03-20)
@@ -125,10 +133,9 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Admin dashboard "Status Kiosk" section (online/offline, battery, sync count) — v5.0
 
 ### Active (v6.0)
-*(Requirements to be defined — run /gsd:new-milestone)*
+*(Requirements to be defined — run /gsd-new-milestone)*
 
 ### Deferred (Future)
-- M005 — Multi-outlet control center (Chain-level oversight)
 - M006 — Employee-facing web app (Astro self-service)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
@@ -241,4 +248,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-20 — v5.0 milestone shipped*
+*Last updated: 2026-03-20 — Milestone v6.0 started*
