@@ -8,10 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../main.dart' show supabaseReady;
 import '../models/kiosk_session.dart';
+import 'device_identity_service.dart';
 import 'sentry_service.dart';
 import 'sqlite_service.dart';
 
-/// Sends a heartbeat to the `outlets` table every 15 minutes.
+/// Sends a heartbeat to the `kiosk_devices` table (via RPC) every 15 minutes.
+/// Also updates `outlets` table heartbeat fields as a backward-compatible bridge
+/// until Phase 32 refactors the admin dashboard to read from `kiosk_devices`.
 ///
 /// Payload fields: last_heartbeat_at, battery_level, is_charging,
 /// app_version, pending_sync_count.
@@ -25,6 +28,7 @@ class HeartbeatService {
   static KioskSession? _session;
   static DateTime? _lastSentAt;
   static String? _cachedVersion;
+  static String? _deviceUuid;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -33,6 +37,9 @@ class HeartbeatService {
   /// restore and retries with a 30-second debounce.
   static Future<void> start(KioskSession session) async {
     _session = session;
+
+    // Get persistent installation UUID (never changes across logout)
+    _deviceUuid = await DeviceIdentityService.getOrCreateDeviceUuid();
 
     // Immediate heartbeat on start
     await _sendHeartbeat();
@@ -70,6 +77,7 @@ class HeartbeatService {
     _connectivitySub?.cancel();
     _connectivitySub = null;
     _session = null;
+    _deviceUuid = null;
     _lastSentAt = null;
     debugPrint('[Heartbeat] stopped');
   }
@@ -134,6 +142,42 @@ class HeartbeatService {
     Map<String, dynamic> payload,
     String outletId,
   ) async {
+    // ── Primary: upsert into kiosk_devices via RPC ──
+    if (_deviceUuid != null) {
+      for (int attempt = 0; attempt < 3; attempt++) {
+        try {
+          await Supabase.instance.client.rpc(
+            'upsert_kiosk_heartbeat',
+            params: {
+              'p_device_uuid': _deviceUuid,
+              'p_outlet_id': outletId,
+              'p_battery_level': payload['battery_level'],
+              'p_is_charging': payload['is_charging'],
+              'p_pending_sync_count': payload['pending_sync_count'],
+              'p_app_version': payload['app_version'],
+            },
+          );
+          debugPrint('[Heartbeat] RPC upsert OK for device=$_deviceUuid');
+          break; // success
+        } catch (e, stack) {
+          if (attempt == 2) {
+            debugPrint('[Heartbeat] RPC upsert failed after 3 attempts: $e');
+            await SentryService.captureBackgroundFailure(
+              exception: e,
+              stackTrace: stack,
+              operation: 'heartbeat_rpc',
+              session: _session,
+            );
+          } else {
+            final delaySeconds = 2 * (attempt + 1);
+            debugPrint('[Heartbeat] RPC retry ${attempt + 1} in ${delaySeconds}s: $e');
+            await Future.delayed(Duration(seconds: delaySeconds));
+          }
+        }
+      }
+    }
+
+    // ── Bridge: also update outlets table (backward compat for admin dashboard) ──
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
         await Supabase.instance.client
@@ -143,19 +187,18 @@ class HeartbeatService {
         return; // success
       } catch (e, stack) {
         if (attempt == 2) {
-          debugPrint(
-              '[Heartbeat] _sendWithRetry failed after 3 attempts: $e');
+          debugPrint('[Heartbeat] bridge update failed after 3 attempts: $e');
           await SentryService.captureBackgroundFailure(
             exception: e,
             stackTrace: stack,
-            operation: 'heartbeat',
+            operation: 'heartbeat_bridge',
             session: _session,
           );
           return;
         }
         final delaySeconds = 2 * (attempt + 1); // 2s, 4s
         debugPrint(
-            '[Heartbeat] retry ${attempt + 1} in ${delaySeconds}s: $e');
+            '[Heartbeat] bridge retry ${attempt + 1} in ${delaySeconds}s: $e');
         await Future.delayed(Duration(seconds: delaySeconds));
       }
     }
