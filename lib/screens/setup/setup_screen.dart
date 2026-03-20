@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +6,7 @@ import '../../core/theme.dart';
 import '../../main.dart' show supabaseReady;
 import '../../models/kiosk_session.dart';
 import '../../providers/app_provider.dart';
+import '../../services/device_identity_service.dart';
 
 class SetupScreen extends ConsumerStatefulWidget {
   const SetupScreen({super.key});
@@ -126,7 +125,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
         return;
       }
 
-      final deviceId = _generateDeviceId();
+      final deviceId = await DeviceIdentityService.getOrCreateDeviceUuid();
 
       final session = KioskSession(
         outletId: outletId,
@@ -147,12 +146,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     } finally {
       if (mounted && _isLoading) setState(() => _isLoading = false);
     }
-  }
-
-  String _generateDeviceId() {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final rng = Random.secure();
-    return List.generate(12, (_) => chars[rng.nextInt(chars.length)]).join();
   }
 
   @override
