@@ -9,6 +9,9 @@ class AppConstants {
   static const String rememberedUserRoleKey = 'remembered_user_role_v1';
   static const String rememberedManagedOutletKey = 'remembered_managed_outlet_v1';
 
+  // Device identity (Phase 31) — survives kiosk logout
+  static const String installationDeviceUuidKey = 'installation_device_uuid_v1';
+
   // SQLite
   static const String dbName = 'absensi_enakko.db';
   static const int dbVersion = 5; // v5: added sakit/izin attendance types
