@@ -8,13 +8,13 @@
 ### Kiosk/Device Health (HLTH)
 - [x] **HLTH-01**: Kiosk tablet sends a background heartbeat to Supabase every 15 minutes.
 - [x] **HLTH-02**: Heartbeat payload includes `battery_level` (%), `is_charging` (boolean), and `app_version` (string).
-- [ ] **HLTH-03**: Admin dashboard displays a warning (e.g. "Offline") if an outlet's kiosk has not sent a heartbeat in over 30 minutes.
-- [ ] **HLTH-04**: Admin dashboard displays low battery warning (< 20%) for any active kiosk.
+- [x] **HLTH-03**: Admin dashboard displays a warning (e.g. "Offline") if an outlet's kiosk has not sent a heartbeat in over 30 minutes.
+- [x] **HLTH-04**: Admin dashboard displays low battery warning (< 20%) for any active kiosk.
 
 ### Sync Visibility (SYNC)
 - [x] **SYNC-01**: System counts the number of pending offline scans currently queued in local SQLite.
 - [x] **SYNC-02**: Pending sync count is sent as part of the 15-minute heartbeat payload (`pending_sync_count`).
-- [ ] **SYNC-03**: Admin dashboard displays the number of unsynced logs per outlet.
+- [x] **SYNC-03**: Admin dashboard displays the number of unsynced logs per outlet.
 - [x] **SYNC-04**: Kiosk UI displays a visual indicator (icon or text) on the idle screen when there are pending offline syncs.
 
 ### Recovery & Repair (RECV)
@@ -51,11 +51,11 @@
 |-------------|-------|--------|
 | HLTH-01 | Phase 27 | Complete |
 | HLTH-02 | Phase 27 | Complete |
-| HLTH-03 | Phase 30 | Pending |
-| HLTH-04 | Phase 30 | Pending |
+| HLTH-03 | Phase 30 | Complete |
+| HLTH-04 | Phase 30 | Complete |
 | SYNC-01 | Phase 27 | Complete |
 | SYNC-02 | Phase 27 | Complete |
-| SYNC-03 | Phase 30 | Pending |
+| SYNC-03 | Phase 30 | Complete |
 | SYNC-04 | Phase 29 | Complete |
 | RECV-01 | Phase 29 | Complete |
 | RECV-02 | Phase 29 | Complete |

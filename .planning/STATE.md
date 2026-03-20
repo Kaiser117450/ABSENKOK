@@ -2,31 +2,31 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-current_plan: Not started
-status: completed
-last_updated: "2026-03-20T04:30:41.421Z"
-last_activity: 2026-03-20 — Phase 29 Plan 01 complete (sync indicator strip, diagnostics screen, force sync)
+current_plan: 30-01 (Complete)
+status: in_progress
+last_updated: "2026-03-20T05:10:00.000Z"
+last_activity: 2026-03-20 — Phase 30 Plan 01 complete (heartbeat migration, KioskHealthCard, admin dashboard health section)
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 4
+  total_plans: 5
+  completed_plans: 5
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 29 (In Progress)
-Plan: 29-01 (Complete)
-Status: Phase 29 Plan 01 complete
-Last activity: 2026-03-20 — Phase 29 Plan 01 complete (sync indicator strip, diagnostics screen, force sync)
+Phase: 30 (In Progress)
+Plan: 30-01 (Complete)
+Status: Phase 30 Plan 01 complete
+Last activity: 2026-03-20 — Phase 30 Plan 01 complete (heartbeat migration, KioskHealthCard, admin dashboard health section)
 
 ## Current Status
 - **Milestone:** v5.0 — Ops hardening + reliability
-- **Phase:** 29 — Diagnostics & Recovery Tools (In Progress)
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-20 — Phase 29 Plan 01 complete
+- **Phase:** 30 — Multi-Outlet Admin Visibility (In Progress)
+- **Current Plan:** 30-01 (Complete)
+- **Last Updated:** 2026-03-20 — Phase 30 Plan 01 complete
 
 ## Progress
 
@@ -41,6 +41,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 - **Phase 26 progress:** 3/3 plans complete
 - **Phase 28 progress:** 1/1 plans complete
 - **Phase 29 progress:** 1/1 plans complete
+- **Phase 30 progress:** 1/? plans complete
 
 ## Project Reference
 
@@ -88,6 +89,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 28-01 | Throttle fingerprint = operation:exceptionType (15-min window) | Prevents flood alerts from retry storms without losing distinct failure types |
 | 29-01 | SlideTransition from top for sync strip (not AnimatedSwitcher) | Matches UI spec exactly — directional slide is more natural for a banner |
 | 29-01 | Long-press only on brand logo column (not full header) | Intentionally hidden from employees — only operators who know will find it |
+| 30-01 | Use withValues(alpha:) in new widgets — not withOpacity() | Matches Flutter 3.x deprecation guidance and existing codebase pattern |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
