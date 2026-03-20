@@ -14,6 +14,7 @@ import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
 import '../../services/badge_service.dart';
 import '../../widgets/badge_avatar.dart';
+import '../../widgets/kiosk_health_card.dart';
 import 'shift_scheduler_screen.dart';
 import '../../main.dart' show supabaseReady;
 
@@ -429,6 +430,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // ── STAT GRID 2×2 ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildStatGrid()),
 
+            // ── KIOSK HEALTH STATUS ────────────────────────────────────────
+            SliverToBoxAdapter(child: _buildKioskHealthSection()),
+
             // ── LIHAT DASHBOARD BUTTON ────────────────────────────────────
             SliverToBoxAdapter(child: _buildDashboardButton()),
 
@@ -656,6 +660,81 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Kiosk Health Section ──────────────────────────────────────────────────
+
+  Widget _buildKioskHealthSection() {
+    // Only show for active outlets that have been fetched
+    if (_outlets.isEmpty) return const SizedBox.shrink();
+
+    // Filter to show health for active outlets only
+    final activeOutlets = _selectedOutletId != null
+        ? _outlets.where((o) => o.id == _selectedOutletId).toList()
+        : _outlets;
+
+    // Count issues for summary
+    final offlineCount = activeOutlets.where((o) {
+      if (o.lastHeartbeatAt == null) return true;
+      return DateTime.now().difference(o.lastHeartbeatAt!).inMinutes > 30;
+    }).length;
+    final lowBatteryCount = activeOutlets
+        .where((o) => o.batteryLevel != null && o.batteryLevel! < 20)
+        .length;
+    final pendingSyncCount = activeOutlets
+        .where((o) => o.pendingSyncCount != null && o.pendingSyncCount! > 0)
+        .length;
+
+    final hasIssues =
+        offlineCount > 0 || lowBatteryCount > 0 || pendingSyncCount > 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header with optional issue count
+          Row(
+            children: [
+              const Icon(Icons.monitor_heart_outlined,
+                  size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              const Text(
+                'Status Kiosk',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              if (hasIssues) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.dangerLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$offlineCount offline',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          // One card per outlet
+          ...activeOutlets.map((outlet) => KioskHealthCard(outlet: outlet)),
         ],
       ),
     );

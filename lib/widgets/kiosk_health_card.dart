@@ -33,7 +33,7 @@ class KioskHealthCard extends StatelessWidget {
               color: status.color,
               boxShadow: [
                 BoxShadow(
-                  color: status.color.withOpacity(0.4),
+                  color: status.color.withValues(alpha: 0.4),
                   blurRadius: 4,
                 ),
               ],
@@ -82,7 +82,7 @@ class KioskHealthCard extends StatelessWidget {
                 color: AppColors.warningLight,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: AppColors.warning.withOpacity(0.3),
+                  color: AppColors.warning.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
