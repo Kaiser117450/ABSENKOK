@@ -3,9 +3,10 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Multi-Outlet & Multi-Device Control
 current_plan: Not started
-status: Roadmap created
-last_updated: "2026-03-20T15:00:00.000Z"
-last_activity: 2026-03-20 — Milestone v6.0 roadmap created
+status: Context gathered
+stopped_at: Phase 31 context gathered
+last_updated: "2026-03-20T08:10:51.039Z"
+last_activity: 2026-03-20 — Phase 31 context gathered
 progress:
   total_phases: 3
   completed_phases: 0
@@ -17,16 +18,16 @@ progress:
 
 ## Current Position
 
-Phase: 31 (Not started)
+Phase: 31 (Context gathered)
 Plan: —
-Status: Roadmap created
-Last activity: 2026-03-20 — Milestone v6.0 roadmap created
+Status: Context gathered
+Last activity: 2026-03-20 — Phase 31 context gathered
 
 ## Current Status
 - **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
-- **Phase:** 31 — Device Identity Foundation (Not started)
+- **Phase:** 31 — Device Identity Foundation (Context gathered)
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-20 — Milestone v6.0 roadmap created
+- **Last Updated:** 2026-03-20 — Phase 31 context gathered
 
 ## Progress
 
@@ -48,7 +49,7 @@ v4.0 Smart Attendance + Admin Dashboard — COMPLETE
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 28 — Failure Surfaces & Crash Reporting
+**Current focus:** Phase 31 — Device Identity Foundation
 
 ## What Was Shipped
 
@@ -118,6 +119,13 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 27 Plan 02 (27-02): HeartbeatService created (lib/services/heartbeat_service.dart), wired into KioskBackgroundService start/stop lifecycle
 - Phase 28 context captured: release-only Sentry, whole-app plus background coverage, benign Tag-lost-family NFC filtering, and deduped background reporting with outlet/device context
 - Phase 29 Plan 01: KioskDiagnosticsScreen at /kiosk/diagnostics (battery, connectivity, version, pending/failed counts, Force Sync); amber sync indicator strip on idle screen slides in when pendingCount > 0; long-press logo opens diagnostics
+- Phase 31 context captured: installation identity must persist across logout/setup, existing admin health surfaces must stay accurate during the schema transition, and one physical device keeps one identity even when reassigned between outlets
+
+## Session Continuity
+
+**Last session:** 2026-03-20T08:10:51.034Z
+**Stopped at:** Phase 31 context gathered
+**Resume file:** .planning/phases/31-device-identity-foundation/31-CONTEXT.md
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
