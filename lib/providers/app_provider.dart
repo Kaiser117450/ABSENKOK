@@ -6,6 +6,7 @@ import '../core/constants.dart';
 import '../models/employee.dart';
 import '../models/kiosk_session.dart';
 import '../services/biometric_service.dart';
+import '../services/device_identity_service.dart';
 
 /// Global application state — mirrors appStore.ts from React Native
 class AppState {
@@ -98,6 +99,10 @@ class AppNotifier extends StateNotifier<AppState> {
     state = state.copyWith(isLoading: true);
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Ensure persistent installation identity exists (Phase 31)
+      await DeviceIdentityService.getOrCreateDeviceUuid();
+
       final raw = prefs.getString(AppConstants.kioskSessionKey);
       final keepOverlayInForeground =
           prefs.getBool(AppConstants.overlayKeepForegroundKey) ?? false;
