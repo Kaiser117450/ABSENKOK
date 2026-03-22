@@ -64,7 +64,7 @@ All sizes use Plus Jakarta Sans via `GoogleFonts.plusJakartaSansTextTheme`. Sour
 | Body | 13sp | w600 | 1.3 | Device name (nickname or UUID prefix) in KioskDeviceCard |
 | Label | 11sp | w600 | 1.2 | Status label (Online / Offline), battery %, pending count |
 | Subheading | 15sp | w600 | 1.3 | AlertDialog title ("Beri Nama Kiosk", "Arsipkan Kiosk?") |
-| Hint | 14sp | w400 | 1.5 | TextField hintText in nickname dialog |
+| Hint | 13sp | w400 | 1.5 | TextField hintText in nickname dialog |
 
 Weight contract: exactly 2 weights — regular (w400) for input hint text only, semibold (w600) for all labels, names, and dialog titles. Do not use w700 in new widgets introduced by this phase.
 
@@ -110,7 +110,7 @@ File: `lib/widgets/kiosk_device_card.dart`
 
 Layout (Row):
 1. Status dot — 8x8 circle, color = online/offline/unconnected semantic
-2. SizedBox(width: 10)
+2. SizedBox(width: 8)
 3. Expanded Column:
    - Line 1: nickname ?? `"Kiosk ${deviceUuid.substring(0, 8)}"` — 13sp w600 textPrimary
    - Line 2: status label with age — 11sp w600 semantic color
