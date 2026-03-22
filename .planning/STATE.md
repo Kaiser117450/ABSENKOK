@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: 38-01 (complete), 38-02 next
+current_plan: Not started
 status: completed
 stopped_at: Completed 38-02-PLAN.md
-last_updated: "2026-03-22T15:55:04.899Z"
-last_activity: 2026-03-22 — Completed portal schedule helper + /portal index schedule surface (Phase 38 Plan 02)
+last_updated: "2026-03-22T15:56:38.753Z"
+last_activity: 2026-03-22 — get_portal_schedule_week RPC + partial indexes created
 progress:
   total_phases: 3
   completed_phases: 2
@@ -26,7 +26,7 @@ Last activity: 2026-03-22 — get_portal_schedule_week RPC + partial indexes cre
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
 - **Phase:** 38 — Employee Schedule Read Model
-- **Current Plan:** 38-01 (complete), 38-02 next
+- **Current Plan:** Not started
 - **Last Updated:** 2026-03-22 — Employee schedule read model RPC shipped; SCHED-01/02/03 backend complete
 
 ## Progress

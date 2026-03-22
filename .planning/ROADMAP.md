@@ -7,7 +7,7 @@
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
 | 37 | 4/4 | Complete    | 2026-03-22 | 4 |
-| 38 | 2/2 | Complete   | 2026-03-22 | 4 |
+| 38 | 2/2 | Complete    | 2026-03-22 | 4 |
 | 39 | Employee Portal Schedule UX | Ship the phone-friendly schedule experience with safe account states and portal-only logout. | AUTH-04, LINK-02, PORT-01, PORT-02 | 4 |
 
 ---
