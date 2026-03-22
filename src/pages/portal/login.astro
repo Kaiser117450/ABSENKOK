@@ -5,6 +5,8 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const errorParam = Astro.url.searchParams.get('error');
 const errorMessage = errorParam ? 'Nama atau kata sandi tidak sesuai. Silakan coba lagi.' : null;
+
+const signedOut = Astro.url.searchParams.get('signed_out') === '1';
 ---
 
 <BaseLayout
@@ -26,6 +28,12 @@ const errorMessage = errorParam ? 'Nama atau kata sandi tidak sesuai. Silakan co
     <!-- Card -->
     <div class="sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-white py-8 px-6 shadow-md rounded-2xl border border-gray-100">
+
+        {signedOut && (
+          <div class="mb-5 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800" role="status">
+            Anda telah keluar dari Portal Karyawan. Masuk kembali untuk melihat jadwal.
+          </div>
+        )}
 
         {errorMessage && (
           <div class="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">

@@ -30,23 +30,27 @@ function initials(name: string): string {
   </head>
   <body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col">
 
-    <!-- Top navigation bar -->
+    <!-- Top navigation bar — sticky, phone-first -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="max-w-3xl mx-auto px-3 sm:px-6 h-12 sm:h-14 flex items-center justify-between gap-2">
+
         <!-- Brand -->
-        <a href="/portal" class="inline-flex items-center gap-2 shrink-0">
-          <span class="text-lg font-extrabold tracking-tight">
+        <a href="/portal" class="inline-flex items-center gap-1.5 shrink-0 min-w-0">
+          <span class="text-base sm:text-lg font-extrabold tracking-tight leading-none">
             <span class="text-[#E91E8C]">ABSEN</span><span class="text-[#1A237E]">KOK</span>
           </span>
-          <span class="hidden sm:inline text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 ml-1">
+          <span class="hidden sm:inline text-xs font-medium text-gray-400 border border-gray-200 rounded px-1.5 py-0.5 ml-1 whitespace-nowrap">
             Portal Karyawan
           </span>
         </a>
 
         <!-- Employee identity + logout -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
           <!-- Avatar -->
-          <div class="w-8 h-8 rounded-full bg-[#E91E8C]/15 flex items-center justify-center text-[#E91E8C] font-semibold text-xs shrink-0 overflow-hidden">
+          <div
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#E91E8C]/15 flex items-center justify-center text-[#E91E8C] font-semibold text-xs shrink-0 overflow-hidden"
+            aria-hidden="true"
+          >
             {employee.photo_url ? (
               <img
                 src={employee.photo_url}
@@ -57,26 +61,45 @@ function initials(name: string): string {
               initials(employee.employee_name)
             )}
           </div>
-          <!-- Name (hide on very small screens) -->
+          <!-- Name (hidden on small phones) -->
           <span class="hidden sm:block text-sm font-medium text-gray-700 max-w-[140px] truncate">
             {employee.employee_name}
           </span>
-          <!-- Logout -->
-          <form method="POST" action="/portal/auth/sign-out">
+          <!-- Logout — form submit with pending feedback, no JS required -->
+          <form
+            method="POST"
+            action="/portal/auth/sign-out"
+            id="portal-logout-form"
+          >
             <button
               type="submit"
-              class="text-xs text-gray-500 hover:text-[#E91E8C] transition px-2 py-1 rounded hover:bg-gray-100"
-              aria-label="Keluar dari portal"
+              id="portal-logout-btn"
+              class="text-xs text-gray-500 hover:text-[#E91E8C] transition px-2 py-1 rounded hover:bg-gray-100 whitespace-nowrap"
+              aria-label="Keluar dari portal karyawan"
             >
               Keluar
             </button>
           </form>
         </div>
       </div>
+
+      <!-- Pending / loading progress bar — shown briefly on form submit or page nav -->
+      <div
+        id="portal-progress"
+        class="h-0.5 bg-[#E91E8C] w-0 transition-all duration-300 ease-in-out"
+        role="progressbar"
+        aria-hidden="true"
+        aria-valuemin={0}
+        aria-valuemax={100}
+      ></div>
     </header>
 
     <!-- Page content -->
-    <main class="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-8">
+    <main
+      id="portal-main"
+      class="flex-1 max-w-3xl mx-auto w-full px-3 sm:px-6 py-6 sm:py-8"
+      aria-busy="false"
+    >
       <slot />
     </main>
 
@@ -84,5 +107,33 @@ function initials(name: string): string {
     <footer class="border-t border-gray-100 py-4 text-center text-xs text-gray-400">
       ABSENKOK &copy; {new Date().getFullYear()}
     </footer>
+
+    <!-- Lightweight pending affordance — no framework, inline script -->
+    <script>
+      (function () {
+        const form = document.getElementById('portal-logout-form') as HTMLFormElement | null;
+        const btn = document.getElementById('portal-logout-btn') as HTMLButtonElement | null;
+        const bar = document.getElementById('portal-progress') as HTMLDivElement | null;
+        const main = document.getElementById('portal-main') as HTMLElement | null;
+
+        if (!form || !btn || !bar) return;
+
+        form.addEventListener('submit', () => {
+          // Disable button to prevent double-submit.
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Keluar…';
+            btn.setAttribute('aria-label', 'Sedang keluar…');
+          }
+          // Animate progress bar to signal pending state.
+          if (bar) {
+            bar.style.width = '60%';
+            bar.setAttribute('aria-hidden', 'false');
+          }
+          // Mark main as busy for screen readers.
+          if (main) main.setAttribute('aria-busy', 'true');
+        });
+      })();
+    </script>
   </body>
 </html>
