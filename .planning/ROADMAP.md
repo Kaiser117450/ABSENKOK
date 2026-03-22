@@ -6,7 +6,7 @@
 |---|-------|------|--------------|----------|
 | 31 | 2/2 | Complete   | 2026-03-20 | 3 |
 | 32 | 2/2 | Complete    | 2026-03-22 | 4 |
-| 33 | Multi-Outlet Control Center | Aggregated chain-wide dashboard for central admins. | ADMIN-01, ADMIN-02 | 3 |
+| 33 | 1/2 | In Progress|  | 3 |
 
 ---
 
@@ -39,6 +39,11 @@ Plans:
 ### Phase 33: Multi-Outlet Control Center
 **Goal:** Provide an overarching central view (M005) combining metrics from all outlets across the entire restaurant chain.
 **Requirements:** [ADMIN-01, ADMIN-02]
+**Plans:** 1/2 plans executed
+
+Plans:
+- [ ] 33-01-PLAN.md — central dashboard RPCs + analytics service contracts/tests
+- [ ] 33-02-PLAN.md — central admin UI + role-aware routing + outlet drilldown
 
 **Success Criteria:**
 1. A new primary "Central Dashboard" view aggregates total connected devices and overall battery health across *all* outlets.
