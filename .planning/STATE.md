@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: 38-01
-status: in_progress
-stopped_at: Completed 38-01-PLAN.md
-last_updated: "2026-03-22T15:55:00.000Z"
-last_activity: 2026-03-22 — Completed employee schedule read model RPC (Phase 38 Plan 01)
+current_plan: 38-01 (complete), 38-02 next
+status: completed
+stopped_at: Completed 38-02-PLAN.md
+last_updated: "2026-03-22T15:55:04.899Z"
+last_activity: 2026-03-22 — Completed portal schedule helper + /portal index schedule surface (Phase 38 Plan 02)
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
@@ -117,6 +117,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 37-03 | middleware calls getUser() not getSession() for server-side portal auth validation | Supabase SSR docs recommend getUser() to avoid trusting stale/spoofed session state |
 | 38-01 | Inline employee resolution (employee_portal_accounts join on auth.uid()) instead of nested SETOF resolve_portal_employee() call | Avoids PostgreSQL nested SETOF complexity; same security boundary |
 | 38-01 | get_portal_schedule_week accepts optional reference_date coalesced to current_date | Prevents UTC drift on Vercel server-rendered portal; keeps week-boundary logic in one variable |
+| 38-02 | getPortalReferenceDate() uses Asia/Makassar (WITA) via Intl.DateTimeFormat | Centralised so a future timezone field replaces one function without touching portal pages |
+| 38-02 | loadPortalSchedule() derives todayAssignment and upcomingAssignments from one RPC dataset | Avoids separate queries; SCHED-01 and SCHED-02 always agree on the same week fetch |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -158,8 +160,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T15:50:13.887Z
-**Stopped at:** Completed 38-01-PLAN.md
+**Last session:** 2026-03-22T15:55:04.890Z
+**Stopped at:** Completed 38-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
