@@ -115,7 +115,7 @@ Layout (Row):
    - Line 1: nickname ?? `"Kiosk ${deviceUuid.substring(0, 8)}"` — 13sp w600 textPrimary
    - Line 2: status label with age — 11sp w600 semantic color
 4. Optional BatteryIndicator (matches existing `_BatteryIndicator` from KioskHealthCard)
-5. SizedBox(width: 12) if battery shown
+5. SizedBox(width: 8) if battery shown
 6. Optional pending sync badge (matches existing warningLight badge from KioskHealthCard)
 7. SizedBox(width: 4)
 8. PopupMenuButton (trailing, icon: Icons.more_vert, iconSize: 20) with items:
@@ -147,7 +147,7 @@ Widget: `showDialog(AlertDialog)`.
 
 Structure:
 - title: Text("Arsipkan Kiosk?") — 15sp w600
-- content: Text("Kiosk ini tidak akan muncul lagi di dashboard. Hubungi admin pusat jika perlu dipulihkan.") — 14sp w400
+- content: Text("Kiosk ini tidak akan muncul lagi di dashboard. Hubungi admin pusat jika perlu dipulihkan.") — 13sp w400
 - actions:
   - TextButton "Batal" — AppColors.textSecondary
   - TextButton "Ya, Arsipkan" — AppColors.danger (destructive label, no FilledButton for destructive)
