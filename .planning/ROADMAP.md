@@ -8,7 +8,7 @@
 |---|-------|------|--------------|----------|
 | 37 | 4/4 | Complete    | 2026-03-22 | 4 |
 | 38 | 2/2 | Complete    | 2026-03-22 | 4 |
-| 39 | 2/2 | Complete    | 2026-03-23 | 4 |
+| 39 | 2/2 | Complete    | 2026-03-22 | 4 |
 
 ---
 
@@ -54,7 +54,7 @@ Plans:
 **Requirements:** [AUTH-04, LINK-02, PORT-01, PORT-02]
 **Depends on:** Phase 38
 
-**Plans:** 2/2 plans complete
+**Plans:** 1/2 plans complete
 
 Plans:
 

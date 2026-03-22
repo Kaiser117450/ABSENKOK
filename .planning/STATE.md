@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: 39-02-PLAN.md
-status: Phase 39 complete; all plans executed
+current_plan: Not started
+status: completed
 stopped_at: Completed 39-02-PLAN.md
-last_updated: "2026-03-23T16:18:52Z"
-last_activity: 2026-03-23 — executed 39-02 portal shell wiring and page integration
+last_updated: "2026-03-22T16:21:42.016Z"
+last_activity: "2026-03-23 — executed 39-02: portal shell hardened (AUTH-04), portal home rewritten as page-state router"
 progress:
   total_phases: 3
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 8
+  completed_plans: 7
 ---
 
 # STATE.md — Project Memory
@@ -26,7 +26,7 @@ Last activity: 2026-03-23 — executed 39-02: portal shell hardened (AUTH-04), p
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
 - **Phase:** 39 — Employee Portal Schedule UX
-- **Current Plan:** 39-02-PLAN.md (COMPLETE)
+- **Current Plan:** Not started
 - **Last Updated:** 2026-03-23 — 39-02 complete: portal shell hardened, local-scope logout, portal home rewritten as page-state router
 
 ## Progress
