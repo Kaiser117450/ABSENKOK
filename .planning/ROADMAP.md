@@ -7,7 +7,7 @@
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
 | 37 | 4/4 | Complete    | 2026-03-22 | 4 |
-| 38 | Employee Schedule Read Model | Build the employee-scoped schedule data path with current-week visibility and cross-day consistency. | SCHED-01, SCHED-02, SCHED-03 | 4 |
+| 38 | 1/2 | In Progress|  | 4 |
 | 39 | Employee Portal Schedule UX | Ship the phone-friendly schedule experience with safe account states and portal-only logout. | AUTH-04, LINK-02, PORT-01, PORT-02 | 4 |
 
 ---

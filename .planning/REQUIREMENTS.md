@@ -19,9 +19,9 @@
 
 ### Schedule Visibility
 
-- [ ] **SCHED-01**: Employee can view today's assigned shift with outlet, shift label, and start/end times.
-- [ ] **SCHED-02**: Employee can view upcoming assigned shifts for at least the current week.
-- [ ] **SCHED-03**: Overnight or cross-day shifts appear consistently with the system's existing logical-day rules.
+- [x] **SCHED-01**: Employee can view today's assigned shift with outlet, shift label, and start/end times.
+- [x] **SCHED-02**: Employee can view upcoming assigned shifts for at least the current week.
+- [x] **SCHED-03**: Overnight or cross-day shifts appear consistently with the system's existing logical-day rules.
 
 ### Portal Experience
 
@@ -64,9 +64,9 @@
 | AUTH-04 | Phase 39 | Pending |
 | LINK-01 | Phase 37 | Complete |
 | LINK-02 | Phase 39 | Pending |
-| SCHED-01 | Phase 38 | Pending |
-| SCHED-02 | Phase 38 | Pending |
-| SCHED-03 | Phase 38 | Pending |
+| SCHED-01 | Phase 38 | Complete |
+| SCHED-02 | Phase 38 | Complete |
+| SCHED-03 | Phase 38 | Complete |
 | PORT-01 | Phase 39 | Pending |
 | PORT-02 | Phase 39 | Pending |
 

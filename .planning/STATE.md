@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: Not started
-status: completed
-stopped_at: Completed 37-04-PLAN.md
-last_updated: "2026-03-22T15:26:59.010Z"
-last_activity: 2026-03-22 — Completed admin portal provisioning UI and service
+current_plan: 38-01
+status: in_progress
+stopped_at: Completed 38-01-PLAN.md
+last_updated: "2026-03-22T15:55:00.000Z"
+last_activity: 2026-03-22 — Completed employee schedule read model RPC (Phase 38 Plan 01)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 37 — Portal Foundation & Employee Auth
-Plan: 37-02 — Admin portal provisioning flow (COMPLETE)
-Status: Phase 37 plans 01+02 complete, phase 37 done
-Last activity: 2026-03-22 — Completed admin portal provisioning UI and service
+Phase: 38 — Employee Schedule Read Model
+Plan: 38-01 — Employee-scoped current-week portal schedule RPC (COMPLETE)
+Status: Phase 38 Plan 01 complete; Plan 02 (website helper + portal page) next
+Last activity: 2026-03-22 — get_portal_schedule_week RPC + partial indexes created
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
-- **Phase:** 37 — Portal Foundation & Employee Auth
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-22 — Admin provisioning flow shipped; AUTH-01 backend + Flutter service + UI complete
+- **Phase:** 38 — Employee Schedule Read Model
+- **Current Plan:** 38-01 (complete), 38-02 next
+- **Last Updated:** 2026-03-22 — Employee schedule read model RPC shipped; SCHED-01/02/03 backend complete
 
 ## Progress
 
@@ -115,6 +115,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 37-01 | Trigram fallback gated at >=3 chars; empty result for <2-char queries | PostgreSQL docs warn short patterns degrade trigram selectivity |
 | 37-03 | Kept output: static in Astro 5 — hybrid mode removed; per-route prerender=false handles mixed static/dynamic | Astro 5 removed hybrid output; static is now the unified mode |
 | 37-03 | middleware calls getUser() not getSession() for server-side portal auth validation | Supabase SSR docs recommend getUser() to avoid trusting stale/spoofed session state |
+| 38-01 | Inline employee resolution (employee_portal_accounts join on auth.uid()) instead of nested SETOF resolve_portal_employee() call | Avoids PostgreSQL nested SETOF complexity; same security boundary |
+| 38-01 | get_portal_schedule_week accepts optional reference_date coalesced to current_date | Prevents UTC drift on Vercel server-rendered portal; keeps week-boundary logic in one variable |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -156,8 +158,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T15:26:04.595Z
-**Stopped at:** Completed 37-04-PLAN.md
+**Last session:** 2026-03-22T15:50:13.887Z
+**Stopped at:** Completed 38-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
