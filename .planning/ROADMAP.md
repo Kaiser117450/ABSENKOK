@@ -24,6 +24,11 @@
 ### Phase 32: Multi-Device Dashboard
 **Goal:** Redesign the Admin 'Status Kiosk' section to handle and display multiple devices natively.
 **Requirements:** [HEALTH-03, HEALTH-04, HEALTH-05]
+**Plans:** 2 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — KioskDevice model, SQL RPCs (set_device_nickname, archive_device), unit tests
+- [ ] 32-02-PLAN.md — KioskDeviceCard widget, dashboard migration, bridge removal, human verification
 
 **Success Criteria:**
 1. Admin Dashboard lists every active device independently with its own real-time battery and sync status.
