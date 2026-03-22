@@ -6,7 +6,7 @@
 
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
-| 37 | 1/4 | In Progress|  | 4 |
+| 37 | 3/4 | In Progress|  | 4 |
 | 38 | Employee Schedule Read Model | Build the employee-scoped schedule data path with current-week visibility and cross-day consistency. | SCHED-01, SCHED-02, SCHED-03 | 4 |
 | 39 | Employee Portal Schedule UX | Ship the phone-friendly schedule experience with safe account states and portal-only logout. | AUTH-04, LINK-02, PORT-01, PORT-02 | 4 |
 
@@ -17,7 +17,7 @@
 ### Phase 37: Portal Foundation & Employee Auth
 **Goal:** Extend the Astro website into a protected employee portal with provisioning, fast name-search sign-in, and stable employee identity resolution.
 **Requirements:** [AUTH-01, AUTH-02, AUTH-03, LINK-01]
-**Plans:** 1/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 

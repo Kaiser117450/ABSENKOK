@@ -4,14 +4,14 @@ milestone: v6.1
 milestone_name: milestone
 current_plan: 37-02
 status: phase-37-in-progress
-stopped_at: Completed 37-01-PLAN.md
-last_updated: "2026-03-22T15:12:19.997Z"
+stopped_at: Completed 37-02-PLAN.md
+last_updated: "2026-03-22T15:21:01.594Z"
 last_activity: 2026-03-22 — Revised Phase 37 auth plan to indexed name search plus password
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
@@ -19,21 +19,21 @@ progress:
 ## Current Position
 
 Phase: 37 — Portal Foundation & Employee Auth
-Plan: 37-01 — Portal account contract, search index, and provisioning function
-Status: Phase planned, ready for execution
-Last activity: 2026-03-22 — Revised Phase 37 auth plan to indexed name search plus password
+Plan: 37-02 — Admin portal provisioning flow (COMPLETE)
+Status: Phase 37 plans 01+02 complete, phase 37 done
+Last activity: 2026-03-22 — Completed admin portal provisioning UI and service
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
 - **Phase:** 37 — Portal Foundation & Employee Auth
-- **Current Plan:** 37-01 — Portal account contract, search index, and provisioning function
-- **Last Updated:** 2026-03-22 — Phase 37 plan revised around name-search login
+- **Current Plan:** 37-02 — Admin portal provisioning flow (COMPLETE)
+- **Last Updated:** 2026-03-22 — Admin provisioning flow shipped; AUTH-01 backend + Flutter service + UI complete
 
 ## Progress
 
 ```
-v6.1 Employee Portal — PHASE 37 PLANNED
-[□□□□□□□□□□] 0% · 0/3 phases
+v6.1 Employee Portal — PHASE 37 IN PROGRESS
+[████████░░] 75% · 3/4 plans complete
 ```
 
 - **Next starting phase:** 37
@@ -154,8 +154,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T15:12:19.994Z
-**Stopped at:** Completed 37-01-PLAN.md
+**Last session:** 2026-03-22T15:21:01.590Z
+**Stopped at:** Completed 37-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
