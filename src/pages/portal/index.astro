@@ -2,23 +2,20 @@
 export const prerender = false;
 
 import PortalLayout from '../../layouts/PortalLayout.astro';
-import { loadPortalSchedule } from '../../lib/portal/schedule';
+import PortalScheduleSection from '../../components/portal/PortalScheduleSection.astro';
+import PortalStatePanel from '../../components/portal/PortalStatePanel.astro';
+import { loadPortalHome } from '../../lib/portal/home';
 
-// Load employee identity + current-week schedule in one call.
-// resolvePortalEmployee is called internally — this page never touches employee IDs.
-const result = await loadPortalSchedule(Astro);
+// Load page state once — all branching is on state.kind below.
+const state = await loadPortalHome(Astro);
 
-// Belt-and-suspenders redirect when middleware missed an unauthenticated request.
-if (!result.ok && result.reason === 'unauthenticated') {
+// Belt-and-suspenders redirect for the unauthenticated state.
+// Middleware should catch this first, but we guard here too.
+if (state.kind === 'unauthenticated') {
   return Astro.redirect('/portal/login');
 }
 
-// Helper: format a two-part HH:MM time from hours + minutes.
-function fmt(hour: number, minute: number): string {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-// Helper: derive initials for the avatar fallback.
+// Helper: derive initials for the greeting avatar fallback.
 function initials(name: string): string {
   return name
     .split(' ')
@@ -27,196 +24,73 @@ function initials(name: string): string {
     .join('')
     .toUpperCase();
 }
-
-// Helper: produce a readable weekday + date label (e.g. "Senin, 22 Mar").
-function dayLabel(isoDate: string): string {
-  const d = new Date(isoDate + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-  });
-}
 ---
 
-{result.ok ? (
-  <PortalLayout title="Beranda" employee={result.schedule.employee}>
+{state.kind === 'ready' && (
+  <PortalLayout title="Beranda" employee={state.schedule.employee}>
     <!-- Greeting -->
     <div class="mb-6">
       <p class="text-sm text-gray-500">Selamat datang,</p>
-      <h1 class="text-2xl font-bold text-gray-900">{result.schedule.employee.employee_name}</h1>
+      <h1 class="text-2xl font-bold text-gray-900">{state.schedule.employee.employee_name}</h1>
     </div>
 
-    <!-- Identity card -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-6 flex items-center gap-4">
-      <!-- Avatar -->
-      <div class="w-14 h-14 rounded-full bg-[#E91E8C]/15 flex items-center justify-center text-[#E91E8C] font-bold text-lg shrink-0 overflow-hidden">
-        {result.schedule.employee.photo_url ? (
-          <img
-            src={result.schedule.employee.photo_url}
-            alt={result.schedule.employee.employee_name}
-            class="w-full h-full object-cover"
-          />
-        ) : (
-          initials(result.schedule.employee.employee_name)
-        )}
-      </div>
-      <!-- Details -->
-      <div class="min-w-0">
-        <p class="font-semibold text-gray-900 truncate">{result.schedule.employee.employee_name}</p>
-        {result.schedule.employee.position && (
-          <p class="text-sm text-gray-500">{result.schedule.employee.position}</p>
-        )}
-        {result.schedule.employee.home_outlet_name && (
-          <p class="text-xs text-gray-400 mt-0.5">{result.schedule.employee.home_outlet_name}</p>
-        )}
-      </div>
-    </div>
-
-    <!-- Today's shift card -->
-    <section class="mb-6">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Jadwal hari ini</h2>
-
-      {result.schedule.todayAssignment ? (
-        result.schedule.todayAssignment.isDayOff ? (
-          <!-- Day off -->
-          <div class="bg-gray-50 rounded-2xl border border-gray-200 p-5 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M4.22 19.78l.707-.707M18.364 5.636l.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold text-gray-900">Libur</p>
-              {result.schedule.todayAssignment.notes && (
-                <p class="text-sm text-gray-500">{result.schedule.todayAssignment.notes}</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <!-- Active shift -->
-          <div class="bg-white rounded-2xl border border-[#E91E8C]/30 shadow-sm p-5">
-            <div class="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <p class="font-semibold text-gray-900">
-                  {result.schedule.todayAssignment.shiftName ?? 'Shift'}
-                </p>
-                {result.schedule.todayAssignment.outletName && (
-                  <p class="text-sm text-gray-500">{result.schedule.todayAssignment.outletName}</p>
-                )}
-              </div>
-              <span class="shrink-0 bg-[#E91E8C]/10 text-[#E91E8C] text-xs font-semibold px-2.5 py-1 rounded-full">
-                Hari ini
-              </span>
-            </div>
-            <div class="flex items-center gap-2 text-sm text-gray-700">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" /><path stroke-linecap="round" d="M12 6v6l4 2" />
-              </svg>
-              <span>
-                {fmt(result.schedule.todayAssignment.startHour, result.schedule.todayAssignment.startMinute)}
-                &ndash;
-                {fmt(result.schedule.todayAssignment.endHour, result.schedule.todayAssignment.endMinute)}
-                {result.schedule.todayAssignment.endsNextDay && (
-                  <span class="ml-1 text-xs text-amber-600 font-medium">(Selesai besok)</span>
-                )}
-              </span>
-            </div>
-          </div>
-        )
-      ) : (
-        <!-- No assignment today -->
-        <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400">
-          <p class="text-sm font-medium">Tidak ada jadwal hari ini</p>
-        </div>
-      )}
-    </section>
-
-    <!-- Current-week assignment list -->
-    <section>
-      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Minggu ini</h2>
-
-      {result.schedule.weekAssignments.length > 0 ? (
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-          {result.schedule.weekAssignments.map((entry) => (
-            <div class={`p-4 flex items-center gap-3 ${entry.logicalDate === result.schedule.referenceDate ? 'bg-[#E91E8C]/5' : ''}`}>
-              <!-- Day indicator -->
-              <div class="w-12 shrink-0 text-center">
-                <p class={`text-xs font-semibold ${entry.logicalDate === result.schedule.referenceDate ? 'text-[#E91E8C]' : 'text-gray-400'}`}>
-                  {new Date(entry.logicalDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' })}
-                </p>
-                <p class={`text-lg font-bold leading-none ${entry.logicalDate === result.schedule.referenceDate ? 'text-[#E91E8C]' : 'text-gray-700'}`}>
-                  {new Date(entry.logicalDate + 'T00:00:00').getDate()}
-                </p>
-              </div>
-
-              <!-- Assignment content -->
-              {entry.isDayOff ? (
-                <div class="min-w-0">
-                  <p class="text-sm font-medium text-gray-400">Libur</p>
-                </div>
-              ) : (
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm font-semibold text-gray-900 truncate">
-                    {entry.shiftName ?? 'Shift'}
-                    {entry.logicalDate === result.schedule.referenceDate && (
-                      <span class="ml-1.5 text-xs font-normal text-[#E91E8C]">Hari ini</span>
-                    )}
-                  </p>
-                  <p class="text-xs text-gray-500">
-                    {fmt(entry.startHour, entry.startMinute)}&ndash;{fmt(entry.endHour, entry.endMinute)}
-                    {entry.endsNextDay && (
-                      <span class="ml-1 text-amber-600">(Selesai besok)</span>
-                    )}
-                    {entry.outletName && (
-                      <span class="ml-1 text-gray-400">&middot; {entry.outletName}</span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <!-- No assignments this week — minimal placeholder; full UX polish deferred to Phase 39 -->
-        <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400">
-          <p class="text-sm font-medium">Belum ada jadwal minggu ini</p>
-          <p class="text-xs mt-1">Jadwal akan muncul setelah admin menerbitkan jadwal mingguan.</p>
-        </div>
-      )}
-    </section>
+    <!-- Schedule surface — today + week rows via shared component -->
+    <PortalScheduleSection schedule={state.schedule} />
   </PortalLayout>
-) : (
-  <!-- Blocked access — identity resolution failed (no_mapping or rpc_error) -->
-  <html lang="id">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Akses Ditolak — Portal ABSENKOK</title>
-      <meta name="robots" content="noindex, nofollow" />
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    </head>
-    <body class="bg-gray-50 font-sans antialiased min-h-screen flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl border border-red-200 shadow-sm p-8 max-w-md w-full text-center">
-        <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
-        </div>
-        <h1 class="text-lg font-bold text-gray-900 mb-2">Akun tidak terhubung</h1>
-        <p class="text-sm text-gray-500 mb-6">
-          Akun portal Anda belum terhubung ke data karyawan aktif.
-          Hubungi admin untuk mengaktifkan akun Anda.
-        </p>
-        <form method="POST" action="/portal/auth/sign-out">
-          <button
-            type="submit"
-            class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
-          >
-            Keluar
-          </button>
-        </form>
-      </div>
-    </body>
-  </html>
+)}
+
+{state.kind === 'empty' && (
+  <PortalLayout title="Beranda" employee={state.employee}>
+    <!-- Greeting retained even with no schedule -->
+    <div class="mb-6">
+      <p class="text-sm text-gray-500">Selamat datang,</p>
+      <h1 class="text-2xl font-bold text-gray-900">{state.employee.employee_name}</h1>
+    </div>
+
+    <PortalStatePanel variant="empty" />
+  </PortalLayout>
+)}
+
+{state.kind === 'not-linked' && (
+  <PortalLayout
+    title="Akun Tidak Terhubung"
+    employee={{ employee_id: '', employee_name: 'Karyawan', position: null, home_outlet_id: null, home_outlet_name: null, photo_url: null, active_badge_id: null }}
+  >
+    <PortalStatePanel
+      variant="not-linked"
+      title="Akun tidak terhubung"
+      message="Akun portal Anda belum terhubung ke data karyawan aktif. Hubungi admin untuk mengaktifkan akun Anda."
+    >
+      <!-- Logout action so the employee can exit the blocked state -->
+      <form method="POST" action="/portal/auth/sign-out" class="w-full">
+        <button
+          type="submit"
+          class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
+        >
+          Keluar
+        </button>
+      </form>
+    </PortalStatePanel>
+  </PortalLayout>
+)}
+
+{state.kind === 'error' && (
+  <PortalLayout
+    title="Terjadi Kesalahan"
+    employee={{ employee_id: '', employee_name: 'Karyawan', position: null, home_outlet_id: null, home_outlet_name: null, photo_url: null, active_badge_id: null }}
+  >
+    <PortalStatePanel
+      variant="error"
+      title="Terjadi kesalahan"
+      message="Tidak dapat memuat data jadwal. Muat ulang halaman atau coba beberapa saat lagi."
+    >
+      <!-- Reload action -->
+      <a
+        href="/portal"
+        class="inline-block rounded-xl bg-[#E91E8C] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#c2187a] transition"
+      >
+        Muat Ulang
+      </a>
+    </PortalStatePanel>
+  </PortalLayout>
 )}
