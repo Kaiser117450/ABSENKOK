@@ -24,7 +24,12 @@ import '../../main.dart' show supabaseReady;
 // ─────────────────────────────────────────────────────────────────────────────
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
-  const AdminDashboardScreen({super.key});
+  /// Optional outlet pre-selection for full admin drilldown from
+  /// [CentralDashboardScreen]. Has no effect for [kepala_gerai] whose outlet
+  /// is locked to [AppState.managedOutletId].
+  final String? initialOutletId;
+
+  const AdminDashboardScreen({super.key, this.initialOutletId});
 
   @override
   ConsumerState<AdminDashboardScreen> createState() =>
@@ -59,7 +64,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = ref.read(appProvider);
       if (appState.isKepalaGerai && appState.managedOutletId != null) {
+        // kepala_gerai is always locked to their managed outlet
         setState(() => _selectedOutletId = appState.managedOutletId);
+      } else if (appState.isAdmin && widget.initialOutletId != null) {
+        // Full admin arriving from CentralDashboardScreen drilldown
+        setState(() => _selectedOutletId = widget.initialOutletId);
       }
       _initialLoad();
     });
@@ -906,10 +915,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
-            final outletId = _selectedOutletId ?? '';
-            context.push('/admin/chart-dashboard?outletId=$outletId');
-          },
+          onPressed: _selectedOutletId == null
+              ? null
+              : () {
+                  context.push(
+                      '/admin/chart-dashboard?outletId=$_selectedOutletId');
+                },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,

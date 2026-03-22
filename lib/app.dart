@@ -13,6 +13,7 @@ import 'core/theme.dart';
 import 'main.dart' show supabaseReady;
 import 'providers/app_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/central_dashboard_screen.dart';
 import 'screens/admin/chart_dashboard_screen.dart';
 import 'screens/admin/admin_employees_screen.dart';
 import 'screens/admin/admin_login_screen.dart';
@@ -120,7 +121,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/admin/dashboard',
-            builder: (_, __) => const AdminDashboardScreen(),
+            builder: (context, state) {
+              final appState =
+                  ProviderScope.containerOf(context).read(appProvider);
+              if (appState.isAdmin) {
+                return const CentralDashboardScreen();
+              }
+              return const AdminDashboardScreen();
+            },
+          ),
+          GoRoute(
+            path: '/admin/outlet-dashboard',
+            builder: (context, state) {
+              final outletId = state.uri.queryParameters['outletId'];
+              return AdminDashboardScreen(initialOutletId: outletId);
+            },
           ),
           GoRoute(
             path: '/admin/employees',

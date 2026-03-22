@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/supabase_client.dart';
@@ -158,10 +159,7 @@ class _CentralDashboardScreenState extends State<CentralDashboardScreen> {
       widget.onOpenOutlet!(outletId);
     } else {
       // ignore: use_build_context_synchronously
-      Navigator.of(context).pushNamed(
-        '/admin/outlet-dashboard',
-        arguments: outletId,
-      );
+      context.push('/admin/outlet-dashboard?outletId=$outletId');
     }
   }
 

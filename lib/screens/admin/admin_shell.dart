@@ -21,6 +21,7 @@ class AdminShell extends ConsumerWidget {
     if (loc.startsWith('/admin/employees')) return 1;
     if (loc.startsWith('/admin/reports')) return 2;
     if (loc.startsWith('/admin/outlets')) return 3;
+    // /admin/dashboard and /admin/outlet-dashboard both keep Dashboard selected
     return 0;
   }
 
