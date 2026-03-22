@@ -5,7 +5,7 @@
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
 | 31 | 2/2 | Complete   | 2026-03-20 | 3 |
-| 32 | 1/2 | In Progress|  | 4 |
+| 32 | 2/2 | Complete   | 2026-03-22 | 4 |
 | 33 | Multi-Outlet Control Center | Aggregated chain-wide dashboard for central admins. | ADMIN-01, ADMIN-02 | 3 |
 
 ---
@@ -24,7 +24,7 @@
 ### Phase 32: Multi-Device Dashboard
 **Goal:** Redesign the Admin 'Status Kiosk' section to handle and display multiple devices natively.
 **Requirements:** [HEALTH-03, HEALTH-04, HEALTH-05]
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 32-01-PLAN.md — KioskDevice model, SQL RPCs (set_device_nickname, archive_device), unit tests
