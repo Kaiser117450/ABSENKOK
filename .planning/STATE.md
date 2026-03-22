@@ -4,14 +4,14 @@ milestone: v6.0
 milestone_name: milestone
 current_plan: Not started
 status: completed
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-03-22T06:59:48.387Z"
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-03-22T07:08:05.125Z"
 last_activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migration + bridge removal)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
@@ -98,6 +98,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 32-01 | displayName falls back to "Kiosk {uuid[0:8]}" — 8-char prefix | UUID prefix is unique enough for admin display without cluttering UI |
 | 32-02 | Archive failure is silent; device reappears on next load | Acceptable per UI-SPEC — avoids error dialog complexity for rare operation |
 | 32-02 | HeartbeatService bridge write to outlets removed (Phase 32 done) | Admin dashboard reads kiosk_devices directly; dual-write overhead eliminated |
+| 33-02 | CentralDashboardScreen uses injected loaders for testability | Widget tests run without Supabase; GoRouter drilldown tested via onOpenOutlet callback |
+| 33-02 | Lihat Dashboard button disabled when no outlet selected | Prevents GoRouter push with empty outletId string — was a latent bug |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -133,8 +135,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T06:59:48.384Z
-**Stopped at:** Completed 33-01-PLAN.md
+**Last session:** 2026-03-22T07:08:05.122Z
+**Stopped at:** Completed 33-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules

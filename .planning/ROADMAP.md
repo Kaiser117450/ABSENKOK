@@ -6,7 +6,7 @@
 |---|-------|------|--------------|----------|
 | 31 | 2/2 | Complete   | 2026-03-20 | 3 |
 | 32 | 2/2 | Complete    | 2026-03-22 | 4 |
-| 33 | 1/2 | In Progress|  | 3 |
+| 33 | 2/2 | Complete   | 2026-03-22 | 3 |
 
 ---
 
@@ -39,7 +39,7 @@ Plans:
 ### Phase 33: Multi-Outlet Control Center
 **Goal:** Provide an overarching central view (M005) combining metrics from all outlets across the entire restaurant chain.
 **Requirements:** [ADMIN-01, ADMIN-02]
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 33-01-PLAN.md — central dashboard RPCs + analytics service contracts/tests
