@@ -8,8 +8,8 @@
 - [x] **HEALTH-05**: Admins can assign custom nicknames to devices (e.g., "Kiosk Pintu Depan").
 
 ## 2. Multi-Outlet Control Center
-- [ ] **ADMIN-01**: Admin Central Dashboard aggregates and displays health/status for ALL outlets in one view.
-- [ ] **ADMIN-02**: Admin Central Dashboard displays aggregate firm-wide daily attendance rate.
+- [x] **ADMIN-01**: Admin Central Dashboard aggregates and displays health/status for ALL outlets in one view.
+- [x] **ADMIN-02**: Admin Central Dashboard displays aggregate firm-wide daily attendance rate.
 
 ## Traceability
 - **HEALTH-01** → Phase 31
