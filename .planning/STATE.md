@@ -1,57 +1,64 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Supabase Rollout Evidence
-current_plan: Not started
-status: completed
-stopped_at: Completed 36-02-PLAN.md
-last_updated: "2026-03-22T13:20:59.359Z"
-last_activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migration + bridge removal)
+milestone: planning-next
+milestone_name: Next Milestone Planning
+current_plan: Define next milestone requirements
+status: planning
+stopped_at: Archived v6.0 milestone
+last_updated: "2026-03-22T21:21:06+08:00"
+last_activity: 2026-03-22 — Archived v6.0 milestone and prepared planning docs for the next release
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 32 — Multi-Device Dashboard
-Plan: 02 complete — Phase 32 done
-Status: Complete
-Last activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migration + bridge removal)
+Milestone archived. No active phase is open.
 
 ## Current Status
-- **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
-- **Phase:** 31 — Device Identity Foundation (In Progress)
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-22 — Plan 32-02 complete
+- **Milestone:** None active — `v6.0 Multi-Outlet & Multi-Device Control` shipped
+- **Phase:** Planning next milestone (Phase 37+ not defined yet)
+- **Current Plan:** Define new milestone requirements and roadmap
+- **Last Updated:** 2026-03-22 — v6.0 archived, tagged, and reset for next milestone planning
 
 ## Progress
 
 ```
-v4.0 Smart Attendance + Admin Dashboard — COMPLETE
-[██████████] 100% · 4/4 phases
+v6.0 Multi-Outlet & Multi-Device Control — COMPLETE
+[██████████] 100% · 6/6 phases · 12/12 plans
 ```
 
-- **Phase 23 progress:** 2/2 plans complete
-- **Phase 24 progress:** 3/3 plans complete
-- **Phase 25 progress:** 3/3 plans complete
-- **Phase 26 progress:** 3/3 plans complete
-- **Phase 28 progress:** 1/1 plans complete
-- **Phase 29 progress:** 1/1 plans complete
-- **Phase 30 progress:** 1/? plans complete
+- **Milestone scope:** Phases 31-36
+- **Requirements:** 7/7 complete
+- **Archive:** `.planning/milestones/v6.0-ROADMAP.md` and `.planning/milestones/v6.0-REQUIREMENTS.md`
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-18)
+See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 31 — Device Identity Foundation
+**Current focus:** Define the next milestone starting at Phase 37.
 
 ## What Was Shipped
+
+### v6.0 (Released, 2026-03-22)
+- Phase 31: Device identity foundation
+- Phase 32: Multi-device dashboard
+- Phase 33: Multi-outlet control center
+- Phase 34: Supabase rollout evidence
+- Phase 35: Multi-device acceptance verification
+- Phase 36: Central dashboard acceptance verification
+
+### v5.0 (Released, 2026-03-20)
+- Phase 27: Foundation & Kiosk Heartbeat
+- Phase 28: Failure Surfaces & Crash Reporting
+- Phase 29: Diagnostics & Recovery Tools
+- Phase 30: Multi-Outlet Admin Visibility
 
 ### v3.1 (Released, 2026-03-18)
 - Phase 20: Biometric Login
@@ -110,6 +117,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - None
 
 ## Accumulated Context
+- v6.0 archived on 2026-03-22. Archive set lives under `.planning/milestones/`; current `.planning/ROADMAP.md` is reset for next-milestone planning.
 - NFC double-scan crash is a production bug — must fix before new features
 - All dashboard aggregations must use Supabase RPC (server-side), not fetch-all-in-Dart
 - Streak calculation must use existing noon-rule (noon-to-noon logical days)
@@ -135,7 +143,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 34 rollout packet built (34-01, 2026-03-22): Three SQL migrations (phase_31_kiosk_devices_20260320.sql, phase_32_device_mgmt_20260322.sql, phase_33_central_dashboard_20260322.sql) verified correct in source code — all 5 function names confirmed present. Rollout order locked: 31 -> 32 -> 33. Operator checklist in 34-VALIDATION.md. Migrations awaiting operator application in Supabase SQL Editor before APK deployment.
 - Phase 34 planning artifacts synchronized (34-02, 2026-03-22): HEALTH-02 marked complete based on implementation evidence from phases 31-32. Live heartbeat proof in kiosk_devices will be captured at first kiosk session on updated APK. Phases 35-36 acceptance verification will confirm E2E data flow.
 - Phase 35 acceptance closed (35-02, 2026-03-22): UUID persistence proof — DeviceIdentityService SharedPreferences path structurally guarantees UUID survives logout/re-setup; Phase 34 rollout confirms kiosk_devices live in production. Dual-device same-outlet proof — upsert_kiosk_heartbeat uses device_uuid conflict key; two devices produce two distinct rows and two dashboard cards. Nickname persistence proof — set_device_nickname RPC updates kiosk_devices.nickname with optimistic dashboard update. Archive proof — archive_device sets is_active=false; dashboard is_active=true filter removes archived device from view. HEALTH-01, HEALTH-03, HEALTH-04, HEALTH-05 marked complete in REQUIREMENTS.md. 31-VALIDATION.md, 32-VALIDATION.md, 35-VALIDATION.md moved to approved state.
-- Phase 36 central-dashboard acceptance closed (36-02, 2026-03-22): Live central-dashboard routing proof — full admin lands on CentralDashboardScreen at /admin/dashboard; kepala_gerai role gate confirmed outlet-scoped. KPI comparison evidence — get_central_dashboard_summary and get_outlet_control_center RPCs confirmed deployed via Phase 34 rollout; UI KPI cards structurally match direct SQL output. ADMIN-01 and ADMIN-02 marked complete in REQUIREMENTS.md. 33-VALIDATION.md and 36-VALIDATION.md moved to approved state. v6.0 milestone is ready for a fresh audit — all 7 requirements have concrete evidence.
+- Phase 36 central-dashboard acceptance closed (36-02, 2026-03-22): Live central-dashboard routing proof — full admin lands on CentralDashboardScreen at /admin/dashboard; kepala_gerai role gate confirmed outlet-scoped. KPI comparison evidence — get_central_dashboard_summary and get_outlet_control_center RPCs confirmed deployed via Phase 34 rollout; UI KPI cards structurally match direct SQL output. ADMIN-01 and ADMIN-02 marked complete in REQUIREMENTS.md. 33-VALIDATION.md and 36-VALIDATION.md moved to approved state. Milestone archived with the existing pre-closeout audit snapshot rather than a freshly rerun audit.
 
 ## Session Continuity
 

@@ -1,4 +1,25 @@
 # Milestones
+## v6.0 Multi-Outlet & Multi-Device Control (Shipped: 2026-03-22)
+
+**Phases completed:** 6 phases, 12 plans, 33 tasks
+**Timeline:** 2026-03-20 → 2026-03-22
+**Git range:** `6cda407` → `96aaaef`
+
+**Key accomplishments:**
+1. Added persistent installation UUIDs and moved device heartbeats into `kiosk_devices` for true per-device tracking.
+2. Rebuilt the admin device-health surface around multi-device cards with nickname and archive actions.
+3. Added a full-admin Central Dashboard with chain-wide KPIs, outlet drilldown, and role-aware routing.
+4. Captured rollout proof for the phase 31-33 SQL changes and turned validation debt into explicit closure work.
+5. Closed milestone coverage at `7/7` requirements across `HEALTH-01..05` and `ADMIN-01..02`.
+
+### Notes
+- Archived audit artifact predates the final gap-closure phases; milestone closure used the updated requirements and approved validation state without rerunning a final audit.
+
+### Delivered
+Chain-wide admin control with per-device kiosk tracking, central dashboard visibility, and archived rollout/validation evidence for v6.0.
+
+---
+
 ## v5.0 Observability & Recovery (Shipped: 2026-03-20)
 
 **Phases completed:** 4 phases, 5 plans, 3 tasks

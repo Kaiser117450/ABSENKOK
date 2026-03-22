@@ -11,19 +11,29 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v6.0 Multi-Outlet & Multi-Device Control
+## Current Milestone: Planning Next Release
 
-**Goal:** Provide chain-wide oversight for admins across all outlets and decouple device health tracking to support multiple devices natively.
+**Status:** `v6.0 Multi-Outlet & Multi-Device Control` shipped on 2026-03-22.
 
-**Target features:**
-- Multi-device support per outlet (individual device heartbeats instead of outlet-level overwrites)
-- Multi-outlet control center (Chain-level oversight - M005)
+**Next step:** Run `$gsd-new-milestone` to define the next shipped scope starting at Phase 37.
 
 ## Current State
 
-**Shipped:** v5.0 Observability & Recovery (2026-03-20)
+**Shipped:** v6.0 Multi-Outlet & Multi-Device Control (2026-03-22)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~31,000+ LOC Dart across 65+ files; Supabase Edge Functions: `create-admin-user`
+**Codebase:** ~28,400 tracked LOC Dart across 102 tracked files; Supabase Edge Functions: `create-admin-user`
+
+## Next Milestone Goals
+- Define the next shipped milestone scope and requirements.
+- Decide whether the next release prioritizes employee self-service, workflow polish, or another ops/admin expansion.
+- Continue phase numbering from 37 onward.
+
+### What v6.0 Added
+- ✅ Persistent installation UUIDv4 per kiosk that survives logout/re-setup
+- ✅ `kiosk_devices` heartbeat pipeline with dedicated nickname/archive RPCs
+- ✅ Multi-device admin dashboard with one live card per active kiosk device
+- ✅ Full-admin Central Dashboard with chain-wide KPIs and outlet drilldown
+- ✅ Gap-closure phases for rollout evidence, validation approval, and final requirement synchronization
 
 ### What v5.0 Added
 - ✅ Background heartbeat — kiosk pings Supabase every 15 min with battery, charging state, app version, pending sync count
@@ -132,8 +142,17 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Sync indicator strip on kiosk idle screen — v5.0
 - ✓ Admin dashboard "Status Kiosk" section (online/offline, battery, sync count) — v5.0
 
-### Active (v6.0)
-*(Requirements to be defined — run /gsd-new-milestone)*
+### Validated (v6.0)
+- ✓ Persistent kiosk installation UUID with logout/re-setup resilience — v6.0
+- ✓ Heartbeat writes to `kiosk_devices` instead of `outlets` — v6.0
+- ✓ Multi-device outlet dashboard with per-device health state — v6.0
+- ✓ Device archive/unlink flow from admin dashboard — v6.0
+- ✓ Device nickname flow from admin dashboard — v6.0
+- ✓ Full-admin Central Dashboard with chain-wide device visibility — v6.0
+- ✓ Firm-wide daily attendance aggregation in the Central Dashboard — v6.0
+
+### Active (Next Milestone Planning)
+*(Requirements to be defined — run `$gsd-new-milestone`)*
 
 ### Deferred (Future)
 - M006 — Employee-facing web app (Astro self-service)
@@ -248,4 +267,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-20 — Milestone v6.0 started*
+*Last updated: 2026-03-22 after v6.0 milestone archival*

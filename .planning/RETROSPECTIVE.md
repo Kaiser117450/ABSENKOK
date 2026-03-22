@@ -205,12 +205,45 @@
 
 ---
 
+## Milestone: v6.0 — Multi-Outlet & Multi-Device Control
+
+**Shipped:** 2026-03-22
+**Phases:** 6 (31-36) | **Plans:** 12 | **Timeline:** 3 days (Mar 20 → Mar 22)
+
+### What Was Built
+- Persistent installation UUIDv4 stored in `SharedPreferences`, reused across logout and re-setup
+- `kiosk_devices` heartbeat pipeline with nickname/archive RPCs and per-device admin dashboard cards
+- Full-admin Central Dashboard with chain-wide KPIs, outlet drilldown, and role-aware routing
+- Gap-closure phases for rollout evidence, acceptance validation, and milestone requirement synchronization to `7/7 complete`
+
+### What Worked
+- Splitting implementation phases (31-33) from closure phases (34-36) made rollout and validation debt explicit instead of leaving it hidden in summaries
+- Acceptance packets in `34-VALIDATION.md`, `35-VALIDATION.md`, and `36-VALIDATION.md` gave the milestone a consistent verification structure
+- Additive Supabase migrations and RPCs kept the production rollout safe while expanding the device-health model
+
+### What Was Inefficient
+- The saved audit file became stale once phases 34-36 closed the gaps; archival would have been cleaner with a fresh audit rerun before closeout
+- Auto-approved human-verify checkpoints pushed too much weight onto structural evidence instead of fresh live proof capture
+
+### Patterns Established
+- Treat rollout evidence as a first-class phase whenever database changes require operator confirmation
+- Close validation debt with dedicated acceptance phases rather than burying it inside implementation work
+- Role-aware dashboard routing is easy to test when loaders and navigation hooks are injectable
+
+### Key Lessons
+1. If an audit fails on evidence, add explicit gap-closure phases immediately instead of carrying the debt forward informally.
+2. Keep `REQUIREMENTS.md` synchronized during closure work so milestone readiness is visible without rereading every summary.
+3. Archive only after `PROJECT.md`, `ROADMAP.md`, `STATE.md`, and the milestone archive all agree on what actually shipped.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
+| v6.0 | 3 days | 6 | Implementation milestone expanded with explicit rollout/acceptance closure phases before archive |
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
 | v2.0 | 1 day | 4 | Rapid iteration — admin tools + live activity |
 | v3.0 | 1 day | 3 | Website + schedule grid — separate Astro repo pattern |
@@ -223,6 +256,7 @@
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
+| v6.0 | Targeted unit/widget tests plus validation packets | Extended (device identity, kiosk devices, analytics/routing, milestone traceability) | 4 items |
 | v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items |
 | v2.0 | 127+ | Extended (CSV, live content, overlay model) | 9 items |
 | v3.0 | 127+ | Unchanged (no new Flutter tests) | 10 items (+ schedule grid device testing needed) |
