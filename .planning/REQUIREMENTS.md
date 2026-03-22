@@ -7,14 +7,14 @@
 
 ### Access & Provisioning
 
-- [ ] **AUTH-01**: Admin can provision initial employee portal access for an existing employee using employee code plus password.
-- [ ] **AUTH-02**: Employee can sign in to the portal using employee code plus password.
+- [x] **AUTH-01**: Admin can provision initial employee portal access for an existing employee by enabling portal login and setting an initial password.
+- [ ] **AUTH-02**: Employee can find and choose their own portal profile through name search, then sign in using password.
 - [ ] **AUTH-03**: Employee session persists across refresh while protected portal routes reject unauthenticated access.
 - [ ] **AUTH-04**: Employee can sign out of the portal without affecting kiosk or admin sessions.
 
 ### Identity Linking
 
-- [ ] **LINK-01**: An authenticated portal user resolves to exactly one employee record before schedule data is shown.
+- [x] **LINK-01**: An authenticated portal user resolves to exactly one employee record before schedule data is shown.
 - [ ] **LINK-02**: If no linked employee record exists, the portal shows a clear "account not linked" state instead of exposing schedule data.
 
 ### Schedule Visibility
@@ -50,18 +50,19 @@
 | Employee schedule editing | v6.1 is read-only self-service, not collaborative planning |
 | Admin analytics in the portal | Existing admin surfaces already own this workflow |
 | Phone OTP login | Current employee data model does not guarantee phone data |
-| Email-first login | Current focused release aligns better with existing employee_code data |
+| Email-first login | Employees do not reliably have email addresses and the product wants a simpler portal-first flow |
+| Name-only login without password | Search is only for finding the right employee card, not authenticating identity |
 | Native employee mobile app | Web-first keeps scope aligned with the existing Astro website |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 37 | Pending |
+| AUTH-01 | Phase 37 | Complete |
 | AUTH-02 | Phase 37 | Pending |
 | AUTH-03 | Phase 37 | Pending |
 | AUTH-04 | Phase 39 | Pending |
-| LINK-01 | Phase 37 | Pending |
+| LINK-01 | Phase 37 | Complete |
 | LINK-02 | Phase 39 | Pending |
 | SCHED-01 | Phase 38 | Pending |
 | SCHED-02 | Phase 38 | Pending |
@@ -76,4 +77,4 @@
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after v6.1 roadmap drafting*
+*Last updated: 2026-03-22 after revising Phase 37 login to name-search plus password*

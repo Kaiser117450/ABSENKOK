@@ -6,7 +6,7 @@
 
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
-| 37 | Portal Foundation & Employee Auth | Extend the Astro site into a protected employee portal with code+password access and employee identity resolution. | AUTH-01, AUTH-02, AUTH-03, LINK-01 | 4 |
+| 37 | 1/4 | In Progress|  | 4 |
 | 38 | Employee Schedule Read Model | Build the employee-scoped schedule data path with current-week visibility and cross-day consistency. | SCHED-01, SCHED-02, SCHED-03 | 4 |
 | 39 | Employee Portal Schedule UX | Ship the phone-friendly schedule experience with safe account states and portal-only logout. | AUTH-04, LINK-02, PORT-01, PORT-02 | 4 |
 
@@ -15,13 +15,27 @@
 ## Phase Details
 
 ### Phase 37: Portal Foundation & Employee Auth
-**Goal:** Extend the Astro website into a protected employee portal with provisioning, sign-in, and stable employee identity resolution.
+**Goal:** Extend the Astro website into a protected employee portal with provisioning, fast name-search sign-in, and stable employee identity resolution.
 **Requirements:** [AUTH-01, AUTH-02, AUTH-03, LINK-01]
+**Plans:** 1/4 plans executed
+
+Plans:
+
+- [ ] 37-01: Portal account contract, search index, and provisioning function
+- [ ] 37-02: Admin employee portal provisioning flow
+- [ ] 37-03: Astro portal auth and search infrastructure
+- [ ] 37-04: Protected portal shell and employee context
+
+**Details:**
+- Portal foundation keeps the public Astro marketing pages static and opts only portal routes into on-demand rendering
+- Employee portal auth is provisioned server-side through Supabase Auth plus a one-to-one employee mapping contract
+- Portal login uses indexed name search with duplicate-safe identity cards before password sign-in
+- The first protected portal page will stop at identity resolution and a shell placeholder so Phase 38 can focus only on schedule data
 
 **Success Criteria:**
 1. Website repo supports protected employee portal routes without breaking public marketing pages.
-2. Admin can provision initial employee portal credentials using employee code plus password.
-3. Employee can sign in with those credentials and stay authenticated across refresh on protected routes.
+2. Admin can provision initial employee portal credentials without requiring employee-code setup first.
+3. Employee can find themselves through fast name search, sign in with password, and stay authenticated across refresh on protected routes.
 4. An authenticated portal session resolves to exactly one employee record before any schedule query is executed.
 
 ### Phase 38: Employee Schedule Read Model

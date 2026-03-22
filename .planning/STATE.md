@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v6.1
-milestone_name: Employee Portal
-current_plan: Not started
-status: roadmap-created
-stopped_at: Roadmap drafted
-last_updated: "2026-03-22T22:20:00+08:00"
-last_activity: 2026-03-22 — Drafted roadmap for v6.1 Employee Portal
+milestone_name: milestone
+current_plan: 37-02
+status: phase-37-in-progress
+stopped_at: Completed 37-01-PLAN.md
+last_updated: "2026-03-22T15:12:19.997Z"
+last_activity: 2026-03-22 — Revised Phase 37 auth plan to indexed name search plus password
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 4
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
@@ -19,33 +19,33 @@ progress:
 ## Current Position
 
 Phase: 37 — Portal Foundation & Employee Auth
-Plan: —
-Status: Roadmap created, ready for planning
-Last activity: 2026-03-22 — Drafted roadmap for v6.1 Employee Portal
+Plan: 37-01 — Portal account contract, search index, and provisioning function
+Status: Phase planned, ready for execution
+Last activity: 2026-03-22 — Revised Phase 37 auth plan to indexed name search plus password
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
 - **Phase:** 37 — Portal Foundation & Employee Auth
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-22 — roadmap drafted and requirements fully mapped
+- **Current Plan:** 37-01 — Portal account contract, search index, and provisioning function
+- **Last Updated:** 2026-03-22 — Phase 37 plan revised around name-search login
 
 ## Progress
 
 ```
-v6.1 Employee Portal — ROADMAP READY
+v6.1 Employee Portal — PHASE 37 PLANNED
 [□□□□□□□□□□] 0% · 0/3 phases
 ```
 
 - **Next starting phase:** 37
 - **Milestone focus:** Employee-facing web portal with schedule visibility first
-- **Roadmap state:** 3 phases drafted, 11/11 requirements mapped
+- **Roadmap state:** Phase 37 planned, phases 38-39 still drafted, 11/11 requirements mapped
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Start Phase 37 planning for employee portal foundation and auth.
+**Current focus:** Execute Phase 37 starting with portal account contract, indexed employee search, and provisioning backend.
 
 ## What Was Shipped
 
@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ### v2.0 (2026-03-12)
 - Phase 13-16: Soft-archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
 
-### v1.1 (2026-03-05)
+### v1.1 (Released, 2026-03-05)
 - Phase 1-12: Bug fixes, overlay pill, PDF/CSV reports, kiosk polish, admin UI, badges, logout resilience
 
 ## Key Decisions (Cumulative)
@@ -91,7 +91,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 24-02 | Direct RPC call from MissingClockoutService (not AnalyticsService) | Wave 1 plan — avoids build-order dependency between services |
 | 24-03 | isLate threshold is exclusive (>5 min, not >=) — exactly 5 min is not flagged | Matches plan spec: "late >5 minutes" |
 | 24-03 | Pattern cache TTL 6 hours + compute() isolate for off-thread processing | Avoids blocking NFC scan (SMART-03) |
-| 25-00 | Wave 0 stubs use pure flutter_test imports only — no app imports until implementation | Keeps stubs compilable before implementation classes exist |
+| 25-00 | Wave 0 stubs use pure flutter_test imports only — no app imports until implementation classes exist | Keeps stubs compilable before implementation classes exist |
 | 25-02 | Exact match milestone check (== not >=) to avoid re-awarding streak badges | Prevents duplicate badge awards on subsequent days |
 | 27-01 | battery_plus ^6.2.3 (not ^7.x) — v7 requires Kotlin 2.2.0 which breaks nfc_manager | Kotlin version constraint |
 | 27-01 | All 5 heartbeat columns nullable with no DEFAULT | Existing production rows unaffected |
@@ -110,6 +110,9 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 32-02 | HeartbeatService bridge write to outlets removed (Phase 32 done) | Admin dashboard reads kiosk_devices directly; dual-write overhead eliminated |
 | 33-02 | CentralDashboardScreen uses injected loaders for testability | Widget tests run without Supabase; GoRouter drilldown tested via onOpenOutlet callback |
 | 33-02 | Lihat Dashboard button disabled when no outlet selected | Prevents GoRouter push with empty outletId string — was a latent bug |
+| 37-01 | Hidden auth email: employee+<uuid>@portal.absenkok.internal | UUID is stable; name/code are mutable and unsafe as auth keys |
+| 37-01 | portal_search_name is GENERATED ALWAYS AS STORED column | Keeps normalization at DB layer; visible employees.name untouched |
+| 37-01 | Trigram fallback gated at >=3 chars; empty result for <2-char queries | PostgreSQL docs warn short patterns degrade trigram selectivity |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -151,8 +154,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T13:20:16.497Z
-**Stopped at:** Completed 36-02-PLAN.md
+**Last session:** 2026-03-22T15:12:19.994Z
+**Stopped at:** Completed 37-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
