@@ -13,8 +13,9 @@ import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
 import '../../services/badge_service.dart';
+import '../../models/kiosk_device.dart';
 import '../../widgets/badge_avatar.dart';
-import '../../widgets/kiosk_health_card.dart';
+import '../../widgets/kiosk_device_card.dart';
 import 'shift_scheduler_screen.dart';
 import '../../main.dart' show supabaseReady;
 
@@ -48,6 +49,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   List<_OpenShift> _openShifts = [];
   bool _loadingOpenShifts = false;
 
+  List<KioskDevice> _kioskDevices = [];
+  RealtimeChannel? _kioskDevicesChannel;
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +68,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Future<void> _initialLoad() async {
     // Warm badge cache for BadgeAvatar rendering
     BadgeService.instance.fetchAll();
-    await Future.wait([_loadOutlets(), _loadEmployeeCount(), _loadOpenShifts()]);
+    await Future.wait([_loadOutlets(), _loadEmployeeCount(), _loadOpenShifts(), _loadKioskDevices()]);
   }
 
   Future<void> _loadOutlets() async {
@@ -84,6 +88,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         await _loadLogs();
         _subscribeRealtime();
         _subscribeEmployeeRealtime();
+        _subscribeKioskDevicesRealtime();
       }
     } catch (e) {
       if (mounted) {
@@ -91,6 +96,136 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           _loading = false;
           _loadError = e.toString();
         });
+      }
+    }
+  }
+
+  Future<void> _loadKioskDevices() async {
+    try {
+      final data = await SupabaseClientFactory.admin
+          .from('kiosk_devices')
+          .select('*')
+          .eq('is_active', true)
+          .order('outlet_id')
+          .order('created_at');
+      if (mounted) {
+        setState(() {
+          _kioskDevices = (data as List)
+              .map((e) => KioskDevice.fromJson(e as Map<String, dynamic>))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] Failed to load kiosk devices: $e');
+    }
+  }
+
+  void _subscribeKioskDevicesRealtime() {
+    _kioskDevicesChannel?.unsubscribe();
+    _kioskDevicesChannel = SupabaseClientFactory.admin
+        .channel('kiosk_devices_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'kiosk_devices',
+          callback: (payload) => _loadKioskDevices(),
+        )
+        .subscribe();
+  }
+
+  Future<void> _showNicknameDialog(KioskDevice device) async {
+    final controller = TextEditingController(text: device.nickname ?? '');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Beri Nama Kiosk',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Kiosk Pintu Depan'),
+          autofocus: true,
+          maxLength: 40,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Simpan Nama'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && controller.text.trim().isNotEmpty) {
+      final newNickname = controller.text.trim();
+      final oldNickname = device.nickname;
+      // Optimistic update
+      setState(() {
+        _kioskDevices = _kioskDevices
+            .map((d) => d.id == device.id ? d.copyWith(nickname: newNickname) : d)
+            .toList();
+      });
+      try {
+        await SupabaseClientFactory.admin.rpc('set_device_nickname', params: {
+          'p_device_id': device.id,
+          'p_nickname': newNickname,
+        });
+      } catch (e) {
+        // Revert on error
+        if (mounted) {
+          setState(() {
+            _kioskDevices = _kioskDevices
+                .map((d) =>
+                    d.id == device.id ? d.copyWith(nickname: oldNickname) : d)
+                .toList();
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan. Coba lagi.')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showArchiveDialog(KioskDevice device) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Arsipkan Kiosk?',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        content: const Text(
+          'Kiosk ini tidak akan muncul lagi di dashboard. Hubungi admin pusat jika perlu dipulihkan.',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Batal',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Ya, Arsipkan',
+                style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      // Optimistic remove
+      setState(() {
+        _kioskDevices = _kioskDevices.where((d) => d.id != device.id).toList();
+      });
+      try {
+        await SupabaseClientFactory.admin.rpc('archive_device', params: {
+          'p_device_id': device.id,
+        });
+      } catch (e) {
+        debugPrint('[Dashboard] Archive device failed: $e');
+        // Device reappears on next data load — acceptable per UI-SPEC
       }
     }
   }
@@ -380,6 +515,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   void dispose() {
     _channel?.unsubscribe();
     _employeeChannel?.unsubscribe();
+    _kioskDevicesChannel?.unsubscribe();
     super.dispose();
   }
 
@@ -668,28 +804,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Kiosk Health Section ──────────────────────────────────────────────────
 
   Widget _buildKioskHealthSection() {
-    // Only show for active outlets that have been fetched
-    if (_outlets.isEmpty) return const SizedBox.shrink();
+    // Filter devices by selected outlet
+    final devicesForOutlet = _selectedOutletId != null
+        ? _kioskDevices.where((d) => d.outletId == _selectedOutletId).toList()
+        : _kioskDevices;
 
-    // Filter to show health for active outlets only
-    final activeOutlets = _selectedOutletId != null
-        ? _outlets.where((o) => o.id == _selectedOutletId).toList()
-        : _outlets;
-
-    // Count issues for summary
-    final offlineCount = activeOutlets.where((o) {
-      if (o.lastHeartbeatAt == null) return true;
-      return DateTime.now().difference(o.lastHeartbeatAt!).inMinutes > 30;
-    }).length;
-    final lowBatteryCount = activeOutlets
-        .where((o) => o.batteryLevel != null && o.batteryLevel! < 20)
-        .length;
-    final pendingSyncCount = activeOutlets
-        .where((o) => o.pendingSyncCount != null && o.pendingSyncCount! > 0)
+    // Count offline devices (excludes "never connected" devices)
+    final offlineCount = devicesForOutlet
+        .where((d) => !d.isOnline && d.lastHeartbeatAt != null)
         .length;
 
-    final hasIssues =
-        offlineCount > 0 || lowBatteryCount > 0 || pendingSyncCount > 0;
+    final hasIssues = offlineCount > 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -733,8 +858,41 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          // One card per outlet
-          ...activeOutlets.map((outlet) => KioskHealthCard(outlet: outlet)),
+          // One card per physical device
+          if (devicesForOutlet.isEmpty)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.devices_outlined, size: 40, color: AppColors.textMuted),
+                SizedBox(height: 8),
+                Text(
+                  'Tidak ada kiosk aktif',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Belum ada perangkat terdaftar untuk gerai ini.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textMuted,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            )
+          else
+            ...devicesForOutlet.map(
+              (d) => KioskDeviceCard(
+                device: d,
+                onNickname: () => _showNicknameDialog(d),
+                onArchive: () => _showArchiveDialog(d),
+              ),
+            ),
         ],
       ),
     );
