@@ -2,13 +2,13 @@
 
 **Goal:** Launch the first employee-facing web portal so staff can view their own schedules without touching kiosk or admin-only surfaces.
 **Starting Phase:** 37
-**Status:** Requirements Mapped
+**Status:** Planned
 
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
 | 37 | 4/4 | Complete    | 2026-03-22 | 4 |
 | 38 | 2/2 | Complete    | 2026-03-22 | 4 |
-| 39 | Employee Portal Schedule UX | Ship the phone-friendly schedule experience with safe account states and portal-only logout. | AUTH-04, LINK-02, PORT-01, PORT-02 | 4 |
+| 39 | 1/2 | In Progress|  | 4 |
 
 ---
 
@@ -53,6 +53,13 @@ Plans:
 **Goal:** Deliver the mobile-first employee portal pages that surface schedule data safely and clearly.
 **Requirements:** [AUTH-04, LINK-02, PORT-01, PORT-02]
 **Depends on:** Phase 38
+
+**Plans:** 1/2 plans executed
+
+Plans:
+
+- [ ] 39-01: Portal home state model and mobile schedule components
+- [ ] 39-02: Portal-only logout plus portal shell/page wiring
 
 **Success Criteria:**
 1. Portal pages are usable on a phone-sized browser without reusing the admin planning grid.

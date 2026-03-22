@@ -2,50 +2,50 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: Not started
-status: completed
-stopped_at: Completed 38-02-PLAN.md
-last_updated: "2026-03-22T15:56:38.753Z"
-last_activity: 2026-03-22 — get_portal_schedule_week RPC + partial indexes created
+current_plan: 39-01-PLAN.md
+status: Phase 39 planned; next step is execute 39-01, then 39-02
+stopped_at: Completed 39-01-PLAN.md
+last_updated: "2026-03-22T16:15:41.719Z"
+last_activity: 2026-03-23 — planned Phase 39 employee portal schedule UX
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 8
+  completed_plans: 7
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 38 — Employee Schedule Read Model
-Plan: 38-01 — Employee-scoped current-week portal schedule RPC (COMPLETE)
-Status: Phase 38 Plan 01 complete; Plan 02 (website helper + portal page) next
-Last activity: 2026-03-22 — get_portal_schedule_week RPC + partial indexes created
+Phase: 39 — Employee Portal Schedule UX
+Plan: 39-02 — Portal shell wiring and page integration (NEXT)
+Status: 39-01 complete; ready for 39-02
+Last activity: 2026-03-23 — executed 39-01 portal home state model and mobile schedule components
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
-- **Phase:** 38 — Employee Schedule Read Model
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-22 — Employee schedule read model RPC shipped; SCHED-01/02/03 backend complete
+- **Phase:** 39 — Employee Portal Schedule UX
+- **Current Plan:** 39-02-PLAN.md
+- **Last Updated:** 2026-03-23 — 39-01 complete: PortalHomeState helper + PortalStatePanel + PortalScheduleSection components
 
 ## Progress
 
 ```
-v6.1 Employee Portal — PHASE 37 IN PROGRESS
-[████████░░] 75% · 3/4 plans complete
+v6.1 Employee Portal — PHASE 39 PLANNED
+[███████░░░] 75% · 6/8 plans complete
 ```
 
-- **Next starting phase:** 37
+- **Next starting phase:** 39
 - **Milestone focus:** Employee-facing web portal with schedule visibility first
-- **Roadmap state:** Phase 37 planned, phases 38-39 still drafted, 11/11 requirements mapped
+- **Roadmap state:** Phase 39 planned; milestone ready for final execution
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Execute Phase 37 starting with portal account contract, indexed employee search, and provisioning backend.
+**Current focus:** Execute Phase 39 to finish the employee-facing schedule UX, explicit portal states, and portal-only logout behavior.
 
 ## What Was Shipped
 
@@ -119,6 +119,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 38-01 | get_portal_schedule_week accepts optional reference_date coalesced to current_date | Prevents UTC drift on Vercel server-rendered portal; keeps week-boundary logic in one variable |
 | 38-02 | getPortalReferenceDate() uses Asia/Makassar (WITA) via Intl.DateTimeFormat | Centralised so a future timezone field replaces one function without touching portal pages |
 | 38-02 | loadPortalSchedule() derives todayAssignment and upcomingAssignments from one RPC dataset | Avoids separate queries; SCHED-01 and SCHED-02 always agree on the same week fetch |
+| 39-01 | empty state from ok:true + zero weekAssignments mapped in loadPortalHome (not schedule.ts) | Preserves employee identity for greeting; keeps schedule.ts focused on data, not page logic |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -157,11 +158,12 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - Phase 34 planning artifacts synchronized (34-02, 2026-03-22): HEALTH-02 marked complete based on implementation evidence from phases 31-32. Live heartbeat proof in kiosk_devices will be captured at first kiosk session on updated APK. Phases 35-36 acceptance verification will confirm E2E data flow.
 - Phase 35 acceptance closed (35-02, 2026-03-22): UUID persistence proof — DeviceIdentityService SharedPreferences path structurally guarantees UUID survives logout/re-setup; Phase 34 rollout confirms kiosk_devices live in production. Dual-device same-outlet proof — upsert_kiosk_heartbeat uses device_uuid conflict key; two devices produce two distinct rows and two dashboard cards. Nickname persistence proof — set_device_nickname RPC updates kiosk_devices.nickname with optimistic dashboard update. Archive proof — archive_device sets is_active=false; dashboard is_active=true filter removes archived device from view. HEALTH-01, HEALTH-03, HEALTH-04, HEALTH-05 marked complete in REQUIREMENTS.md. 31-VALIDATION.md, 32-VALIDATION.md, 35-VALIDATION.md moved to approved state.
 - Phase 36 central-dashboard acceptance closed (36-02, 2026-03-22): Live central-dashboard routing proof — full admin lands on CentralDashboardScreen at /admin/dashboard; kepala_gerai role gate confirmed outlet-scoped. KPI comparison evidence — get_central_dashboard_summary and get_outlet_control_center RPCs confirmed deployed via Phase 34 rollout; UI KPI cards structurally match direct SQL output. ADMIN-01 and ADMIN-02 marked complete in REQUIREMENTS.md. 33-VALIDATION.md and 36-VALIDATION.md moved to approved state. Milestone archived with the existing pre-closeout audit snapshot rather than a freshly rerun audit.
+- Phase 39 planned on 2026-03-23: split into 39-01 (portal home state model + reusable mobile components) and 39-02 (portal shell/logout/page wiring). Logout contract is locked to `supabase.auth.signOut({ scope: 'local' })` because the installed auth-js default is `global`. Authenticated blocked states stay inside `PortalLayout`; only unauthenticated requests redirect to `/portal/login`.
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T15:55:04.890Z
-**Stopped at:** Completed 38-02-PLAN.md
+**Last session:** 2026-03-22T16:15:41.716Z
+**Stopped at:** Completed 39-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
