@@ -131,6 +131,126 @@ void main() {
       });
     });
 
+    group('CentralDashboardSummary.fromJson', () {
+      test('parses standard central dashboard summary', () {
+        final json = {
+          'total_outlets': 4,
+          'connected_devices': 7,
+          'offline_devices': 1,
+          'low_battery_devices': 2,
+          'pending_sync_devices': 1,
+          'daily_attendance_rate': 84.6,
+        };
+        final summary = CentralDashboardSummary.fromJson(json);
+        expect(summary.totalOutlets, 4);
+        expect(summary.connectedDevices, 7);
+        expect(summary.offlineDevices, 1);
+        expect(summary.lowBatteryDevices, 2);
+        expect(summary.pendingSyncDevices, 1);
+        expect(summary.dailyAttendanceRate, closeTo(84.6, 0.001));
+      });
+
+      test('handles zero attendance rate (no scans today)', () {
+        final json = {
+          'total_outlets': 4,
+          'connected_devices': 3,
+          'offline_devices': 0,
+          'low_battery_devices': 0,
+          'pending_sync_devices': 0,
+          'daily_attendance_rate': 0.0,
+        };
+        final summary = CentralDashboardSummary.fromJson(json);
+        expect(summary.dailyAttendanceRate, 0.0);
+        expect(summary.connectedDevices, 3);
+      });
+
+      test('coerces integer daily_attendance_rate to double', () {
+        final json = {
+          'total_outlets': 2,
+          'connected_devices': 4,
+          'offline_devices': 0,
+          'low_battery_devices': 0,
+          'pending_sync_devices': 0,
+          'daily_attendance_rate': 100,
+        };
+        final summary = CentralDashboardSummary.fromJson(json);
+        expect(summary.dailyAttendanceRate, 100.0);
+        expect(summary.dailyAttendanceRate, isA<double>());
+      });
+    });
+
+    group('OutletControlCenterRow.fromJson', () {
+      test('parses standard outlet control center row', () {
+        final json = {
+          'outlet_id': 'outlet-uuid-001',
+          'outlet_name': 'Gerai Panakkukang',
+          'connected_devices': 2,
+          'offline_devices': 0,
+          'low_battery_devices': 1,
+          'pending_sync_devices': 0,
+          'daily_attendance_rate': 91.7,
+          'last_heartbeat_at': '2026-03-22T06:10:00Z',
+        };
+        final row = OutletControlCenterRow.fromJson(json);
+        expect(row.outletId, 'outlet-uuid-001');
+        expect(row.outletName, 'Gerai Panakkukang');
+        expect(row.connectedDevices, 2);
+        expect(row.offlineDevices, 0);
+        expect(row.lowBatteryDevices, 1);
+        expect(row.pendingSyncDevices, 0);
+        expect(row.dailyAttendanceRate, closeTo(91.7, 0.001));
+        expect(row.lastHeartbeatAt, DateTime.parse('2026-03-22T06:10:00Z'));
+      });
+
+      test('handles nullable last_heartbeat_at', () {
+        final json = {
+          'outlet_id': 'outlet-uuid-002',
+          'outlet_name': 'Gerai Makassar',
+          'connected_devices': 0,
+          'offline_devices': 0,
+          'low_battery_devices': 0,
+          'pending_sync_devices': 0,
+          'daily_attendance_rate': 0.0,
+          'last_heartbeat_at': null,
+        };
+        final row = OutletControlCenterRow.fromJson(json);
+        expect(row.lastHeartbeatAt, isNull);
+        expect(row.outletId, 'outlet-uuid-002');
+      });
+
+      test('coerces integer daily_attendance_rate to double', () {
+        final json = {
+          'outlet_id': 'outlet-uuid-003',
+          'outlet_name': 'Gerai Gowa',
+          'connected_devices': 1,
+          'offline_devices': 0,
+          'low_battery_devices': 0,
+          'pending_sync_devices': 0,
+          'daily_attendance_rate': 80,
+          'last_heartbeat_at': null,
+        };
+        final row = OutletControlCenterRow.fromJson(json);
+        expect(row.dailyAttendanceRate, 80.0);
+        expect(row.dailyAttendanceRate, isA<double>());
+      });
+    });
+
+    group('AnalyticsService central dashboard methods', () {
+      test('getCentralDashboardSummary returns null when supabaseReady is false', () async {
+        final result = await AnalyticsService.instance.getCentralDashboardSummary(
+          date: DateTime(2026, 3, 22),
+        );
+        expect(result, isNull);
+      });
+
+      test('getOutletControlCenter returns empty list when supabaseReady is false', () async {
+        final result = await AnalyticsService.instance.getOutletControlCenter(
+          date: DateTime(2026, 3, 22),
+        );
+        expect(result, isEmpty);
+      });
+    });
+
     group('AnalyticsService singleton', () {
       test('instance is a singleton', () {
         final a = AnalyticsService.instance;

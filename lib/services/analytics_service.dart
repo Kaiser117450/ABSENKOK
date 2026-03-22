@@ -76,6 +76,74 @@ class MissingClockout {
   }
 }
 
+/// Firm-wide central dashboard KPIs returned by get_central_dashboard_summary.
+class CentralDashboardSummary {
+  final int totalOutlets;
+  final int connectedDevices;
+  final int offlineDevices;
+  final int lowBatteryDevices;
+  final int pendingSyncDevices;
+  final double dailyAttendanceRate;
+
+  const CentralDashboardSummary({
+    required this.totalOutlets,
+    required this.connectedDevices,
+    required this.offlineDevices,
+    required this.lowBatteryDevices,
+    required this.pendingSyncDevices,
+    required this.dailyAttendanceRate,
+  });
+
+  factory CentralDashboardSummary.fromJson(Map<String, dynamic> json) {
+    return CentralDashboardSummary(
+      totalOutlets: (json['total_outlets'] as num).toInt(),
+      connectedDevices: (json['connected_devices'] as num).toInt(),
+      offlineDevices: (json['offline_devices'] as num).toInt(),
+      lowBatteryDevices: (json['low_battery_devices'] as num).toInt(),
+      pendingSyncDevices: (json['pending_sync_devices'] as num).toInt(),
+      dailyAttendanceRate: (json['daily_attendance_rate'] as num).toDouble(),
+    );
+  }
+}
+
+/// One rollup row per active outlet returned by get_outlet_control_center.
+class OutletControlCenterRow {
+  final String outletId;
+  final String outletName;
+  final int connectedDevices;
+  final int offlineDevices;
+  final int lowBatteryDevices;
+  final int pendingSyncDevices;
+  final double dailyAttendanceRate;
+  final DateTime? lastHeartbeatAt;
+
+  const OutletControlCenterRow({
+    required this.outletId,
+    required this.outletName,
+    required this.connectedDevices,
+    required this.offlineDevices,
+    required this.lowBatteryDevices,
+    required this.pendingSyncDevices,
+    required this.dailyAttendanceRate,
+    this.lastHeartbeatAt,
+  });
+
+  factory OutletControlCenterRow.fromJson(Map<String, dynamic> json) {
+    return OutletControlCenterRow(
+      outletId: json['outlet_id'] as String,
+      outletName: json['outlet_name'] as String,
+      connectedDevices: (json['connected_devices'] as num).toInt(),
+      offlineDevices: (json['offline_devices'] as num).toInt(),
+      lowBatteryDevices: (json['low_battery_devices'] as num).toInt(),
+      pendingSyncDevices: (json['pending_sync_devices'] as num).toInt(),
+      dailyAttendanceRate: (json['daily_attendance_rate'] as num).toDouble(),
+      lastHeartbeatAt: json['last_heartbeat_at'] == null
+          ? null
+          : DateTime.parse(json['last_heartbeat_at'] as String),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AnalyticsService
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,6 +236,54 @@ class AnalyticsService {
           .toList();
     } catch (e) {
       debugPrint('[AnalyticsService] getMissingClockouts failed: $e');
+      return [];
+    }
+  }
+
+  /// Returns firm-wide central dashboard KPIs for [date].
+  /// Returns null if [supabaseReady] is false or if the RPC fails.
+  Future<CentralDashboardSummary?> getCentralDashboardSummary({
+    required DateTime date,
+  }) async {
+    if (!supabaseReady) return null;
+    try {
+      final dateStr =
+          '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+      final result = await SupabaseClientFactory.admin.rpc(
+        'get_central_dashboard_summary',
+        params: {'p_date': dateStr},
+      );
+      if (result == null) return null;
+      return CentralDashboardSummary.fromJson(result as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('[AnalyticsService] getCentralDashboardSummary failed: $e');
+      return null;
+    }
+  }
+
+  /// Returns one rollup row per active outlet for [date].
+  /// Returns empty list if [supabaseReady] is false or if the RPC fails.
+  Future<List<OutletControlCenterRow>> getOutletControlCenter({
+    required DateTime date,
+  }) async {
+    if (!supabaseReady) return [];
+    try {
+      final dateStr =
+          '${date.year.toString().padLeft(4, '0')}-'
+          '${date.month.toString().padLeft(2, '0')}-'
+          '${date.day.toString().padLeft(2, '0')}';
+      final result = await SupabaseClientFactory.admin.rpc(
+        'get_outlet_control_center',
+        params: {'p_date': dateStr},
+      );
+      if (result == null) return [];
+      return (result as List)
+          .map((e) => OutletControlCenterRow.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[AnalyticsService] getOutletControlCenter failed: $e');
       return [];
     }
   }
