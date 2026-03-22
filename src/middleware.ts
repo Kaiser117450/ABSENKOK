@@ -47,6 +47,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Cache the verified portal user on the request context so page loaders
+  // do not need to hit Auth again during the same request.
+  (context.locals as Record<string, unknown>).portalUser = user ?? null;
+
   // Forward to the route handler.
   const response = await next();
 

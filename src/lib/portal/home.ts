@@ -81,9 +81,9 @@ export async function loadPortalHome(Astro: AstroGlobal): Promise<PortalHomeStat
 
   const schedule = result.schedule;
 
-  // Treat a week with zero assignments as the empty state, surfacing
+  // Treat only a fully-empty two-week horizon as the empty state, surfacing
   // the employee identity so the shell can still greet them by name.
-  if (schedule.weekAssignments.length === 0) {
+  if (schedule.weekAssignments.length === 0 && schedule.nextWeekAssignments.length === 0) {
     return {
       kind: 'empty',
       employee: schedule.employee,

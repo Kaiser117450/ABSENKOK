@@ -15,15 +15,6 @@ if (state.kind === 'unauthenticated') {
   return Astro.redirect('/portal/login');
 }
 
-// Helper: derive initials for the greeting avatar fallback.
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .toUpperCase();
-}
 ---
 
 {state.kind === 'ready' && (

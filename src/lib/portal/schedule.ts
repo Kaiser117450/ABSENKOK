@@ -1,5 +1,5 @@
 import type { AstroGlobal } from 'astro';
-import { createSupabaseAdminClient } from '../supabase/admin';
+import { createSupabaseServerClient } from '../supabase/server';
 import { resolvePortalEmployee } from './employee';
 import type { PortalEmployee } from './employee';
 
@@ -8,6 +8,8 @@ import type { PortalEmployee } from './employee';
 // ---------------------------------------------------------------------------
 
 /** One schedule assignment row as returned by the portal schedule helper. */
+export type PortalScheduleStatus = 'normal' | 'libur' | 'sakit' | 'izin';
+
 export interface PortalScheduleEntry {
   /** Logical calendar date for this assignment (always the scheduled start day). */
   logicalDate: string; // ISO date string: "YYYY-MM-DD"
@@ -22,6 +24,8 @@ export interface PortalScheduleEntry {
   endsNextDay: boolean;
   /** True when this slot is a scheduled day off (libur). */
   isDayOff: boolean;
+  /** Employee-specific state overlayed from schedule + attendance status sources. */
+  status: PortalScheduleStatus;
   notes: string | null;
 }
 
@@ -34,7 +38,9 @@ export interface PortalScheduleModel {
   todayAssignment: PortalScheduleEntry | null;
   /** All assignments for the current ISO week, ordered by logicalDate ascending. */
   weekAssignments: PortalScheduleEntry[];
-  /** Assignments after today within the current week, ordered by logicalDate ascending. */
+  /** All assignments for the next ISO week, ordered by logicalDate ascending. */
+  nextWeekAssignments: PortalScheduleEntry[];
+  /** Assignments after today within the fetched two-week horizon, ordered by logicalDate ascending. */
   upcomingAssignments: PortalScheduleEntry[];
 }
 
@@ -74,31 +80,19 @@ export function getPortalReferenceDate(): string {
 // Raw RPC row type
 // ---------------------------------------------------------------------------
 
-interface ShiftSlotRow {
-  name?: string;
-  start_hour?: number;
-  start_minute?: number;
-  end_hour?: number;
-  end_minute?: number;
-}
-
-interface ScheduleEntryRow {
-  date: string;
-  shift_slot: ShiftSlotRow | null;
-  is_day_off: boolean | null;
-  notes: string | null;
-  schedule_id: string;
-}
-
-interface ScheduleRow {
-  id: string;
+interface PortalScheduleOverviewRow {
+  logical_date: string;
   outlet_id: string | null;
-  is_active: boolean;
-}
-
-interface OutletRow {
-  id: string;
-  name: string;
+  outlet_name: string | null;
+  shift_name: string | null;
+  start_hour: number | null;
+  start_minute: number | null;
+  end_hour: number | null;
+  end_minute: number | null;
+  is_day_off: boolean | null;
+  ends_next_day: boolean | null;
+  entry_status: string | null;
+  notes: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,28 +100,27 @@ interface OutletRow {
 // ---------------------------------------------------------------------------
 
 function normalizeRow(
-  row: ScheduleEntryRow,
-  outletName: string | null,
-  outletId: string | null,
+  row: PortalScheduleOverviewRow,
 ): PortalScheduleEntry {
-  const shift = row.shift_slot ?? {};
-  const startHour = typeof shift.start_hour === 'number' ? shift.start_hour : 0;
-  const startMinute = typeof shift.start_minute === 'number' ? shift.start_minute : 0;
-  const endHour = typeof shift.end_hour === 'number' ? shift.end_hour : 0;
-  const endMinute = typeof shift.end_minute === 'number' ? shift.end_minute : 0;
+  const startHour = typeof row.start_hour === 'number' ? row.start_hour : 0;
+  const startMinute = typeof row.start_minute === 'number' ? row.start_minute : 0;
+  const endHour = typeof row.end_hour === 'number' ? row.end_hour : 0;
+  const endMinute = typeof row.end_minute === 'number' ? row.end_minute : 0;
   const isDayOff = row.is_day_off ?? false;
+  const status = normalizeStatus(row.entry_status, isDayOff);
 
   return {
-    logicalDate: row.date,
-    outletId,
-    outletName,
-    shiftName: shift.name ?? null,
+    logicalDate: row.logical_date,
+    outletId: row.outlet_id ?? null,
+    outletName: row.outlet_name ?? null,
+    shiftName: row.shift_name ?? null,
     startHour,
     startMinute,
     endHour,
     endMinute,
-    endsNextDay: !isDayOff && (endHour < startHour || (endHour === startHour && endMinute <= startMinute)),
+    endsNextDay: row.ends_next_day ?? (!isDayOff && (endHour < startHour || (endHour === startHour && endMinute <= startMinute))),
     isDayOff,
+    status,
     notes: row.notes ?? null,
   };
 }
@@ -146,6 +139,28 @@ function getPortalWeekRange(referenceDate: string) {
   };
 }
 
+function shiftIsoDate(date: string, offsetDays: number): string {
+  const shifted = new Date(`${date}T00:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + offsetDays);
+  return shifted.toISOString().slice(0, 10);
+}
+
+function normalizeStatus(
+  status: string | null,
+  isDayOff: boolean,
+): PortalScheduleStatus {
+  switch (status) {
+    case 'sakit':
+      return 'sakit';
+    case 'izin':
+      return 'izin';
+    case 'libur':
+      return 'libur';
+    default:
+      return isDayOff ? 'libur' : 'normal';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main helper
 // ---------------------------------------------------------------------------
@@ -154,8 +169,8 @@ function getPortalWeekRange(referenceDate: string) {
  * Load the current-week portal schedule for the authenticated employee.
  *
  * Security: employee identity is resolved server-side through
- * `resolvePortalEmployee()`. The page never supplies the employee ID — the
- * authenticated portal session carries the employee id in `app_metadata`.
+ * `resolvePortalEmployee()` and the schedule rows come from an authenticated
+ * RPC scoped by the portal session. The page never supplies employee ID.
  *
  * Returns a typed empty-state result (`no_assignments`) when the employee
  * exists but has no schedule entries for the current week.
@@ -176,76 +191,34 @@ export async function loadPortalSchedule(Astro: AstroGlobal): Promise<PortalSche
   // 2. Compute one explicit business-local reference date and week boundaries.
   const referenceDate = getPortalReferenceDate();
   const { weekStart, weekEnd } = getPortalWeekRange(referenceDate);
+  const nextWeekStart = shiftIsoDate(weekEnd, 1);
+  const nextWeekEnd = shiftIsoDate(nextWeekStart, 6);
 
-  const admin = createSupabaseAdminClient();
+  const supabase = createSupabaseServerClient(
+    Astro.request.headers.get('cookie') ?? '',
+    Astro.response.headers,
+  );
+  const { data, error } = await supabase.rpc('get_portal_schedule_overview', {
+    reference_date: referenceDate,
+  });
 
-  const { data: entries, error: entriesError } = await admin
-    .from('schedule_entries')
-    .select('date, shift_slot, is_day_off, notes, schedule_id')
-    .eq('employee_id', employee.employee_id)
-    .gte('date', weekStart)
-    .lte('date', weekEnd)
-    .order('date', { ascending: true })
-    .returns<ScheduleEntryRow[]>();
-
-  if (entriesError) {
+  if (error) {
     return {
       ok: false,
       reason: 'rpc_error',
-      message: entriesError.message,
+      message: error.message,
     };
   }
 
-  const scheduleIds = Array.from(new Set((entries ?? []).map((entry) => entry.schedule_id)));
-  const { data: schedules, error: schedulesError } = scheduleIds.length === 0
-    ? { data: [] as ScheduleRow[], error: null }
-    : await admin
-        .from('schedules')
-        .select('id, outlet_id, is_active')
-        .in('id', scheduleIds)
-        .eq('is_active', true)
-        .returns<ScheduleRow[]>();
-
-  if (schedulesError) {
-    return {
-      ok: false,
-      reason: 'rpc_error',
-      message: schedulesError.message,
-    };
-  }
-
-  const outletIds = Array.from(new Set((schedules ?? []).map((schedule) => schedule.outlet_id).filter(Boolean))) as string[];
-  const { data: outlets, error: outletsError } = outletIds.length === 0
-    ? { data: [] as OutletRow[], error: null }
-    : await admin
-        .from('outlets')
-        .select('id, name')
-        .in('id', outletIds)
-        .returns<OutletRow[]>();
-
-  if (outletsError) {
-    return {
-      ok: false,
-      reason: 'rpc_error',
-      message: outletsError.message,
-    };
-  }
-
-  const scheduleMap = new Map((schedules ?? []).map((schedule) => [schedule.id, schedule]));
-  const outletMap = new Map((outlets ?? []).map((outlet) => [outlet.id, outlet.name]));
-
-  const rows: PortalScheduleEntry[] = (entries ?? [])
-    .filter((entry) => scheduleMap.has(entry.schedule_id))
-    .map((entry) => {
-      const schedule = scheduleMap.get(entry.schedule_id) ?? null;
-      const outletId = schedule?.outlet_id ?? null;
-      return normalizeRow(entry, outletId ? outletMap.get(outletId) ?? null : null, outletId);
-    })
+  const rows = (Array.isArray(data) ? data : [])
+    .map((row) => normalizeRow(row as PortalScheduleOverviewRow))
     .sort((a, b) => a.logicalDate.localeCompare(b.logicalDate));
 
   // 4. Derive today and upcoming from one dataset.
   const todayAssignment = rows.find((r) => r.logicalDate === referenceDate) ?? null;
   const upcomingAssignments = rows.filter((r) => r.logicalDate > referenceDate);
+  const weekAssignments = rows.filter((r) => r.logicalDate >= weekStart && r.logicalDate <= weekEnd);
+  const nextWeekAssignments = rows.filter((r) => r.logicalDate >= nextWeekStart && r.logicalDate <= nextWeekEnd);
 
   return {
     ok: true,
@@ -253,7 +226,8 @@ export async function loadPortalSchedule(Astro: AstroGlobal): Promise<PortalSche
       employee,
       referenceDate,
       todayAssignment,
-      weekAssignments: rows,
+      weekAssignments,
+      nextWeekAssignments,
       upcomingAssignments,
     },
   };
