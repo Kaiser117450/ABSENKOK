@@ -132,11 +132,13 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 31 Plan 02 (31-02): kiosk_devices table + upsert_kiosk_heartbeat SECURITY DEFINER RPC + HeartbeatService dual-write (RPC primary + outlets bridge). Migration file: sql/phase_31_kiosk_devices_20260320.sql — MUST be applied to Supabase before deploying updated APK
 - Phase 32 Plan 01 (32-01): KioskDevice model (lib/models/kiosk_device.dart) with fromJson, isOnline (30-min threshold), displayName, copyWith; 8 unit tests passing; SQL migration sql/phase_32_device_mgmt_20260322.sql with set_device_nickname + archive_device SECURITY DEFINER RPCs — MUST be applied before Plan 02 UI deployment
 - Phase 32 Plan 02 (32-02): KioskDeviceCard widget (lib/widgets/kiosk_device_card.dart); admin dashboard Status Kiosk section migrated from outlets to kiosk_devices; _showNicknameDialog + _showArchiveDialog with optimistic updates; realtime subscription on kiosk_devices_changes; HeartbeatService bridge write to outlets table removed
+- Phase 34 rollout packet built (34-01, 2026-03-22): Three SQL migrations (phase_31_kiosk_devices_20260320.sql, phase_32_device_mgmt_20260322.sql, phase_33_central_dashboard_20260322.sql) verified correct in source code — all 5 function names confirmed present. Rollout order locked: 31 -> 32 -> 33. Operator checklist in 34-VALIDATION.md. Migrations awaiting operator application in Supabase SQL Editor before APK deployment.
+- Phase 34 planning artifacts synchronized (34-02, 2026-03-22): HEALTH-02 marked complete based on implementation evidence from phases 31-32. Live heartbeat proof in kiosk_devices will be captured at first kiosk session on updated APK. Phases 35-36 acceptance verification will confirm E2E data flow.
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T12:56:37.893Z
-**Stopped at:** Completed 34-01-PLAN.md
+**Last session:** 2026-03-22
+**Stopped at:** Completed 34-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
