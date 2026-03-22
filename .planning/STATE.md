@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Employee Portal
-current_plan: Define next milestone requirements
-status: defining-requirements
-stopped_at: Milestone initialized
-last_updated: "2026-03-22T22:00:00+08:00"
-last_activity: 2026-03-22 — Started v6.1 Employee Portal milestone
+current_plan: Not started
+status: roadmap-created
+stopped_at: Roadmap drafted
+last_updated: "2026-03-22T22:20:00+08:00"
+last_activity: 2026-03-22 — Drafted roadmap for v6.1 Employee Portal
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,34 +18,34 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 37 — Portal Foundation & Employee Auth
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-22 — Milestone v6.1 started
+Status: Roadmap created, ready for planning
+Last activity: 2026-03-22 — Drafted roadmap for v6.1 Employee Portal
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
-- **Phase:** Not started
-- **Current Plan:** Define requirements for the employee-facing web portal
-- **Last Updated:** 2026-03-22 — v6.1 milestone initialized
+- **Phase:** 37 — Portal Foundation & Employee Auth
+- **Current Plan:** Not started
+- **Last Updated:** 2026-03-22 — roadmap drafted and requirements fully mapped
 
 ## Progress
 
 ```
-v6.1 Employee Portal — DEFINING
-[□□□□□□□□□□] 0% · 0/0 phases
+v6.1 Employee Portal — ROADMAP READY
+[□□□□□□□□□□] 0% · 0/3 phases
 ```
 
 - **Next starting phase:** 37
 - **Milestone focus:** Employee-facing web portal with schedule visibility first
-- **Roadmap state:** Requirements and roadmap not written yet
+- **Roadmap state:** 3 phases drafted, 11/11 requirements mapped
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Define v6.1 requirements and roadmap starting at Phase 37.
+**Current focus:** Start Phase 37 planning for employee portal foundation and auth.
 
 ## What Was Shipped
 

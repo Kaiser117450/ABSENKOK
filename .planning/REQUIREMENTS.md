@@ -57,23 +57,23 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| LINK-01 | TBD | Pending |
-| LINK-02 | TBD | Pending |
-| SCHED-01 | TBD | Pending |
-| SCHED-02 | TBD | Pending |
-| SCHED-03 | TBD | Pending |
-| PORT-01 | TBD | Pending |
-| PORT-02 | TBD | Pending |
+| AUTH-01 | Phase 37 | Pending |
+| AUTH-02 | Phase 37 | Pending |
+| AUTH-03 | Phase 37 | Pending |
+| AUTH-04 | Phase 39 | Pending |
+| LINK-01 | Phase 37 | Pending |
+| LINK-02 | Phase 39 | Pending |
+| SCHED-01 | Phase 38 | Pending |
+| SCHED-02 | Phase 38 | Pending |
+| SCHED-03 | Phase 38 | Pending |
+| PORT-01 | Phase 39 | Pending |
+| PORT-02 | Phase 39 | Pending |
 
 **Coverage:**
 - v6.1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
-*Last updated: 2026-03-22 after v6.1 requirement drafting*
+*Last updated: 2026-03-22 after v6.1 roadmap drafting*
