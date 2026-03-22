@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: 39-01-PLAN.md
-status: Phase 39 planned; next step is execute 39-01, then 39-02
-stopped_at: Completed 39-01-PLAN.md
-last_updated: "2026-03-22T16:15:41.719Z"
-last_activity: 2026-03-23 — planned Phase 39 employee portal schedule UX
+current_plan: 39-02-PLAN.md
+status: Phase 39 complete; all plans executed
+stopped_at: Completed 39-02-PLAN.md
+last_updated: "2026-03-23T16:18:52Z"
+last_activity: 2026-03-23 — executed 39-02 portal shell wiring and page integration
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # STATE.md — Project Memory
@@ -19,21 +19,21 @@ progress:
 ## Current Position
 
 Phase: 39 — Employee Portal Schedule UX
-Plan: 39-02 — Portal shell wiring and page integration (NEXT)
-Status: 39-01 complete; ready for 39-02
-Last activity: 2026-03-23 — executed 39-01 portal home state model and mobile schedule components
+Plan: 39-02 — Portal shell wiring and page integration (COMPLETE)
+Status: Phase 39 complete — all plans executed
+Last activity: 2026-03-23 — executed 39-02: portal shell hardened (AUTH-04), portal home rewritten as page-state router
 
 ## Current Status
 - **Milestone:** v6.1 — Employee Portal
 - **Phase:** 39 — Employee Portal Schedule UX
-- **Current Plan:** 39-02-PLAN.md
-- **Last Updated:** 2026-03-23 — 39-01 complete: PortalHomeState helper + PortalStatePanel + PortalScheduleSection components
+- **Current Plan:** 39-02-PLAN.md (COMPLETE)
+- **Last Updated:** 2026-03-23 — 39-02 complete: portal shell hardened, local-scope logout, portal home rewritten as page-state router
 
 ## Progress
 
 ```
-v6.1 Employee Portal — PHASE 39 PLANNED
-[███████░░░] 75% · 6/8 plans complete
+v6.1 Employee Portal — PHASE 39 COMPLETE
+[██████████] 100% · 8/8 plans complete
 ```
 
 - **Next starting phase:** 39
@@ -120,6 +120,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 38-02 | getPortalReferenceDate() uses Asia/Makassar (WITA) via Intl.DateTimeFormat | Centralised so a future timezone field replaces one function without touching portal pages |
 | 38-02 | loadPortalSchedule() derives todayAssignment and upcomingAssignments from one RPC dataset | Avoids separate queries; SCHED-01 and SCHED-02 always agree on the same week fetch |
 | 39-01 | empty state from ok:true + zero weekAssignments mapped in loadPortalHome (not schedule.ts) | Preserves employee identity for greeting; keeps schedule.ts focused on data, not page logic |
+| 39-02 | Portal sign-out uses scope: 'local' — auth-js default is 'global' | AUTH-04 explicitly enforced; portal logout ends portal session only, not global Supabase session |
+| 39-02 | not-linked and error render inside PortalLayout (not bare HTML) | Consistent shell for all authenticated states; only unauthenticated redirects out |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -162,8 +164,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T16:15:41.716Z
-**Stopped at:** Completed 39-01-PLAN.md
+**Last session:** 2026-03-23T16:18:52Z
+**Stopped at:** Completed 39-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules

@@ -10,12 +10,12 @@
 - [x] **AUTH-01**: Admin can provision initial employee portal access for an existing employee by enabling portal login and setting an initial password.
 - [x] **AUTH-02**: Employee can find and choose their own portal profile through name search, then sign in using password.
 - [x] **AUTH-03**: Employee session persists across refresh while protected portal routes reject unauthenticated access.
-- [ ] **AUTH-04**: Employee can sign out of the portal without affecting kiosk or admin sessions.
+- [x] **AUTH-04**: Employee can sign out of the portal without affecting kiosk or admin sessions.
 
 ### Identity Linking
 
 - [x] **LINK-01**: An authenticated portal user resolves to exactly one employee record before schedule data is shown.
-- [ ] **LINK-02**: If no linked employee record exists, the portal shows a clear "account not linked" state instead of exposing schedule data.
+- [x] **LINK-02**: If no linked employee record exists, the portal shows a clear "account not linked" state instead of exposing schedule data.
 
 ### Schedule Visibility
 
@@ -25,8 +25,8 @@
 
 ### Portal Experience
 
-- [ ] **PORT-01**: Portal schedule pages are usable on a phone-sized browser without relying on the admin schedule grid.
-- [ ] **PORT-02**: Portal distinguishes loading, empty schedule, not-linked, and error states clearly.
+- [x] **PORT-01**: Portal schedule pages are usable on a phone-sized browser without relying on the admin schedule grid.
+- [x] **PORT-02**: Portal distinguishes loading, empty schedule, not-linked, and error states clearly.
 
 ## Future Requirements
 
@@ -61,14 +61,14 @@
 | AUTH-01 | Phase 37 | Complete |
 | AUTH-02 | Phase 37 | Complete |
 | AUTH-03 | Phase 37 | Complete |
-| AUTH-04 | Phase 39 | Pending |
+| AUTH-04 | Phase 39 | Complete |
 | LINK-01 | Phase 37 | Complete |
-| LINK-02 | Phase 39 | Pending |
+| LINK-02 | Phase 39 | Complete |
 | SCHED-01 | Phase 38 | Complete |
 | SCHED-02 | Phase 38 | Complete |
 | SCHED-03 | Phase 38 | Complete |
-| PORT-01 | Phase 39 | Pending |
-| PORT-02 | Phase 39 | Pending |
+| PORT-01 | Phase 39 | Complete |
+| PORT-02 | Phase 39 | Complete |
 
 **Coverage:**
 - v6.1 requirements: 11 total
