@@ -13,8 +13,7 @@ import 'sentry_service.dart';
 import 'sqlite_service.dart';
 
 /// Sends a heartbeat to the `kiosk_devices` table (via RPC) every 15 minutes.
-/// Also updates `outlets` table heartbeat fields as a backward-compatible bridge
-/// until Phase 32 refactors the admin dashboard to read from `kiosk_devices`.
+/// Admin dashboard now reads directly from kiosk_devices (Phase 32).
 ///
 /// Payload fields: last_heartbeat_at, battery_level, is_charging,
 /// app_version, pending_sync_count.
@@ -177,30 +176,5 @@ class HeartbeatService {
       }
     }
 
-    // ── Bridge: also update outlets table (backward compat for admin dashboard) ──
-    for (int attempt = 0; attempt < 3; attempt++) {
-      try {
-        await Supabase.instance.client
-            .from('outlets')
-            .update(payload)
-            .eq('id', outletId);
-        return; // success
-      } catch (e, stack) {
-        if (attempt == 2) {
-          debugPrint('[Heartbeat] bridge update failed after 3 attempts: $e');
-          await SentryService.captureBackgroundFailure(
-            exception: e,
-            stackTrace: stack,
-            operation: 'heartbeat_bridge',
-            session: _session,
-          );
-          return;
-        }
-        final delaySeconds = 2 * (attempt + 1); // 2s, 4s
-        debugPrint(
-            '[Heartbeat] bridge retry ${attempt + 1} in ${delaySeconds}s: $e');
-        await Future.delayed(Duration(seconds: delaySeconds));
-      }
-    }
   }
 }
