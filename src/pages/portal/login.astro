@@ -302,5 +302,11 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
       e.preventDefault();
       searchInput!.focus();
     }
+
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    if (btnText) btnText.classList.add('hidden');
+    if (btnLoading) btnLoading.classList.remove('hidden');
+    submitBtn!.disabled = true;
   });
 </script>

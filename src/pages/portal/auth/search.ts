@@ -1,7 +1,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { createSupabaseServerClient } from '../../../lib/supabase/server';
+import { createSupabaseAdminClient } from '../../../lib/supabase/admin';
 import { normalizeSearchText, SEARCH_MIN_LENGTH, SEARCH_MAX_RESULTS } from '../../../lib/portal/auth';
 
 export interface EmployeeSearchResult {
@@ -12,6 +12,39 @@ export interface EmployeeSearchResult {
   position: string | null;
   photo_url: string | null;
   active_badge_id: string | null;
+}
+
+interface EmployeeRow {
+  id: string;
+  name: string;
+  home_outlet_id: string | null;
+  position: string | null;
+  photo_url: string | null;
+  active_badge_id: string | null;
+}
+
+interface OutletRow {
+  id: string;
+  name: string;
+}
+
+async function searchEmployeesByPattern(pattern: string) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from('employees')
+    .select('id, name, home_outlet_id, position, photo_url, active_badge_id')
+    .eq('is_active', true)
+    .is('archived_at', null)
+    .ilike('name', pattern)
+    .order('name', { ascending: true })
+    .limit(SEARCH_MAX_RESULTS)
+    .returns<EmployeeRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -26,39 +59,54 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
-  const cookieHeader = request.headers.get('cookie') ?? '';
-  const supabase = createSupabaseServerClient(cookieHeader);
+  try {
+    const prefixMatches = await searchEmployeesByPattern(`${normalized}%`);
+    const seenIds = new Set(prefixMatches.map((employee) => employee.id));
+    let rows = prefixMatches;
 
-  const { data, error } = await supabase.rpc('search_portal_employees', {
-    search_text: normalized,
-    limit_count: SEARCH_MAX_RESULTS,
-  });
+    if (rows.length < SEARCH_MAX_RESULTS && normalized.length >= 3) {
+      const fallbackMatches = await searchEmployeesByPattern(`%${normalized}%`);
+      const remaining = fallbackMatches.filter((employee) => !seenIds.has(employee.id));
+      rows = [...rows, ...remaining].slice(0, SEARCH_MAX_RESULTS);
+    }
 
-  if (error) {
-    console.error('[portal/auth/search] RPC error:', error.message);
+    const outletIds = Array.from(new Set(rows.map((employee) => employee.home_outlet_id).filter(Boolean))) as string[];
+    const admin = createSupabaseAdminClient();
+    const { data: outlets, error: outletsError } = outletIds.length === 0
+      ? { data: [] as OutletRow[], error: null }
+      : await admin
+          .from('outlets')
+          .select('id, name')
+          .in('id', outletIds)
+          .returns<OutletRow[]>();
+
+    if (outletsError) {
+      throw outletsError;
+    }
+
+    const outletMap = new Map((outlets ?? []).map((outlet) => [outlet.id, outlet.name]));
+    const results: EmployeeSearchResult[] = rows.map((row) => ({
+      employee_id: row.id,
+      employee_name: row.name,
+      home_outlet_id: row.home_outlet_id ?? null,
+      home_outlet_name: row.home_outlet_id ? outletMap.get(row.home_outlet_id) ?? null : null,
+      position: row.position ?? null,
+      photo_url: row.photo_url ?? null,
+      active_badge_id: row.active_badge_id ?? null,
+    }));
+
+    return new Response(JSON.stringify({ results }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=10',
+      },
+    });
+  } catch (error) {
+    console.error('[portal/auth/search] query error:', error);
     return new Response(JSON.stringify({ results: [] }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
-  const results: EmployeeSearchResult[] = (data ?? []).map((row: EmployeeSearchResult) => ({
-    employee_id: row.employee_id,
-    employee_name: row.employee_name,
-    home_outlet_id: row.home_outlet_id ?? null,
-    home_outlet_name: row.home_outlet_name ?? null,
-    position: row.position ?? null,
-    photo_url: row.photo_url ?? null,
-    active_badge_id: row.active_badge_id ?? null,
-  }));
-
-  return new Response(JSON.stringify({ results }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      // Short private browser cache — avoids re-fetching for rapid back-edits.
-      // max-age=10 is safe because the DB result set rarely changes mid-login.
-      'Cache-Control': 'private, max-age=10',
-    },
-  });
 };

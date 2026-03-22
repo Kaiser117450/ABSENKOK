@@ -1,5 +1,5 @@
 import type { AstroGlobal } from 'astro';
-import { createSupabaseServerClient } from '../supabase/server';
+import { createSupabaseAdminClient } from '../supabase/admin';
 import { resolvePortalEmployee } from './employee';
 import type { PortalEmployee } from './employee';
 
@@ -74,37 +74,75 @@ export function getPortalReferenceDate(): string {
 // Raw RPC row type
 // ---------------------------------------------------------------------------
 
-interface RpcScheduleRow {
-  logical_date: string;
-  outlet_id: string | null;
-  outlet_name: string | null;
-  shift_name: string | null;
-  start_hour: number;
-  start_minute: number;
-  end_hour: number;
-  end_minute: number;
-  is_day_off: boolean;
-  ends_next_day: boolean;
+interface ShiftSlotRow {
+  name?: string;
+  start_hour?: number;
+  start_minute?: number;
+  end_hour?: number;
+  end_minute?: number;
+}
+
+interface ScheduleEntryRow {
+  date: string;
+  shift_slot: ShiftSlotRow | null;
+  is_day_off: boolean | null;
   notes: string | null;
+  schedule_id: string;
+}
+
+interface ScheduleRow {
+  id: string;
+  outlet_id: string | null;
+  is_active: boolean;
+}
+
+interface OutletRow {
+  id: string;
+  name: string;
 }
 
 // ---------------------------------------------------------------------------
 // Row normalizer
 // ---------------------------------------------------------------------------
 
-function normalizeRow(row: RpcScheduleRow): PortalScheduleEntry {
+function normalizeRow(
+  row: ScheduleEntryRow,
+  outletName: string | null,
+  outletId: string | null,
+): PortalScheduleEntry {
+  const shift = row.shift_slot ?? {};
+  const startHour = typeof shift.start_hour === 'number' ? shift.start_hour : 0;
+  const startMinute = typeof shift.start_minute === 'number' ? shift.start_minute : 0;
+  const endHour = typeof shift.end_hour === 'number' ? shift.end_hour : 0;
+  const endMinute = typeof shift.end_minute === 'number' ? shift.end_minute : 0;
+  const isDayOff = row.is_day_off ?? false;
+
   return {
-    logicalDate: row.logical_date,
-    outletId: row.outlet_id ?? null,
-    outletName: row.outlet_name ?? null,
-    shiftName: row.shift_name ?? null,
-    startHour: row.start_hour,
-    startMinute: row.start_minute,
-    endHour: row.end_hour,
-    endMinute: row.end_minute,
-    endsNextDay: row.ends_next_day,
-    isDayOff: row.is_day_off,
+    logicalDate: row.date,
+    outletId,
+    outletName,
+    shiftName: shift.name ?? null,
+    startHour,
+    startMinute,
+    endHour,
+    endMinute,
+    endsNextDay: !isDayOff && (endHour < startHour || (endHour === startHour && endMinute <= startMinute)),
+    isDayOff,
     notes: row.notes ?? null,
+  };
+}
+
+function getPortalWeekRange(referenceDate: string) {
+  const current = new Date(`${referenceDate}T00:00:00Z`);
+  const isoDay = ((current.getUTCDay() + 6) % 7) + 1;
+  const weekStart = new Date(current);
+  weekStart.setUTCDate(current.getUTCDate() - (isoDay - 1));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+
+  return {
+    weekStart: weekStart.toISOString().slice(0, 10),
+    weekEnd: weekEnd.toISOString().slice(0, 10),
   };
 }
 
@@ -117,7 +155,7 @@ function normalizeRow(row: RpcScheduleRow): PortalScheduleEntry {
  *
  * Security: employee identity is resolved server-side through
  * `resolvePortalEmployee()`. The page never supplies the employee ID — the
- * RPC `get_portal_schedule_week` resolves it internally from `auth.uid()`.
+ * authenticated portal session carries the employee id in `app_metadata`.
  *
  * Returns a typed empty-state result (`no_assignments`) when the employee
  * exists but has no schedule entries for the current week.
@@ -135,28 +173,74 @@ export async function loadPortalSchedule(Astro: AstroGlobal): Promise<PortalSche
 
   const employee = employeeResult.employee;
 
-  // 2. Compute one explicit business-local reference date for the RPC.
+  // 2. Compute one explicit business-local reference date and week boundaries.
   const referenceDate = getPortalReferenceDate();
+  const { weekStart, weekEnd } = getPortalWeekRange(referenceDate);
 
-  // 3. Call the employee-scoped schedule RPC.
-  const supabase = createSupabaseServerClient(
-    Astro.request.headers.get('cookie') ?? '',
-    Astro.response.headers,
-  );
+  const admin = createSupabaseAdminClient();
 
-  const { data, error } = await supabase
-    .rpc('get_portal_schedule_week', { reference_date: referenceDate });
+  const { data: entries, error: entriesError } = await admin
+    .from('schedule_entries')
+    .select('date, shift_slot, is_day_off, notes, schedule_id')
+    .eq('employee_id', employee.employee_id)
+    .gte('date', weekStart)
+    .lte('date', weekEnd)
+    .order('date', { ascending: true })
+    .returns<ScheduleEntryRow[]>();
 
-  if (error) {
+  if (entriesError) {
     return {
       ok: false,
       reason: 'rpc_error',
-      message: error.message,
+      message: entriesError.message,
     };
   }
 
-  const rows: PortalScheduleEntry[] = ((data ?? []) as RpcScheduleRow[])
-    .map(normalizeRow)
+  const scheduleIds = Array.from(new Set((entries ?? []).map((entry) => entry.schedule_id)));
+  const { data: schedules, error: schedulesError } = scheduleIds.length === 0
+    ? { data: [] as ScheduleRow[], error: null }
+    : await admin
+        .from('schedules')
+        .select('id, outlet_id, is_active')
+        .in('id', scheduleIds)
+        .eq('is_active', true)
+        .returns<ScheduleRow[]>();
+
+  if (schedulesError) {
+    return {
+      ok: false,
+      reason: 'rpc_error',
+      message: schedulesError.message,
+    };
+  }
+
+  const outletIds = Array.from(new Set((schedules ?? []).map((schedule) => schedule.outlet_id).filter(Boolean))) as string[];
+  const { data: outlets, error: outletsError } = outletIds.length === 0
+    ? { data: [] as OutletRow[], error: null }
+    : await admin
+        .from('outlets')
+        .select('id, name')
+        .in('id', outletIds)
+        .returns<OutletRow[]>();
+
+  if (outletsError) {
+    return {
+      ok: false,
+      reason: 'rpc_error',
+      message: outletsError.message,
+    };
+  }
+
+  const scheduleMap = new Map((schedules ?? []).map((schedule) => [schedule.id, schedule]));
+  const outletMap = new Map((outlets ?? []).map((outlet) => [outlet.id, outlet.name]));
+
+  const rows: PortalScheduleEntry[] = (entries ?? [])
+    .filter((entry) => scheduleMap.has(entry.schedule_id))
+    .map((entry) => {
+      const schedule = scheduleMap.get(entry.schedule_id) ?? null;
+      const outletId = schedule?.outlet_id ?? null;
+      return normalizeRow(entry, outletId ? outletMap.get(outletId) ?? null : null, outletId);
+    })
     .sort((a, b) => a.logicalDate.localeCompare(b.logicalDate));
 
   // 4. Derive today and upcoming from one dataset.

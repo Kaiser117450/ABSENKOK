@@ -67,6 +67,7 @@ npm run check
 Environment website:
 
 - website server membaca `SUPABASE_URL` dan `SUPABASE_ANON_KEY`
+- login portal passwordless yang auto-provision/reset akun juga membutuhkan `SUPABASE_SERVICE_ROLE_KEY` di environment server
 - `PUBLIC_SUPABASE_URL` dan `PUBLIC_SUPABASE_ANON_KEY` masih diterima sebagai fallback kompatibilitas
 - untuk local, copy `.env.example` menjadi `.env` lalu isi nilainya
 - untuk Vercel, isi env yang sama di `Project Settings > Environment Variables` karena file `.env` lokal tidak ikut ter-deploy

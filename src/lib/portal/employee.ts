@@ -1,5 +1,22 @@
 import type { AstroGlobal } from 'astro';
 import { createSupabaseServerClient } from '../supabase/server';
+import { createSupabaseAdminClient } from '../supabase/admin';
+
+interface PortalEmployeeRow {
+  id: string;
+  name: string;
+  position: string | null;
+  home_outlet_id: string | null;
+  photo_url: string | null;
+  active_badge_id: string | null;
+  is_active: boolean;
+  archived_at: string | null;
+}
+
+interface OutletRow {
+  id: string;
+  name: string;
+}
 
 /** Typed employee context returned after a successful portal session resolution. */
 export interface PortalEmployee {
@@ -45,20 +62,9 @@ export async function resolvePortalEmployee(Astro: AstroGlobal): Promise<Resolve
     };
   }
 
-  // Call the backend resolver from plan 01.
-  const { data, error: rpcError } = await supabase
-    .rpc('resolve_portal_employee')
-    .single();
-
-  if (rpcError) {
-    return {
-      ok: false,
-      reason: 'rpc_error',
-      message: rpcError.message,
-    };
-  }
-
-  if (!data) {
+  const employeeId = user.app_metadata?.employee_id;
+  const appRole = user.app_metadata?.app_role;
+  if (typeof employeeId !== 'string' || employeeId.length === 0 || appRole !== 'employee_portal') {
     return {
       ok: false,
       reason: 'no_mapping',
@@ -66,18 +72,58 @@ export async function resolvePortalEmployee(Astro: AstroGlobal): Promise<Resolve
     };
   }
 
-  const row = data as Record<string, unknown>;
+  const admin = createSupabaseAdminClient();
+  const { data: employee, error: employeeError } = await admin
+    .from('employees')
+    .select('id, name, position, home_outlet_id, photo_url, active_badge_id, is_active, archived_at')
+    .eq('id', employeeId)
+    .single<PortalEmployeeRow>();
+
+  if (employeeError) {
+    return {
+      ok: false,
+      reason: 'rpc_error',
+      message: employeeError.message,
+    };
+  }
+
+  if (!employee || !employee.is_active || employee.archived_at !== null) {
+    return {
+      ok: false,
+      reason: 'no_mapping',
+      message: 'No active employee found for this portal account.',
+    };
+  }
+
+  let homeOutletName: string | null = null;
+  if (employee.home_outlet_id) {
+    const { data: outlet, error: outletError } = await admin
+      .from('outlets')
+      .select('id, name')
+      .eq('id', employee.home_outlet_id)
+      .maybeSingle<OutletRow>();
+
+    if (outletError) {
+      return {
+        ok: false,
+        reason: 'rpc_error',
+        message: outletError.message,
+      };
+    }
+
+    homeOutletName = outlet?.name ?? null;
+  }
 
   return {
     ok: true,
     employee: {
-      employee_id: row['employee_id'] as string,
-      employee_name: row['employee_name'] as string,
-      position: (row['position'] as string | null) ?? null,
-      home_outlet_id: (row['home_outlet_id'] as string | null) ?? null,
-      home_outlet_name: (row['home_outlet_name'] as string | null) ?? null,
-      photo_url: (row['photo_url'] as string | null) ?? null,
-      active_badge_id: (row['active_badge_id'] as string | null) ?? null,
+      employee_id: employee.id,
+      employee_name: employee.name,
+      position: employee.position ?? null,
+      home_outlet_id: employee.home_outlet_id ?? null,
+      home_outlet_name: homeOutletName,
+      photo_url: employee.photo_url ?? null,
+      active_badge_id: employee.active_badge_id ?? null,
     },
   };
 }

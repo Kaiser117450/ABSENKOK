@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /**
  * Shared portal auth helpers.
  * All helpers are pure functions with no Astro or Supabase imports so they
@@ -52,7 +54,12 @@ export function normalizeSearchText(raw: string): string {
  */
 export function buildPortalAuthPassword(employeeId: string): string {
   const secret = import.meta.env.PORTAL_SECRET ?? 'enakko-portal-default-secret';
-  return `portal::${secret}::${employeeId}`;
+  const digest = createHash('sha256')
+    .update(`${secret}:${employeeId}`)
+    .digest('base64url')
+    .slice(0, 32);
+
+  return `portal-${digest}`;
 }
 
 /** Minimum query length before a search request should be sent. */
