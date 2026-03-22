@@ -4,14 +4,14 @@ milestone: v6.0
 milestone_name: Supabase Rollout Evidence
 current_plan: Not started
 status: completed
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-03-22T13:10:58.660Z"
+stopped_at: Completed 36-01-PLAN.md
+last_updated: "2026-03-22T13:15:36.639Z"
 last_activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migration + bridge removal)
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # STATE.md — Project Memory
@@ -138,8 +138,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## Session Continuity
 
-**Last session:** 2026-03-22T13:10:01.473Z
-**Stopped at:** Completed 35-02-PLAN.md
+**Last session:** 2026-03-22T13:15:36.632Z
+**Stopped at:** Completed 36-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
