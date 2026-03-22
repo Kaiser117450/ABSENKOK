@@ -11,11 +11,14 @@ schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: Planning Next Release
+## Current Milestone: v6.1 Employee Portal
 
-**Status:** `v6.0 Multi-Outlet & Multi-Device Control` shipped on 2026-03-22.
+**Goal:** Launch the first employee-facing web portal so staff can see their own schedules without touching kiosk or admin-only surfaces.
 
-**Next step:** Run `$gsd-new-milestone` to define the next shipped scope starting at Phase 37.
+**Target features:**
+- Employee-facing web access separate from kiosk/admin flows
+- Employee can view assigned shifts and upcoming work days
+- Portal foundation that can expand into attendance and request workflows later
 
 ## Current State
 
@@ -24,8 +27,8 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,400 tracked LOC Dart across 102 tracked files; Supabase Edge Functions: `create-admin-user`
 
 ## Next Milestone Goals
-- Define the next shipped milestone scope and requirements.
-- Decide whether the next release prioritizes employee self-service, workflow polish, or another ops/admin expansion.
+- Define the first employee self-service surface around schedule visibility.
+- Keep the release focused enough to ship as `v6.1`.
 - Continue phase numbering from 37 onward.
 
 ### What v6.0 Added
@@ -151,11 +154,12 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Full-admin Central Dashboard with chain-wide device visibility — v6.0
 - ✓ Firm-wide daily attendance aggregation in the Central Dashboard — v6.0
 
-### Active (Next Milestone Planning)
-*(Requirements to be defined — run `$gsd-new-milestone`)*
+### Active (v6.1)
+- Employee-facing web portal foundation
+- Employee schedule visibility and self-service access
+- Clear separation between employee, kiosk, and admin surfaces
 
 ### Deferred (Future)
-- M006 — Employee-facing web app (Astro self-service)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
@@ -164,7 +168,6 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 
 ### Out of Scope
 - iOS app — Android-only kiosk, no iOS target
-- Employee self-service portal — kiosk-only workflow
 - WhatsApp/email daily summary — external integration, low priority
 - Blog/pricing on website — internal tool, not SaaS
 - Drag-and-drop shift assignment — wrong for tablet touch
@@ -267,4 +270,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-22 after v6.0 milestone archival*
+*Last updated: 2026-03-22 after v6.1 milestone start*

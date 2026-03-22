@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: planning-next
-milestone_name: Next Milestone Planning
+milestone: v6.1
+milestone_name: Employee Portal
 current_plan: Define next milestone requirements
-status: planning
-stopped_at: Archived v6.0 milestone
-last_updated: "2026-03-22T21:21:06+08:00"
-last_activity: 2026-03-22 — Archived v6.0 milestone and prepared planning docs for the next release
+status: defining-requirements
+stopped_at: Milestone initialized
+last_updated: "2026-03-22T22:00:00+08:00"
+last_activity: 2026-03-22 — Started v6.1 Employee Portal milestone
 progress:
   total_phases: 0
   completed_phases: 0
@@ -18,31 +18,34 @@ progress:
 
 ## Current Position
 
-Milestone archived. No active phase is open.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-22 — Milestone v6.1 started
 
 ## Current Status
-- **Milestone:** None active — `v6.0 Multi-Outlet & Multi-Device Control` shipped
-- **Phase:** Planning next milestone (Phase 37+ not defined yet)
-- **Current Plan:** Define new milestone requirements and roadmap
-- **Last Updated:** 2026-03-22 — v6.0 archived, tagged, and reset for next milestone planning
+- **Milestone:** v6.1 — Employee Portal
+- **Phase:** Not started
+- **Current Plan:** Define requirements for the employee-facing web portal
+- **Last Updated:** 2026-03-22 — v6.1 milestone initialized
 
 ## Progress
 
 ```
-v6.0 Multi-Outlet & Multi-Device Control — COMPLETE
-[██████████] 100% · 6/6 phases · 12/12 plans
+v6.1 Employee Portal — DEFINING
+[□□□□□□□□□□] 0% · 0/0 phases
 ```
 
-- **Milestone scope:** Phases 31-36
-- **Requirements:** 7/7 complete
-- **Archive:** `.planning/milestones/v6.0-ROADMAP.md` and `.planning/milestones/v6.0-REQUIREMENTS.md`
+- **Next starting phase:** 37
+- **Milestone focus:** Employee-facing web portal with schedule visibility first
+- **Roadmap state:** Requirements and roadmap not written yet
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Define the next milestone starting at Phase 37.
+**Current focus:** Define v6.1 requirements and roadmap starting at Phase 37.
 
 ## What Was Shipped
 
@@ -118,6 +121,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Accumulated Context
 - v6.0 archived on 2026-03-22. Archive set lives under `.planning/milestones/`; current `.planning/ROADMAP.md` is reset for next-milestone planning.
+- v6.1 initialized on 2026-03-22 as a focused employee-facing web portal milestone. Primary first job: employee can view assigned schedule and upcoming work days. Preferred surface: separate web portal, not kiosk/admin flow reuse.
 - NFC double-scan crash is a production bug — must fix before new features
 - All dashboard aggregations must use Supabase RPC (server-side), not fetch-all-in-Dart
 - Streak calculation must use existing noon-rule (noon-to-noon logical days)
