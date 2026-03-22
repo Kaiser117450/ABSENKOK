@@ -1,29 +1,101 @@
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import PortalLayout from '../../layouts/PortalLayout.astro';
+import { resolvePortalEmployee } from '../../lib/portal/employee';
 
-// Identity will be resolved in a later phase.
-// For now, confirm the user is authenticated (middleware already guards this).
+// Resolve employee identity before rendering any content.
+// Middleware already validates the session cookie; this RPC confirms the
+// one-to-one employee mapping exists in the portal accounts table.
+const result = await resolvePortalEmployee(Astro);
+
+// If unauthenticated, middleware should have redirected already — but guard
+// here as a belt-and-suspenders measure.
+if (!result.ok && result.reason === 'unauthenticated') {
+  return Astro.redirect('/portal/login');
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
 ---
 
-<BaseLayout
-  title="Portal Karyawan — ABSENKOK"
-  description="Selamat datang di portal karyawan ABSENKOK."
->
-  <div class="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 px-4 text-center">
-    <span class="text-3xl font-extrabold tracking-tight mb-2">
-      <span class="text-[#E91E8C]">ABSEN</span><span class="text-[#1A237E]">KOK</span>
-    </span>
-    <h1 class="text-xl font-semibold text-gray-800 mt-4 mb-2">Portal Karyawan</h1>
-    <p class="text-sm text-gray-500 mb-8">Jadwal dan informasi kehadiran akan tersedia di sini.</p>
-    <form method="POST" action="/portal/auth/sign-out">
-      <button
-        type="submit"
-        class="rounded-xl border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
-      >
-        Keluar
-      </button>
-    </form>
-  </div>
-</BaseLayout>
+{result.ok ? (
+  <PortalLayout title="Beranda" employee={result.employee}>
+    <!-- Greeting -->
+    <div class="mb-6">
+      <p class="text-sm text-gray-500">Selamat datang,</p>
+      <h1 class="text-2xl font-bold text-gray-900">{result.employee.employee_name}</h1>
+    </div>
+
+    <!-- Identity card -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-6 flex items-center gap-4">
+      <!-- Avatar -->
+      <div class="w-14 h-14 rounded-full bg-[#E91E8C]/15 flex items-center justify-center text-[#E91E8C] font-bold text-lg shrink-0 overflow-hidden">
+        {result.employee.photo_url ? (
+          <img
+            src={result.employee.photo_url}
+            alt={result.employee.employee_name}
+            class="w-full h-full object-cover"
+          />
+        ) : (
+          initials(result.employee.employee_name)
+        )}
+      </div>
+      <!-- Details -->
+      <div class="min-w-0">
+        <p class="font-semibold text-gray-900 truncate">{result.employee.employee_name}</p>
+        {result.employee.position && (
+          <p class="text-sm text-gray-500">{result.employee.position}</p>
+        )}
+        {result.employee.home_outlet_name && (
+          <p class="text-xs text-gray-400 mt-0.5">{result.employee.home_outlet_name}</p>
+        )}
+      </div>
+    </div>
+
+    <!-- Schedule placeholder (Phase 38) -->
+    <div class="bg-white rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400">
+      <p class="text-sm font-medium">Jadwal akan tersedia di fase 38</p>
+      <p class="text-xs mt-1">Fitur jadwal kerja sedang dalam pengembangan.</p>
+    </div>
+  </PortalLayout>
+) : (
+  <!-- Blocked access — identity resolution failed (no_mapping or rpc_error) -->
+  <html lang="id">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Akses Ditolak — Portal ABSENKOK</title>
+      <meta name="robots" content="noindex, nofollow" />
+      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    </head>
+    <body class="bg-gray-50 font-sans antialiased min-h-screen flex items-center justify-center px-4">
+      <div class="bg-white rounded-2xl border border-red-200 shadow-sm p-8 max-w-md w-full text-center">
+        <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <h1 class="text-lg font-bold text-gray-900 mb-2">Akun tidak terhubung</h1>
+        <p class="text-sm text-gray-500 mb-6">
+          Akun portal Anda belum terhubung ke data karyawan aktif.
+          Hubungi admin untuk mengaktifkan akun Anda.
+        </p>
+        <form method="POST" action="/portal/auth/sign-out">
+          <button
+            type="submit"
+            class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
+          >
+            Keluar
+          </button>
+        </form>
+      </div>
+    </body>
+  </html>
+)}
