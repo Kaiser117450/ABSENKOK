@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +9,7 @@ import '../../core/theme.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../services/employee_portal_provisioning_service.dart';
 import '../../services/nfc_service.dart';
 import '../../services/badge_service.dart';
 import '../../widgets/app_card.dart';
@@ -232,6 +234,17 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     if (changed) {
       _loadData();
     }
+  }
+
+  void _showProvisionPortalDialog(Employee employee, String? outletName) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ProvisionPortalDialog(
+        employee: employee,
+        outletName: outletName,
+      ),
+    );
   }
 
   void _openBadgeManagement() {
@@ -557,6 +570,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                                 onSakitIzin: () => _showSakitIzinDialog(emp),
                                 onSakitIzinHistory: () => _showSakitIzinHistory(emp),
                                 onAssignBadge: () => _showBadgePicker(emp),
+                                onProvisionPortal: () => _showProvisionPortalDialog(emp, outletName),
                               );
                             },
                           ),
@@ -730,6 +744,7 @@ class _EmployeeCard extends StatelessWidget {
   final VoidCallback onSakitIzin;
   final VoidCallback onSakitIzinHistory;
   final VoidCallback onAssignBadge;
+  final VoidCallback onProvisionPortal;
 
   const _EmployeeCard({
     required this.employee,
@@ -739,6 +754,7 @@ class _EmployeeCard extends StatelessWidget {
     required this.onSakitIzin,
     required this.onSakitIzinHistory,
     required this.onAssignBadge,
+    required this.onProvisionPortal,
   });
 
   @override
@@ -902,6 +918,8 @@ class _EmployeeCard extends StatelessWidget {
                       onSakitIzinHistory();
                     } else if (value == 'assign_badge') {
                       onAssignBadge();
+                    } else if (value == 'provision_portal') {
+                      onProvisionPortal();
                     }
                   },
                   itemBuilder: (context) => [
@@ -948,6 +966,18 @@ class _EmployeeCard extends StatelessWidget {
                               size: 18, color: const Color(0xFFF59E0B)),
                           const SizedBox(width: 12),
                           const Text('Assign Badge'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'provision_portal',
+                      child: Row(
+                        children: [
+                          Icon(Icons.manage_accounts_outlined,
+                              size: 18, color: const Color(0xFF6366F1)),
+                          const SizedBox(width: 12),
+                          const Text('Buat Akses Portal'),
                         ],
                       ),
                     ),
@@ -1047,6 +1077,544 @@ class _FilterChip2 extends StatelessWidget {
             fontSize: 12,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Portal Provisioning Dialog
+// ---------------------------------------------------------------------------
+
+enum _PortalDialogState { form, loading, success, error }
+
+class _ProvisionPortalDialog extends StatefulWidget {
+  final Employee employee;
+  final String? outletName;
+
+  const _ProvisionPortalDialog({
+    required this.employee,
+    required this.outletName,
+  });
+
+  @override
+  State<_ProvisionPortalDialog> createState() => _ProvisionPortalDialogState();
+}
+
+class _ProvisionPortalDialogState extends State<_ProvisionPortalDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _passwordVisible = false;
+  bool _confirmVisible = false;
+
+  _PortalDialogState _state = _PortalDialogState.form;
+  String? _errorMessage;
+  EmployeePortalProvisionResult? _result;
+  String? _chosenPassword;
+
+  final _service = EmployeePortalProvisioningService();
+
+  @override
+  void dispose() {
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canProvision {
+    // Block inactive or archived employees
+    return widget.employee.isActive && widget.employee.archivedAt == null;
+  }
+
+  String? get _blockReason {
+    if (widget.employee.archivedAt != null) return 'Karyawan telah diarsipkan';
+    if (!widget.employee.isActive) return 'Karyawan tidak aktif';
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final password = _passwordCtrl.text;
+    setState(() {
+      _state = _PortalDialogState.loading;
+      _errorMessage = null;
+      _chosenPassword = password;
+    });
+
+    try {
+      final result = await _service.provisionAccess(
+        employeeId: widget.employee.id,
+        password: password,
+      );
+      if (mounted) {
+        setState(() {
+          _result = result;
+          _state = _PortalDialogState.success;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _state = _PortalDialogState.error;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.manage_accounts_outlined,
+                color: Color(0xFF6366F1), size: 22),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Buat Akses Portal',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 300,
+        child: _buildContent(),
+      ),
+      actions: _buildActions(),
+    );
+  }
+
+  Widget _buildContent() {
+    switch (_state) {
+      case _PortalDialogState.form:
+        return _buildForm();
+      case _PortalDialogState.loading:
+        return const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 16),
+            CircularProgressIndicator(color: Color(0xFF6366F1)),
+            SizedBox(height: 16),
+            Text('Membuat akses portal...', style: TextStyle(color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+          ],
+        );
+      case _PortalDialogState.success:
+        return _buildSuccessReceipt();
+      case _PortalDialogState.error:
+        return _buildError();
+    }
+  }
+
+  Widget _buildForm() {
+    final blockReason = _blockReason;
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Employee context card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F5F0),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                  child: Text(
+                    widget.employee.name.isNotEmpty
+                        ? widget.employee.name[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      color: Color(0xFF6366F1),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.employee.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (widget.employee.position != null)
+                        Text(
+                          widget.employee.position!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      if (widget.outletName != null)
+                        Row(
+                          children: [
+                            const Icon(Icons.store_outlined,
+                                size: 11, color: AppColors.textMuted),
+                            const SizedBox(width: 3),
+                            Text(
+                              widget.outletName!,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Blocked state warning
+          if (blockReason != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.block_outlined,
+                      color: AppColors.danger, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      blockReason,
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const Text(
+              'Buat password untuk login portal karyawan ini.',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+
+            // Password field
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: !_passwordVisible,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(_passwordVisible
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                      size: 18),
+                  onPressed: () =>
+                      setState(() => _passwordVisible = !_passwordVisible),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Password wajib diisi';
+                if (v.length < EmployeePortalProvisioningService.minPasswordLength) {
+                  return 'Password minimal ${EmployeePortalProvisioningService.minPasswordLength} karakter';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Confirm password field
+            TextFormField(
+              controller: _confirmCtrl,
+              obscureText: !_confirmVisible,
+              decoration: InputDecoration(
+                labelText: 'Konfirmasi Password',
+                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(_confirmVisible
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                      size: 18),
+                  onPressed: () =>
+                      setState(() => _confirmVisible = !_confirmVisible),
+                ),
+              ),
+              validator: (v) {
+                if (v != _passwordCtrl.text) return 'Password tidak cocok';
+                return null;
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccessReceipt() {
+    final result = _result!;
+    final password = _chosenPassword ?? '';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Center(
+          child: Icon(Icons.check_circle, size: 48, color: AppColors.success),
+        ),
+        const SizedBox(height: 8),
+        const Center(
+          child: Text(
+            'Akses Portal Berhasil Dibuat!',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: AppColors.success,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Handoff receipt card
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ReceiptRow(label: 'Nama', value: result.employeeName),
+              if (widget.employee.position != null)
+                _ReceiptRow(label: 'Jabatan', value: widget.employee.position!),
+              if (widget.outletName != null)
+                _ReceiptRow(label: 'Gerai', value: widget.outletName!),
+              const Divider(height: 16),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Password', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        SizedBox(height: 2),
+                        Text(
+                          '(lihat di bawah)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Copy password to clipboard
+                      _copyToClipboard(context, password);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.copy_outlined, size: 14, color: Color(0xFF6366F1)),
+                          SizedBox(width: 4),
+                          Text('Salin', style: TextStyle(fontSize: 12, color: Color(0xFF6366F1), fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF86EFAC)),
+                ),
+                child: Text(
+                  password,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F5F0),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Cari nama Anda di portal, pilih kartu yang cocok, lalu masukkan password ini.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildError() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
+        const SizedBox(height: 12),
+        Text(
+          _errorMessage ?? 'Terjadi kesalahan',
+          style: const TextStyle(color: AppColors.danger),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildActions() {
+    switch (_state) {
+      case _PortalDialogState.form:
+        return [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Batal'),
+          ),
+          if (_canProvision)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: _submit,
+              child: const Text('Buat Akses'),
+            ),
+        ];
+
+      case _PortalDialogState.loading:
+        return [];
+
+      case _PortalDialogState.success:
+        return [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Selesai'),
+          ),
+        ];
+
+      case _PortalDialogState.error:
+        return [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton(
+            onPressed: () => setState(() {
+              _state = _PortalDialogState.form;
+              _errorMessage = null;
+            }),
+            child: const Text('Coba Lagi'),
+          ),
+        ];
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Password disalin ke clipboard'),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Receipt row helper
+// ---------------------------------------------------------------------------
+
+class _ReceiptRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ReceiptRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 60,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
