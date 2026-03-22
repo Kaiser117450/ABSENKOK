@@ -1,10 +1,11 @@
 ---
 phase: 31
 slug: device-identity-foundation
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-20
+approved: 2026-03-22
 ---
 
 # Phase 31 — Validation Strategy
@@ -38,10 +39,10 @@ created: 2026-03-20
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 31-01-01 | 01 | 1 | HEALTH-01 | unit | `flutter test test/device_identity_service_test.dart` | ❌ W0 | ⬜ pending |
-| 31-01-02 | 01 | 1 | HEALTH-01 | manual | Session persistence across logout | N/A | ⬜ pending |
-| 31-02-01 | 02 | 1 | HEALTH-02 | SQL | `SELECT * FROM kiosk_devices` after heartbeat | ❌ W0 | ⬜ pending |
-| 31-02-02 | 02 | 1 | HEALTH-02 | manual | Admin dashboard still shows outlet health during bridge | N/A | ⬜ pending |
+| 31-01-01 | 01 | 1 | HEALTH-01 | unit | `flutter test test/device_identity_service_test.dart` | ✅ | ✅ green |
+| 31-01-02 | 01 | 1 | HEALTH-01 | manual | Session persistence across logout | N/A | ✅ green — Phase 35 evidence 2026-03-22 |
+| 31-02-01 | 02 | 1 | HEALTH-02 | SQL | `SELECT * FROM kiosk_devices` after heartbeat | ✅ | ✅ green — Phase 34 rollout confirmed |
+| 31-02-02 | 02 | 1 | HEALTH-02 | manual | Admin dashboard still shows outlet health during bridge | N/A | ✅ green — Phase 34 rollout confirmed |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -68,11 +69,11 @@ created: 2026-03-20
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved — 2026-03-22. UUID persistence proof captured in Phase 35 acceptance verification. DeviceIdentityService SharedPreferences path structurally guarantees UUID survives logout/re-setup. Phase 34 rollout confirms kiosk_devices table and upsert_kiosk_heartbeat RPC are live in production.

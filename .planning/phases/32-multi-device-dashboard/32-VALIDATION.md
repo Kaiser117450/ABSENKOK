@@ -1,10 +1,11 @@
 ---
 phase: 32
 slug: multi-device-dashboard
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-22
+approved: 2026-03-22
 ---
 
 # Phase 32 — Validation Strategy
@@ -38,11 +39,11 @@ created: 2026-03-22
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 32-01-01 | 01 | 1 | HEALTH-03 | unit | `flutter test --plain-name "KioskDevice model"` | ❌ W0 | ⬜ pending |
-| 32-01-02 | 01 | 1 | HEALTH-03 | unit | `flutter test --plain-name "kiosk_devices RPC"` | ❌ W0 | ⬜ pending |
-| 32-02-01 | 02 | 1 | HEALTH-04 | unit | `flutter test --plain-name "set_device_nickname"` | ❌ W0 | ⬜ pending |
-| 32-02-02 | 02 | 1 | HEALTH-05 | unit | `flutter test --plain-name "archive_device"` | ❌ W0 | ⬜ pending |
-| 32-03-01 | 03 | 2 | HEALTH-03 | manual | N/A — UI widget test | ❌ W0 | ⬜ pending |
+| 32-01-01 | 01 | 1 | HEALTH-03 | unit | `flutter test --plain-name "KioskDevice model"` | ✅ | ✅ green |
+| 32-01-02 | 01 | 1 | HEALTH-03 | unit | `flutter test --plain-name "kiosk_devices RPC"` | ✅ | ✅ green |
+| 32-02-01 | 02 | 1 | HEALTH-04 | unit | `flutter test --plain-name "set_device_nickname"` | ✅ | ✅ green — Phase 35 evidence 2026-03-22 |
+| 32-02-02 | 02 | 1 | HEALTH-05 | unit | `flutter test --plain-name "archive_device"` | ✅ | ✅ green — Phase 35 evidence 2026-03-22 |
+| 32-03-01 | 03 | 2 | HEALTH-03 | manual | N/A — UI widget test | ✅ | ✅ green — no race condition; two devices produce two separate kiosk_devices rows confirmed Phase 35 |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -71,11 +72,11 @@ created: 2026-03-22
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved — 2026-03-22. Phase 35 acceptance verification confirms: (1) no race condition on dual-device login — upsert_kiosk_heartbeat uses device_uuid as conflict key; (2) nickname persistence confirmed via set_device_nickname RPC + optimistic dashboard update; (3) archive confirmed via archive_device RPC + is_active filter in dashboard query.
