@@ -4,7 +4,7 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const errorParam = Astro.url.searchParams.get('error');
-const errorMessage = errorParam ? 'Nama atau kata sandi tidak sesuai. Silakan coba lagi.' : null;
+const errorMessage = errorParam ? 'Gagal masuk. Silakan coba lagi.' : null;
 
 const signedOut = Astro.url.searchParams.get('signed_out') === '1';
 ---
@@ -22,7 +22,7 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
         </span>
       </a>
       <h1 class="text-2xl font-bold text-gray-900">Portal Karyawan</h1>
-      <p class="mt-2 text-sm text-gray-500">Cari nama Anda, pilih kartu, lalu masukkan kata sandi.</p>
+      <p class="mt-2 text-sm text-gray-500">Cari nama Anda dan pilih kartu untuk masuk.</p>
     </div>
 
     <!-- Card -->
@@ -83,29 +83,14 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
             >Ganti</button>
           </div>
 
-          <!-- Password -->
-          <div class="mb-6">
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1.5">
-              Kata sandi
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              placeholder="Kata sandi portal"
-              class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#E91E8C] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 transition"
-            />
-          </div>
-
           <button
             type="submit"
             id="submit-btn"
             disabled
             class="w-full rounded-xl bg-[#E91E8C] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#c2187a] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/40 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Masuk
+            <span id="btn-text">Masuk</span>
+            <span id="btn-loading" class="hidden">Memproses…</span>
           </button>
         </form>
 
@@ -238,6 +223,14 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
     searchInput!.classList.add('hidden');
     chooser!.classList.add('hidden');
     if (searchStatus) searchStatus.classList.add('hidden');
+
+    // Auto-submit — passwordless login, no extra step needed.
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    if (btnText) btnText.classList.add('hidden');
+    if (btnLoading) btnLoading.classList.remove('hidden');
+    submitBtn!.disabled = true;
+    loginForm?.submit();
   }
 
   function clearSelection(): void {

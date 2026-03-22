@@ -45,6 +45,16 @@ export function normalizeSearchText(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/**
+ * Derive the deterministic internal password for a portal auth user.
+ * The employee never sees or types this — it's an implementation detail
+ * so we can use Supabase Auth sessions without requiring a real password.
+ */
+export function buildPortalAuthPassword(employeeId: string): string {
+  const secret = import.meta.env.PORTAL_SECRET ?? 'enakko-portal-default-secret';
+  return `portal::${secret}::${employeeId}`;
+}
+
 /** Minimum query length before a search request should be sent. */
 export const SEARCH_MIN_LENGTH = 2;
 

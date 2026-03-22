@@ -2,32 +2,43 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../../lib/supabase/server';
-import { buildPortalAuthEmail } from '../../../lib/portal/auth';
+import { buildPortalAuthEmail, buildPortalAuthPassword } from '../../../lib/portal/auth';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const formData = await request.formData();
   const employeeId = (formData.get('employee_id') ?? '').toString().trim();
-  const password = (formData.get('password') ?? '').toString();
 
-  // Require a selected employee_id, not a free-form name.
-  if (!employeeId || !password) {
+  if (!employeeId) {
     return redirect('/portal/login?error=invalid', 302);
   }
 
-  // Build the hidden auth email from the stable employee UUID.
   const authEmail = buildPortalAuthEmail(employeeId);
+  const authPassword = buildPortalAuthPassword(employeeId);
 
   const cookieHeader = request.headers.get('cookie') ?? '';
   const responseHeaders = new Headers();
   const supabase = createSupabaseServerClient(cookieHeader, responseHeaders);
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email: authEmail,
-    password,
+  // Auto-provision the auth user if it doesn't exist (pre-confirmed, no email needed).
+  const { error: provisionError } = await supabase.rpc('provision_portal_user', {
+    p_employee_id: employeeId,
+    p_email: authEmail,
+    p_password: authPassword,
   });
 
-  if (error) {
-    // Do not leak whether a name or account exists.
+  if (provisionError) {
+    console.error('[portal/auth/sign-in] provision error:', provisionError.message);
+    return redirect('/portal/login?error=invalid', 302);
+  }
+
+  // Sign in with the deterministic password.
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: authEmail,
+    password: authPassword,
+  });
+
+  if (signInError) {
+    console.error('[portal/auth/sign-in] sign-in error:', signInError.message);
     return redirect('/portal/login?error=invalid', 302);
   }
 

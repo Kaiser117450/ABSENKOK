@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 import { isProtectedPortalRoute } from './lib/portal/auth';
+import { getSupabaseServerEnv } from './lib/supabase/env';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { url, request, redirect } = context;
@@ -12,8 +13,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseServerEnv();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     // Missing env vars — let the page handle it; don't block marketing.
