@@ -5,7 +5,7 @@
 | # | Phase | Goal | Requirements | Criteria |
 |---|-------|------|--------------|----------|
 | 31 | 2/2 | Complete   | 2026-03-20 | 3 |
-| 32 | 2/2 | Complete   | 2026-03-22 | 4 |
+| 32 | 2/2 | Complete    | 2026-03-22 | 4 |
 | 33 | Multi-Outlet Control Center | Aggregated chain-wide dashboard for central admins. | ADMIN-01, ADMIN-02 | 3 |
 
 ---

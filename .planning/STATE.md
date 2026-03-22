@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
-current_plan: 32-02 complete
-status: executing
+current_plan: Not started
+status: completed
 stopped_at: Completed 32-02-PLAN.md
-last_updated: "2026-03-22T06:27:25.810Z"
-last_activity: 2026-03-22 — Completed 32-01 (KioskDevice model + SQL RPCs)
+last_updated: "2026-03-22T06:32:08.235Z"
+last_activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migration + bridge removal)
 progress:
   total_phases: 3
   completed_phases: 2
@@ -26,7 +26,7 @@ Last activity: 2026-03-22 — Completed 32-02 (KioskDeviceCard + dashboard migra
 ## Current Status
 - **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
 - **Phase:** 31 — Device Identity Foundation (In Progress)
-- **Current Plan:** 32-02 complete (Phase 32 done)
+- **Current Plan:** Not started
 - **Last Updated:** 2026-03-22 — Plan 32-02 complete
 
 ## Progress
