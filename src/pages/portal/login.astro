@@ -1,0 +1,305 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const errorParam = Astro.url.searchParams.get('error');
+const errorMessage = errorParam ? 'Nama atau kata sandi tidak sesuai. Silakan coba lagi.' : null;
+---
+
+<BaseLayout
+  title="Portal Karyawan — ABSENKOK"
+  description="Masuk ke portal karyawan ABSENKOK untuk melihat jadwal dan informasi kehadiran."
+>
+  <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 mb-6">
+        <span class="text-2xl font-extrabold tracking-tight">
+          <span class="text-[#E91E8C]">ABSEN</span><span class="text-[#1A237E]">KOK</span>
+        </span>
+      </a>
+      <h1 class="text-2xl font-bold text-gray-900">Portal Karyawan</h1>
+      <p class="mt-2 text-sm text-gray-500">Cari nama Anda, pilih kartu, lalu masukkan kata sandi.</p>
+    </div>
+
+    <!-- Card -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-6 shadow-md rounded-2xl border border-gray-100">
+
+        {errorMessage && (
+          <div class="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
+            {errorMessage}
+          </div>
+        )}
+
+        <form method="POST" action="/portal/auth/sign-in" id="login-form" novalidate>
+          <!-- Name search -->
+          <div class="mb-4">
+            <label for="search_name" class="block text-sm font-medium text-gray-700 mb-1.5">
+              Cari nama karyawan
+            </label>
+            <input
+              id="search_name"
+              name="search_name"
+              type="text"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="Ketik nama Anda…"
+              class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#E91E8C] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 transition"
+              aria-describedby="search-status"
+            />
+            <p id="search-status" class="mt-1.5 text-xs text-gray-400 hidden" aria-live="polite"></p>
+          </div>
+
+          <!-- Employee chooser cards -->
+          <div id="chooser" class="mb-4 space-y-2 hidden" role="listbox" aria-label="Pilih kartu karyawan">
+          </div>
+
+          <!-- Hidden employee_id — filled when a card is selected -->
+          <input type="hidden" name="employee_id" id="employee_id" value="" />
+
+          <!-- Selected employee preview -->
+          <div id="selected-preview" class="hidden mb-4 rounded-xl bg-[#E91E8C]/5 border border-[#E91E8C]/20 px-4 py-3 text-sm text-gray-700 flex items-center gap-3">
+            <div id="selected-avatar" class="w-9 h-9 rounded-full bg-[#E91E8C]/20 flex items-center justify-center text-[#E91E8C] font-semibold text-sm shrink-0"></div>
+            <div>
+              <p id="selected-name" class="font-medium text-gray-900 text-sm"></p>
+              <p id="selected-meta" class="text-xs text-gray-500"></p>
+            </div>
+            <button
+              type="button"
+              id="clear-selection"
+              class="ml-auto text-xs text-[#E91E8C] hover:underline"
+              aria-label="Ganti pilihan"
+            >Ganti</button>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-6">
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1.5">
+              Kata sandi
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="Kata sandi portal"
+              class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#E91E8C] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 transition"
+            />
+          </div>
+
+          <button
+            type="submit"
+            id="submit-btn"
+            disabled
+            class="w-full rounded-xl bg-[#E91E8C] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#c2187a] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/40 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Masuk
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // ── Lightweight vanilla search chooser ──────────────────────────────────────
+  // No framework. AbortController for stale-request cancellation.
+  // Simple prefix-cache in page memory to avoid refetching the same prefix.
+
+  const searchInput = document.getElementById('search_name') as HTMLInputElement | null;
+  const chooser = document.getElementById('chooser') as HTMLDivElement | null;
+  const employeeIdInput = document.getElementById('employee_id') as HTMLInputElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const selectedPreview = document.getElementById('selected-preview') as HTMLDivElement | null;
+  const selectedAvatar = document.getElementById('selected-avatar') as HTMLDivElement | null;
+  const selectedName = document.getElementById('selected-name') as HTMLParagraphElement | null;
+  const selectedMeta = document.getElementById('selected-meta') as HTMLParagraphElement | null;
+  const clearBtn = document.getElementById('clear-selection') as HTMLButtonElement | null;
+  const searchStatus = document.getElementById('search-status') as HTMLParagraphElement | null;
+  const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
+
+  if (!searchInput || !chooser || !employeeIdInput || !submitBtn) {
+    // Elements missing — bail out gracefully.
+    throw new Error('Portal login: required DOM elements missing.');
+  }
+
+  // In-memory prefix cache: { normalizedQuery -> result array }
+  const cache = new Map<string, EmployeeCard[]>();
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let currentController: AbortController | null = null;
+
+  interface EmployeeCard {
+    employee_id: string;
+    employee_name: string;
+    home_outlet_name: string | null;
+    position: string | null;
+    photo_url: string | null;
+  }
+
+  function normalize(s: string): string {
+    return s.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function initials(name: string): string {
+    return name
+      .split(' ')
+      .slice(0, 2)
+      .map((w) => w[0] ?? '')
+      .join('')
+      .toUpperCase();
+  }
+
+  function renderCards(results: EmployeeCard[]): void {
+    chooser!.innerHTML = '';
+    if (results.length === 0) {
+      chooser!.classList.add('hidden');
+      if (searchStatus) {
+        searchStatus.textContent = 'Tidak ada karyawan yang cocok.';
+        searchStatus.classList.remove('hidden');
+      }
+      return;
+    }
+    if (searchStatus) searchStatus.classList.add('hidden');
+
+    results.forEach((emp) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.setAttribute('role', 'option');
+      card.dataset.id = emp.employee_id;
+      card.dataset.name = emp.employee_name;
+      card.dataset.outlet = emp.home_outlet_name ?? '';
+      card.dataset.position = emp.position ?? '';
+      card.className =
+        'w-full flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left text-sm hover:border-[#E91E8C] hover:bg-[#E91E8C]/5 focus:outline-none focus:border-[#E91E8C] focus:ring-2 focus:ring-[#E91E8C]/20 transition cursor-pointer';
+
+      // Avatar
+      const avatarEl = document.createElement('div');
+      avatarEl.className =
+        'w-9 h-9 rounded-full bg-[#E91E8C]/15 flex items-center justify-center text-[#E91E8C] font-semibold text-sm shrink-0 overflow-hidden';
+      if (emp.photo_url) {
+        const img = document.createElement('img');
+        img.src = emp.photo_url;
+        img.alt = emp.employee_name;
+        img.className = 'w-full h-full object-cover';
+        avatarEl.appendChild(img);
+      } else {
+        avatarEl.textContent = initials(emp.employee_name);
+      }
+
+      // Text
+      const textEl = document.createElement('div');
+      const nameEl = document.createElement('p');
+      nameEl.className = 'font-medium text-gray-900';
+      nameEl.textContent = emp.employee_name;
+      const metaEl = document.createElement('p');
+      metaEl.className = 'text-xs text-gray-500';
+      const parts = [emp.position, emp.home_outlet_name].filter(Boolean);
+      metaEl.textContent = parts.join(' · ');
+      textEl.appendChild(nameEl);
+      textEl.appendChild(metaEl);
+
+      card.appendChild(avatarEl);
+      card.appendChild(textEl);
+
+      card.addEventListener('click', () => selectEmployee(emp));
+      chooser!.appendChild(card);
+    });
+
+    chooser!.classList.remove('hidden');
+  }
+
+  function selectEmployee(emp: EmployeeCard): void {
+    employeeIdInput!.value = emp.employee_id;
+    submitBtn!.disabled = false;
+
+    // Show preview.
+    if (selectedPreview && selectedAvatar && selectedName && selectedMeta) {
+      selectedAvatar.textContent = initials(emp.employee_name);
+      selectedName.textContent = emp.employee_name;
+      const parts = [emp.position, emp.home_outlet_name].filter(Boolean);
+      selectedMeta.textContent = parts.join(' · ');
+      selectedPreview.classList.remove('hidden');
+    }
+
+    // Hide search and chooser.
+    searchInput!.classList.add('hidden');
+    chooser!.classList.add('hidden');
+    if (searchStatus) searchStatus.classList.add('hidden');
+  }
+
+  function clearSelection(): void {
+    employeeIdInput!.value = '';
+    submitBtn!.disabled = true;
+    if (selectedPreview) selectedPreview.classList.add('hidden');
+    searchInput!.classList.remove('hidden');
+    searchInput!.value = '';
+    chooser!.classList.add('hidden');
+    searchInput!.focus();
+  }
+
+  clearBtn?.addEventListener('click', clearSelection);
+
+  async function fetchResults(query: string): Promise<void> {
+    const normalized = normalize(query);
+    if (normalized.length < 2) {
+      chooser!.classList.add('hidden');
+      if (searchStatus) searchStatus.classList.add('hidden');
+      return;
+    }
+
+    // Cache hit
+    if (cache.has(normalized)) {
+      renderCards(cache.get(normalized)!);
+      return;
+    }
+
+    // Cancel previous in-flight request.
+    currentController?.abort();
+    currentController = new AbortController();
+
+    if (searchStatus) {
+      searchStatus.textContent = 'Mencari…';
+      searchStatus.classList.remove('hidden');
+    }
+
+    try {
+      const res = await fetch(
+        `/portal/auth/search?q=${encodeURIComponent(normalized)}`,
+        { signal: currentController.signal },
+      );
+      if (!res.ok) throw new Error('Search request failed');
+      const json = (await res.json()) as { results: EmployeeCard[] };
+      cache.set(normalized, json.results);
+      renderCards(json.results);
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return; // Stale — ignore.
+      if (searchStatus) {
+        searchStatus.textContent = 'Tidak dapat mencari sekarang. Coba lagi.';
+        searchStatus.classList.remove('hidden');
+      }
+      chooser!.classList.add('hidden');
+    }
+  }
+
+  searchInput.addEventListener('input', () => {
+    // Reset selection whenever user types again.
+    if (employeeIdInput!.value) clearSelection();
+
+    const query = searchInput!.value;
+    if (debounceTimer !== null) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchResults(query), 250);
+  });
+
+  // Prevent form submission when no employee is selected.
+  loginForm?.addEventListener('submit', (e) => {
+    if (!employeeIdInput!.value) {
+      e.preventDefault();
+      searchInput!.focus();
+    }
+  });
+</script>

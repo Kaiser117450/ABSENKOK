@@ -1,0 +1,29 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+// Identity will be resolved in a later phase.
+// For now, confirm the user is authenticated (middleware already guards this).
+---
+
+<BaseLayout
+  title="Portal Karyawan — ABSENKOK"
+  description="Selamat datang di portal karyawan ABSENKOK."
+>
+  <div class="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 px-4 text-center">
+    <span class="text-3xl font-extrabold tracking-tight mb-2">
+      <span class="text-[#E91E8C]">ABSEN</span><span class="text-[#1A237E]">KOK</span>
+    </span>
+    <h1 class="text-xl font-semibold text-gray-800 mt-4 mb-2">Portal Karyawan</h1>
+    <p class="text-sm text-gray-500 mb-8">Jadwal dan informasi kehadiran akan tersedia di sini.</p>
+    <form method="POST" action="/portal/auth/sign-out">
+      <button
+        type="submit"
+        class="rounded-xl border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
+      >
+        Keluar
+      </button>
+    </form>
+  </div>
+</BaseLayout>
