@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-03-22
+revised: 2026-03-22
 ---
 
 # Phase 32 — UI Design Contract
@@ -37,7 +38,7 @@ Declared values (multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon-to-label gaps, inline badge padding |
-| sm | 8px | Card bottom margin, row internal gaps |
+| sm | 8px | Card bottom margin, row internal gaps, **status dot size** |
 | md | 16px | Section horizontal padding, dialog content padding |
 | lg | 24px | Section vertical padding |
 | xl | 32px | Major section breaks |
@@ -45,9 +46,10 @@ Declared values (multiples of 4):
 | 3xl | 64px | Not used in this phase |
 
 Exceptions:
-- Status dot: 10x10px (not on 4-point scale — matches existing `KioskHealthCard` exactly; do not change)
 - Card inner padding: 12px (existing pattern in `KioskHealthCard` — match for visual continuity)
 - Touch target for trailing menu icon (PopupMenuButton): minimum 48x48px per Material 3 touch target spec
+
+Status dot: 8x8px circle. Previous draft declared 10x10px which violated the 4-point scale. 8px is the correct value on the declared scale and requires no exception.
 
 Source: `lib/widgets/kiosk_health_card.dart` inner padding 12px, margin bottom 8px — replicate in `KioskDeviceCard`.
 
@@ -59,12 +61,14 @@ All sizes use Plus Jakarta Sans via `GoogleFonts.plusJakartaSansTextTheme`. Sour
 
 | Role | Size | Weight | Line Height | Usage in this phase |
 |------|------|--------|-------------|---------------------|
-| Body | 13sp | w700 | 1.3 | Device name (nickname or UUID prefix) in KioskDeviceCard |
-| Label | 11sp | w600–w700 | 1.2 | Status label (Online / Offline), battery %, pending count |
-| Subheading | 15sp | w700 | 1.3 | AlertDialog title ("Beri Nama Kiosk", "Arsipkan Kiosk?") |
+| Body | 13sp | w600 | 1.3 | Device name (nickname or UUID prefix) in KioskDeviceCard |
+| Label | 11sp | w600 | 1.2 | Status label (Online / Offline), battery %, pending count |
+| Subheading | 15sp | w600 | 1.3 | AlertDialog title ("Beri Nama Kiosk", "Arsipkan Kiosk?") |
 | Hint | 14sp | w400 | 1.5 | TextField hintText in nickname dialog |
 
-Weight contract: exactly 2 weights used in new widgets — regular (w400) for input hint, semibold/bold (w600–w700) for all labels and names.
+Weight contract: exactly 2 weights — regular (w400) for input hint text only, semibold (w600) for all labels, names, and dialog titles. Do not use w700 in new widgets introduced by this phase.
+
+13sp is used for the device name (primary identifier in the card). 11sp is used for secondary metadata (status age, battery percentage, pending count). Both sizes serve distinct information hierarchy roles and are both required.
 
 ---
 
@@ -79,7 +83,7 @@ Source: `lib/core/theme.dart` — AppColors. All hex values are from the existin
 | Accent (10%) | AppColors.primary | #DC2626 | FilledButton in nickname dialog only |
 | Destructive | AppColors.danger | #DC2626 | Archive confirmation button label, Offline status dot |
 
-Accent reserved for: the "Simpan" FilledButton in the nickname dialog — and nothing else in `KioskDeviceCard`. Do not apply accent color to online status dots, menu icons, or card borders.
+Accent reserved for: the "Simpan Nama" FilledButton in the nickname dialog — and nothing else in `KioskDeviceCard`. Do not apply accent color to online status dots, menu icons, or card borders.
 
 Semantic colors (not accent):
 - Online dot: AppColors.success (#16A34A)
@@ -102,19 +106,23 @@ New widgets introduced in this phase (for planner/executor reference):
 
 File: `lib/widgets/kiosk_device_card.dart`
 
+**Focal point:** The device name (nickname or UUID prefix) at 13sp w600 is the primary visual anchor. The 8x8 status dot to its left provides the immediate health-at-a-glance signal. These two elements together are the focal point of every card — all other elements (battery, sync badge, menu) are secondary and must not compete with them in visual weight.
+
 Layout (Row):
-1. Status dot — 10x10 circle, color = online/offline/unconnected semantic
+1. Status dot — 8x8 circle, color = online/offline/unconnected semantic
 2. SizedBox(width: 10)
 3. Expanded Column:
-   - Line 1: nickname ?? `"Kiosk ${deviceUuid.substring(0, 8)}"` — 13sp w700 textPrimary
+   - Line 1: nickname ?? `"Kiosk ${deviceUuid.substring(0, 8)}"` — 13sp w600 textPrimary
    - Line 2: status label with age — 11sp w600 semantic color
 4. Optional BatteryIndicator (matches existing `_BatteryIndicator` from KioskHealthCard)
 5. SizedBox(width: 12) if battery shown
 6. Optional pending sync badge (matches existing warningLight badge from KioskHealthCard)
 7. SizedBox(width: 4)
-8. PopupMenuButton (trailing, icon: Icons.more_vert, size 20) with items:
+8. PopupMenuButton (trailing, icon: Icons.more_vert, iconSize: 20) with items:
    - "Beri Nama" (Icons.edit_outlined)
    - "Arsipkan" (Icons.archive_outlined, color: danger)
+
+PopupMenuButton accessibility: set `tooltip: "Opsi perangkat"` so TalkBack announces the button purpose. This satisfies Material 3 semantic label requirement for icon-only interactive controls.
 
 Card container: margin bottom 8, padding 12, white fill, border AppColors.border, borderRadius 12.
 
@@ -126,11 +134,11 @@ Trigger: "Beri Nama" from PopupMenuButton.
 Widget: `showDialog(AlertDialog)` — matches all existing dialog patterns in codebase.
 
 Structure:
-- title: Text("Beri Nama Kiosk") — 15sp w700
+- title: Text("Beri Nama Kiosk") — 15sp w600
 - content: TextField, autofocus: true, hintText: "Kiosk Pintu Depan", maxLength: 40
 - actions:
   - TextButton "Batal" — AppColors.textSecondary
-  - FilledButton "Simpan" — AppColors.primary background, white text
+  - FilledButton "Simpan Nama" — AppColors.primary background, white text
 
 ### Archive Confirmation Dialog
 
@@ -138,11 +146,11 @@ Trigger: "Arsipkan" from PopupMenuButton.
 Widget: `showDialog(AlertDialog)`.
 
 Structure:
-- title: Text("Arsipkan Kiosk?") — 15sp w700
+- title: Text("Arsipkan Kiosk?") — 15sp w600
 - content: Text("Kiosk ini tidak akan muncul lagi di dashboard. Hubungi admin pusat jika perlu dipulihkan.") — 14sp w400
 - actions:
   - TextButton "Batal" — AppColors.textSecondary
-  - TextButton "Arsipkan" — AppColors.danger (destructive label, no FilledButton for destructive)
+  - TextButton "Ya, Arsipkan" — AppColors.danger (destructive label, no FilledButton for destructive)
 
 ### Empty Device State
 
@@ -161,14 +169,14 @@ All Indonesian-language copy. Source: RESEARCH.md open questions + existing code
 
 | Element | Copy |
 |---------|------|
-| Primary CTA | "Simpan" (nickname dialog confirm) |
-| Secondary CTA | "Arsipkan" (archive action confirm — destructive) |
+| Primary CTA | "Simpan Nama" (nickname dialog confirm — verb + noun) |
+| Secondary CTA | "Ya, Arsipkan" (archive confirm button — confirmation word + action verb) |
 | Cancel label | "Batal" (both dialogs — consistent with existing codebase) |
 | Nickname dialog title | "Beri Nama Kiosk" |
 | Nickname dialog hint | "Kiosk Pintu Depan" |
 | Archive dialog title | "Arsipkan Kiosk?" |
 | Archive dialog body | "Kiosk ini tidak akan muncul lagi di dashboard. Hubungi admin pusat jika perlu dipulihkan." |
-| Archive confirmation | TextButton labeled "Arsipkan" in AppColors.danger — no SnackBar undo in this phase |
+| Archive confirmation | TextButton labeled "Ya, Arsipkan" in AppColors.danger — no SnackBar undo in this phase |
 | Empty state heading | "Tidak ada kiosk aktif" |
 | Empty state body | "Belum ada perangkat terdaftar untuk gerai ini." |
 | Error state (RPC failure) | Show AppToast/SnackBar: "Gagal menyimpan. Coba lagi." (matches existing toast pattern) |
@@ -179,9 +187,10 @@ All Indonesian-language copy. Source: RESEARCH.md open questions + existing code
 | PopupMenu item: rename | "Beri Nama" |
 | PopupMenu item: archive | "Arsipkan" |
 | Section header | "Status Kiosk" (unchanged from current dashboard — do not rename) |
+| PopupMenuButton tooltip | "Opsi perangkat" |
 
 Destructive actions in this phase:
-- Archive device: confirmed via AlertDialog with "Arsipkan" TextButton in danger color. No second confirmation step. Action is reversible via Supabase dashboard (is_active = true) — inform admin in dialog body.
+- Archive device: confirmed via AlertDialog with "Ya, Arsipkan" TextButton in danger color. No second confirmation step. Action is reversible via Supabase dashboard (is_active = true) — inform admin in dialog body.
 
 ---
 
