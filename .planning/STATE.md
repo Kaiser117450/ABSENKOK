@@ -2,32 +2,32 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
-current_plan: 31-01 complete
+current_plan: 32-01 complete
 status: executing
-stopped_at: Completed 31-02-PLAN.md
-last_updated: "2026-03-20T09:15:56.717Z"
-last_activity: 2026-03-20 — Completed 31-01 (DeviceIdentityService + UUID persistence)
+stopped_at: Completed 32-01-PLAN.md
+last_updated: "2026-03-22T06:16:33.132Z"
+last_activity: 2026-03-20 — Completed 31-02 (kiosk_devices migration + HeartbeatService dual-write)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 31 — Device Identity Foundation
+Phase: 32 — Multi-Device Dashboard
 Plan: 01 complete, 02 pending
 Status: In Progress
-Last activity: 2026-03-20 — Completed 31-02 (kiosk_devices migration + HeartbeatService dual-write)
+Last activity: 2026-03-22 — Completed 32-01 (KioskDevice model + SQL RPCs)
 
 ## Current Status
 - **Milestone:** v6.0 — Multi-Outlet & Multi-Device Control
 - **Phase:** 31 — Device Identity Foundation (In Progress)
-- **Current Plan:** 31-02 complete (Phase 31 complete)
-- **Last Updated:** 2026-03-20 — Plan 31-02 complete
+- **Current Plan:** 32-01 complete
+- **Last Updated:** 2026-03-22 — Plan 32-01 complete
 
 ## Progress
 
@@ -94,6 +94,8 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 | 31-01 | DeviceIdentityService as pure static class with SharedPreferences persistence | No instance state needed; uuid package already present at ^4.5.1 |
 | 31-02 | Dual-write pattern: RPC primary (kiosk_devices) + outlets bridge until Phase 32 admin dashboard migration | Backward compatible; admin dashboard still reads outlets heartbeat columns |
 | 31-02 | SECURITY DEFINER RPC (upsert_kiosk_heartbeat) for anon-key kiosk writes | Matches verify_kiosk_password pattern; anon key cannot direct-write with RLS |
+| 32-01 | KioskDevice.isOnline uses <= 30 min threshold | Matches kiosk_health_card.dart existing logic — consistent across codebase |
+| 32-01 | displayName falls back to "Kiosk {uuid[0:8]}" — 8-char prefix | UUID prefix is unique enough for admin display without cluttering UI |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -124,11 +126,12 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 - Phase 29 Plan 01: KioskDiagnosticsScreen at /kiosk/diagnostics (battery, connectivity, version, pending/failed counts, Force Sync); amber sync indicator strip on idle screen slides in when pendingCount > 0; long-press logo opens diagnostics
 - Phase 31 context captured: installation identity must persist across logout/setup, existing admin health surfaces must stay accurate during the schema transition, and one physical device keeps one identity even when reassigned between outlets
 - Phase 31 Plan 02 (31-02): kiosk_devices table + upsert_kiosk_heartbeat SECURITY DEFINER RPC + HeartbeatService dual-write (RPC primary + outlets bridge). Migration file: sql/phase_31_kiosk_devices_20260320.sql — MUST be applied to Supabase before deploying updated APK
+- Phase 32 Plan 01 (32-01): KioskDevice model (lib/models/kiosk_device.dart) with fromJson, isOnline (30-min threshold), displayName, copyWith; 8 unit tests passing; SQL migration sql/phase_32_device_mgmt_20260322.sql with set_device_nickname + archive_device SECURITY DEFINER RPCs — MUST be applied before Plan 02 UI deployment
 
 ## Session Continuity
 
-**Last session:** 2026-03-20T09:15:56.715Z
-**Stopped at:** Completed 31-02-PLAN.md
+**Last session:** 2026-03-22T06:16:33.127Z
+**Stopped at:** Completed 32-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
