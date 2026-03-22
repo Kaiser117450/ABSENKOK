@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: milestone
-current_plan: 37-02
+current_plan: 37-03
 status: phase-37-in-progress
-stopped_at: Completed 37-02-PLAN.md
+stopped_at: Completed 37-03-PLAN.md
 last_updated: "2026-03-22T15:21:01.594Z"
 last_activity: 2026-03-22 — Revised Phase 37 auth plan to indexed name search plus password
 progress:
@@ -113,6 +113,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 | 37-01 | Hidden auth email: employee+<uuid>@portal.absenkok.internal | UUID is stable; name/code are mutable and unsafe as auth keys |
 | 37-01 | portal_search_name is GENERATED ALWAYS AS STORED column | Keeps normalization at DB layer; visible employees.name untouched |
 | 37-01 | Trigram fallback gated at >=3 chars; empty result for <2-char queries | PostgreSQL docs warn short patterns degrade trigram selectivity |
+| 37-03 | Kept output: static in Astro 5 — hybrid mode removed; per-route prerender=false handles mixed static/dynamic | Astro 5 removed hybrid output; static is now the unified mode |
+| 37-03 | middleware calls getUser() not getSession() for server-side portal auth validation | Supabase SSR docs recommend getUser() to avoid trusting stale/spoofed session state |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
