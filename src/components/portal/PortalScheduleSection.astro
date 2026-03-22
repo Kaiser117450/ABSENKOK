@@ -1,0 +1,163 @@
+---
+/**
+ * PortalScheduleSection — mobile-first today + week schedule surface.
+ *
+ * Renders the ready-state schedule as a phone-first stacked layout.
+ * Phone-first: single column, no table/grid treatment, row cards.
+ *
+ * Props:
+ *   schedule — the `PortalScheduleModel` from `loadPortalHome` ready state.
+ *
+ * Scope guard:
+ *   - no client framework
+ *   - does not duplicate the portal shell (header/nav/footer)
+ *   - does not include the identity/greeting card (that belongs in the page)
+ */
+
+import type { PortalScheduleModel, PortalScheduleEntry } from '../../lib/portal/schedule';
+
+interface Props {
+  schedule: PortalScheduleModel;
+}
+
+const { schedule } = Astro.props;
+
+/** Format two-part HH:MM from numeric hours + minutes. */
+function fmt(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/** True when this entry is today's assignment. */
+function isToday(entry: PortalScheduleEntry, referenceDate: string): boolean {
+  return entry.logicalDate === referenceDate;
+}
+---
+
+<!-- Today's shift section -->
+<section class="mb-6">
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Jadwal hari ini</h2>
+
+  {schedule.todayAssignment ? (
+    schedule.todayAssignment.isDayOff ? (
+      <!-- Day off -->
+      <div class="bg-gray-50 rounded-2xl border border-gray-200 p-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M4.22 19.78l.707-.707M18.364 5.636l.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-900">Libur</p>
+          {schedule.todayAssignment.notes && (
+            <p class="text-sm text-gray-500">{schedule.todayAssignment.notes}</p>
+          )}
+        </div>
+      </div>
+    ) : (
+      <!-- Active shift today -->
+      <div class="bg-white rounded-2xl border border-[#E91E8C]/30 shadow-sm p-5" role="region" aria-label="Shift hari ini">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-900 truncate">
+              {schedule.todayAssignment.shiftName ?? 'Shift'}
+            </p>
+            {schedule.todayAssignment.outletName && (
+              <p class="text-sm text-gray-500">{schedule.todayAssignment.outletName}</p>
+            )}
+          </div>
+          <span class="shrink-0 bg-[#E91E8C]/10 text-[#E91E8C] text-xs font-semibold px-2.5 py-1 rounded-full">
+            Hari ini
+          </span>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" /><path stroke-linecap="round" d="M12 6v6l4 2" />
+          </svg>
+          <span>
+            {fmt(schedule.todayAssignment.startHour, schedule.todayAssignment.startMinute)}
+            &ndash;
+            {fmt(schedule.todayAssignment.endHour, schedule.todayAssignment.endMinute)}
+            {schedule.todayAssignment.endsNextDay && (
+              <span class="ml-1 text-xs text-amber-600 font-medium">(Selesai besok)</span>
+            )}
+          </span>
+        </div>
+        {schedule.todayAssignment.notes && (
+          <p class="mt-2 text-xs text-gray-400">{schedule.todayAssignment.notes}</p>
+        )}
+      </div>
+    )
+  ) : (
+    <!-- No assignment today -->
+    <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400" role="status">
+      <p class="text-sm font-medium">Tidak ada jadwal hari ini</p>
+    </div>
+  )}
+</section>
+
+<!-- Current-week assignment list -->
+<section>
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Minggu ini</h2>
+
+  {schedule.weekAssignments.length > 0 ? (
+    <!-- One-column stacked list — no table/grid -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100" role="list" aria-label="Jadwal minggu ini">
+      {schedule.weekAssignments.map((entry) => {
+        const today = isToday(entry, schedule.referenceDate);
+        return (
+          <div
+            class={`p-4 flex items-center gap-3 ${today ? 'bg-[#E91E8C]/5' : ''}`}
+            role="listitem"
+          >
+            <!-- Day indicator column -->
+            <div class="w-12 shrink-0 text-center">
+              <p class={`text-xs font-semibold uppercase ${today ? 'text-[#E91E8C]' : 'text-gray-400'}`}>
+                {new Date(entry.logicalDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' })}
+              </p>
+              <p class={`text-lg font-bold leading-none ${today ? 'text-[#E91E8C]' : 'text-gray-700'}`}>
+                {new Date(entry.logicalDate + 'T00:00:00').getDate()}
+              </p>
+            </div>
+
+            <!-- Assignment content -->
+            {entry.isDayOff ? (
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-400">Libur</p>
+                {entry.notes && (
+                  <p class="text-xs text-gray-400 mt-0.5">{entry.notes}</p>
+                )}
+              </div>
+            ) : (
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-gray-900 truncate">
+                  {entry.shiftName ?? 'Shift'}
+                  {today && (
+                    <span class="ml-1.5 text-xs font-normal text-[#E91E8C]">Hari ini</span>
+                  )}
+                </p>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  {fmt(entry.startHour, entry.startMinute)}&ndash;{fmt(entry.endHour, entry.endMinute)}
+                  {entry.endsNextDay && (
+                    <span class="ml-1 text-amber-600 font-medium">(Selesai besok)</span>
+                  )}
+                  {entry.outletName && (
+                    <span class="ml-1 text-gray-400">&middot; {entry.outletName}</span>
+                  )}
+                </p>
+                {entry.notes && (
+                  <p class="text-xs text-gray-400 mt-0.5">{entry.notes}</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  ) : (
+    <!-- No assignments this week -->
+    <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400" role="status">
+      <p class="text-sm font-medium">Belum ada jadwal minggu ini</p>
+      <p class="text-xs mt-1">Jadwal akan muncul setelah admin menerbitkan jadwal mingguan.</p>
+    </div>
+  )}
+</section>
