@@ -14,12 +14,12 @@ Restore a deterministic Android release path for the Flutter kiosk app before re
 
 **Goal:** Re-establish a clean Android release packaging baseline and align version metadata with the active milestone.
 **Depends on:** Phase 45 closeout and current repo state
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 
 - [x] 46-01: Restore the canonical Android release build path by removing the current release-only packaging blocker
-- [ ] 46-02: Align `pubspec.yaml`, milestone versioning, and generated artifact naming for v7.0
+- [x] 46-02: Align `pubspec.yaml`, milestone versioning, and generated artifact naming for v7.0
 
 **Details:**
 - Requirements: `BUILD-01`, `BUILD-03`

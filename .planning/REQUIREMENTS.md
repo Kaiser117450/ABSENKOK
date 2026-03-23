@@ -7,7 +7,7 @@
 
 - [x] **BUILD-01**: Operator can run the canonical Android release command from a clean checkout and reach release packaging without the current Dart compile failures.
 - [ ] **BUILD-02**: Operator can run one preflight release check that fails before signing when analysis, tests, or release-only compile steps are broken.
-- [ ] **BUILD-03**: Operator can identify the active milestone version from `pubspec.yaml` and generated release artifact names without cross-checking planning docs manually.
+- [x] **BUILD-03**: Operator can identify the active milestone version from `pubspec.yaml` and generated release artifact names without cross-checking planning docs manually.
 
 ## 2. Toolchain Contract
 
@@ -59,7 +59,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BUILD-01 | Phase 46 | Complete |
-| BUILD-03 | Phase 46 | Pending |
+| BUILD-03 | Phase 46 | Complete |
 | BUILD-02 | Phase 47 | Pending |
 | TOOL-01 | Phase 47 | Pending |
 | TOOL-02 | Phase 47 | Pending |

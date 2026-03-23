@@ -22,7 +22,7 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, and portal-specific Supabase RPCs
 **Archive note:** v6.3 archived with audit status `closed`; the Phase 42 recap RPC/index were applied to production Supabase during closeout
-**Release note:** Android release hardening is the new active milestone because the current release path is blocked by compile errors, still signs with the debug key, and depends on a Java/toolchain setup that is not yet codified in version control
+**Release note:** Phase 46 restored the canonical local release lane to `C:\flutter\bin\flutter.bat build apk --release`, aligned metadata to `7.0.0+8013`, and produced `ABSENKOK-v7.0.0.apk`; signing still uses the debug key and the supported Java/toolchain contract still needs tracked documentation
 
 ## Current Milestone: v7.0 Android Release Hardening
 
@@ -83,9 +83,8 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
-- `pubspec.yaml` still reports `version: 6.2.0+8012` even though the latest shipped milestone is v6.3, so release metadata is already drifting from planning reality
 - `android/app/build.gradle.kts` still points the `release` build type at the debug signing config
-- Recent release builds fail in Dart compile stage (`shift_scheduler_screen.dart`, `schedule_sqlite_service.dart`) before Android packaging can complete
+- `android/local.properties` still carries the working `C:\flutter` + Android Studio JBR baseline as a machine-local, gitignored file, so the supported toolchain contract is not yet codified in tracked files
 - Shell `java -version` resolves to Temurin 25 while this repo's proven-good path still depends on Android Studio JBR; the supported Java baseline is not pinned in VCS
 - v6.2 archived without a dedicated milestone audit or per-phase PLAN/SUMMARY artifacts for phases 40-41
 - Final admin logo correction landed after the first `v6.2.0` build; milestone closeout rebuilds from the corrected asset path `src/assets/images/logogoenakko.png`
@@ -212,9 +211,9 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Portal attendance recap has explicit loading, empty, and error states when data is unavailable — v6.3
 
 ### Active (v7.0 Android Release Hardening)
-- [ ] Release build succeeds from a clean checkout on the supported Flutter/Java/Gradle toolchain without `--android-skip-build-dependency-validation`
+- [x] Release build succeeds from a clean checkout on the supported Flutter/Java/Gradle toolchain without `--android-skip-build-dependency-validation` — Phase 46
 - [ ] Release signing uses a private upload keystore flow instead of the debug keystore
-- [ ] `pubspec.yaml`, Android version metadata, and generated artifact names all reflect the active milestone version
+- [x] `pubspec.yaml`, Android version metadata, and generated artifact names all reflect the active milestone version — Phase 46
 - [ ] Release packaging retains the required symbol/debug artifacts and validates the shrunken build before distribution
 - [ ] Operators can follow one documented local release workflow without guessing environment variables or secret file locations
 
@@ -335,6 +334,8 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 34 | Portal attendance recap stays employee-scoped end-to-end through `resolve_portal_employee()` and one recap dataset | ✓ Portal recap never trusts client-supplied employee identity |
 | 35 | Only `belum_pulang` and `tidak_hadir` are follow-up gaps; current-day in-progress states stay informational | ✓ Portal highlights actionable days without alarming active-shift employees |
 | 36 | Historical recap copy is row-aware via `getRecapDayPresentationForDay(day, referenceDate)` | ✓ Past rows use date-accurate wording instead of generic "hari ini" copy |
+| 37 | Canonical Windows release lane uses `C:\flutter\bin\flutter.bat` while AGP/Gradle/Kotlin stay pinned through Phase 46 | ✓ Release packaging baseline recovered without a toolchain upgrade |
+| 38 | `pubspec.yaml` remains the single version source of truth and APK naming stays derived from `variant.versionName` | ✓ v7.0 metadata now aligns from source version through packaged artifact name |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -352,4 +353,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after starting v7.0 Android Release Hardening*
+*Last updated: 2026-03-23 after completing Phase 46*

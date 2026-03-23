@@ -2,48 +2,48 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
-status: phase_in_progress
-stopped_at: Completed 46-01-PLAN.md
-last_updated: "2026-03-23T12:11:06.454Z"
-last_activity: "2026-03-23 — restored the Windows release baseline with the C:\\flutter alias and packaged ABSENKOK-v6.2.0.apk; ready for 46-02 metadata alignment"
+status: phase_completed
+stopped_at: Completed Phase 46 execution
+last_updated: "2026-03-23T12:18:24.3738370Z"
+last_activity: "2026-03-23 — completed Phase 46: restored the Windows release baseline and packaged ABSENKOK-v7.0.0.apk for milestone v7.0"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 10
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 46 - Release Baseline Recovery
-Plan: 46-02 - Align pubspec.yaml, milestone versioning, and generated artifact naming for v7.0
-Status: 46-01 complete; release baseline restored for the current checkout
-Last activity: 2026-03-23 — Restored the `C:\flutter` release baseline and rebuilt `ABSENKOK-v6.2.0.apk`
+Phase: Ready for Phase 47 - Toolchain Contract & Preflight Gates
+Plan: —
+Status: Phase 46 complete; release baseline restored and v7.0 metadata aligned
+Last activity: 2026-03-23 — Packaged `ABSENKOK-v7.0.0.apk` from the canonical `C:\flutter` release lane
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
-- **Next phase:** Phase 46: Release Baseline Recovery
-- **Current focus:** Execute 46-02 to align v7.0 version metadata and artifact naming on the restored release lane
+- **Next phase:** Phase 47: Toolchain Contract & Preflight Gates
+- **Current focus:** Codify the supported Java/Flutter/Gradle contract and add fail-fast release preflight gates
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```
 v7.0 milestone in progress
-[----------] 0 of 4 phases complete (1/10 plans)
+[##--------] 1 of 4 phases complete (2/10 plans)
 ```
 
-- **Next action:** Execute 46-02 to bump `pubspec.yaml` to v7.0 and verify the versioned release APK output
+- **Next action:** Start Phase 47 with `$gsd-discuss-phase 47` or `$gsd-plan-phase 47`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Execute v7.0 Android Release Hardening starting with Phase 46 Release Baseline Recovery.
+**Current focus:** Phase 47 Toolchain Contract & Preflight Gates after Phase 46 release baseline recovery.
 
 ## What Was Shipped
 
@@ -160,6 +160,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 46-02 completed on 2026-03-23: `pubspec.yaml` is now `7.0.0+8013`, Flutter regenerated `android/local.properties` to `7.0.0 / 8013`, and the release artifact path is `build/app/outputs/apk/release/ABSENKOK-v7.0.0.apk` without changing the version-derived Gradle naming rule.
 - Phase 46-01 completed on 2026-03-23: the canonical Windows release lane is now `C:\flutter\bin\flutter.bat build apk --release`, which packaged `ABSENKOK-v6.2.0.apk` again without changing AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, or the debug-signing baseline.
 - `android/local.properties` remains gitignored by repo design, so the C:\flutter baseline is machine-local until Phase 47 codifies the tracked toolchain contract.
 - v6.3 archived on 2026-03-23. Archive set now includes roadmap, requirements, and milestone audit files under `.planning/milestones/`; no active milestone is currently defined.
@@ -204,8 +205,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T12:11:06.440Z
-**Stopped at:** Completed 46-01-PLAN.md
+**Last session:** 2026-03-23T12:18:24.3738370Z
+**Stopped at:** Completed Phase 46 execution
 **Resume file:** None
 
 ## Database Safety Rules
