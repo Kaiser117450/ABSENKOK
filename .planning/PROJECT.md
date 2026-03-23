@@ -5,31 +5,53 @@ NFC attendance kiosk app for **Ayam Guling Enakko** restaurant chain — Android
 at each outlet. Replaces paper attendance. Features: real-time reports with PDF/CSV export,
 persistent floating pill overlay (Dynamic Island-style), employee badge system, Supabase-synced
 schedule grid (week-view TableView), employee archive/restore, batch CSV import, and premium
-kiosk UI. Marketing website at absenkok.vercel.app. Admin can manage employees, attendance,
-schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+kiosk UI. Marketing website at absenkok.vercel.app now also hosts a protected employee portal
+for self-service schedule visibility. Admin can manage employees, attendance, schedules, and
+badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v6.1 Employee Portal
-
-**Goal:** Launch the first employee-facing web portal so staff can see their own schedules without touching kiosk or admin-only surfaces.
-
-**Target features:**
-- Employee-facing web access separate from kiosk/admin flows
-- Employee can view assigned shifts and upcoming work days
-- Portal foundation that can expand into attendance and request workflows later
-
 ## Current State
 
-**Shipped:** v6.0 Multi-Outlet & Multi-Device Control (2026-03-22)
+**Shipped:** v6.3 Employee Attendance Recap (2026-03-23)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~28,400 tracked LOC Dart across 102 tracked files; Supabase Edge Functions: `create-admin-user`
+**Web surfaces:** marketing site + protected employee portal with schedules plus attendance recap on the Astro website
+**Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
+**Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
+**Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
+**Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, and portal-specific Supabase RPCs
+**Archive note:** v6.3 archived with audit status `closed`; the Phase 42 recap RPC/index were applied to production Supabase during closeout
 
 ## Next Milestone Goals
-- Define the first employee self-service surface around schedule visibility.
-- Keep the release focused enough to ship as `v6.1`.
-- Continue phase numbering from 37 onward.
+
+**Status:** Not defined yet
+
+**Likely focus areas:**
+- Let employees browse older attendance windows or custom date ranges from the portal recap
+- Add employee-initiated correction/time-off request flows with auditable manager approval
+- Introduce reminder or notification flows only after the request lifecycle is defined
+
+### What v6.3 Added
+- ✅ Employee-scoped portal attendance recap RPC with overnight logical-day repair and named timestamp contract
+- ✅ Typed Astro recap loader plus shared summary/history components derived from one dataset
+- ✅ `/portal/attendance` route, shell navigation, and home CTA inside the existing employee portal
+- ✅ Shared exception taxonomy and historical copy hardening for follow-up vs in-progress days
+- ✅ Verification backfill and audit closure for phases 42-44, with production recap migration applied during closeout
+
+### What v6.2 Added
+- ✅ Restored the classic admin dashboard as the default `/admin/dashboard` landing surface for full admin users
+- ✅ Moved chain-wide ringkasan jaringan and status per gerai to a dedicated full-admin screen reachable from the dashboard
+- ✅ Replaced the admin dashboard utensil branding with the official Enakko dashboard logo asset
+- ✅ Hardened Rekap Harian PDF for large exports and switched summary metrics from percentages to concrete counts
+
+### What v6.1 Added
+- ✅ Employee portal provisioning flow for existing employees
+- ✅ Password-based name-search login on the Astro website
+- ✅ Protected portal shell with employee identity resolution before schedule reads
+- ✅ Employee schedule visibility for today, this week, and next week
+- ✅ Mobile-first portal states for loading, empty, not-linked, and error
+- ✅ Portal-only logout plus hardened authenticated RPC read path in the website backend
 
 ### What v6.0 Added
 - ✅ Persistent installation UUIDv4 per kiosk that survives logout/re-setup
@@ -59,6 +81,10 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
+- v6.2 archived without a dedicated milestone audit or per-phase PLAN/SUMMARY artifacts for phases 40-41
+- Final admin logo correction landed after the first `v6.2.0` build; milestone closeout rebuilds from the corrected asset path `src/assets/images/logogoenakko.png`
+- v6.1 verification debt accepted at archive time: Phase 37 has no verification artifact; Phase 38 and 39 validation files remained draft
+- v6.1 planning summaries lag the shipped website hardening (`get_portal_schedule_overview`, authenticated RPC ACL tightening, and portal UI follow-up tweaks)
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
 - Dual PDF service files (pdf_report_service.dart + pdf_service.dart)
 - Phase 15 has no formal PLAN/SUMMARY files (SQL-only phase)
@@ -154,16 +180,43 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Full-admin Central Dashboard with chain-wide device visibility — v6.0
 - ✓ Firm-wide daily attendance aggregation in the Central Dashboard — v6.0
 
-### Active (v6.1)
-- Employee-facing web portal foundation
-- Employee schedule visibility and self-service access
-- Clear separation between employee, kiosk, and admin surfaces
+### Validated (v6.1)
+- ✓ Admin can provision initial employee portal access for existing staff records — v6.1
+- ✓ Employee can find their profile through name search and sign in with password — v6.1
+- ✓ Protected portal routes resolve exactly one employee before schedule data is shown — v6.1
+- ✓ Employee can see current and upcoming schedules in a mobile-first portal shell — v6.1
+- ✓ Portal logout is scoped locally to the portal session — v6.1
+
+### Validated (v6.2)
+- ✓ Full admin lands on the classic admin dashboard at `/admin/dashboard` again — v6.2
+- ✓ Dedicated action opens chain-wide ringkasan jaringan and status per gerai without replacing the classic dashboard — v6.2
+- ✓ Kepala gerai stays outlet-scoped while chain-wide network views remain full-admin only — v6.2
+- ✓ Admin dashboard uses the official Enakko brand logo asset — v6.2
+- ✓ Rekap Harian PDF keeps per-employee summaries visible on large exports — v6.2
+- ✓ Rekap Harian PDF summary cards use concrete counts instead of percentages — v6.2
+- ✓ Rekap Harian PDF per-employee rows show count-based attendance metrics while preserving time context — v6.2
+
+### Validated (v6.3)
+- ✓ Employee can open an attendance recap inside the existing portal and stay within the employee-facing shell — v6.3
+- ✓ Each recap day shows the attendance outcome together with the available timestamps for that logical workday — v6.3
+- ✓ Portal recap preserves logical-day and overnight handling for cross-day attendance — v6.3
+- ✓ Month-to-date summary counts are visible from the same recap dataset — v6.3
+- ✓ Exception days are clearly labeled, including incomplete attendance outcomes and scheduled days without a completed record — v6.3
+- ✓ Portal attendance recap is usable on a phone-sized browser inside the existing portal shell — v6.3
+- ✓ Portal attendance recap has explicit loading, empty, and error states when data is unavailable — v6.3
+
+### Active (Next Milestone Candidates)
+- [ ] Employee can filter attendance recap by custom date range or prior month
+- [ ] Employee can submit an attendance correction or dispute request from an exception day
+- [ ] Employee can submit time-off or absence requests through the portal
+- [ ] Manager/admin can approve or reject employee requests with an auditable status change
+- [ ] Employee receives reminders or status notifications for upcoming work or request changes
 
 ### Deferred (Future)
+- [ ] Employee-facing attendance export or payroll-grade reporting
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
-- [ ] Time-off request approval workflow
 - [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
 
 ### Out of Scope
@@ -253,6 +306,17 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 23 | Sentry NFC noise filter via type+message check | ✓ Zero spam; real errors still captured |
 | 24 | HeartbeatService in background isolate (not main) | ✓ Never blocks NFC scan, survives app minimize |
 | 25 | Diagnostics screen behind long-press logo (hidden) | ✓ No UI clutter; ops can access without training |
+| 26 | Hidden portal auth email uses `employee+<uuid>@portal.absenkok.internal` | ✓ Stable employee-linked auth key without exposing user-entered identifiers |
+| 27 | Portal search normalization stays in Postgres via generated column + trigram gate | ✓ Fast duplicate-safe employee search without mutating display names |
+| 28 | Astro SSR portal auth validates with `getUser()` in middleware | ✓ Server-side portal access does not trust stale client session state |
+| 29 | Portal schedule UI derives today and upcoming views from one schedule dataset | ✓ Portal surfaces stay internally consistent across current and future schedule sections |
+| 30 | Portal logout uses `scope: 'local'` and blocked states stay inside `PortalLayout` | ✓ Employee portal can sign out safely without affecting kiosk/admin sessions |
+| 31 | Full admin returns to the classic dashboard; chain-wide network visibility moves to a dedicated route | ✓ Restores the preferred ops surface without losing cross-gerai visibility |
+| 32 | Rekap Harian PDF summary switched to count metrics and `MultiPage` landscape summary layout | ✓ Large exports keep per-employee summary content visible |
+| 33 | Final admin branding ships with `src/assets/images/logogoenakko.png` | ✓ Dashboard branding now matches the intended Enakko logo asset |
+| 34 | Portal attendance recap stays employee-scoped end-to-end through `resolve_portal_employee()` and one recap dataset | ✓ Portal recap never trusts client-supplied employee identity |
+| 35 | Only `belum_pulang` and `tidak_hadir` are follow-up gaps; current-day in-progress states stay informational | ✓ Portal highlights actionable days without alarming active-shift employees |
+| 36 | Historical recap copy is row-aware via `getRecapDayPresentationForDay(day, referenceDate)` | ✓ Past rows use date-accurate wording instead of generic "hari ini" copy |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -270,4 +334,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-22 after v6.1 milestone start*
+*Last updated: 2026-03-23 after shipping v6.3 Employee Attendance Recap*

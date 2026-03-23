@@ -79,9 +79,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Kepala gerai → akses dashboard/karyawan/laporan saja,
         // TIDAK bisa ke halaman admin khusus (outlet, CSV import)
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/network-summary')) return '/admin/dashboard';
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
         if (loc.startsWith('/admin/csv-import')) return '/admin/dashboard';
-        if (loc.startsWith('/admin/archived-employees')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/archived-employees'))
+          return '/admin/dashboard';
         if (loc.startsWith('/admin/create-account')) return '/admin/dashboard';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
@@ -121,14 +123,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/admin/dashboard',
-            builder: (context, state) {
-              final appState =
-                  ProviderScope.containerOf(context).read(appProvider);
-              if (appState.isAdmin) {
-                return const CentralDashboardScreen();
-              }
-              return const AdminDashboardScreen();
-            },
+            builder: (_, __) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/admin/network-summary',
+            builder: (_, __) => const CentralDashboardScreen(),
           ),
           GoRoute(
             path: '/admin/outlet-dashboard',

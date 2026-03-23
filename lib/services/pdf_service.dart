@@ -61,17 +61,17 @@ class AttendanceDailyPdfRow {
 
 class AttendanceDailyPdfStats {
   final int totalKaryawan;
-  final double attendanceRate; // percentage 0-100
-  final String avgWorkStr;     // "8j 12m" format
-  final int totalSakit;
+  final int totalMasuk;
+  final int totalTidakHadir;
+  final int totalBelumPulang;
   final int totalScan;
   final List<AttendanceDailyPdfEmployeeRow> employeeRows;
 
   const AttendanceDailyPdfStats({
     required this.totalKaryawan,
-    required this.attendanceRate,
-    required this.avgWorkStr,
-    required this.totalSakit,
+    required this.totalMasuk,
+    required this.totalTidakHadir,
+    required this.totalBelumPulang,
     required this.totalScan,
     required this.employeeRows,
   });
@@ -79,21 +79,21 @@ class AttendanceDailyPdfStats {
 
 class AttendanceDailyPdfEmployeeRow {
   final String nama;
-  final int hadirCount;
-  final String avgMasukStr;   // "HH:mm" or "--:--"
+  final int masukCount;
+  final int tidakHadirCount;
+  final int belumPulangCount;
+  final String avgMasukStr;
   final String avgPulangStr;
-  final String totalKerjaStr; // "Xj Ym"
-  final int sakitCount;
-  final String badgeName;     // badge name or empty
+  final String totalKerjaStr;
 
   const AttendanceDailyPdfEmployeeRow({
     required this.nama,
-    required this.hadirCount,
+    required this.masukCount,
+    required this.tidakHadirCount,
+    required this.belumPulangCount,
     required this.avgMasukStr,
     required this.avgPulangStr,
     required this.totalKerjaStr,
-    required this.sakitCount,
-    this.badgeName = '',
   });
 }
 
@@ -157,7 +157,8 @@ class PdfService {
     final ttfBold = pw.Font.helveticaBold();
 
     final days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    final daysCount = schedule.endDate.difference(schedule.startDate).inDays + 1;
+    final daysCount =
+        schedule.endDate.difference(schedule.startDate).inDays + 1;
 
     pdf.addPage(
       pw.Page(
@@ -205,9 +206,9 @@ class PdfService {
                   ),
                 ],
               ),
-              
+
               pw.SizedBox(height: 20),
-              
+
               // Legend
               pw.Row(
                 children: [
@@ -224,9 +225,9 @@ class PdfService {
                   _buildLegendChip('Izin', PdfColor.fromHex('1E40AF'), ttf),
                 ],
               ),
-              
+
               pw.SizedBox(height: 16),
-              
+
               // Schedule Table
               pw.Table(
                 border: pw.TableBorder.all(
@@ -235,7 +236,7 @@ class PdfService {
                 ),
                 columnWidths: {
                   0: const pw.FixedColumnWidth(100), // Employee name
-                  for (int i = 1; i <= daysCount; i++) 
+                  for (int i = 1; i <= daysCount; i++)
                     i: const pw.FixedColumnWidth(60), // Days
                 },
                 children: [
@@ -284,7 +285,7 @@ class PdfService {
                       }),
                     ],
                   ),
-                  
+
                   // Data rows
                   ...employees.map((emp) {
                     return pw.TableRow(
@@ -304,32 +305,37 @@ class PdfService {
                             ),
                           ),
                         ),
-                        
+
                         // Day cells
                         ...List.generate(daysCount, (dayIndex) {
-                          final date = schedule.startDate.add(Duration(days: dayIndex));
-                          
+                          final date =
+                              schedule.startDate.add(Duration(days: dayIndex));
+
                           // Find entries for this employee on this date
-                          final entries = schedule.entries.where((e) =>
-                            e.employeeId == emp.id &&
-                            e.date.year == date.year &&
-                            e.date.month == date.month &&
-                            e.date.day == date.day).toList();
-                          
+                          final entries = schedule.entries
+                              .where((e) =>
+                                  e.employeeId == emp.id &&
+                                  e.date.year == date.year &&
+                                  e.date.month == date.month &&
+                                  e.date.day == date.day)
+                              .toList();
+
                           if (entries.isEmpty) {
                             return pw.Container(
                               padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text('-', 
+                              child: pw.Text(
+                                '-',
                                 style: pw.TextStyle(font: ttf, fontSize: 8),
                                 textAlign: pw.TextAlign.center,
                               ),
                             );
                           }
-                          
+
                           // Get the first entry (should be only one per day)
                           final entry = entries.first;
-                          final shiftColors = _getShiftColors(entry.shift.name, entry.status);
-                          
+                          final shiftColors =
+                              _getShiftColors(entry.shift.name, entry.status);
+
                           return pw.Container(
                             padding: const pw.EdgeInsets.all(4),
                             color: shiftColors.background,
@@ -352,9 +358,9 @@ class PdfService {
                   }),
                 ],
               ),
-              
+
               pw.Spacer(),
-              
+
               // Footer
               pw.Text(
                 'Dibuat pada: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}',
@@ -372,7 +378,8 @@ class PdfService {
 
     // Save PDF
     final directory = await getTemporaryDirectory();
-    final fileName = 'jadwal_${outletName.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(schedule.startDate)}.pdf';
+    final fileName =
+        'jadwal_${outletName.replaceAll(' ', '_')}_${DateFormat('yyyyMMdd').format(schedule.startDate)}.pdf';
     final filePath = '${directory.path}/$fileName';
     final file = File(filePath);
     await file.writeAsBytes(await pdf.save());
@@ -380,7 +387,8 @@ class PdfService {
     // Share PDF
     await Share.shareXFiles(
       [XFile(filePath)],
-      text: 'Jadwal Shift $outletName - ${dateFormat.format(schedule.startDate)} sampai ${dateFormat.format(schedule.endDate)}',
+      text:
+          'Jadwal Shift $outletName - ${dateFormat.format(schedule.startDate)} sampai ${dateFormat.format(schedule.endDate)}',
     );
   }
 
@@ -394,7 +402,8 @@ class PdfService {
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
     final logoBytes = await _loadLogo();
-    final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+    final range =
+        '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
 
     pdf.addPage(
       pw.MultiPage(
@@ -412,30 +421,45 @@ class PdfService {
           ),
           pw.SizedBox(height: 12),
           if (rows.isEmpty)
-            pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
+            pw.Text('Tidak ada data pada rentang ini.',
+                style: pw.TextStyle(font: ttf))
           else
             pw.Table(
-              border: pw.TableBorder.all(color: PdfColor.fromHex('E5E7EB'), width: 0.5),
+              border: pw.TableBorder.all(
+                  color: PdfColor.fromHex('E5E7EB'), width: 0.5),
               columnWidths: {
-                0: const pw.FlexColumnWidth(2),     // Nama
-                1: const pw.FlexColumnWidth(1.5),   // Jabatan
-                2: const pw.FlexColumnWidth(1.5),   // Outlet
-                3: const pw.FixedColumnWidth(52),   // Jenis
-                4: const pw.FixedColumnWidth(90),   // Waktu
-                5: const pw.FixedColumnWidth(52),   // Lat
-                6: const pw.FixedColumnWidth(52),   // Lng
-                7: const pw.FlexColumnWidth(2),     // Catatan
+                0: const pw.FlexColumnWidth(2), // Nama
+                1: const pw.FlexColumnWidth(1.5), // Jabatan
+                2: const pw.FlexColumnWidth(1.5), // Outlet
+                3: const pw.FixedColumnWidth(52), // Jenis
+                4: const pw.FixedColumnWidth(90), // Waktu
+                5: const pw.FixedColumnWidth(52), // Lat
+                6: const pw.FixedColumnWidth(52), // Lng
+                7: const pw.FlexColumnWidth(2), // Catatan
               },
               children: [
                 // Header row
                 pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
-                  children: ['Nama', 'Jabatan', 'Outlet', 'Jenis', 'Waktu', 'Lat', 'Lng', 'Catatan']
+                  decoration:
+                      pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
+                  children: [
+                    'Nama',
+                    'Jabatan',
+                    'Outlet',
+                    'Jenis',
+                    'Waktu',
+                    'Lat',
+                    'Lng',
+                    'Catatan'
+                  ]
                       .map((h) => pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 5),
                             child: pw.Text(h,
                                 style: pw.TextStyle(
-                                    font: ttfBold, fontSize: 9, color: PdfColors.white)),
+                                    font: ttfBold,
+                                    fontSize: 9,
+                                    color: PdfColors.white)),
                           ))
                       .toList(),
                 ),
@@ -454,7 +478,8 @@ class PdfService {
                       _pdfCell(row.nama, ttf),
                       _pdfCell(row.jabatan, ttf),
                       _pdfCell(row.outlet, ttf),
-                      _pdfCell(row.jenis, ttfBold, color: jenisColor), // Colored jenis
+                      _pdfCell(row.jenis, ttfBold,
+                          color: jenisColor), // Colored jenis
                       _pdfCell(row.waktu, ttf),
                       _pdfCell(row.latitude, ttf),
                       _pdfCell(row.longitude, ttf),
@@ -469,7 +494,8 @@ class PdfService {
     );
 
     final dir = await getTemporaryDirectory();
-    final fileName = 'laporan_absensi_per_scan_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    final fileName =
+        'laporan_absensi_per_scan_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
 
@@ -490,7 +516,8 @@ class PdfService {
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
     final logoBytes = await _loadLogo();
-    final range = '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
+    final range =
+        '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
 
     // Insert summary page first if stats provided
     if (stats != null) {
@@ -521,26 +548,29 @@ class PdfService {
           ),
           pw.SizedBox(height: 12),
           if (rows.isEmpty)
-            pw.Text('Tidak ada data pada rentang ini.', style: pw.TextStyle(font: ttf))
+            pw.Text('Tidak ada data pada rentang ini.',
+                style: pw.TextStyle(font: ttf))
           else
             pw.Table(
-              border: pw.TableBorder.all(color: PdfColor.fromHex('E5E7EB'), width: 0.5),
+              border: pw.TableBorder.all(
+                  color: PdfColor.fromHex('E5E7EB'), width: 0.5),
               columnWidths: {
-                0: const pw.FixedColumnWidth(58),   // Tanggal
-                1: const pw.FlexColumnWidth(2),     // Nama
-                2: const pw.FlexColumnWidth(1.5),   // Outlet
-                3: const pw.FixedColumnWidth(52),   // Status
-                4: const pw.FixedColumnWidth(38),   // Masuk
-                5: const pw.FixedColumnWidth(38),   // Pulang
-                6: const pw.FixedColumnWidth(42),   // Kerja
-                7: const pw.FixedColumnWidth(42),   // Istirahat
-                8: const pw.FixedColumnWidth(28),   // Scan
-                9: const pw.FlexColumnWidth(1.5),   // Catatan
+                0: const pw.FixedColumnWidth(58), // Tanggal
+                1: const pw.FlexColumnWidth(2), // Nama
+                2: const pw.FlexColumnWidth(1.5), // Outlet
+                3: const pw.FixedColumnWidth(52), // Status
+                4: const pw.FixedColumnWidth(38), // Masuk
+                5: const pw.FixedColumnWidth(38), // Pulang
+                6: const pw.FixedColumnWidth(42), // Kerja
+                7: const pw.FixedColumnWidth(42), // Istirahat
+                8: const pw.FixedColumnWidth(28), // Scan
+                9: const pw.FlexColumnWidth(1.5), // Catatan
               },
               children: [
                 // Header row
                 pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColor.fromHex('B91C1C')),
+                  decoration:
+                      pw.BoxDecoration(color: PdfColor.fromHex('B91C1C')),
                   children: [
                     'Tanggal',
                     'Nama',
@@ -554,10 +584,13 @@ class PdfService {
                     'Catatan',
                   ]
                       .map((h) => pw.Container(
-                            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 5),
                             child: pw.Text(h,
                                 style: pw.TextStyle(
-                                    font: ttfBold, fontSize: 9, color: PdfColors.white)),
+                                    font: ttfBold,
+                                    fontSize: 9,
+                                    color: PdfColors.white)),
                           ))
                       .toList(),
                 ),
@@ -576,7 +609,8 @@ class PdfService {
                       _pdfCell(row.tanggal, ttf),
                       _pdfCell(row.nama, ttf),
                       _pdfCell(row.outlet, ttf),
-                      _pdfCell(row.status, ttfBold, color: statusColor), // Colored status
+                      _pdfCell(row.status, ttfBold,
+                          color: statusColor), // Colored status
                       _pdfCell(row.masuk, ttf),
                       _pdfCell(row.pulang, ttf),
                       _pdfCell(row.kerja, ttf),
@@ -593,7 +627,8 @@ class PdfService {
     );
 
     final dir = await getTemporaryDirectory();
-    final fileName = 'laporan_absensi_rekap_harian_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    final fileName =
+        'laporan_absensi_rekap_harian_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
 
@@ -629,7 +664,10 @@ class PdfService {
               children: [
                 pw.Text(
                   'Ayam Guling Enakko',
-                  style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColor.fromHex('B91C1C')),
+                  style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 14,
+                      color: PdfColor.fromHex('B91C1C')),
                 ),
                 pw.SizedBox(height: 2),
                 pw.Text(
@@ -639,25 +677,34 @@ class PdfService {
                 pw.SizedBox(height: 2),
                 pw.Text(
                   'Outlet: $outletName',
-                  style: pw.TextStyle(font: font, fontSize: 9, color: PdfColor.fromHex('374151')),
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 9,
+                      color: PdfColor.fromHex('374151')),
                 ),
                 pw.Text(
                   'Periode: $dateRange',
-                  style: pw.TextStyle(font: font, fontSize: 9, color: PdfColor.fromHex('374151')),
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 9,
+                      color: PdfColor.fromHex('374151')),
                 ),
               ],
             ),
           ),
           pw.Text(
             '$rowCount baris',
-            style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('6B7280')),
+            style: pw.TextStyle(
+                font: fontBold,
+                fontSize: 10,
+                color: PdfColor.fromHex('6B7280')),
           ),
         ],
       ),
     );
   }
 
-  static pw.Page _buildSummaryPage({
+  static pw.MultiPage _buildSummaryPage({
     required AttendanceDailyPdfStats stats,
     required DateTime startDate,
     required DateTime endDate,
@@ -669,139 +716,149 @@ class PdfService {
     final range =
         '${DateFormat('dd MMM yyyy').format(startDate)} - ${DateFormat('dd MMM yyyy').format(endDate)}';
 
-    return pw.Page(
-      pageFormat: PdfPageFormat.a4,
+    final createdAt = DateFormat('dd MMM yyyy HH:mm').format(DateTime.now());
+
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
       margin: const pw.EdgeInsets.all(24),
-      build: (context) {
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // Reuse _buildAttendanceHeader
-            _buildAttendanceHeader(
-              title: 'Laporan Absensi - Ringkasan',
-              outletName: outletName,
-              dateRange: range,
-              rowCount: stats.totalScan,
+      footer: (context) => pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Dibuat pada: $createdAt',
+            style: pw.TextStyle(
               font: font,
-              fontBold: fontBold,
-              logoBytes: logoBytes,
+              fontSize: 8,
+              color: PdfColor.fromHex('9CA3AF'),
             ),
-            pw.SizedBox(height: 20),
-
-            // 2x2 Insight Cards
-            pw.Row(
-              children: [
-                pw.Expanded(
-                    child: _insightCard(
-                        'Total Karyawan',
-                        '${stats.totalKaryawan} orang',
-                        PdfColor.fromHex('16A34A'),
-                        font,
-                        fontBold)),
-                pw.SizedBox(width: 12),
-                pw.Expanded(
-                    child: _insightCard(
-                        'Tingkat Kehadiran',
-                        '${stats.attendanceRate.toStringAsFixed(1)}%',
-                        PdfColor.fromHex('16A34A'),
-                        font,
-                        fontBold)),
-              ],
+          ),
+          pw.Text(
+            'Hal. ${context.pageNumber}',
+            style: pw.TextStyle(
+              font: font,
+              fontSize: 8,
+              color: PdfColor.fromHex('9CA3AF'),
             ),
-            pw.SizedBox(height: 12),
-            pw.Row(
-              children: [
-                pw.Expanded(
-                    child: _insightCard(
-                        'Rata-rata Kerja',
-                        stats.avgWorkStr,
-                        PdfColor.fromHex('1D4ED8'),
-                        font,
-                        fontBold)),
-                pw.SizedBox(width: 12),
-                pw.Expanded(
-                    child: _insightCard(
-                        'Tidak Hadir',
-                        '${stats.totalSakit} kali',
-                        PdfColor.fromHex('DC2626'),
-                        font,
-                        fontBold)),
-              ],
-            ),
-
-            pw.SizedBox(height: 24),
-
-            // Per-Employee Aggregate Table
-            pw.Text(
-              'Ringkasan Per Karyawan',
-              style: pw.TextStyle(font: fontBold, fontSize: 14),
-            ),
-            pw.SizedBox(height: 8),
-
-            if (stats.employeeRows.isEmpty)
-              pw.Text('Tidak ada data karyawan.',
-                  style: pw.TextStyle(font: font, fontSize: 10))
-            else
-              pw.TableHelper.fromTextArray(
-                headers: const [
-                  'No',
-                  'Nama',
-                  'Badge',
-                  'Hadir',
-                  'Avg Masuk',
-                  'Avg Pulang',
-                  'Total Kerja',
-                  'Sakit'
-                ],
-                data: stats.employeeRows
-                    .asMap()
-                    .entries
-                    .map((e) => [
-                          '${e.key + 1}',
-                          e.value.nama,
-                          e.value.badgeName,
-                          '${e.value.hadirCount}',
-                          e.value.avgMasukStr,
-                          e.value.avgPulangStr,
-                          e.value.totalKerjaStr,
-                          '${e.value.sakitCount}',
-                        ])
-                    .toList(),
-                headerStyle: pw.TextStyle(
-                    font: fontBold, fontSize: 9, color: PdfColors.white),
-                headerDecoration:
-                    pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
-                cellStyle: pw.TextStyle(font: font, fontSize: 9),
-                oddRowDecoration:
-                    pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
-                cellAlignment: pw.Alignment.center,
-                cellPadding:
-                    const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                columnWidths: {
-                  0: const pw.FixedColumnWidth(28),  // No
-                  1: const pw.FlexColumnWidth(2.5),  // Nama
-                  2: const pw.FlexColumnWidth(2),    // Badge
-                  3: const pw.FixedColumnWidth(36),  // Hadir
-                  4: const pw.FixedColumnWidth(50),  // Avg Masuk
-                  5: const pw.FixedColumnWidth(50),  // Avg Pulang
-                  6: const pw.FixedColumnWidth(55),  // Total Kerja
-                  7: const pw.FixedColumnWidth(36),  // Sakit
-                },
+          ),
+        ],
+      ),
+      build: (context) => [
+        _buildAttendanceHeader(
+          title: 'Laporan Absensi - Ringkasan',
+          outletName: outletName,
+          dateRange: range,
+          rowCount: stats.totalScan,
+          font: font,
+          fontBold: fontBold,
+          logoBytes: logoBytes,
+        ),
+        pw.SizedBox(height: 18),
+        pw.Row(
+          children: [
+            pw.Expanded(
+              child: _insightCard(
+                'Total Karyawan',
+                '${stats.totalKaryawan} orang',
+                PdfColor.fromHex('0F766E'),
+                font,
+                fontBold,
               ),
-
-            pw.Spacer(),
-
-            // Footer
-            pw.Text(
-              'Dibuat pada: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}',
-              style: pw.TextStyle(
-                  font: font,
-                  fontSize: 8,
-                  color: PdfColor.fromHex('9CA3AF')),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: _insightCard(
+                'Total Masuk',
+                '${stats.totalMasuk} kali',
+                PdfColor.fromHex('16A34A'),
+                font,
+                fontBold,
+              ),
             ),
           ],
-        );
-      },
+        ),
+        pw.SizedBox(height: 12),
+        pw.Row(
+          children: [
+            pw.Expanded(
+              child: _insightCard(
+                'Tidak Hadir',
+                '${stats.totalTidakHadir} kali',
+                PdfColor.fromHex('DC2626'),
+                font,
+                fontBold,
+              ),
+            ),
+            pw.SizedBox(width: 12),
+            pw.Expanded(
+              child: _insightCard(
+                'Belum Pulang',
+                '${stats.totalBelumPulang} kali',
+                PdfColor.fromHex('D97706'),
+                font,
+                fontBold,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 20),
+        pw.Text(
+          'Ringkasan Per Karyawan',
+          style: pw.TextStyle(font: fontBold, fontSize: 14),
+        ),
+        pw.SizedBox(height: 8),
+        if (stats.employeeRows.isEmpty)
+          pw.Text(
+            'Tidak ada data karyawan.',
+            style: pw.TextStyle(font: font, fontSize: 10),
+          )
+        else
+          pw.TableHelper.fromTextArray(
+            headers: const [
+              'No',
+              'Nama',
+              'Masuk',
+              'Tidak Hadir',
+              'Belum Pulang',
+              'Avg Masuk',
+              'Avg Pulang',
+              'Total Kerja',
+            ],
+            data: stats.employeeRows
+                .asMap()
+                .entries
+                .map((entry) => [
+                      '${entry.key + 1}',
+                      entry.value.nama,
+                      '${entry.value.masukCount}',
+                      '${entry.value.tidakHadirCount}',
+                      '${entry.value.belumPulangCount}',
+                      entry.value.avgMasukStr,
+                      entry.value.avgPulangStr,
+                      entry.value.totalKerjaStr,
+                    ])
+                .toList(),
+            headerStyle: pw.TextStyle(
+                font: fontBold, fontSize: 9, color: PdfColors.white),
+            headerDecoration:
+                pw.BoxDecoration(color: PdfColor.fromHex('DC2626')),
+            cellStyle: pw.TextStyle(font: font, fontSize: 8.5),
+            oddRowDecoration:
+                pw.BoxDecoration(color: PdfColor.fromHex('F9FAFB')),
+            cellAlignment: pw.Alignment.center,
+            cellPadding:
+                const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            columnWidths: {
+              0: const pw.FixedColumnWidth(24),
+              1: const pw.FlexColumnWidth(2.8),
+              2: const pw.FixedColumnWidth(44),
+              3: const pw.FixedColumnWidth(58),
+              4: const pw.FixedColumnWidth(60),
+              5: const pw.FixedColumnWidth(52),
+              6: const pw.FixedColumnWidth(52),
+              7: const pw.FixedColumnWidth(58),
+            },
+          ),
+      ],
     );
   }
 
@@ -818,13 +875,10 @@ class PdfService {
         children: [
           pw.Text(label,
               style: pw.TextStyle(
-                  font: font,
-                  fontSize: 9,
-                  color: PdfColor.fromHex('6B7280'))),
+                  font: font, fontSize: 9, color: PdfColor.fromHex('6B7280'))),
           pw.SizedBox(height: 4),
           pw.Text(value,
-              style:
-                  pw.TextStyle(font: fontBold, fontSize: 18, color: accent)),
+              style: pw.TextStyle(font: fontBold, fontSize: 18, color: accent)),
         ],
       ),
     );
@@ -875,7 +929,8 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildLegendChip(String label, PdfColor color, pw.Font font) {
+  static pw.Widget _buildLegendChip(
+      String label, PdfColor color, pw.Font font) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: pw.BoxDecoration(
@@ -894,34 +949,57 @@ class PdfService {
     );
   }
 
-  static ({PdfColor background, PdfColor text}) _getShiftColors(String shiftName, ScheduleStatus? status) {
+  static ({PdfColor background, PdfColor text}) _getShiftColors(
+      String shiftName, ScheduleStatus? status) {
     // Priority: Sakit/Izin status
     if (status == ScheduleStatus.sakit) {
-      return (background: PdfColor.fromHex('FECACA'), text: PdfColor.fromHex('7F1D1D'));
+      return (
+        background: PdfColor.fromHex('FECACA'),
+        text: PdfColor.fromHex('7F1D1D')
+      );
     }
     if (status == ScheduleStatus.izin) {
-      return (background: PdfColor.fromHex('BFDBFE'), text: PdfColor.fromHex('1E3A8A'));
+      return (
+        background: PdfColor.fromHex('BFDBFE'),
+        text: PdfColor.fromHex('1E3A8A')
+      );
     }
-    
+
     final name = shiftName.toLowerCase();
     if (name.contains('pagi')) {
-      return (background: PdfColor.fromHex('DBEAFE'), text: PdfColor.fromHex('1E40AF'));
+      return (
+        background: PdfColor.fromHex('DBEAFE'),
+        text: PdfColor.fromHex('1E40AF')
+      );
     } else if (name.contains('siang')) {
-      return (background: PdfColor.fromHex('FEF3C7'), text: PdfColor.fromHex('92400E'));
+      return (
+        background: PdfColor.fromHex('FEF3C7'),
+        text: PdfColor.fromHex('92400E')
+      );
     } else if (name.contains('sore')) {
-      return (background: PdfColor.fromHex('FFEDD5'), text: PdfColor.fromHex('C2410C'));
+      return (
+        background: PdfColor.fromHex('FFEDD5'),
+        text: PdfColor.fromHex('C2410C')
+      );
     } else if (name.contains('libur')) {
-      return (background: PdfColor.fromHex('FEE2E2'), text: PdfColor.fromHex('991B1B'));
+      return (
+        background: PdfColor.fromHex('FEE2E2'),
+        text: PdfColor.fromHex('991B1B')
+      );
     }
-    return (background: PdfColor.fromHex('F3F4F6'), text: PdfColor.fromHex('374151'));
+    return (
+      background: PdfColor.fromHex('F3F4F6'),
+      text: PdfColor.fromHex('374151')
+    );
   }
 
   static String _getShiftLabel(ScheduleEntry entry) {
     if (entry.status == ScheduleStatus.sakit) return 'Sakit';
     if (entry.status == ScheduleStatus.izin) return 'Izin';
     if (entry.status == ScheduleStatus.libur) return 'Libur';
-    if (entry.isCustomName && entry.displayName != 'Unknown') return entry.displayName.toUpperCase();
-    
+    if (entry.isCustomName && entry.displayName != 'Unknown')
+      return entry.displayName.toUpperCase();
+
     final name = entry.shift.name.toLowerCase();
     if (name.contains('pagi')) return 'Pagi';
     if (name.contains('siang')) return 'Siang';
@@ -936,6 +1014,5 @@ class PdfService {
       _statusTextColor(status);
 
   @visibleForTesting
-  static PdfColor typeTextColorForTest(String jenis) =>
-      _typeTextColor(jenis);
+  static PdfColor typeTextColorForTest(String jenis) => _typeTextColor(jenis);
 }

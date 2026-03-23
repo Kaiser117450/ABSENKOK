@@ -1,7 +1,7 @@
 # Architecture Research
 
-**Domain:** Employee-facing schedule portal for Absensi Enakko
-**Researched:** 2026-03-22
+**Domain:** Authenticated employee portal attendance recap
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Standard Architecture
@@ -10,26 +10,20 @@
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    Employee Browser / Phone                 │
+│                     Astro Portal Routes                     │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌────────────────┐   ┌────────────────┐   ┌─────────────┐ │
-│  │ Login Route    │   │ Portal Pages   │   │ Form Posts  │ │
-│  │ /portal/login  │   │ /portal/*      │   │ Actions     │ │
-│  └──────┬─────────┘   └──────┬─────────┘   └──────┬──────┘ │
-│         │                    │                    │        │
-├─────────┴────────────────────┴────────────────────┴────────┤
-│                 Astro 5 Server Output on Vercel            │
+│  /portal index  │  recap loader  │  mobile components      │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌────────────────┐  ┌────────────────┐  ┌───────────────┐ │
-│  │ middleware.ts  │  │ Supabase SSR   │  │ Portal Query  │ │
-│  │ auth gate      │  │ clients        │  │ layer         │ │
-│  └────────────────┘  └────────────────┘  └───────────────┘ │
+│                Server-side Portal Helpers                  │
 ├─────────────────────────────────────────────────────────────┤
-│                   Supabase Auth + PostgreSQL               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ auth.users   │  │ employees    │  │ schedules /      │  │
-│  │              │  │ + mapping    │  │ schedule_entries │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│  resolvePortalEmployee  │  loadPortalRecap  │  state model │
+├─────────────────────────────────────────────────────────────┤
+│                 Supabase Authenticated RPCs                │
+├─────────────────────────────────────────────────────────────┤
+│  recap overview RPC  │  schedule context RPC  │  RLS       │
+├─────────────────────────────────────────────────────────────┤
+│                   Postgres Source Tables                   │
+│  attendance_logs  │  schedule_entries  │  schedules        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -37,123 +31,115 @@
 
 | Component | Responsibility | Typical Implementation |
 |-----------|----------------|------------------------|
-| Portal routes | Render login and employee-facing schedule pages | Astro pages under `src/pages/portal/` with server-rendered data loading |
-| Auth middleware | Guard protected routes and refresh session cookies | `src/middleware.ts` plus Supabase SSR helpers |
-| Employee identity mapping | Resolve "which employee record belongs to this auth user?" | Additive table/column plus RLS-aware query or RPC |
-| Schedule query layer | Fetch only the authenticated employee's schedule data | Server-side helper or RPC returning a simplified schedule view model |
+| Portal page/loaders | Request the recap once and branch on typed page state | Astro page calling a server helper from `src/lib/portal/*` |
+| Employee resolver | Guarantee one authenticated employee identity before recap reads | Reuse `resolvePortalEmployee()` and fail closed on missing mapping |
+| Recap RPC | Merge attendance logs, schedule context, and logical-day rules | Authenticated `SECURITY DEFINER` function with additive indexes |
+| Portal components | Render summary + daily history for phone-sized screens | Reuse existing card/list patterns from the shipped portal |
 
 ## Recommended Project Structure
 
 ```text
-src/
-├── actions/
-│   └── portal.ts            # login and future request actions
-├── components/
-│   └── portal/              # employee-facing UI building blocks
-├── lib/
-│   ├── employee/
-│   │   ├── auth.ts          # employee mapping helpers
-│   │   └── schedule.ts      # schedule query helpers
-│   └── supabase/
-│       ├── client.ts        # browser client
-│       └── server.ts        # SSR server client
-├── middleware.ts            # auth gate and redirect handling
-└── pages/
-    ├── index.astro          # existing marketing pages remain
-    └── portal/
-        ├── index.astro      # employee home
-        ├── login.astro      # sign-in
-        └── schedule.astro   # upcoming shifts
+absenkok-website/
+├── src/pages/portal/           # portal routes
+│   └── index.astro             # entry point or recap surface
+├── src/lib/portal/             # server-side portal loaders/helpers
+│   ├── employee.ts             # employee identity resolution
+│   ├── schedule.ts             # existing schedule model
+│   └── recap.ts                # new attendance recap loader
+├── src/components/portal/      # mobile portal components
+│   ├── PortalScheduleSection.astro
+│   └── PortalAttendanceRecapSection.astro
+└── src/layouts/                # shared portal shell
+
+absensi_enakko_flutter/
+└── sql/                        # additive recap RPC + index migrations
 ```
 
 ### Structure Rationale
 
-- **`pages/portal/`:** keeps employee-facing routes isolated from the public marketing site.
-- **`lib/employee/`:** prevents schedule access rules from being scattered across page files.
-- **`middleware.ts`:** centralizes auth gate logic instead of repeating route checks manually.
+- **`src/lib/portal/`:** keeps employee-scoped business logic on the server side and prevents page files from owning auth or RPC details.
+- **`src/components/portal/`:** keeps recap rendering consistent with the current mobile-first schedule UI.
+- **`sql/`:** keeps the database contract versioned beside the main app planning and rollout history.
 
 ## Architectural Patterns
 
-### Pattern 1: Mixed Static + SSR Astro
+### Pattern 1: Authenticated server-side portal loaders
 
-**What:** Keep public marketing pages prerendered while rendering portal routes on demand.
-**When to use:** When an existing Astro marketing site gains authenticated surfaces.
-**Trade-offs:** Slightly more deployment/config complexity, but far less than introducing a second web app.
+**What:** Route loaders resolve the portal employee and fetch recap data on the server before rendering.
+**When to use:** For every employee-facing page that needs protected data.
+**Trade-offs:** Slightly more backend ceremony, but it avoids exposing internal query shape to the browser.
 
-**Example:**
-```ts
-// astro.config.mjs
-export default defineConfig({
-  output: 'server',
-});
-```
+### Pattern 2: Read-optimized recap RPC
 
-### Pattern 2: Server-Only Data Access for Employee Pages
+**What:** One RPC returns summary-ready recap rows with exception semantics already resolved.
+**When to use:** When the UI needs attendance meaning, not raw `attendance_logs` events.
+**Trade-offs:** More SQL design upfront, but much lower cross-repo drift and better consistency with kiosk/admin rules.
 
-**What:** Read employee schedule data on the server, never by exposing broad schedule tables to the browser.
-**When to use:** Any page that depends on authenticated employee identity.
-**Trade-offs:** Slightly more server wiring, but much safer than client-side filtering.
+### Pattern 3: Discriminated page state model
 
-**Example:**
-```ts
-const supabase = createServerClient(Astro);
-const employee = await getEmployeeForSession(supabase);
-const schedule = await getScheduleForEmployee(supabase, employee.id);
-```
-
-### Pattern 3: Read-Optimized Portal View Model
-
-**What:** Build a simplified employee schedule payload instead of reusing the admin planning grid response.
-**When to use:** Mobile-first self-service views.
-**Trade-offs:** Adds a translation layer, but keeps the portal focused and easier to evolve.
+**What:** Map low-level RPC outcomes into page-level states such as `ready`, `empty`, `error`, or `not-linked`.
+**When to use:** For portal pages where mobile UX clarity matters more than raw backend errors.
+**Trade-offs:** Requires a small translation layer, but keeps page templates simple and testable.
 
 ## Data Flow
 
 ### Request Flow
 
 ```text
-[Employee opens /portal/schedule]
+Employee opens /portal
     ↓
-[Astro middleware checks session]
+Astro page loader
     ↓
-[Server helper resolves employee mapping]
+resolvePortalEmployee()
     ↓
-[Server query/RPC fetches schedule rows]
+attendance recap RPC
     ↓
-[Astro renders mobile-friendly schedule page]
+typed recap model + state mapping
+    ↓
+summary cards + daily history UI
+```
+
+### State Management
+
+```text
+Server loader result
+    ↓
+Portal page state union
+    ↓
+Portal components render by state
 ```
 
 ### Key Data Flows
 
-1. **Login flow:** employee authenticates, middleware stores/refreshes session cookies, protected routes become available.
-2. **Schedule flow:** authenticated employee request resolves to one employee record, then to a scoped schedule response.
+1. **Identity flow:** Auth session -> server-side employee resolution -> scoped recap query.
+2. **Recap flow:** Attendance logs + schedule context -> logical-day normalization -> summary counts + day history.
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0-1k users | Existing Astro monolith plus Supabase is more than enough. |
-| 1k-100k users | Optimize schedule query shapes and indexes before touching the frontend architecture. |
-| 100k+ users | Consider separating portal concerns only if the product grows well beyond the current restaurant-chain scale. |
+| 0-200 employees | Current RPC + indexed tables are sufficient; keep the portal monolithic. |
+| 200-2,000 employees | Add more targeted recap indexes and tighten query plans before changing architecture. |
+| 2,000+ employees | Consider materialized summary support only if recap query latency becomes a proven problem. |
 
 ### Scaling Priorities
 
-1. **First bottleneck:** poorly scoped schedule queries or missing indexes on schedule joins.
-2. **Second bottleneck:** portal UX complexity creeping toward admin-dashboard territory.
+1. **First bottleneck:** recap SQL shape on `attendance_logs` date windows; fix with query-specific indexes and bounded history windows.
+2. **Second bottleneck:** duplicated logic across website loaders and SQL; fix by keeping recap semantics centralized in one RPC.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Client-Side Filtering of Admin Data
+### Anti-Pattern 1: Rebuilding employee scope inside every page
 
-**What people do:** fetch a broad schedule dataset and hide rows in the browser.
-**Why it's wrong:** one auth or filtering mistake leaks other employees' schedules immediately.
-**Do this instead:** scope data at the query/RLS layer and render only the authenticated employee's schedule.
+**What people do:** Each page hand-rolls auth checks and employee joins.
+**Why it's wrong:** Scope drift and edge cases appear quickly across portal routes.
+**Do this instead:** Keep `resolvePortalEmployee()` as the one identity gate and build recap loaders on top of it.
 
-### Anti-Pattern 2: Reusing the Admin Scheduler UI for Employees
+### Anti-Pattern 2: Treating recap as a raw event log dump
 
-**What people do:** expose the same multi-employee planning grid because it already exists conceptually.
-**Why it's wrong:** it is optimized for admins, not for employees checking today's shift on a phone.
-**Do this instead:** build a dedicated employee read model and UI.
+**What people do:** Expose raw punches and let the UI infer workday meaning.
+**Why it's wrong:** Cross-day rules and exception semantics will diverge from kiosk/admin behavior.
+**Do this instead:** Normalize recap semantics in SQL or a single server helper before UI rendering.
 
 ## Integration Points
 
@@ -161,25 +147,25 @@ const schedule = await getScheduleForEmployee(supabase, employee.id);
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| Supabase Auth | SSR cookie-based session handling | Employee portal routes should trust the server session, not a browser-only token cache. |
-| Supabase Postgres | RLS-scoped queries or RPCs | Keep all employee schedule visibility inside the existing production database rules. |
+| Supabase Auth | Cookie-aware server client | Verify employee sessions server-side before recap reads. |
+| Supabase Postgres | Authenticated RPCs | Keep recap and exception logic close to the data. |
 
 ### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Marketing pages ↔ portal routes | Shared Astro app, separate route tree | Public and private surfaces can coexist cleanly in one site. |
-| Flutter admin app ↔ employee portal | Shared Supabase backend only | Admin writes schedule data; portal reads employee-facing slices of it. |
+| Website repo ↔ SQL migrations | Versioned files + planning docs | Cross-repo portal work needs explicit planning to avoid drift. |
+| Portal loaders ↔ components | Typed models | Components should not know raw RPC schema details. |
 
 ## Sources
 
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json`
-- [Astro on-demand rendering docs](https://docs.astro.build/en/guides/on-demand-rendering/)
-- [Astro actions docs](https://docs.astro.build/en/guides/actions/)
-- [Astro sessions docs](https://docs.astro.build/en/guides/sessions/)
-- [Supabase SSR client docs](https://supabase.com/docs/guides/auth/server-side/creating-a-client)
-- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\employee.ts`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\schedule.ts`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_38_employee_schedule_read_model_20260322.sql`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_39_portal_read_path_hardening_20260323.sql`
+- https://docs.astro.build/en/guides/on-demand-rendering/
+- https://supabase.com/docs/reference/javascript/auth-getuser
 
 ---
-*Architecture research for: employee-facing schedule portal*
-*Researched: 2026-03-22*
+*Architecture research for: employee portal attendance recap*
+*Researched: 2026-03-23*

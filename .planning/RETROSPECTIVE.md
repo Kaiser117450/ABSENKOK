@@ -237,12 +237,133 @@
 
 ---
 
+## Milestone: v6.1 — Employee Portal
+
+**Shipped:** 2026-03-23
+**Phases:** 3 (37-39) | **Plans:** 8 | **Timeline:** 2 days
+
+### What Was Built
+- Employee portal provisioning contract and initial admin provisioning flow
+- Password-based name-search login on the Astro website
+- Protected employee portal shell with server-side identity resolution
+- Employee schedule visibility for today, this week, and next week
+- Mobile-first portal UX with empty, not-linked, and error states
+- Hardened authenticated RPC read path for the shipped portal backend
+
+### What Worked
+- Tight milestone scope kept the portal release small enough to ship quickly
+- Cross-repo split remained clear: Flutter repo kept planning and app state, Astro repo carried the website implementation
+- The later hardening pass improved portal security without changing employee UX
+
+### What Was Inefficient
+- Verification discipline broke again: Phase 37 had no verification artifact, and 38/39 validation files stayed draft
+- Planning summaries drifted behind the shipped website implementation after the hardening pass
+- Milestone closeout required a proceed-anyway decision because the archive trail lagged the actual implementation
+
+### Patterns Established
+- Employee self-service belongs in the separate Astro portal, not in kiosk or admin surfaces
+- Portal auth and schedule reads should stay server-side and employee-scoped
+- When work spans a second repo, planning artifacts need a mandatory backfill step before milestone archive
+
+### Key Lessons
+1. Cross-repo milestones need explicit verification ownership; otherwise the implementation ships faster than the planning evidence.
+2. Security hardening landed smoothly because the portal already had a clean server-side boundary.
+3. Accepting verification debt at archive time is possible, but it should stay exceptional and documented.
+
+### Cost Observations
+- Model mix: balanced profile with targeted manual verification
+- Sessions: short burst across 2 days
+- Notable: implementation moved faster than archive hygiene; closeout time was spent on traceability debt, not feature work
+
+---
+
+## Milestone: v6.2 — Dashboard & Report Foundation
+
+**Shipped:** 2026-03-23
+**Phases:** 2 (40-41) | **Plans:** 0 formal plan files | **Timeline:** 1 day
+
+### What Was Built
+- Restored the classic admin dashboard as the default `/admin/dashboard` experience for full-admin users
+- Added a dedicated full-admin route/button for chain-wide ringkasan jaringan and status per gerai
+- Replaced admin dashboard branding with the intended Enakko logo asset from `src/assets/images/logogoenakko.png`
+- Reworked Rekap Harian PDF summary generation so large exports use `MultiPage` landscape layout and keep per-employee summaries visible
+- Changed PDF summary metrics from percentages to operational counts for masuk, tidak hadir, and belum pulang
+
+### What Worked
+- Tight scope kept the milestone focused on foundation fixes that unblock later features
+- The direct code-first approach made the dashboard and PDF fixes fast to ship in one day
+- Using the Android Studio Java 21 runtime restored a reliable Android release build path on this Windows machine
+
+### What Was Inefficient
+- No dedicated audit or phase PLAN/SUMMARY artifacts were produced, so milestone closeout had to reconstruct evidence from code and git history
+- The correct admin logo asset path was only clarified after the first `v6.2.0` release had already been published
+- GitHub release asset upload via the MCP tool could not read local files in this environment, so the final upload needed `gh` CLI fallback
+
+### Patterns Established
+- Foundation-only milestones are useful before adding new features when UX and reporting baselines need to be stabilized first
+- Large PDF summary sections should prefer paginated `MultiPage` layouts instead of single-page assumptions
+- Keep brand assets tracked in the Flutter repo before wiring them into release-critical admin surfaces
+
+### Key Lessons
+1. Even rapid foundation passes need lightweight PLAN/SUMMARY artifacts, otherwise archive work becomes manual evidence reconstruction.
+2. Build reliability on Windows is sensitive to the Java runtime; this repo should stay on Android Studio JBR/Java 21 for release builds.
+3. Release publication needs a tested fallback path when app-upload tooling cannot access local artifacts directly.
+
+### Cost Observations
+- Model mix: balanced profile with manual release operations
+- Sessions: short burst in a single day
+- Notable: most closeout time went into archive hygiene and release mechanics, not feature implementation
+
+---
+
+## Milestone: v6.3 — Employee Attendance Recap
+
+**Shipped:** 2026-03-23
+**Phases:** 4 (42-45) | **Plans:** 11 | **Timeline:** 1 day
+
+### What Was Built
+- Employee-scoped portal attendance recap RPC plus supporting index with logical-day-aware overnight repair
+- Typed Astro recap loader that derives month-to-date counts and recent history from one dataset
+- Portal shell nav/CTA plus `/portal/attendance` SSR route with summary cards and recent history cards
+- Shared exception-state taxonomy, follow-up chip treatment, and historical row-aware copy
+- Verification backfill for phases 42-44, regenerated closed milestone audit, and production Supabase rollout of the recap migration during closeout
+
+### What Worked
+- Reusing the existing portal shell, SSR auth boundary, and schedule-read patterns kept the milestone mostly additive instead of architectural rework
+- A dedicated audit-closure phase prevented verification debt from leaking into the archive again
+- The late production migration check caught a real deployment gap before archive and turned it into an explicitly verified closeout step
+
+### What Was Inefficient
+- The milestone looked archive-ready from planning files even though the Phase 42 production migration had not yet been applied
+- Cross-repo work still required manual evidence backfill because the Astro implementation outpaced this repo's planning artifacts
+- Repo-wide `npm run check` noise from Deno edge functions still obscures the portal-surface signal
+
+### Patterns Established
+- Portal recap features should derive all employee-facing counts and history from one authenticated dataset
+- Exception presentation belongs in a shared helper, not duplicated inside route components
+- Audit-closure phases are useful when implementation is done but verification evidence or deployment confirmation still lags
+
+### Key Lessons
+1. A closed audit is not enough to claim "shipped" if production migration state is still unknown; deployment verification needs its own explicit gate.
+2. One trusted recap dataset kept the portal UI simple and prevented summary/history drift.
+3. Shared row-aware copy helpers are worth the extra abstraction when historical wording can mislead employees.
+
+### Cost Observations
+- Model mix: balanced profile
+- Sessions: one fast milestone burst plus a closeout pass
+- Notable: final closeout risk came from deployment verification, not feature coding
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
+| v6.3 | 1 day | 4 | Added an explicit audit-closure phase and live production migration verification before archive |
+| v6.2 | 1 day | 2 | Foundation-only milestone; shipped fast but archive evidence had to be reconstructed after direct execution |
+| v6.1 | 2 days | 3 | First employee portal milestone; implementation shipped fast but verification/traceability lagged |
 | v6.0 | 3 days | 6 | Implementation milestone expanded with explicit rollout/acceptance closure phases before archive |
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
 | v2.0 | 1 day | 4 | Rapid iteration — admin tools + live activity |
@@ -256,6 +377,9 @@
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
+| v6.3 | Astro build checks + 3 verification reports + live Supabase migration presence check | Strong (7/7 requirements verified, audit closed, production RPC/index confirmed) | 2 items |
+| v6.2 | Targeted analyze/build plus release APK verification | Partial (requirements implemented, no dedicated audit or phase summaries) | 3 items |
+| v6.1 | Website build checks plus pending manual portal validation | Partial (requirements implemented, audit passed only by proceed-anyway decision) | 4 items |
 | v6.0 | Targeted unit/widget tests plus validation packets | Extended (device identity, kiosk devices, analytics/routing, milestone traceability) | 4 items |
 | v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items |
 | v2.0 | 127+ | Extended (CSV, live content, overlay model) | 9 items |
@@ -268,3 +392,4 @@
 3. Injectable dependencies (callbacks, not singletons) = fast unit tests
 4. Top-level functions beat methods for widget extraction — less context binding, more composable
 5. Device verification is a separate concern — add it as an explicit plan, not an afterthought
+6. Cross-repo milestones need a deliberate backfill step for verification and planning artifacts before archive

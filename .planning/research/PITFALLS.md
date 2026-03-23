@@ -1,177 +1,175 @@
 # Pitfalls Research
 
-**Domain:** Employee-facing schedule portal for Absensi Enakko
-**Researched:** 2026-03-22
+**Domain:** Employee portal attendance recap
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Critical Pitfalls
 
-### Pitfall 1: No Reliable Employee Identity Mapping
+### Pitfall 1: Logical-day drift from kiosk/admin rules
 
 **What goes wrong:**
-Employees can log in, but the portal cannot safely determine which `employees` row belongs to the authenticated user.
+The portal recap attributes attendance to the wrong day for overnight or cross-midnight shifts.
 
 **Why it happens:**
-Teams add auth first and postpone the database linkage, then patch access rules later with brittle email matching.
+Developers treat raw timestamps as calendar days instead of reusing the product's logical-day rules.
 
 **How to avoid:**
-Create an explicit employee-to-auth-user mapping and write portal queries/RLS around that mapping from day one.
+Anchor recap dates to `Asia/Makassar`, use one recap contract for both summary and day history, and carry forward the existing overnight handling rules explicitly.
 
 **Warning signs:**
-Code starts filtering schedules by email string or outlet membership instead of a stable employee identifier.
+Employees complain that a late-night shift shows up on the next day, or portal totals do not match admin reports.
 
 **Phase to address:**
-Portal foundation and auth phase.
+Phase 42
 
 ---
 
-### Pitfall 2: Treating the Current Astro Site as Static Forever
+### Pitfall 2: Employee data leakage through admin-shaped queries
 
 **What goes wrong:**
-The team tries to bolt protected portal behavior onto a static build with client-side auth workarounds.
+Portal pages accidentally read attendance data with broader scope than the authenticated employee should see.
 
 **Why it happens:**
-The current website is static marketing-only, so it is easy to assume the portal must work the same way.
+The shortest path is often to reuse existing admin/service-role query patterns from internal tooling.
 
 **How to avoid:**
-Switch the site to server output for portal routes and use SSR sessions/cookies for protected pages.
+Keep recap reads behind authenticated RPCs, resolve employee identity server-side, and fail closed when mapping is missing.
 
 **Warning signs:**
-Login state is stored only in `localStorage`, or protected pages flash public HTML before redirecting.
+Browser code needs direct table access, or recap pages receive employee IDs from the client.
 
 **Phase to address:**
-Portal foundation and routing phase.
+Phase 42
 
 ---
 
-### Pitfall 3: Leaking Other Employees' Schedule Data
+### Pitfall 3: Confusing exception states
 
 **What goes wrong:**
-A portal bug exposes another employee's shifts, outlet, or attendance data.
+Employees cannot tell whether a day was libur, sakit, izin, missing clock-out, or simply has no qualifying attendance record.
 
 **Why it happens:**
-Developers reuse admin queries or rely on client-side filtering instead of enforcing server-side scope.
+The UI compresses too many states into one generic "masalah" badge.
 
 **How to avoid:**
-Enforce RLS and use server-side helpers or RPCs that return only the authenticated employee's schedule slice.
+Define exception categories in the recap model before building the UI and render them with distinct copy and styling.
 
 **Warning signs:**
-Frontend pages request generic schedule tables and then filter rows in JavaScript.
+Support questions start with "Kenapa ini merah?" instead of the portal itself explaining the reason.
 
 **Phase to address:**
-Employee data model / query phase.
+Phase 43
 
 ---
 
-### Pitfall 4: Date Logic Drift Between Portal and Core Attendance Rules
+### Pitfall 4: Turning a read-only recap milestone into a workflow milestone
 
 **What goes wrong:**
-Employees see schedules or recaps that do not align with the app's established timezone and cross-day shift logic.
+The milestone grows to include correction requests, manager approvals, or notifications before recap is stable.
 
 **Why it happens:**
-The web portal is built quickly and re-implements time/date formatting without respecting the existing noon-rule and outlet-local assumptions.
+Recap naturally exposes issues, so it is tempting to add the write path immediately.
 
 **How to avoid:**
-Carry the existing date rules into the portal data layer and verify with concrete cross-day examples before launch.
+Treat v6.3 as visibility only. Capture exceptions clearly now, then plan employee requests as the next milestone.
 
 **Warning signs:**
-A night shift appears on the wrong day in the portal or differs from admin/kiosk views.
+Requirements start mentioning forms, mutation endpoints, or admin approval queues.
 
 **Phase to address:**
-Schedule read-model phase and portal UI phase.
+Phase 43
 
 ---
 
-### Pitfall 5: Over-Scoping v6.1
+### Pitfall 5: Cross-repo execution drift
 
 **What goes wrong:**
-The release expands from "employees can view schedules" into approvals, swaps, notifications, and attendance history before the foundation is stable.
+Planning, SQL, and website implementation stop matching after the first portal hardening pass.
 
 **Why it happens:**
-Self-service portals invite obvious adjacent ideas, and each seems small in isolation.
+Portal work spans the Flutter planning repo and the separate Astro website repo, so quick fixes bypass documentation.
 
 **How to avoid:**
-Hold v6.1 to schedule visibility plus access/control foundations. Defer request workflows until the first portal surface is trusted.
+Keep the recap read model, portal helpers, and planning traceability in sync from the start of the milestone.
 
 **Warning signs:**
-Requirements start mixing read-only schedule access with manager approval logic in the same milestone.
+Shipped code references new RPCs or page states that never appear in planning artifacts.
 
 **Phase to address:**
-Requirements definition before roadmap generation.
+Phase 44
 
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Matching employees to auth users by email text only | Fast to prototype | Brittle when emails change or duplicates appear | Only as a temporary migration path with a clear replacement plan |
-| Reusing admin schedule query payloads | Fewer backend changes now | Security and UX debt immediately | Never for the employee portal surface |
-| Building v6.1 as a new web stack | Isolation from current site | Extra auth, deployment, and UI duplication | Only if Astro becomes a proven blocker, which research does not show |
+| Build recap from multiple ad hoc page queries | Faster first render | Hard-to-debug drift between summary and daily history | Never for this milestone |
+| Skip explicit exception labels | Less UI copy work | Employees still need admin help to interpret recap | Never |
+| Leave planning artifacts behind the shipped website path | Faster closeout | Repeats the v6.1/v6.2 documentation drift | Never |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Astro + Supabase SSR | Using a browser client everywhere | Split server and browser clients and refresh auth via cookies/middleware |
-| Supabase RLS | Creating tables in `public` but forgetting policies | Enable RLS and write explicit authenticated-user policies before exposing reads |
-| Existing website repo | Treating the portal as just another public page | Separate `/portal/*` routes and auth middleware from the marketing surface |
+| Astro SSR + Supabase auth | Trusting a stale session object client-side | Verify the user on the server and resolve employee identity before loading recap data. |
+| Attendance recap + schedules | Joining raw logs without business-local day rules | Normalize recap dates with the same timezone and logical-day contract used elsewhere. |
+| Portal UI + planning docs | Treating website changes as "small enough" to skip planning updates | Keep roadmap and requirements aligned with the actual RPC/page changes. |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Rendering the full admin grid for employees | Slow mobile pages and noisy UI | Build a compact read model for "today / upcoming" | Immediately on phones |
-| Client-side schedule joins | Large payloads and leaked data risk | Join/filter on the server or in SQL/RPC | Even at the current 4-outlet scale |
-| Adding interactive UI libraries too early | Larger bundles and more moving parts | Start with SSR pages, add islands only where justified | Before the first portal ship |
+| Unbounded attendance history windows | Slow recap loads as logs grow | Limit v6.3 to current month plus recent history and index by employee/date | Noticeable once logs grow well beyond the current staff footprint |
+| Duplicate summary calculations in UI | Counts disagree across cards and lists | Derive summary and history from one trusted recap dataset | As soon as exception rules evolve |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using service-role credentials in the portal | Full database compromise | Keep service-role on server-only infrastructure, never in the website repo runtime |
-| Trusting `employeeId` from query params | Horizontal data leakage | Resolve employee identity from the session on the server |
-| Sharing admin-facing routes/components with employee auth | Permission confusion and accidental exposure | Keep employee route tree and guards separate |
+| Passing employee IDs from the browser into recap reads | Horizontal data access | Resolve employee identity entirely server-side. |
+| Granting broad table access to portal roles | Exposure of internal HR data | Keep portal reads behind authenticated functions with narrow grants. |
+| Reusing admin-only endpoints for employees | Scope bypass and maintenance drift | Create employee-scoped recap contracts explicitly. |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Desktop-like planning grid on mobile | Employees cannot quickly answer "when do I work?" | Use simple cards or list sections for today and upcoming shifts |
-| No "not linked yet" state | Employees think the portal is broken | Explain that their account is not linked and who to contact |
-| Portal shows raw shift codes only | Employees do not understand schedule data | Show human-readable labels, times, and outlet context |
+| Showing raw event jargon only | Employees do not know what action to take | Pair timestamps with clear daily status labels and short explanation text. |
+| Hiding exceptions deep in the list | Problems are missed | Surface attention states and counts prominently near the top. |
+| Desktop-shaped tables in the portal | Poor phone usability | Reuse the card/list layout already proven in the portal schedule view. |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Login:** User can sign in, but protected portal routes still redirect correctly after refresh
-- [ ] **Schedule view:** Data is scoped to one employee at the SQL/RLS layer, not just in the browser
-- [ ] **Cross-day shifts:** Overnight examples match the existing attendance system's logical-day rules
-- [ ] **Empty states:** "No shift", "not linked", and "loading error" are clearly distinct
+- [ ] **Attendance recap:** Summary counts and day history come from the same trusted dataset.
+- [ ] **Overnight handling:** Cross-day scans match the existing logical-day rule in portal output.
+- [ ] **Exception states:** Missing clock-out, sakit, izin, libur, and empty history each have distinct behavior.
+- [ ] **Cross-repo artifact sync:** Planning docs, SQL migration, and website loader/component names match shipped code.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Missing employee mapping | MEDIUM | Add explicit mapping, backfill links, then tighten RLS before reopening access |
-| Static-only auth workaround | MEDIUM | Convert portal routes to server output and replace client-only auth handling |
-| Data leak via broad queries | HIGH | Revoke access immediately, patch RLS/query scope, and verify with targeted tests before relaunch |
+| Logical-day drift | HIGH | Correct the recap contract centrally, backfill tests, and verify against known overnight examples. |
+| Query scope leak | HIGH | Revoke the broken path immediately, replace it with a narrowed RPC, and re-verify grants. |
+| Cross-repo drift | MEDIUM | Update planning artifacts before milestone closeout and document the actual shipped RPC/page surface. |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| No reliable employee identity mapping | Phase 37 foundation/auth | Authenticated user resolves to exactly one employee record |
-| Static-site assumptions | Phase 37 foundation/auth | Protected routes work server-side and survive refresh |
-| Schedule data leakage | Phase 38 schedule read model | Portal queries cannot return another employee's rows |
-| Date logic drift | Phase 38 schedule read model / Phase 39 UI | Cross-day schedule examples match admin expectations |
-| Over-scoping v6.1 | Requirements and roadmap gate | Milestone scope stays focused on schedule visibility |
+| Logical-day drift | Phase 42 | Recap output matches known overnight attendance cases. |
+| Query scope leak | Phase 42 | Employee recap loads without client-supplied employee identifiers. |
+| Confusing exception states | Phase 43 | Each exception day renders with distinct copy and styling. |
+| Workflow scope creep | Phase 43 | Requirements remain read-only and exclude requests/approvals. |
+| Cross-repo drift | Phase 44 | Planning artifacts match the shipped SQL and website implementation. |
 
 ## Sources
 
-- Existing project constraints in `.planning/PROJECT.md` and `.planning/STATE.md`
-- [Astro sessions docs](https://docs.astro.build/en/guides/sessions/)
-- [Astro actions docs](https://docs.astro.build/en/guides/actions/)
-- [Supabase SSR client docs](https://supabase.com/docs/guides/auth/server-side/creating-a-client)
-- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- Local repo: existing portal code and SQL functions from phases 37-39
+- `.planning/PROJECT.md` and `.planning/STATE.md` known debt notes for v6.1/v6.2
+- https://supabase.com/docs/guides/database/postgres/row-level-security
+- https://supabase.com/docs/reference/javascript/auth-getuser
 
 ---
-*Pitfalls research for: employee-facing schedule portal*
-*Researched: 2026-03-22*
+*Pitfalls research for: employee portal attendance recap*
+*Researched: 2026-03-23*

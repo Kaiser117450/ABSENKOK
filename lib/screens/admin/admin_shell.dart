@@ -193,25 +193,36 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
                         // Toggle ON: require biometric confirmation
                         setState(() => _toggling = true);
                         final success = await BiometricService.authenticate(
-                          reason: 'Verifikasi untuk mengaktifkan login biometrik',
+                          reason:
+                              'Verifikasi untuk mengaktifkan login biometrik',
                         );
                         if (!mounted) return;
                         setState(() => _toggling = false);
                         if (success) {
-                          await ref.read(appProvider.notifier).setBiometricEnabled(true);
+                          await ref
+                              .read(appProvider.notifier)
+                              .setBiometricEnabled(true);
                           // Save current role for biometric re-login
-                          final user = Supabase.instance.client.auth.currentUser;
-                          final role = (user?.appMetadata['app_role'] as String?) ??
-                              (user?.userMetadata?['app_role'] as String?);
-                          final outletId = (user?.appMetadata['managed_outlet_id'] as String?) ??
-                              (user?.userMetadata?['managed_outlet_id'] as String?);
+                          final user =
+                              Supabase.instance.client.auth.currentUser;
+                          final role =
+                              (user?.appMetadata['app_role'] as String?) ??
+                                  (user?.userMetadata?['app_role'] as String?);
+                          final outletId =
+                              (user?.appMetadata['managed_outlet_id']
+                                      as String?) ??
+                                  (user?.userMetadata?['managed_outlet_id']
+                                      as String?);
                           if (role != null) {
-                            await ref.read(appProvider.notifier).saveRememberedRole(role, outletId);
+                            await ref
+                                .read(appProvider.notifier)
+                                .saveRememberedRole(role, outletId);
                           }
                           if (mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Login biometrik diaktifkan')),
+                              const SnackBar(
+                                  content: Text('Login biometrik diaktifkan')),
                             );
                           }
                         } else {
@@ -223,11 +234,14 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
                         }
                       } else {
                         // Toggle OFF: no confirmation needed
-                        await ref.read(appProvider.notifier).setBiometricEnabled(false);
+                        await ref
+                            .read(appProvider.notifier)
+                            .setBiometricEnabled(false);
                         if (mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Login biometrik dinonaktifkan')),
+                            const SnackBar(
+                                content: Text('Login biometrik dinonaktifkan')),
                           );
                         }
                       }
@@ -295,105 +309,113 @@ class _EnakkoAppBar extends StatelessWidget {
           height: 60,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // Logo & brand
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: const Color(0x2EFFFFFF),
-                      borderRadius: BorderRadius.circular(10),
+            child: Row(
+              children: [
+                // Logo & brand
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0x2EFFFFFF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: Image.asset(
+                      'src/assets/images/logogoenakko.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
                     ),
-                    child: const Icon(Icons.restaurant,
-                        color: Colors.white, size: 18),
                   ),
-                  const SizedBox(width: 10),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ENAKKO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2.5,
-                          height: 1,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: const Color(0xB3FFFFFF),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-
-                  // Settings button
-                  GestureDetector(
-                    onTap: onSettings,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0x40FFFFFF),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.settings_outlined,
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ENAKKO',
+                      style: TextStyle(
                         color: Colors.white,
-                        size: 18,
-                        semanticLabel: 'Pengaturan',
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.5,
+                        height: 1,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: const Color(0xB3FFFFFF),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
 
-                  // Logout button
-                  GestureDetector(
-                    onTap: onLogout,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0x26FFFFFF),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0x40FFFFFF),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.logout, color: Colors.white, size: 15),
-                          SizedBox(width: 5),
-                          Text(
-                            'Keluar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                // Settings button
+                GestureDetector(
+                  onTap: onSettings,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0x26FFFFFF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0x40FFFFFF),
+                        width: 1,
                       ),
                     ),
+                    child: const Icon(
+                      Icons.settings_outlined,
+                      color: Colors.white,
+                      size: 18,
+                      semanticLabel: 'Pengaturan',
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+
+                // Logout button
+                GestureDetector(
+                  onTap: onLogout,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0x26FFFFFF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0x40FFFFFF),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.logout, color: Colors.white, size: 15),
+                        SizedBox(width: 5),
+                        Text(
+                          'Keluar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
     );
   }
 }
@@ -497,9 +519,7 @@ class _NavItem extends StatelessWidget {
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.primaryLight
-                    : Colors.transparent,
+                color: selected ? AppColors.primaryLight : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -513,8 +533,7 @@ class _NavItem extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight:
-                    selected ? FontWeight.w800 : FontWeight.w600,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 color: selected ? AppColors.primary : AppColors.textSecondary,
               ),
               overflow: TextOverflow.ellipsis,

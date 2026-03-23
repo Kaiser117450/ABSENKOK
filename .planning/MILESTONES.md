@@ -1,4 +1,73 @@
 # Milestones
+## v6.3 Employee Attendance Recap (Shipped: 2026-03-23)
+
+**Phases completed:** 4 phases, 11 plans, 20 tracked tasks
+**Timeline:** 2026-03-23 → 2026-03-23
+**Git range:** `0a494ed` → `8f32b6e`
+
+**Key accomplishments:**
+1. Added an employee-scoped portal attendance recap RPC and supporting index with logical-day-aware overnight repair.
+2. Derived month-to-date summary counts and recent logical-day history from one typed recap dataset in the Astro portal.
+3. Shipped a dedicated attendance entry point and `/portal/attendance` surface inside the existing employee portal shell.
+4. Centralized exception-state presentation so follow-up gaps are explicit while current-day in-progress states stay informational.
+5. Hardened recap empty/error/loading states and fixed historical row copy so past days no longer read as "hari ini".
+6. Closed the v6.3 audit with verification artifacts for phases 42-44 and applied the recap RPC/index to production Supabase during closeout.
+
+### Notes
+- Production now has `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap` after migration `phase_42_portal_attendance_recap_20260323` was applied during closeout.
+- Repo-wide `npm run check` in `absenkok-website` still reports pre-existing Deno edge-function typing noise outside the portal recap surface.
+- `followUpCount` derives from `recap.days` (14-day history horizon) while summary chips stay month-scoped; accepted as minimal overlap.
+
+### Delivered
+Employee portal now includes a phone-friendly attendance recap with month-to-date summary counts, recent logical-day history, explicit follow-up labeling, and verified closeout evidence.
+
+---
+
+## v6.2 Dashboard & Report Foundation (Shipped: 2026-03-23)
+
+**Phases completed:** 2 phases, 0 formal plans, 0 tracked tasks
+**Timeline:** 2026-03-23 → 2026-03-23
+**Git range:** `52bb5c1` → `e6c2902`
+
+**Key accomplishments:**
+1. Restored the classic admin dashboard as the full-admin default landing surface while preserving role-based outlet scoping for kepala gerai.
+2. Moved chain-wide ringkasan jaringan and status per gerai into a dedicated full-admin screen reachable from the dashboard.
+3. Replaced the admin dashboard utensil mark with the intended Enakko logo asset and tracked that asset in the Flutter repo.
+4. Hardened Rekap Harian PDF exports so large datasets keep rendering per-employee summary content.
+5. Replaced percentage-based attendance summaries with concrete counts for masuk, tidak hadir, and belum pulang.
+
+### Known Gaps
+- Archived without a dedicated `v6.2-MILESTONE-AUDIT.md`.
+- Phases 40-41 were executed as a rapid foundation pass without formal PLAN/SUMMARY artifacts.
+- Initial milestone drafting referenced `assets/images/logo_enakko.png`; the shipped admin logo path is `src/assets/images/logogoenakko.png`.
+
+### Delivered
+Admin dashboard flow restored, chain-wide network visibility isolated into its own screen, branding corrected, and PDF exports hardened before the next feature milestone.
+
+---
+
+## v6.1 Employee Portal (Shipped: 2026-03-23)
+
+**Phases completed:** 3 phases, 8 plans, 15 tasks
+**Timeline:** 2026-03-22 → 2026-03-23
+**Git range:** `0082be6` → `3d9d3f2`
+
+**Key accomplishments:**
+1. Added a deterministic employee portal account contract with indexed name search and server-side provisioning for existing staff records.
+2. Extended the Astro website with password-based employee login, SSR auth guards, and server-side employee identity resolution.
+3. Shipped an employee-scoped portal schedule read model with current-week visibility, overnight handling, and mobile-first portal surfaces.
+4. Delivered portal state handling for loading, empty, not-linked, and error cases plus portal-only logout behavior.
+5. Hardened the shipped portal read path in the website repo around authenticated RPCs, current-plus-next-week schedule visibility, and status-tinted schedule cards.
+
+### Known Gaps
+- Archived with audit status `gaps_found` because Phase 37 has no verification artifact and Phase 38/39 validation artifacts remained draft at closeout.
+- Planning summaries for Phase 37-38 lag the shipped website hardening (`get_portal_schedule_overview`, RPC ACL tightening, and portal UI follow-up tweaks).
+
+### Delivered
+First employee-facing ABSENKOK web portal: admin-provisioned password login, employee-scoped schedule visibility, mobile-first portal UX, and hardened server-side schedule reads.
+
+---
+
 ## v6.0 Multi-Outlet & Multi-Device Control (Shipped: 2026-03-22)
 
 **Phases completed:** 6 phases, 12 plans, 33 tasks

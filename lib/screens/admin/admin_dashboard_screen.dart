@@ -77,7 +77,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Future<void> _initialLoad() async {
     // Warm badge cache for BadgeAvatar rendering
     BadgeService.instance.fetchAll();
-    await Future.wait([_loadOutlets(), _loadEmployeeCount(), _loadOpenShifts(), _loadKioskDevices()]);
+    await Future.wait([
+      _loadOutlets(),
+      _loadEmployeeCount(),
+      _loadOpenShifts(),
+      _loadKioskDevices()
+    ]);
   }
 
   Future<void> _loadOutlets() async {
@@ -158,8 +163,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child:
+                Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -174,7 +179,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       // Optimistic update
       setState(() {
         _kioskDevices = _kioskDevices
-            .map((d) => d.id == device.id ? d.copyWith(nickname: newNickname) : d)
+            .map((d) =>
+                d.id == device.id ? d.copyWith(nickname: newNickname) : d)
             .toList();
       });
       try {
@@ -212,13 +218,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child:
+                Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Ya, Arsipkan',
-                style: TextStyle(color: AppColors.danger)),
+            child:
+                Text('Ya, Arsipkan', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -258,18 +264,24 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Future<void> _loadLogs() async {
-    if (mounted) setState(() { _loading = true; _loadError = null; });
+    if (mounted)
+      setState(() {
+        _loading = true;
+        _loadError = null;
+      });
     try {
       final today = DateTime.now();
-      final startOfDay =
-          DateTime(today.year, today.month, today.day).toUtc().toIso8601String();
-      final endOfDay =
-          DateTime(today.year, today.month, today.day, 23, 59, 59)
-              .toUtc().toIso8601String();
+      final startOfDay = DateTime(today.year, today.month, today.day)
+          .toUtc()
+          .toIso8601String();
+      final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59)
+          .toUtc()
+          .toIso8601String();
 
       var q = SupabaseClientFactory.admin
           .from('attendance_logs')
-          .select('*, employees(id, name, photo_url, active_badge_id), outlets(id, name)')
+          .select(
+              '*, employees(id, name, photo_url, active_badge_id), outlets(id, name)')
           .gte('scanned_at', startOfDay)
           .lte('scanned_at', endOfDay);
 
@@ -292,7 +304,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _loading = false; _loadError = e.toString(); });
+        setState(() {
+          _loading = false;
+          _loadError = e.toString();
+        });
       }
     }
   }
@@ -310,7 +325,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
       var q = SupabaseClientFactory.admin
           .from('attendance_logs')
-          .select('employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url, active_badge_id)')
+          .select(
+              'employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url, active_badge_id)')
           .gte('scanned_at', cutoff);
 
       // Kepala gerai: strictly limited to managed outlet.
@@ -327,7 +343,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       final Map<String, List<Map<String, dynamic>>> byEmployee = {};
       for (final row in (data as List)) {
         final empId = row['employee_id'] as String;
-        byEmployee.putIfAbsent(empId, () => []).add(row as Map<String, dynamic>);
+        byEmployee
+            .putIfAbsent(empId, () => [])
+            .add(row as Map<String, dynamic>);
       }
 
       final openShifts = <_OpenShift>[];
@@ -368,7 +386,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
   }
 
-  Future<void> _refreshDashboardData({bool includeEmployeeCount = false}) async {
+  Future<void> _refreshDashboardData(
+      {bool includeEmployeeCount = false}) async {
     await Future.wait([
       _loadLogs(),
       _loadOpenShifts(),
@@ -447,18 +466,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     try {
       final notes = notesCtrl.text.trim();
-      await SupabaseClientFactory.admin
-          .from('attendance_logs')
-          .insert({
-            'employee_id': shift.employeeId,
-            'scan_outlet_id': shift.outletId,
-            'type': 'pulang',
-            'scanned_at': DateTime.now().toUtc().toIso8601String(),
-            'notes': notes.isNotEmpty
-                ? notes
-                : 'Lupa absen pulang — diinput manual oleh admin',
-            'is_backup': false,
-          });
+      await SupabaseClientFactory.admin.from('attendance_logs').insert({
+        'employee_id': shift.employeeId,
+        'scan_outlet_id': shift.outletId,
+        'type': 'pulang',
+        'scanned_at': DateTime.now().toUtc().toIso8601String(),
+        'notes': notes.isNotEmpty
+            ? notes
+            : 'Lupa absen pulang — diinput manual oleh admin',
+        'is_backup': false,
+      });
 
       // Refresh open shifts list
       await _loadOpenShifts();
@@ -550,8 +567,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   String get _todayLabel {
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
     ];
     final n = DateTime.now();
     return '${days[n.weekday % 7]}, ${n.day} ${months[n.month]} ${n.year}';
@@ -578,8 +606,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             // ── KIOSK HEALTH STATUS ────────────────────────────────────────
             SliverToBoxAdapter(child: _buildKioskHealthSection()),
 
-            // ── LIHAT DASHBOARD BUTTON ────────────────────────────────────
-            SliverToBoxAdapter(child: _buildDashboardButton()),
+            // ── INSIGHT / NETWORK ACTIONS ────────────────────────────────
+            SliverToBoxAdapter(child: _buildInsightButtons()),
 
             // ── QUICK ACTIONS ──────────────────────────────────────────────
             SliverToBoxAdapter(child: _buildQuickActions()),
@@ -633,6 +661,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Hero Header ───────────────────────────────────────────────────────────
 
   Widget _buildHeroHeader() {
+    final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -651,6 +680,26 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               children: [
                 Row(
                   children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          'src/assets/images/logogoenakko.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,6 +725,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                               letterSpacing: -0.5,
                               height: 1.1,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            isFullAdmin
+                                ? 'Operasional harian, grafik gerai, dan kontrol jaringan dipisah agar dashboard utama tetap fokus.'
+                                : 'Pantau absensi gerai Anda secara real-time tanpa meninggalkan dashboard utama.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              height: 1.3,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.84),
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -744,7 +807,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 20),
         ],
       ),
@@ -872,7 +934,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Icon(Icons.devices_outlined, size: 40, color: AppColors.textMuted),
+                Icon(Icons.devices_outlined,
+                    size: 40, color: AppColors.textMuted),
                 SizedBox(height: 8),
                 Text(
                   'Tidak ada kiosk aktif',
@@ -907,33 +970,65 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ─── Lihat Dashboard Button ────────────────────────────────────────────────
+  // ─── Insight / Navigation Buttons ──────────────────────────────────────────
 
-  Widget _buildDashboardButton() {
+  Widget _buildInsightButtons() {
+    final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: _selectedOutletId == null
-              ? null
-              : () {
-                  context.push(
-                      '/admin/chart-dashboard?outletId=$_selectedOutletId');
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+      child: Column(
+        children: [
+          if (isFullAdmin) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/admin/network-summary'),
+                icon: const Icon(Icons.hub_rounded, size: 18),
+                label: const Text(
+                  'Ringkasan Jaringan & Status Gerai',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB91C1C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _selectedOutletId == null
+                  ? null
+                  : () {
+                      context.push(
+                          '/admin/chart-dashboard?outletId=$_selectedOutletId');
+                    },
+              icon: const Icon(Icons.bar_chart_rounded, size: 18),
+              label: Text(
+                isFullAdmin
+                    ? 'Dashboard Grafik Gerai'
+                    : 'Lihat Dashboard Grafik',
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ),
-          child: const Text(
-            'Lihat Dashboard',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -941,7 +1036,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Quick Actions ─────────────────────────────────────────────────────────
 
   Widget _buildQuickActions() {
- final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: SingleChildScrollView(
@@ -1000,7 +1095,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     top: -4,
                     right: -4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.danger,
                         borderRadius: BorderRadius.circular(10),
@@ -1027,10 +1123,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   void _openShiftScheduler() {
     final appState = ref.read(appProvider);
-    final outletId = appState.isKepalaGerai 
-        ? appState.managedOutletId 
-        : _selectedOutletId;
-    
+    final outletId =
+        appState.isKepalaGerai ? appState.managedOutletId : _selectedOutletId;
+
     if (outletId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1040,12 +1135,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       );
       return;
     }
-    
+
     final outletName = _outlets
-        .where((o) => o.id == outletId)
-        .map((o) => o.name)
-        .firstOrNull ?? 'Unknown';
-    
+            .where((o) => o.id == outletId)
+            .map((o) => o.name)
+            .firstOrNull ??
+        'Unknown';
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1127,7 +1223,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           photoUrl: shift.photoUrl,
                           name: shift.employeeName,
                           size: 36,
-                          badge: BadgeService.instance.getBadgeByIdSync(shift.activeBadgeId),
+                          badge: BadgeService.instance
+                              .getBadgeByIdSync(shift.activeBadgeId),
                         ),
                         title: Text(
                           shift.employeeName,
@@ -1179,9 +1276,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     // Kepala gerai: tampilkan nama outlet sebagai label statis (tidak bisa ganti)
     if (isKepalaGerai) {
       final outletName = _outlets
-          .where((o) => o.id == _selectedOutletId)
-          .map((o) => o.name)
-          .firstOrNull ?? 'Memuat outlet...';
+              .where((o) => o.id == _selectedOutletId)
+              .map((o) => o.name)
+              .firstOrNull ??
+          'Memuat outlet...';
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
         child: Row(
@@ -1201,7 +1299,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1419,7 +1518,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.fromLTRB(
-            20, 16, 20,
+            20,
+            16,
+            20,
             MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(
@@ -1439,7 +1540,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               const SizedBox(height: 4),
               const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
               const SizedBox(height: 18),
-
               Row(
                 children: [
                   Container(
@@ -1464,7 +1564,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-
               _SheetField(
                 controller: nameCtrl,
                 label: 'Nama Gerai',
@@ -1487,7 +1586,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 obscure: true,
               ),
               const SizedBox(height: 10),
-
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -1514,7 +1612,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -1537,18 +1634,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                 'password': passwordCtrl.text,
                               },
                             );
-                            if (ctx.mounted) { Navigator.pop(ctx); }
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
                             await _loadOutlets();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text(
-                                      'Gerai berhasil ditambahkan'),
+                                  content:
+                                      const Text('Gerai berhasil ditambahkan'),
                                   backgroundColor: AppColors.success,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(10)),
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               );
                             }
@@ -1561,8 +1659,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   backgroundColor: AppColors.danger,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(10)),
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               );
                             }
@@ -1852,7 +1949,8 @@ class _LogCard extends StatelessWidget {
           width: 40,
           height: 40,
           fit: BoxFit.cover,
-          placeholder: (context, url) => Container(width: 40, height: 40, color: Colors.grey.shade200),
+          placeholder: (context, url) =>
+              Container(width: 40, height: 40, color: Colors.grey.shade200),
           errorWidget: (context, url, error) => _initialBox(initial, bg),
         ),
       );
@@ -1864,11 +1962,16 @@ class _LogCard extends StatelessWidget {
     return Container(
       width: 40,
       height: 40,
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
       child: Center(
         child: Text(
           initial,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16, height: 1),
+          style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              height: 1),
         ),
       ),
     );
@@ -1892,7 +1995,8 @@ class _LogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final empName = item.employee?.name ?? 'Karyawan';
     final outletName = item.outlet?.name ?? '';
-    final empBadge = BadgeService.instance.getBadgeByIdSync(item.employee?.activeBadgeId);
+    final empBadge =
+        BadgeService.instance.getBadgeByIdSync(item.employee?.activeBadgeId);
 
     return Container(
       height: 70,
@@ -1966,7 +2070,8 @@ class _LogCard extends StatelessWidget {
                           color: const Color(0xFFE0F2FE),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: const Color(0xFF0891B2).withValues(alpha: 0.3)),
+                              color: const Color(0xFF0891B2)
+                                  .withValues(alpha: 0.3)),
                         ),
                         child: const Text(
                           'BACKUP',
@@ -1992,7 +2097,9 @@ class _LogCard extends StatelessWidget {
                           ? const Color(0xFF0891B2)
                           : AppColors.textMuted,
                       height: 1.2,
-                      fontWeight: item.log.isBackup ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: item.log.isBackup
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -2012,8 +2119,8 @@ class _LogCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: _typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
