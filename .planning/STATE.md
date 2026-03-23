@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v6.3
 milestone_name: Employee Attendance Recap
-current_plan: Requirements definition
-status: defining_requirements
-stopped_at: Researching and defining milestone requirements
-last_updated: "2026-03-23T17:05:00+08:00"
-last_activity: "2026-03-23 — started milestone v6.3 Employee Attendance Recap"
+current_plan: Roadmap created
+status: ready_for_phase_planning
+stopped_at: Ready to start Phase 42 planning
+last_updated: "2026-03-23T17:30:00+08:00"
+last_activity: "2026-03-23 — created roadmap for milestone v6.3 Employee Attendance Recap"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,32 +18,33 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-23 — Milestone v6.3 Employee Attendance Recap started
+Phase: 42
+Plan: none
+Status: Roadmap created; ready to plan Phase 42
+Last activity: 2026-03-23 — Roadmap created for milestone v6.3 Employee Attendance Recap
 
 ## Current Status
 - **Active milestone:** v6.3 Employee Attendance Recap
 - **Last shipped milestone:** v6.2 Dashboard & Report Foundation
-- **Current focus:** Research and scope a read-only employee attendance recap inside the portal
+- **Next phase:** Phase 42 — Attendance Recap Read Model
+- **Current focus:** Plan the recap data contract before touching the portal surface
 - **Scope guard:** Request submission, approvals, and reminder notifications stay out of this milestone
 
 ## Progress
 
 ```
-Defining milestone requirements
-[##........] scope selected, research in progress
+Milestone roadmap created
+[###.......] 0 of 3 phases planned/executed
 ```
 
-- **Next action:** Finish research, confirm requirements, and create the v6.3 roadmap
+- **Next action:** Start Phase 42 with `$gsd-discuss-phase 42` or `$gsd-plan-phase 42`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Define the v6.3 employee portal attendance recap milestone and prepare Phase 42 for planning.
+**Current focus:** Plan Phase 42 for the v6.3 employee portal attendance recap milestone.
 
 ## What Was Shipped
 
@@ -144,14 +145,15 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
-- v6.2 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; no active milestone is currently defined.
+- v6.3 initialized on 2026-03-23 as a read-only employee portal attendance recap milestone. Phase numbering now continues at 42 with phases 42-44 reserved for this milestone.
+- v6.2 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; v6.3 is now the active milestone.
 - Final v6.2 release must be built with Java 21 from Android Studio JBR; JDK 25 breaks the Android/Kotlin toolchain in this repo.
 - Admin dashboard branding now expects `src/assets/images/logogoenakko.png`; the file must remain tracked in git for release builds.
 - v6.2 phase artifacts were lightweight: the milestone shipped from direct code execution without dedicated PLAN/SUMMARY files, so archive and retrospective notes carry the closeout evidence.
-- v6.1 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; no active milestone is defined yet, and next phase numbering should start at 40.
+- v6.1 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; later milestone planning continued through phases 40-41 before v6.3 opened at phase 42.
 - v6.1 archive intentionally accepts verification debt: Phase 37 has no verification artifact, while Phase 38 and 39 validation files remained draft at closeout.
 - The shipped website portal path is ahead of planning summaries: current implementation uses hardened authenticated RPCs such as `get_portal_schedule_overview`.
-- v6.0 archived on 2026-03-22. Archive set lives under `.planning/milestones/`; current `.planning/ROADMAP.md` is reset for next-milestone planning.
+- v6.0 archived on 2026-03-22. Archive set lives under `.planning/milestones/`; the active roadmap was later reset during closeout before v6.3 planning began.
 - v6.1 initialized on 2026-03-22 as a focused employee-facing web portal milestone. Primary first job: employee can view assigned schedule and upcoming work days. Preferred surface: separate web portal, not kiosk/admin flow reuse.
 - NFC double-scan crash is a production bug — must fix before new features
 - All dashboard aggregations must use Supabase RPC (server-side), not fetch-all-in-Dart
@@ -184,7 +186,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Session Continuity
 
 **Last session:** 2026-03-23T16:18:52Z
-**Stopped at:** Archived v6.2 and waiting for the next milestone scope
+**Stopped at:** Roadmap created for v6.3; Phase 42 ready for planning
 **Resume file:** None
 
 ## Database Safety Rules

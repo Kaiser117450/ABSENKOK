@@ -48,23 +48,23 @@
 
 ## Traceability
 
-Roadmap mapping will be added after milestone approval and phase creation.
+Roadmap mapping for the approved v6.3 milestone:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ATTN-01 | TBD | Pending |
-| ATTN-02 | TBD | Pending |
-| ATTN-03 | TBD | Pending |
-| ATTN-04 | TBD | Pending |
-| ATTN-05 | TBD | Pending |
-| PORT-03 | TBD | Pending |
-| PORT-04 | TBD | Pending |
+| ATTN-01 | Phase 43 | Pending |
+| ATTN-02 | Phase 42 | Pending |
+| ATTN-03 | Phase 42 | Pending |
+| ATTN-04 | Phase 43 | Pending |
+| ATTN-05 | Phase 44 | Pending |
+| PORT-03 | Phase 43 | Pending |
+| PORT-04 | Phase 44 | Pending |
 
 **Coverage:**
 - v6.3 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7
+- Mapped to phases: 7
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after milestone v6.3 scoping*
+*Last updated: 2026-03-23 after roadmap creation for milestone v6.3*
