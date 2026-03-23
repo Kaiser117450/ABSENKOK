@@ -9,9 +9,9 @@
  *   recentDays    — the `recentDays` slice from the recap model (up to 14 rows).
  *   referenceDate — ISO date "YYYY-MM-DD" used to highlight today's row.
  *
- * Phase 44 hardening:
+ * Phase 44/45 hardening:
  *   - badge label, tone, needsFollowUp, followUpLabel, and supportingCopy are
- *     all sourced from the shared `getRecapDayPresentation()` helper, not
+ *     all sourced from the shared `getRecapDayPresentationForDay()` helper, not
  *     derived ad hoc inside this component.
  *   - follow-up days show an explicit chip and one-sentence explanatory copy.
  *   - current-day in-progress states (sedang_bekerja, belum_masuk) remain
@@ -25,7 +25,7 @@
  */
 
 import type { PortalRecapDay } from '../../lib/portal/attendance-recap';
-import { getRecapDayPresentation, type RecapDayTone } from '../../lib/portal/attendance-recap-presentation';
+import { getRecapDayPresentationForDay, type RecapDayTone } from '../../lib/portal/attendance-recap-presentation';
 
 interface Props {
   recentDays: PortalRecapDay[];
@@ -147,7 +147,7 @@ function getToneStyle(tone: RecapDayTone, today: boolean): ToneStyle {
     <div class="space-y-3" role="list" aria-label="Daftar riwayat kehadiran">
       {recentDays.map((day) => {
         const today = isToday(day.logicalDate);
-        const pres = getRecapDayPresentation(day.attendanceStatus);
+        const pres = getRecapDayPresentationForDay(day, referenceDate);
         const style = getToneStyle(pres.tone, today);
         const masukTs = fmtTs(day.firstMasukAt);
         const pulangTs = fmtTs(day.lastPulangAt);
