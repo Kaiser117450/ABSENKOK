@@ -23,7 +23,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 42 | Attendance Recap Read Model | Build the employee-scoped recap data contract and preserve logical-day semantics. | `ATTN-02`, `ATTN-03` | 3 |
+| 42 | 1/2 | In Progress|  | 3 |
 | 43 | Portal Attendance Recap Surface | Add the month summary and recent history experience inside the existing portal shell. | `ATTN-01`, `ATTN-04`, `PORT-03` | 3 |
 | 44 | Portal Exception States & Hardening | Surface follow-up days clearly and close the cross-repo hardening gap before implementation drift returns. | `ATTN-05`, `PORT-04` | 3 |
 

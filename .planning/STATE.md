@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.3
 milestone_name: Employee Attendance Recap
-current_plan: Roadmap created
-status: ready_for_phase_planning
-stopped_at: Ready to start Phase 42 planning
-last_updated: "2026-03-23T17:30:00+08:00"
-last_activity: "2026-03-23 — created roadmap for milestone v6.3 Employee Attendance Recap"
+status: planning
+stopped_at: Completed 42-01-PLAN.md
+last_updated: "2026-03-23T07:00:16.221Z"
+last_activity: 2026-03-23 — Roadmap created for milestone v6.3 Employee Attendance Recap
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
@@ -19,9 +18,9 @@ progress:
 ## Current Position
 
 Phase: 42
-Plan: none
-Status: Roadmap created; ready to plan Phase 42
-Last activity: 2026-03-23 — Roadmap created for milestone v6.3 Employee Attendance Recap
+Plan: 01 (complete)
+Status: Phase 42 Plan 01 executed; attendance recap RPC deployed to sql/
+Last activity: 2026-03-23 — Phase 42 Plan 01 executed: get_portal_attendance_recap RPC + recap index
 
 ## Current Status
 - **Active milestone:** v6.3 Employee Attendance Recap
@@ -135,6 +134,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 40-01 | Full admin returns to the classic dashboard while chain-wide visibility moves to its own route | Preserves the preferred operational landing page without removing the full-admin network view |
 | 41-01 | Rekap Harian PDF summary uses count metrics plus `MultiPage` landscape layout | Prevents summary loss on large exports while keeping admin-friendly time context |
 | 41-02 | Final admin branding uses `src/assets/images/logogoenakko.png` | Matches the intended Enakko dashboard logo after the initial placeholder asset mismatch |
+| 42-01 | Break duration uses outer envelope (first_break to last_kembali) — matches admin Rekap Harian approximation | Detailed per-break timelines deferred to a later phase |
+| 42-01 | sedang_bekerja status suppresses belum_pulang false alarm for the active current workday | Prevents portal from showing false incomplete-attendance alarm while employee is still working |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -185,8 +186,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T16:18:52Z
-**Stopped at:** Roadmap created for v6.3; Phase 42 ready for planning
+**Last session:** 2026-03-23T07:00:16.218Z
+**Stopped at:** Completed 42-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
