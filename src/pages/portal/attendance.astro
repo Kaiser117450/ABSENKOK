@@ -6,6 +6,7 @@ import PortalAttendanceSummary from '../../components/portal/PortalAttendanceSum
 import PortalAttendanceHistorySection from '../../components/portal/PortalAttendanceHistorySection.astro';
 import PortalStatePanel from '../../components/portal/PortalStatePanel.astro';
 import { loadPortalAttendanceRecap } from '../../lib/portal/attendance-recap';
+import { countFollowUpDays } from '../../lib/portal/attendance-recap-presentation';
 
 // Load the recap exactly once — never fetch again on this page.
 const result = await loadPortalAttendanceRecap(Astro);
@@ -14,6 +15,9 @@ const result = await loadPortalAttendanceRecap(Astro);
 if (!result.ok && result.reason === 'unauthenticated') {
   return Astro.redirect('/portal/login');
 }
+
+// Derive follow-up count from the recap dataset — no second query needed.
+const followUpCount = result.ok ? countFollowUpDays(result.recap.days) : 0;
 
 // Stub employee used when the recap failed and identity is unavailable.
 const FALLBACK_EMPLOYEE = {
@@ -27,7 +31,7 @@ const FALLBACK_EMPLOYEE = {
 };
 ---
 
-{result.ok && (
+{result.ok && result.recap.days.length === 0 && (
   <PortalLayout title="Kehadiran" employee={result.recap.employee} activeSection="attendance">
     <!-- Page heading -->
     <div class="mb-6">
@@ -37,11 +41,31 @@ const FALLBACK_EMPLOYEE = {
       </p>
     </div>
 
-    <!-- Month-to-date summary counts -->
+    <!-- Empty state: no recap days returned for this employee -->
+    <PortalStatePanel
+      variant="empty"
+      title="Belum ada data kehadiran"
+      message="Belum ada data kehadiran yang tersedia untuk bulan ini. Data akan muncul setelah jadwal dan absensi tercatat."
+    />
+  </PortalLayout>
+)}
+
+{result.ok && result.recap.days.length > 0 && (
+  <PortalLayout title="Kehadiran" employee={result.recap.employee} activeSection="attendance">
+    <!-- Page heading -->
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Rekap Kehadiran</h1>
+      <p class="mt-1 text-sm text-gray-500">
+        Ringkasan kehadiran bulan ini dan riwayat hari-hari terkini.
+      </p>
+    </div>
+
+    <!-- Month-to-date summary counts with follow-up framing -->
     <div class="mb-6">
       <PortalAttendanceSummary
         summaryCounts={result.recap.summaryCounts}
         monthStart={result.recap.monthStart}
+        followUpCount={followUpCount}
       />
     </div>
 
