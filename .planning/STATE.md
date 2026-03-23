@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.3
 milestone_name: Employee Attendance Recap
-status: Phase 42 Plan 01 executed; attendance recap RPC deployed to sql/
-stopped_at: Completed 42-02-PLAN.md
-last_updated: "2026-03-23T07:05:18.211Z"
-last_activity: "2026-03-23 — Phase 42 Plan 01 executed: get_portal_attendance_recap RPC + recap index"
+status: Phase 43 Plan 02 executed; portal shell nav + home CTA wired
+stopped_at: Completed 43-02-PLAN.md
+last_updated: "2026-03-23T07:33:00Z"
+last_activity: "2026-03-23 — Phase 43 Plan 02 executed: PortalLayout activeSection nav + home CTA card"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # STATE.md — Project Memory
@@ -186,8 +186,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T07:04:36.552Z
-**Stopped at:** Completed 42-02-PLAN.md
+**Last session:** 2026-03-23T07:29:06.282Z
+**Stopped at:** Completed 43-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules

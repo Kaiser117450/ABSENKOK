@@ -24,7 +24,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 42 | 2/2 | Complete    | 2026-03-23 | 3 |
-| 43 | Portal Attendance Recap Surface | Add the month summary and recent history experience inside the existing portal shell. | `ATTN-01`, `ATTN-04`, `PORT-03` | 3 |
+| 43 | 2/3 | In Progress|  | 3 |
 | 44 | Portal Exception States & Hardening | Surface follow-up days clearly and close the cross-repo hardening gap before implementation drift returns. | `ATTN-05`, `PORT-04` | 3 |
 
 ## Phases
@@ -45,7 +45,7 @@
 **Goal:** Deliver the recap entry point and main mobile-first portal experience using the trusted read model from Phase 42.
 **Depends on:** Phase 42
 **Requirements:** `ATTN-01`, `ATTN-04`, `PORT-03`
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] `43-01-PLAN.md` — Shared recap summary and recent-history components

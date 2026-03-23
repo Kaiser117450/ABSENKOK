@@ -8,18 +8,18 @@
 
 ### Attendance History
 
-- [ ] **ATTN-01**: Employee can open an attendance recap inside the existing portal and see recent attendance days without leaving the employee-facing shell.
+- [x] **ATTN-01**: Employee can open an attendance recap inside the existing portal and see recent attendance days without leaving the employee-facing shell.
 - [x] **ATTN-02**: Each recap day shows the recorded attendance outcome together with the available attendance timestamps for that logical workday.
 - [x] **ATTN-03**: Portal attendance recap applies the product's existing logical-day and overnight handling so cross-day attendance appears on the correct workday.
 
 ### Summary & Exceptions
 
-- [ ] **ATTN-04**: Employee can see month-to-date summary counts for the attendance states surfaced in the recap.
+- [x] **ATTN-04**: Employee can see month-to-date summary counts for the attendance states surfaced in the recap.
 - [ ] **ATTN-05**: Employee can identify days that need follow-up, including incomplete attendance outcomes and scheduled days without a completed attendance record.
 
 ### Portal Experience
 
-- [ ] **PORT-03**: Portal attendance recap is usable on a phone-sized browser and fits the existing employee portal shell.
+- [x] **PORT-03**: Portal attendance recap is usable on a phone-sized browser and fits the existing employee portal shell.
 - [ ] **PORT-04**: Portal attendance recap shows clear loading, empty, and error states when recap data is unavailable.
 
 ## v6.4+ Candidate Requirements
@@ -52,12 +52,12 @@ Roadmap mapping for the approved v6.3 milestone:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ATTN-01 | Phase 43 | Pending |
+| ATTN-01 | Phase 43 | Complete |
 | ATTN-02 | Phase 42 | Complete |
 | ATTN-03 | Phase 42 | Complete |
-| ATTN-04 | Phase 43 | Pending |
+| ATTN-04 | Phase 43 | Complete |
 | ATTN-05 | Phase 44 | Pending |
-| PORT-03 | Phase 43 | Pending |
+| PORT-03 | Phase 43 | Complete |
 | PORT-04 | Phase 44 | Pending |
 
 **Coverage:**
