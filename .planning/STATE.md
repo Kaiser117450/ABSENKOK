@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.2
-milestone_name: Dashboard & Report Foundation
-current_plan: Phase 40 milestone execution prep
-status: implementing_foundation
-stopped_at: Initializing milestone v6.2 and preparing implementation
-last_updated: "2026-03-23T12:35:00+08:00"
-last_activity: "2026-03-23 — started v6.2 Dashboard & Report Foundation milestone"
+milestone: none
+milestone_name: Planning Next Milestone
+current_plan: Milestone v6.2 archived
+status: planning_next_milestone
+stopped_at: Archived v6.2 and awaiting next milestone definition
+last_updated: "2026-03-23T13:45:00+08:00"
+last_activity: "2026-03-23 — archived v6.2 Dashboard & Report Foundation"
 progress:
-  total_phases: 2
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,36 +18,39 @@ progress:
 
 ## Current Position
 
-Phase: 40
-Plan: Phase 40 milestone execution prep
-Status: v6.2 initialized — implementing dashboard and PDF foundation fixes
-Last activity: 2026-03-23 — started v6.2 Dashboard & Report Foundation milestone
+Phase: none
+Plan: none
+Status: v6.2 archived; next milestone not yet defined
+Last activity: 2026-03-23 — archived v6.2 and reset planning state
 
 ## Current Status
-- **Milestone:** v6.2 Dashboard & Report Foundation
-- **Phase:** 40
-- **Current Plan:** Phase 40 milestone execution prep
-- **Last Updated:** 2026-03-23 — v6.2 initialized for dashboard, branding, and PDF hardening
+- **Active milestone:** None
+- **Last shipped milestone:** v6.2 Dashboard & Report Foundation
+- **Current focus:** Planning the next milestone after shipping v6.2
+- **Archive state:** `.planning/ROADMAP.md` now points to milestone archives; `.planning/REQUIREMENTS.md` has been archived for v6.2
 
 ## Progress
 
 ```
-v6.2 Dashboard & Report Foundation
-[..........] 0% · 2 phases planned, execution starting at phase 40
+Planning next milestone
+[..........] waiting for new scope definition
 ```
 
-- **Next starting phase:** 40
-- **Milestone focus:** Restore admin dashboard flow, separate network control center access, refresh branding, and harden large-volume PDF reporting
-- **Roadmap state:** v6.2 active with phases 40-41 planned
+- **Next action:** Start the next milestone with `$gsd-new-milestone`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Execute v6.2 foundation fixes before new features are added.
+**Current focus:** Planning the next milestone while keeping the shipped v6.2 baseline healthy.
 
 ## What Was Shipped
+
+### v6.2 (Released, 2026-03-23)
+- Phase 40: Admin dashboard restoration and brand refresh
+- Phase 41: PDF report reliability and count metrics
+- Notes: archived with accepted planning debt because no dedicated audit or per-phase PLAN/SUMMARY artifacts were produced for phases 40-41
 
 ### v6.1 (Released, 2026-03-23)
 - Phase 37: Portal foundation and employee auth
@@ -128,6 +131,9 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 39-01 | empty state from ok:true + zero weekAssignments mapped in loadPortalHome (not schedule.ts) | Preserves employee identity for greeting; keeps schedule.ts focused on data, not page logic |
 | 39-02 | Portal sign-out uses scope: 'local' — auth-js default is 'global' | AUTH-04 explicitly enforced; portal logout ends portal session only, not global Supabase session |
 | 39-02 | not-linked and error render inside PortalLayout (not bare HTML) | Consistent shell for all authenticated states; only unauthenticated redirects out |
+| 40-01 | Full admin returns to the classic dashboard while chain-wide visibility moves to its own route | Preserves the preferred operational landing page without removing the full-admin network view |
+| 41-01 | Rekap Harian PDF summary uses count metrics plus `MultiPage` landscape layout | Prevents summary loss on large exports while keeping admin-friendly time context |
+| 41-02 | Final admin branding uses `src/assets/images/logogoenakko.png` | Matches the intended Enakko dashboard logo after the initial placeholder asset mismatch |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -138,6 +144,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- v6.2 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; no active milestone is currently defined.
+- Final v6.2 release must be built with Java 21 from Android Studio JBR; JDK 25 breaks the Android/Kotlin toolchain in this repo.
+- Admin dashboard branding now expects `src/assets/images/logogoenakko.png`; the file must remain tracked in git for release builds.
+- v6.2 phase artifacts were lightweight: the milestone shipped from direct code execution without dedicated PLAN/SUMMARY files, so archive and retrospective notes carry the closeout evidence.
 - v6.1 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; no active milestone is defined yet, and next phase numbering should start at 40.
 - v6.1 archive intentionally accepts verification debt: Phase 37 has no verification artifact, while Phase 38 and 39 validation files remained draft at closeout.
 - The shipped website portal path is ahead of planning summaries: current implementation uses hardened authenticated RPCs such as `get_portal_schedule_overview`.
@@ -174,7 +184,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Session Continuity
 
 **Last session:** 2026-03-23T16:18:52Z
-**Stopped at:** Completed 39-02-PLAN.md
+**Stopped at:** Archived v6.2 and waiting for the next milestone scope
 **Resume file:** None
 
 ## Database Safety Rules

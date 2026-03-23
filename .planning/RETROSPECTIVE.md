@@ -277,12 +277,52 @@
 
 ---
 
+## Milestone: v6.2 — Dashboard & Report Foundation
+
+**Shipped:** 2026-03-23
+**Phases:** 2 (40-41) | **Plans:** 0 formal plan files | **Timeline:** 1 day
+
+### What Was Built
+- Restored the classic admin dashboard as the default `/admin/dashboard` experience for full-admin users
+- Added a dedicated full-admin route/button for chain-wide ringkasan jaringan and status per gerai
+- Replaced admin dashboard branding with the intended Enakko logo asset from `src/assets/images/logogoenakko.png`
+- Reworked Rekap Harian PDF summary generation so large exports use `MultiPage` landscape layout and keep per-employee summaries visible
+- Changed PDF summary metrics from percentages to operational counts for masuk, tidak hadir, and belum pulang
+
+### What Worked
+- Tight scope kept the milestone focused on foundation fixes that unblock later features
+- The direct code-first approach made the dashboard and PDF fixes fast to ship in one day
+- Using the Android Studio Java 21 runtime restored a reliable Android release build path on this Windows machine
+
+### What Was Inefficient
+- No dedicated audit or phase PLAN/SUMMARY artifacts were produced, so milestone closeout had to reconstruct evidence from code and git history
+- The correct admin logo asset path was only clarified after the first `v6.2.0` release had already been published
+- GitHub release asset upload via the MCP tool could not read local files in this environment, so the final upload needed `gh` CLI fallback
+
+### Patterns Established
+- Foundation-only milestones are useful before adding new features when UX and reporting baselines need to be stabilized first
+- Large PDF summary sections should prefer paginated `MultiPage` layouts instead of single-page assumptions
+- Keep brand assets tracked in the Flutter repo before wiring them into release-critical admin surfaces
+
+### Key Lessons
+1. Even rapid foundation passes need lightweight PLAN/SUMMARY artifacts, otherwise archive work becomes manual evidence reconstruction.
+2. Build reliability on Windows is sensitive to the Java runtime; this repo should stay on Android Studio JBR/Java 21 for release builds.
+3. Release publication needs a tested fallback path when app-upload tooling cannot access local artifacts directly.
+
+### Cost Observations
+- Model mix: balanced profile with manual release operations
+- Sessions: short burst in a single day
+- Notable: most closeout time went into archive hygiene and release mechanics, not feature implementation
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
+| v6.2 | 1 day | 2 | Foundation-only milestone; shipped fast but archive evidence had to be reconstructed after direct execution |
 | v6.1 | 2 days | 3 | First employee portal milestone; implementation shipped fast but verification/traceability lagged |
 | v6.0 | 3 days | 6 | Implementation milestone expanded with explicit rollout/acceptance closure phases before archive |
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
@@ -297,6 +337,7 @@
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
+| v6.2 | Targeted analyze/build plus release APK verification | Partial (requirements implemented, no dedicated audit or phase summaries) | 3 items |
 | v6.1 | Website build checks plus pending manual portal validation | Partial (requirements implemented, audit passed only by proceed-anyway decision) | 4 items |
 | v6.0 | Targeted unit/widget tests plus validation packets | Extended (device identity, kiosk devices, analytics/routing, milestone traceability) | 4 items |
 | v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items |

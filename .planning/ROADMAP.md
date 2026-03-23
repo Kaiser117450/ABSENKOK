@@ -2,48 +2,17 @@
 
 ## Milestones
 
+- ✅ **v6.2 Dashboard & Report Foundation** — Phases 40-41 shipped 2026-03-23. Archive: [`milestones/v6.2-ROADMAP.md`](milestones/v6.2-ROADMAP.md)
 - ✅ **v6.1 Employee Portal** — Phases 37-39 shipped 2026-03-23. Archive: [`milestones/v6.1-ROADMAP.md`](milestones/v6.1-ROADMAP.md)
-- 🚧 **v6.2 Dashboard & Report Foundation** — Phases 40-41 planned 2026-03-23.
+- ✅ **v6.0 Multi-Outlet & Multi-Device Control** — Phases 31-36 shipped 2026-03-22. Archive: [`milestones/v6.0-ROADMAP.md`](milestones/v6.0-ROADMAP.md)
+- ✅ **v5.0 Observability & Recovery** — Phases 27-30 shipped 2026-03-20. Archive: [`milestones/v5.0-ROADMAP.md`](milestones/v5.0-ROADMAP.md)
+- ✅ **v4.0 Smart Attendance + Admin Dashboard** — Phases 23-26 shipped 2026-03-19. Archive: [`milestones/v4.0-ROADMAP.md`](milestones/v4.0-ROADMAP.md)
+- ✅ **v3.0 Schedule Grid + Landing Website** — Phases 17-19 shipped 2026-03-13. Archive: [`milestones/v3.0-ROADMAP.md`](milestones/v3.0-ROADMAP.md)
+- ✅ **v2.0 Admin Tools + Live Activity** — Phases 13-16 shipped 2026-03-12. Archive: [`milestones/v2.0-ROADMAP.md`](milestones/v2.0-ROADMAP.md)
+- ✅ **v1.1 Bug Fix + Edge Cases + Features** — Phases 1-12 shipped 2026-03-05. Archive: [`milestones/v1.1-ROADMAP.md`](milestones/v1.1-ROADMAP.md)
 
-## Current Milestone: v6.2 Dashboard & Report Foundation
+## Current State
 
-**Goal:** Restore the preferred admin dashboard flow, keep chain-wide network visibility on a dedicated screen, refresh Enakko branding, and harden large-volume attendance PDF exports before future feature work.
-
-### Phase 40: Admin Dashboard Restoration & Brand Refresh
-
-**Goal:** Make the classic operational dashboard the default admin landing again, while preserving a dedicated path to the chain-wide network control center and updating the dashboard brand asset.
-**Depends on:** None
-**Requirements:** `DASH-01`, `DASH-02`, `DASH-03`, `BRAND-01`
-
-**Success criteria:**
-1. Full admin opens `/admin/dashboard` and sees the classic admin dashboard, while kepala gerai behavior stays outlet-scoped.
-2. Ringkasan jaringan and status per gerai are still available through a dedicated action/screen instead of replacing the default admin landing surface.
-3. The admin dashboard header uses `assets/images/logo_enakko.png` without breaking the existing layout on phone and tablet widths.
-
-### Phase 41: PDF Report Reliability & Count Metrics
-
-**Goal:** Keep Rekap Harian PDF summaries reliable on large exports and replace percentage-based attendance summaries with concrete operational counts.
-**Depends on:** Phase 40
-**Requirements:** `PDF-01`, `PDF-02`, `PDF-03`
-
-**Success criteria:**
-1. Rekap Harian PDF still shows per-employee summary content when the selected date range generates hundreds of rows.
-2. Report-level summary cards show count-based values for hadir, tidak absen, and belum absen pulang in the selected range.
-3. Per-employee summary rows show count-based attendance/absence/open-shift values while preserving supporting time context that remains useful for admins.
-
-## Traceability
-
-| Requirement | Phase |
-|-------------|-------|
-| DASH-01 | Phase 40 |
-| DASH-02 | Phase 40 |
-| DASH-03 | Phase 40 |
-| BRAND-01 | Phase 40 |
-| PDF-01 | Phase 41 |
-| PDF-02 | Phase 41 |
-| PDF-03 | Phase 41 |
-
-## Notes
-
-- Current active milestone starts at phase `40`.
-- v6.1 was archived with accepted verification debt. See [`milestones/v6.1-MILESTONE-AUDIT.md`](milestones/v6.1-MILESTONE-AUDIT.md) for the final audit snapshot.
+- No active milestone is defined.
+- Latest shipped milestone restored the classic admin dashboard, split chain-wide network visibility into its own screen, corrected admin branding, and hardened large PDF exports.
+- Start the next milestone with `$gsd-new-milestone`.

@@ -1,4 +1,27 @@
 # Milestones
+## v6.2 Dashboard & Report Foundation (Shipped: 2026-03-23)
+
+**Phases completed:** 2 phases, 0 formal plans, 0 tracked tasks
+**Timeline:** 2026-03-23 → 2026-03-23
+**Git range:** `52bb5c1` → `e6c2902`
+
+**Key accomplishments:**
+1. Restored the classic admin dashboard as the full-admin default landing surface while preserving role-based outlet scoping for kepala gerai.
+2. Moved chain-wide ringkasan jaringan and status per gerai into a dedicated full-admin screen reachable from the dashboard.
+3. Replaced the admin dashboard utensil mark with the intended Enakko logo asset and tracked that asset in the Flutter repo.
+4. Hardened Rekap Harian PDF exports so large datasets keep rendering per-employee summary content.
+5. Replaced percentage-based attendance summaries with concrete counts for masuk, tidak hadir, and belum pulang.
+
+### Known Gaps
+- Archived without a dedicated `v6.2-MILESTONE-AUDIT.md`.
+- Phases 40-41 were executed as a rapid foundation pass without formal PLAN/SUMMARY artifacts.
+- Initial milestone drafting referenced `assets/images/logo_enakko.png`; the shipped admin logo path is `src/assets/images/logogoenakko.png`.
+
+### Delivered
+Admin dashboard flow restored, chain-wide network visibility isolated into its own screen, branding corrected, and PDF exports hardened before the next feature milestone.
+
+---
+
 ## v6.1 Employee Portal (Shipped: 2026-03-23)
 
 **Phases completed:** 3 phases, 8 plans, 15 tasks

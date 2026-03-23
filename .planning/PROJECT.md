@@ -14,21 +14,24 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 ## Current State
 
-**Shipped:** v6.1 Employee Portal (2026-03-23)
+**Shipped:** v6.2 Dashboard & Report Foundation (2026-03-23)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Web surfaces:** marketing site + protected employee portal on the Astro website
+**Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
+**Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
 **Codebase:** ~28,400 tracked LOC Dart across 102 tracked files plus the separate Astro website repo and portal-specific Supabase RPCs
-**Archive note:** v6.1 shipped with accepted verification debt; see `.planning/milestones/v6.1-MILESTONE-AUDIT.md`
+**Archive note:** v6.2 archived with accepted planning debt; no dedicated milestone audit or phase SUMMARY artifacts were produced for phases 40-41
 
-## Current Milestone: v6.2 Dashboard & Report Foundation
+## Next Milestone Goals
 
-**Goal:** Stabilize the admin operational baseline before future feature work by restoring the preferred dashboard flow, separating chain-wide network visibility, refreshing Enakko branding, and hardening large-volume PDF reporting.
+- Define the next shipped scope with a fresh `$gsd-new-milestone` pass before starting implementation.
+- Choose which backlog moves next: portal attendance recap, employee request workflow, or the next admin/schedule improvement slice.
 
-**Target features:**
-- Restore the classic admin dashboard as the default full-admin landing surface.
-- Move chain-wide ringkasan jaringan and status per gerai into a dedicated control-center screen reachable from the admin dashboard.
-- Replace the utensil-only dashboard branding with the official `logo_enakko.png` asset.
-- Fix Rekap Harian PDF so per-employee summaries remain visible on large exports and show count-based attendance metrics.
+### What v6.2 Added
+- ✅ Restored the classic admin dashboard as the default `/admin/dashboard` landing surface for full admin users
+- ✅ Moved chain-wide ringkasan jaringan and status per gerai to a dedicated full-admin screen reachable from the dashboard
+- ✅ Replaced the admin dashboard utensil branding with the official Enakko dashboard logo asset
+- ✅ Hardened Rekap Harian PDF for large exports and switched summary metrics from percentages to concrete counts
 
 ### What v6.1 Added
 - ✅ Employee portal provisioning flow for existing employees
@@ -66,6 +69,8 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
+- v6.2 archived without a dedicated milestone audit or per-phase PLAN/SUMMARY artifacts for phases 40-41
+- Final admin logo correction landed after the first `v6.2.0` build; milestone closeout rebuilds from the corrected asset path `src/assets/images/logogoenakko.png`
 - v6.1 verification debt accepted at archive time: Phase 37 has no verification artifact; Phase 38 and 39 validation files remained draft
 - v6.1 planning summaries lag the shipped website hardening (`get_portal_schedule_overview`, authenticated RPC ACL tightening, and portal UI follow-up tweaks)
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
@@ -170,20 +175,22 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Employee can see current and upcoming schedules in a mobile-first portal shell — v6.1
 - ✓ Portal logout is scoped locally to the portal session — v6.1
 
-### Active (v6.2)
-- Restore `/admin/dashboard` for full admin to the classic operational dashboard (`DASH-01`)
-- Add a dedicated path/CTA for chain-wide ringkasan jaringan and status per gerai (`DASH-02`)
-- Keep kepala gerai constrained to outlet-scoped admin visibility while full-admin-only network views stay separate (`DASH-03`)
-- Use the official `assets/images/logo_enakko.png` asset in the admin dashboard header (`BRAND-01`)
-- Keep Rekap Harian PDF per-employee summaries visible on large exports (`PDF-01`)
-- Replace percentage-based PDF attendance summary with concrete counts for hadir, tidak absen, and belum absen pulang (`PDF-02`)
-- Show per-karyawan count metrics for hadir, tidak absen, and belum absen pulang while preserving useful time context (`PDF-03`)
+### Validated (v6.2)
+- ✓ Full admin lands on the classic admin dashboard at `/admin/dashboard` again — v6.2
+- ✓ Dedicated action opens chain-wide ringkasan jaringan and status per gerai without replacing the classic dashboard — v6.2
+- ✓ Kepala gerai stays outlet-scoped while chain-wide network views remain full-admin only — v6.2
+- ✓ Admin dashboard uses the official Enakko brand logo asset — v6.2
+- ✓ Rekap Harian PDF keeps per-employee summaries visible on large exports — v6.2
+- ✓ Rekap Harian PDF summary cards use concrete counts instead of percentages — v6.2
+- ✓ Rekap Harian PDF per-employee rows show count-based attendance metrics while preserving time context — v6.2
 
-### Deferred (Future)
+### Active (Planning Next Milestone)
 - [ ] Employee attendance recap inside the portal
 - [ ] Employee time-off or absence request submission
 - [ ] Manager/admin approval workflow for employee requests
 - [ ] Shift reminders or notifications for upcoming work
+
+### Deferred (Future)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
@@ -282,6 +289,9 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 28 | Astro SSR portal auth validates with `getUser()` in middleware | ✓ Server-side portal access does not trust stale client session state |
 | 29 | Portal schedule UI derives today and upcoming views from one schedule dataset | ✓ Portal surfaces stay internally consistent across current and future schedule sections |
 | 30 | Portal logout uses `scope: 'local'` and blocked states stay inside `PortalLayout` | ✓ Employee portal can sign out safely without affecting kiosk/admin sessions |
+| 31 | Full admin returns to the classic dashboard; chain-wide network visibility moves to a dedicated route | ✓ Restores the preferred ops surface without losing cross-gerai visibility |
+| 32 | Rekap Harian PDF summary switched to count metrics and `MultiPage` landscape summary layout | ✓ Large exports keep per-employee summary content visible |
+| 33 | Final admin branding ships with `src/assets/images/logogoenakko.png` | ✓ Dashboard branding now matches the intended Enakko logo asset |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -299,4 +309,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after initializing milestone v6.2 Dashboard & Report Foundation*
+*Last updated: 2026-03-23 after completing milestone v6.2 Dashboard & Report Foundation*
