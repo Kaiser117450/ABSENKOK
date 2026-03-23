@@ -1,7 +1,6 @@
 [CmdletBinding()]
 param(
     [switch]$CheckOnly,
-    [Alias("IncludeSideLoadApk")]
     [switch]$IncludeAppBundle,
     [switch]$SmokeVerify
 )
@@ -603,7 +602,7 @@ if ($CheckOnly) {
         CanonicalArtifact  = $releasePaths.ApkPath
         BundleArtifactPath = $releasePaths.BundlePath
         SymbolsDirectory   = $releasePaths.SymbolsDirectory
-        MappingTarget      = $releasePaths.MappingPath
+        MappingPath        = $releasePaths.MappingPath
         BundleRetentionState = $bundleRetentionState
         ManifestPath       = $releasePaths.ManifestPath
         SmokeEvidencePath  = $releasePaths.SmokeEvidencePath
