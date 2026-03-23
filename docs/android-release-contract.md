@@ -37,6 +37,8 @@ Helper tersebut akan:
 - `android/local.properties` boleh tetap berbeda per mesin dan tidak perlu ditrack.
 - Kontrak ini sengaja fokus ke runtime/toolchain baseline. Instruksi signing, packaging, atau CI/CD belum termasuk di Phase 47.
 - Release commands Windows harus masuk lewat helper `tool/release_env.ps1` supaya drift antara PATH Java dan Java 21 JBR terlihat lebih awal.
+- Mulai Phase 48, artifact `release` harus memakai private upload key; file nyata `android/key.properties` dan upload keystore tetap private dan tidak boleh masuk source control.
+- Repo hanya menyediakan `android/key.properties.example` sebagai schema placeholder untuk `storePassword`, `keyPassword`, `keyAlias`, dan `storeFile`.
 
 ## Release Preflight
 
