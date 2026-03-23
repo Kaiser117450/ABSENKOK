@@ -60,6 +60,10 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+  IF auth.role() <> 'authenticated' THEN
+    RAISE EXCEPTION 'upsert_kiosk_heartbeat requires authenticated role';
+  END IF;
+
   INSERT INTO kiosk_devices (
     device_uuid, outlet_id, last_heartbeat_at,
     battery_level, is_charging, pending_sync_count, app_version,
@@ -79,3 +83,8 @@ BEGIN
     updated_at         = NOW();
 END;
 $$;
+
+
+-- Restrict RPC execution surface (never PUBLIC for SECURITY DEFINER)
+REVOKE ALL ON FUNCTION upsert_kiosk_heartbeat(TEXT, UUID, SMALLINT, BOOLEAN, INTEGER, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION upsert_kiosk_heartbeat(TEXT, UUID, SMALLINT, BOOLEAN, INTEGER, TEXT) TO authenticated;
