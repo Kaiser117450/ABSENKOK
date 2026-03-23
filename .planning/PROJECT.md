@@ -22,10 +22,19 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,400 tracked LOC Dart across 102 tracked files plus the separate Astro website repo and portal-specific Supabase RPCs
 **Archive note:** v6.2 archived with accepted planning debt; no dedicated milestone audit or phase SUMMARY artifacts were produced for phases 40-41
 
-## Next Milestone Goals
+## Current Milestone: v6.3 Employee Attendance Recap
 
-- Define the next shipped scope with a fresh `$gsd-new-milestone` pass before starting implementation.
-- Choose which backlog moves next: portal attendance recap, employee request workflow, or the next admin/schedule improvement slice.
+**Goal:** Give each employee a clear, phone-friendly attendance recap inside the existing portal so they can review recent workdays and spot issues without asking admin.
+
+**Target features:**
+- Employee can open an attendance recap surface from the existing portal
+- Recap shows month-to-date summary counts plus recent daily attendance history
+- Portal highlights exception days clearly, including sakit, izin, libur, and incomplete attendance outcomes
+
+### Milestone Boundaries
+- Keep this milestone read-only for employees
+- Reuse the existing Astro portal shell, SSR auth flow, and employee identity resolution
+- Defer employee requests, approval workflow, and reminder notifications to later milestones
 
 ### What v6.2 Added
 - ✅ Restored the classic admin dashboard as the default `/admin/dashboard` landing surface for full admin users
@@ -184,13 +193,18 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Rekap Harian PDF summary cards use concrete counts instead of percentages — v6.2
 - ✓ Rekap Harian PDF per-employee rows show count-based attendance metrics while preserving time context — v6.2
 
-### Active (Planning Next Milestone)
-- [ ] Employee attendance recap inside the portal
+### Active (v6.3 Employee Attendance Recap)
+- [ ] Employee can view an attendance recap inside the existing portal
+- [ ] Portal recap shows month-to-date summary counts and recent day-by-day attendance history
+- [ ] Portal recap preserves existing logical-day handling for overnight and cross-day attendance
+- [ ] Portal recap surfaces exception days clearly without introducing request/approval workflow scope
+
+### Deferred (Future)
 - [ ] Employee time-off or absence request submission
 - [ ] Manager/admin approval workflow for employee requests
 - [ ] Shift reminders or notifications for upcoming work
-
-### Deferred (Future)
+- [ ] Employee-driven attendance correction or dispute submission
+- [ ] Portal attendance filtering by custom date range or export
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
@@ -309,4 +323,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after completing milestone v6.2 Dashboard & Report Foundation*
+*Last updated: 2026-03-23 after starting milestone v6.3 Employee Attendance Recap*

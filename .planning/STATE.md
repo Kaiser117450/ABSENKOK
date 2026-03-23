@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: Planning Next Milestone
-current_plan: Milestone v6.2 archived
-status: planning_next_milestone
-stopped_at: Archived v6.2 and awaiting next milestone definition
-last_updated: "2026-03-23T13:45:00+08:00"
-last_activity: "2026-03-23 — archived v6.2 Dashboard & Report Foundation"
+milestone: v6.3
+milestone_name: Employee Attendance Recap
+current_plan: Requirements definition
+status: defining_requirements
+stopped_at: Researching and defining milestone requirements
+last_updated: "2026-03-23T17:05:00+08:00"
+last_activity: "2026-03-23 — started milestone v6.3 Employee Attendance Recap"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -18,32 +18,32 @@ progress:
 
 ## Current Position
 
-Phase: none
-Plan: none
-Status: v6.2 archived; next milestone not yet defined
-Last activity: 2026-03-23 — archived v6.2 and reset planning state
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-23 — Milestone v6.3 Employee Attendance Recap started
 
 ## Current Status
-- **Active milestone:** None
+- **Active milestone:** v6.3 Employee Attendance Recap
 - **Last shipped milestone:** v6.2 Dashboard & Report Foundation
-- **Current focus:** Planning the next milestone after shipping v6.2
-- **Archive state:** `.planning/ROADMAP.md` now points to milestone archives; `.planning/REQUIREMENTS.md` has been archived for v6.2
+- **Current focus:** Research and scope a read-only employee attendance recap inside the portal
+- **Scope guard:** Request submission, approvals, and reminder notifications stay out of this milestone
 
 ## Progress
 
 ```
-Planning next milestone
-[..........] waiting for new scope definition
+Defining milestone requirements
+[##........] scope selected, research in progress
 ```
 
-- **Next action:** Start the next milestone with `$gsd-new-milestone`
+- **Next action:** Finish research, confirm requirements, and create the v6.3 roadmap
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Planning the next milestone while keeping the shipped v6.2 baseline healthy.
+**Current focus:** Define the v6.3 employee portal attendance recap milestone and prepare Phase 42 for planning.
 
 ## What Was Shipped
 
