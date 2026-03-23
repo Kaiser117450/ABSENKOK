@@ -27,6 +27,10 @@ Prasyarat:
 - Android SDK / emulator bila ingin run di Android
 - file `.env` tersedia jika dibutuhkan environment lokal
 
+## Android Release Contract
+
+Untuk release Android v7.0, jangan mengandalkan `java.exe` pertama di PATH atau isi `android/local.properties` sebagai source of truth. Kontrak toolchain yang ditrack ada di [docs/android-release-contract.md](docs/android-release-contract.md), dan verifikasi environment Windows dijalankan lewat `tool/release_env.ps1 -CheckOnly`.
+
 Perintah umum:
 
 ```bash
