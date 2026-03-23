@@ -20,7 +20,8 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.11.1" apply false
-    // Kotlin 1.9.25 — nfc_manager tidak kompatibel dengan Kotlin 2.x (toLowerCase deprecation)
+    // v7.0 sengaja tetap di Kotlin 1.9.25: Flutter warning diakui, tetapi release hardening ini tidak
+    // mengizinkan surprise upgrade atau bypass flag sampai kompatibilitas nfc_manager terhadap Kotlin 2.x dibuktikan.
     id("org.jetbrains.kotlin.android") version "1.9.25" apply false
 }
 

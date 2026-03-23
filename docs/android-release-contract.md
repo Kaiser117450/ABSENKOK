@@ -60,3 +60,15 @@ Ekspektasi Phase 47:
 - ketika analyze dan test sudah hijau, lane yang sama tetap akan lanjut ke `:app:compileReleaseSources` untuk mengecek release-only compilation tanpa masuk ke packaging
 
 Hasil observasi 2026-03-23: lane berhenti di `flutter analyze` dengan exit code `1` setelah menemukan 152 issue. Itu membuktikan preflight gagal sebelum packaging/signing dimulai, sehingga operator tidak perlu lompat ke `build apk --release` untuk mengetahui repo sedang merah.
+
+## v7.0 Compatibility Decision
+
+v7.0 sengaja menahan compatibility line berikut:
+
+- Flutter 3.41.1
+- AGP 8.11.1
+- Gradle 8.14
+- Kotlin 1.9.25
+- Java 21 JBR
+
+Keputusan ini disengaja untuk release hardening. Warning Flutter tentang umur dukungan Kotlin 1.9.25 diakui, tetapi milestone v7.0 tidak memakai `--android-skip-build-dependency-validation` dan tidak membuka surprise upgrade Kotlin/AGP/Gradle di mesin operator. Bila pin ini perlu berubah, `android/settings.gradle.kts`, `android/gradle/wrapper/gradle-wrapper.properties`, `tool/release_preflight.ps1`, dan dokumen kontrak ini harus diperbarui dengan sengaja sebagai satu keputusan baru.
