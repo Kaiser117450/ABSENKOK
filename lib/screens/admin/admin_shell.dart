@@ -321,7 +321,7 @@ class _EnakkoAppBar extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(7),
                     child: Image.asset(
-                      'assets/images/logo_enakko.png',
+                      'src/assets/images/logogoenakko.png',
                       width: 28,
                       height: 28,
                       fit: BoxFit.contain,

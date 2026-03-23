@@ -694,7 +694,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: Image.asset(
-                          'assets/images/logo_enakko.png',
+                          'src/assets/images/logogoenakko.png',
                           fit: BoxFit.contain,
                         ),
                       ),
