@@ -18,6 +18,10 @@ interface OutletRow {
   name: string;
 }
 
+interface PortalAccountRow {
+  employee_id: string;
+}
+
 /** Typed employee context returned after a successful portal session resolution. */
 export interface PortalEmployee {
   employee_id: string;
@@ -73,6 +77,29 @@ export async function resolvePortalEmployee(Astro: AstroGlobal): Promise<Resolve
   }
 
   const admin = createSupabaseAdminClient();
+  const { data: portalAccount, error: portalAccountError } = await admin
+    .from('employee_portal_accounts')
+    .select('employee_id')
+    .eq('employee_id', employeeId)
+    .eq('auth_user_id', user.id)
+    .maybeSingle<PortalAccountRow>();
+
+  if (portalAccountError) {
+    return {
+      ok: false,
+      reason: 'rpc_error',
+      message: portalAccountError.message,
+    };
+  }
+
+  if (!portalAccount) {
+    return {
+      ok: false,
+      reason: 'no_mapping',
+      message: 'No active employee mapping found for this portal account.',
+    };
+  }
+
   const { data: employee, error: employeeError } = await admin
     .from('employees')
     .select('id, name, position, home_outlet_id, photo_url, active_badge_id, is_active, archived_at')

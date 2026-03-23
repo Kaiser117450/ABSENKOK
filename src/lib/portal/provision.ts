@@ -1,6 +1,5 @@
 import {
   createSupabaseAdminClient,
-  createSupabaseAuthAdminUser,
   updateSupabaseAuthAdminUser,
 } from '../supabase/admin';
 
@@ -11,12 +10,31 @@ interface PortalEmployeeRow {
   archived_at: string | null;
 }
 
+interface PortalAccountRow {
+  employee_id: string;
+  auth_user_id: string;
+}
+
 export async function ensurePortalPasswordlessAccount(
   employeeId: string,
   authEmail: string,
   authPassword: string,
 ) {
   const admin = createSupabaseAdminClient();
+
+  const { data: portalAccount, error: portalAccountError } = await admin
+    .from('employee_portal_accounts')
+    .select('employee_id, auth_user_id')
+    .eq('employee_id', employeeId)
+    .maybeSingle<PortalAccountRow>();
+
+  if (portalAccountError) {
+    throw new Error(`Failed to validate portal account mapping: ${portalAccountError.message}`);
+  }
+
+  if (!portalAccount) {
+    throw new Error('Employee is not allowed to access the portal.');
+  }
 
   const { data: employee, error: employeeError } = await admin
     .from('employees')
@@ -48,11 +66,22 @@ export async function ensurePortalPasswordlessAccount(
   const existingAuthUser = await findPortalAuthUserByEmail(authEmail);
 
   if (existingAuthUser) {
+    if (existingAuthUser.id !== portalAccount.auth_user_id) {
+      throw new Error('Portal account mapping does not match existing auth user.');
+    }
     await updateSupabaseAuthAdminUser(existingAuthUser.id, userAttributes);
     return;
   }
 
-  await createSupabaseAuthAdminUser(userAttributes);
+  const { data: mappedAuthUser, error: mappedAuthUserError } = await admin.auth.admin.getUserById(
+    portalAccount.auth_user_id,
+  );
+
+  if (mappedAuthUserError || !mappedAuthUser?.user) {
+    throw new Error('Mapped portal auth user was not found.');
+  }
+
+  await updateSupabaseAuthAdminUser(portalAccount.auth_user_id, userAttributes);
 }
 
 async function findPortalAuthUserByEmail(email: string) {

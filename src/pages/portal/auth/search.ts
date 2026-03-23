@@ -32,7 +32,9 @@ async function searchEmployeesByPattern(pattern: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from('employees')
-    .select('id, name, home_outlet_id, position, photo_url, active_badge_id')
+    .select(
+      'id, name, home_outlet_id, position, photo_url, active_badge_id, employee_portal_accounts!inner(employee_id)',
+    )
     .eq('is_active', true)
     .is('archived_at', null)
     .ilike('name', pattern)
