@@ -1,12 +1,12 @@
 # Milestone v7.0: Android Release Hardening
 
-**Status:** PLANNED 2026-03-23
+**Status:** IN PROGRESS 2026-03-23
 **Phases:** 46-49
 **Total Plans:** 10
 
 ## Overview
 
-Restore a deterministic Android release path for the Flutter kiosk app before resuming new product work. The milestone closes the current release compile blockers, codifies the supported toolchain, replaces debug signing with a private upload-key flow, and turns release work into a repeatable operator process with clear artifacts.
+Restore a deterministic Android release path for the Flutter kiosk app before resuming new product work. The milestone closes the current release packaging blockers, codifies the supported toolchain, replaces debug signing with a private upload-key flow, and turns release work into a repeatable operator process with clear artifacts.
 
 ## Phases
 
@@ -14,11 +14,11 @@ Restore a deterministic Android release path for the Flutter kiosk app before re
 
 **Goal:** Re-establish a clean Android release packaging baseline and align version metadata with the active milestone.
 **Depends on:** Phase 45 closeout and current repo state
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 
-- [ ] 46-01: Close the current release-only Dart compile blockers that stop Android packaging
+- [x] 46-01: Restore the canonical Android release build path by removing the current release-only packaging blocker
 - [ ] 46-02: Align `pubspec.yaml`, milestone versioning, and generated artifact naming for v7.0
 
 **Details:**

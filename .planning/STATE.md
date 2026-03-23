@@ -2,41 +2,41 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
-status: milestone_planned
-stopped_at: Completed v7.0 milestone planning
-last_updated: "2026-03-23T11:05:00Z"
-last_activity: "2026-03-23 — defined requirements and created roadmap for v7.0 Android Release Hardening"
+status: phase_in_progress
+stopped_at: Completed 46-01-PLAN.md
+last_updated: "2026-03-23T12:11:06.454Z"
+last_activity: "2026-03-23 — restored the Windows release baseline with the C:\\flutter alias and packaged ABSENKOK-v6.2.0.apk; ready for 46-02 metadata alignment"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 10
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: Not started (ready for Phase 46)
-Plan: —
-Status: Milestone planned; ready to start Phase 46
-Last activity: 2026-03-23 — Requirements and roadmap created for v7.0 Android Release Hardening
+Phase: 46 - Release Baseline Recovery
+Plan: 46-02 - Align pubspec.yaml, milestone versioning, and generated artifact naming for v7.0
+Status: 46-01 complete; release baseline restored for the current checkout
+Last activity: 2026-03-23 — Restored the `C:\flutter` release baseline and rebuilt `ABSENKOK-v6.2.0.apk`
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
 - **Next phase:** Phase 46: Release Baseline Recovery
-- **Current focus:** Start Phase 46 to close release compile blockers and realign v7.0 release metadata
+- **Current focus:** Execute 46-02 to align v7.0 version metadata and artifact naming on the restored release lane
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```
-v7.0 milestone planned
-[----------] 0 of 4 phases complete (0/10 plans)
+v7.0 milestone in progress
+[----------] 0 of 4 phases complete (1/10 plans)
 ```
 
-- **Next action:** Start Phase 46 with `$gsd-discuss-phase 46` or `$gsd-plan-phase 46`
+- **Next action:** Execute 46-02 to bump `pubspec.yaml` to v7.0 and verify the versioned release APK output
 
 ## Project Reference
 
@@ -160,6 +160,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 46-01 completed on 2026-03-23: the canonical Windows release lane is now `C:\flutter\bin\flutter.bat build apk --release`, which packaged `ABSENKOK-v6.2.0.apk` again without changing AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, or the debug-signing baseline.
+- `android/local.properties` remains gitignored by repo design, so the C:\flutter baseline is machine-local until Phase 47 codifies the tracked toolchain contract.
 - v6.3 archived on 2026-03-23. Archive set now includes roadmap, requirements, and milestone audit files under `.planning/milestones/`; no active milestone is currently defined.
 - Production Supabase now includes `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap`; the Phase 42 recap migration was applied during milestone closeout.
 - v6.3 initialized on 2026-03-23 as a read-only employee portal attendance recap milestone. Phase numbering now continues at 42 with phases 42-44 reserved for this milestone.
@@ -202,8 +204,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T08:51:42.524Z
-**Stopped at:** Completed 45-03-PLAN.md
+**Last session:** 2026-03-23T12:11:06.440Z
+**Stopped at:** Completed 46-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
