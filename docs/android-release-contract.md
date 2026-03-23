@@ -37,3 +37,26 @@ Helper tersebut akan:
 - `android/local.properties` boleh tetap berbeda per mesin dan tidak perlu ditrack.
 - Kontrak ini sengaja fokus ke runtime/toolchain baseline. Instruksi signing, packaging, atau CI/CD belum termasuk di Phase 47.
 - Release commands Windows harus masuk lewat helper `tool/release_env.ps1` supaya drift antara PATH Java dan Java 21 JBR terlihat lebih awal.
+
+## Release Preflight
+
+Satu lane preflight yang ditrack untuk v7.0 adalah:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/release_preflight.ps1
+```
+
+Urutan stage yang dijalankan:
+
+1. `C:\flutter\bin\flutter.bat analyze`
+2. `C:\flutter\bin\flutter.bat test`
+3. `android\gradlew.bat :app:compileReleaseSources`
+
+Ekspektasi Phase 47:
+
+- lane ini gagal cepat pada stage pertama yang merah
+- lane ini tidak memanggil `assembleRelease`, `bundleRelease`, `packageRelease`, atau task signing
+- pada checkout saat ini lane memang diperkirakan gagal di `flutter analyze` atau `flutter test`, dan itu adalah perilaku yang diinginkan
+- ketika analyze dan test sudah hijau, lane yang sama tetap akan lanjut ke `:app:compileReleaseSources` untuk mengecek release-only compilation tanpa masuk ke packaging
+
+Hasil observasi 2026-03-23: lane berhenti di `flutter analyze` dengan exit code `1` setelah menemukan 152 issue. Itu membuktikan preflight gagal sebelum packaging/signing dimulai, sehingga operator tidak perlu lompat ke `build apk --release` untuk mengetahui repo sedang merah.
