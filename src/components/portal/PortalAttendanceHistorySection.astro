@@ -9,14 +9,23 @@
  *   recentDays    — the `recentDays` slice from the recap model (up to 14 rows).
  *   referenceDate — ISO date "YYYY-MM-DD" used to highlight today's row.
  *
+ * Phase 44 hardening:
+ *   - badge label, tone, needsFollowUp, followUpLabel, and supportingCopy are
+ *     all sourced from the shared `getRecapDayPresentation()` helper, not
+ *     derived ad hoc inside this component.
+ *   - follow-up days show an explicit chip and one-sentence explanatory copy.
+ *   - current-day in-progress states (sedang_bekerja, belum_masuk) remain
+ *     visually calm and are clearly non-follow-up.
+ *
  * Scope guard:
- *   - does not add loading/empty/error states (reserved for Phase 44)
- *   - does not add follow-up-day badges or exception labels (reserved for Phase 44)
+ *   - does not add loading/empty/error page-level states
+ *   - does not add correction-request buttons or workflow actions
  *   - does not re-derive logical-day grouping or summary counts
  *   - no client framework or new dependencies
  */
 
-import type { PortalRecapDay, AttendanceStatus } from '../../lib/portal/attendance-recap';
+import type { PortalRecapDay } from '../../lib/portal/attendance-recap';
+import { getRecapDayPresentation, type RecapDayTone } from '../../lib/portal/attendance-recap-presentation';
 
 interface Props {
   recentDays: PortalRecapDay[];
@@ -50,102 +59,77 @@ function hasRenderableScheduleTime(day: PortalRecapDay): boolean {
   );
 }
 
-interface StatusStyle {
+// ---------------------------------------------------------------------------
+// Tone → Tailwind class maps
+//
+// Colour palette is driven by RecapDayTone so the shared presentation helper
+// is the single authority for exception semantics. Ad hoc per-status colour
+// switches are removed.
+// ---------------------------------------------------------------------------
+
+interface ToneStyle {
   badge: string;
   card: string;
   dayNumber: string;
   dayLabel: string;
   meta: string;
+  followUpChip: string;
 }
 
-function getStatusStyle(status: AttendanceStatus, today: boolean): StatusStyle {
-  switch (status) {
-    case 'hadir':
+/**
+ * Map a RecapDayTone to Tailwind colour tokens.
+ *
+ * `today` affects card and day-number emphasis for accent and success tones
+ * so that the current-day row is visually prominent regardless of status.
+ */
+function getToneStyle(tone: RecapDayTone, today: boolean): ToneStyle {
+  switch (tone) {
+    case 'success':
       return {
         badge: 'bg-emerald-100 text-emerald-700',
         card: today ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200',
         dayNumber: today ? 'text-emerald-700' : 'text-gray-700',
         dayLabel: today ? 'text-emerald-600' : 'text-gray-400',
         meta: 'text-gray-500',
+        followUpChip: '',
       };
-    case 'sakit':
+    case 'warning':
+      return {
+        badge: 'bg-amber-100 text-amber-700',
+        card: 'bg-amber-50 border-amber-200',
+        dayNumber: 'text-amber-700',
+        dayLabel: 'text-amber-600',
+        meta: 'text-amber-700',
+        followUpChip: 'bg-amber-100 text-amber-700 border border-amber-200',
+      };
+    case 'accent':
+      return {
+        badge: 'bg-[#E91E8C]/10 text-[#E91E8C]',
+        card: today ? 'bg-[#E91E8C]/5 border-[#E91E8C]/20' : 'bg-white border-gray-200',
+        dayNumber: today ? 'text-[#E91E8C]' : 'text-gray-700',
+        dayLabel: today ? 'text-[#E91E8C]' : 'text-gray-400',
+        meta: 'text-gray-500',
+        followUpChip: '',
+      };
+    case 'danger':
       return {
         badge: 'bg-red-100 text-red-700',
         card: 'bg-red-50 border-red-200',
         dayNumber: 'text-red-700',
         dayLabel: 'text-red-600',
         meta: 'text-red-500',
+        followUpChip: 'bg-red-100 text-red-700 border border-red-200',
       };
-    case 'izin':
-      return {
-        badge: 'bg-sky-100 text-sky-700',
-        card: 'bg-sky-50 border-sky-200',
-        dayNumber: 'text-sky-700',
-        dayLabel: 'text-sky-600',
-        meta: 'text-sky-500',
-      };
-    case 'belum_pulang':
-      return {
-        badge: 'bg-amber-100 text-amber-700',
-        card: today ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200',
-        dayNumber: today ? 'text-amber-700' : 'text-gray-700',
-        dayLabel: today ? 'text-amber-600' : 'text-gray-400',
-        meta: 'text-gray-500',
-      };
-    case 'sedang_bekerja':
-      return {
-        badge: 'bg-[#E91E8C]/10 text-[#E91E8C]',
-        card: 'bg-[#E91E8C]/5 border-[#E91E8C]/20',
-        dayNumber: 'text-[#E91E8C]',
-        dayLabel: 'text-[#E91E8C]',
-        meta: 'text-gray-500',
-      };
-    case 'tidak_hadir':
-      return {
-        badge: 'bg-red-100 text-red-700',
-        card: 'bg-white border-gray-200',
-        dayNumber: 'text-gray-700',
-        dayLabel: 'text-gray-400',
-        meta: 'text-gray-500',
-      };
-    case 'belum_masuk':
-      return {
-        badge: 'bg-gray-100 text-gray-500',
-        card: today ? 'bg-[#E91E8C]/5 border-[#E91E8C]/20' : 'bg-white border-gray-200',
-        dayNumber: today ? 'text-[#E91E8C]' : 'text-gray-700',
-        dayLabel: today ? 'text-[#E91E8C]' : 'text-gray-400',
-        meta: 'text-gray-500',
-      };
-    case 'libur':
+    case 'neutral':
+    default:
       return {
         badge: 'bg-gray-100 text-gray-500',
         card: 'bg-gray-50 border-gray-200',
         dayNumber: 'text-gray-500',
         dayLabel: 'text-gray-400',
         meta: 'text-gray-400',
+        followUpChip: '',
       };
-    default:
-      return {
-        badge: 'bg-gray-100 text-gray-500',
-        card: 'bg-white border-gray-200',
-        dayNumber: 'text-gray-700',
-        dayLabel: 'text-gray-400',
-        meta: 'text-gray-500',
-      };
-  }
-}
-
-function getStatusLabel(status: AttendanceStatus): string {
-  switch (status) {
-    case 'hadir': return 'Hadir';
-    case 'sakit': return 'Sakit';
-    case 'izin': return 'Izin';
-    case 'belum_pulang': return 'Belum Pulang';
-    case 'sedang_bekerja': return 'Sedang Bekerja';
-    case 'tidak_hadir': return 'Tidak Hadir';
-    case 'belum_masuk': return 'Belum Masuk';
-    case 'libur': return 'Libur';
-    default: return '—';
   }
 }
 ---
@@ -163,7 +147,8 @@ function getStatusLabel(status: AttendanceStatus): string {
     <div class="space-y-3" role="list" aria-label="Daftar riwayat kehadiran">
       {recentDays.map((day) => {
         const today = isToday(day.logicalDate);
-        const style = getStatusStyle(day.attendanceStatus, today);
+        const pres = getRecapDayPresentation(day.attendanceStatus);
+        const style = getToneStyle(pres.tone, today);
         const masukTs = fmtTs(day.firstMasukAt);
         const pulangTs = fmtTs(day.lastPulangAt);
         const breakTs = fmtTs(day.firstBreakAt);
@@ -188,10 +173,10 @@ function getStatusLabel(status: AttendanceStatus): string {
 
             <!-- Content column -->
             <div class="min-w-0 flex-1">
-              <!-- Status badge + shift name row -->
+              <!-- Status badge + today marker + shift name row -->
               <div class="flex items-center gap-2 flex-wrap">
                 <span class={`${style.badge} text-xs font-semibold px-2 py-0.5 rounded-full shrink-0`}>
-                  {getStatusLabel(day.attendanceStatus)}
+                  {pres.label}
                 </span>
                 {today && (
                   <span class="text-xs font-normal text-[#E91E8C]">Hari ini</span>
@@ -200,6 +185,16 @@ function getStatusLabel(status: AttendanceStatus): string {
                   <span class="text-xs text-gray-500 truncate">{day.shiftName}</span>
                 )}
               </div>
+
+              <!-- Follow-up chip: explicit action indicator for prior-day gaps -->
+              {pres.needsFollowUp && pres.followUpLabel && (
+                <div class={`mt-1.5 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${style.followUpChip}`} aria-label="Perlu ditindaklanjuti">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  </svg>
+                  {pres.followUpLabel}
+                </div>
+              )}
 
               <!-- Outlet and schedule time -->
               {(day.outletName || hasRenderableScheduleTime(day)) && (
@@ -250,6 +245,13 @@ function getStatusLabel(status: AttendanceStatus): string {
                     </span>
                   )}
                 </div>
+              )}
+
+              <!-- Supporting copy for exceptional days -->
+              {pres.supportingCopy && (
+                <p class={`mt-1.5 text-xs leading-relaxed ${pres.needsFollowUp ? style.meta : 'text-gray-400'}`}>
+                  {pres.supportingCopy}
+                </p>
               )}
 
               <!-- Notes -->
