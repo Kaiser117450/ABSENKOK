@@ -24,7 +24,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 42 | 2/2 | Complete    | 2026-03-23 | 3 |
-| 43 | 3/3 | Complete   | 2026-03-23 | 3 |
+| 43 | 3/3 | Complete    | 2026-03-23 | 3 |
 | 44 | Portal Exception States & Hardening | Surface follow-up days clearly and close the cross-repo hardening gap before implementation drift returns. | `ATTN-05`, `PORT-04` | 3 |
 
 ## Phases
