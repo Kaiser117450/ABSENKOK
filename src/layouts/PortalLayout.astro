@@ -140,22 +140,55 @@ function initials(name: string): string {
         const bar = document.getElementById('portal-progress') as HTMLDivElement | null;
         const main = document.getElementById('portal-main') as HTMLElement | null;
 
-        if (!form || !btn || !bar) return;
-
-        form.addEventListener('submit', () => {
-          // Disable button to prevent double-submit.
-          if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Keluar…';
-            btn.setAttribute('aria-label', 'Sedang keluar…');
-          }
-          // Animate progress bar to signal pending state.
+        /** Show the progress bar and mark main as busy. */
+        function showProgress(): void {
           if (bar) {
             bar.style.width = '60%';
             bar.setAttribute('aria-hidden', 'false');
           }
-          // Mark main as busy for screen readers.
           if (main) main.setAttribute('aria-busy', 'true');
+        }
+
+        // ── Logout form ──────────────────────────────────────────────────────
+        if (form) {
+          form.addEventListener('submit', () => {
+            if (btn) {
+              btn.disabled = true;
+              btn.textContent = 'Keluar…';
+              btn.setAttribute('aria-label', 'Sedang keluar…');
+            }
+            showProgress();
+          });
+        }
+
+        // ── Internal portal navigation and retry links ───────────────────────
+        // Trigger progress bar for same-origin portal anchor clicks that would
+        // cause a full-page navigation. Excludes: modified clicks (Ctrl/Cmd/Shift),
+        // middle-button clicks, links with target="_blank", and external origins.
+        document.addEventListener('click', (e: MouseEvent) => {
+          // Skip modified or non-primary clicks — they open new tabs or have
+          // browser-default handling; we should not intercept them.
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+          const target = e.target as HTMLElement | null;
+          const anchor = target?.closest<HTMLAnchorElement>('a[href]');
+          if (!anchor) return;
+
+          // Skip links that open in a new tab or non-http schemes.
+          if (anchor.target === '_blank' || anchor.target === '_top') return;
+          const href = anchor.getAttribute('href') ?? '';
+          if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+          // Only handle same-origin portal paths.
+          try {
+            const resolved = new URL(href, window.location.href);
+            if (resolved.origin !== window.location.origin) return;
+            if (!resolved.pathname.startsWith('/portal')) return;
+          } catch {
+            return;
+          }
+
+          showProgress();
         });
       })();
     </script>
