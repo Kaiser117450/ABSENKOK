@@ -3,47 +3,47 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
 status: phase_in_progress
-stopped_at: Completed 48-02-PLAN.md
-last_updated: "2026-03-23T14:00:27.989Z"
-last_activity: "2026-03-23 — completed 48-02: canonical Android artifacts now stage from one tracked lane with signed .aab-first retention rules"
+stopped_at: Completed 48-03-PLAN.md
+last_updated: "2026-03-23T14:16:23.815Z"
+last_activity: "2026-03-23 — completed 48-03: retained release directories now capture symbols, optional mapping, and smoke-verification evidence for the same signed version"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 48 - Secure Signing & Artifact Discipline
-Plan: 48-03 pending
-Status: 48-02 complete; the canonical artifact lane now stages signed .aab releases with opt-in retained .apk handling
-Last activity: 2026-03-23 — Completed 48-02 and verified `tool/release_build.ps1 -CheckOnly` reports the staged artifact contract without cutting artifacts
+Phase: 49 - Release Runbook & Acceptance
+Plan: 49-01 pending
+Status: 48-03 complete; retained release directories now capture symbols, optional mapping, and smoke-verification evidence for the same signed version
+Last activity: 2026-03-23 — Completed 48-03 and verified `tool/release_build.ps1 -CheckOnly -IncludeSideLoadApk -SmokeVerify` resolves the smoke lane without cutting artifacts
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
-- **Next phase:** Phase 48: Secure Signing & Artifact Discipline
-- **Current focus:** Add symbol retention and smoke-verification evidence on top of the staged v7.0 artifact lane
+- **Next phase:** Phase 49: Release Runbook & Acceptance
+- **Current focus:** Document the local v7.0 release runbook and capture acceptance evidence from the now-complete signed artifact lane
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```text
 v7.0 milestone in progress
-[######----] 2 of 4 phases complete (7/10 plans)
+[########--] 3 of 4 phases complete (8/10 plans)
 ```
 
-- **Next action:** Execute Phase 48-03 to retain split debug info and smoke-verify the shrunken release output
+- **Next action:** Execute Phase 49-01 to write the local release runbook with the now-finalized signing, artifact, symbol, and smoke-verification contract
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 48 Secure Signing & Artifact Discipline after locking the v7.0 toolchain contract.
+**Current focus:** Phase 49 Release Runbook & Acceptance now that the v7.0 signing, artifact, symbol, and smoke-verification contract is complete.
 
 ## What Was Shipped
 
@@ -157,6 +157,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 48-01 | Track `android/key.properties.example` while gitignoring the real signing files | Keeps the repo shareable while documenting the private upload-key schema |
 | 48-02 | Signed `.aab` stays the canonical retained Android release artifact; signed `.apk` retention remains opt-in via `tool/release_build.ps1 -IncludeSideLoadApk` | Keeps v7.0 artifact policy explicit and avoids default APK distribution drift |
 | 48-02 | `tool/release_build.ps1` stages retained outputs into `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/` with `release-manifest.json` | Gives one deterministic retention location tied to tracked version metadata instead of AGP output folders |
+| 48-03 | Keep `--split-debug-info` enabled by default while leaving `--obfuscate` off for v7.0 | Retains symbolization output without widening the release rollout risk |
+| 48-03 | `release-manifest.json` records `apkRetentionState: smoke-only` when smoke verification needs an APK but side-load retention was not requested | Keeps smoke-install evidence explicit without quietly turning every APK into a distribution artifact |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -167,6 +169,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 48-03 completed on 2026-03-23: `tool/release_build.ps1` now retains split-debug-info under `symbols/`, copies `mapping.txt` into the staged release directory when available, records both in `release-manifest.json`, and supports `-SmokeVerify`; `-CheckOnly -IncludeSideLoadApk -SmokeVerify` now resolves `adb`, the signed APK plan, and `smoke-check.txt` without needing an attached device; real smoke verification records install and launch results or fails clearly when no Android target is visible.
 - Phase 48-02 completed on 2026-03-23: `tool/release_build.ps1` is now the single tracked packaging entrypoint; `-CheckOnly` validates the release lane without cutting artifacts; real builds always gate through `tool/release_preflight.ps1`; the canonical retained output is a signed `.aab` staged under `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`, while a signed release `.apk` is retained only with `-IncludeSideLoadApk`; `docs/android-release-contract.md` now records the staged artifact and `release-manifest.json` contract.
 - Phase 48-01 completed on 2026-03-23: `.gitignore` now excludes `android/key.properties` and common Android keystore patterns; `android/key.properties.example` tracks the required signing schema; `android/app/build.gradle.kts` loads `key.properties`, uses `signingConfigs.release`, and `:app:bundleRelease` now fails clearly when private signing inputs are missing instead of falling back to debug signing.
 - Phase 47 completed on 2026-03-23: `tool/release_env.ps1` now resolves Java 21 JBR and the canonical `C:\flutter\bin\flutter.bat`; `docs/android-release-contract.md` is the tracked v7.0 contract; `tool/release_preflight.ps1` fails fast before packaging/signing and currently stops at `flutter analyze` with 152 issues while also asserting the pinned AGP/Gradle/Kotlin/Flutter/Java contract.
@@ -215,8 +218,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T14:00:27.985Z
-**Stopped at:** Completed 48-02-PLAN.md
+**Last session:** 2026-03-23T14:16:23.808Z
+**Stopped at:** Completed 48-03-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
