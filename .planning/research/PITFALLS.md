@@ -1,175 +1,216 @@
 # Pitfalls Research
 
-**Domain:** Employee portal attendance recap
+**Domain:** Flutter Android release hardening
 **Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Critical Pitfalls
 
-### Pitfall 1: Logical-day drift from kiosk/admin rules
+### Pitfall 1: Chasing toolchain warnings before fixing the actual compile blockers
 
 **What goes wrong:**
-The portal recap attributes attendance to the wrong day for overnight or cross-midnight shifts.
+The team upgrades Kotlin, Java, or Flutter first while the release still fails because app code does not compile.
 
 **Why it happens:**
-Developers treat raw timestamps as calendar days instead of reusing the product's logical-day rules.
+Toolchain warnings are loud and look more "infrastructure-like" than the underlying Dart failures.
 
 **How to avoid:**
-Anchor recap dates to `Asia/Makassar`, use one recap contract for both summary and day history, and carry forward the existing overnight handling rules explicitly.
+Fail fast on analyze/test/release compile checks, fix the concrete source errors first, then address structural toolchain risks.
 
 **Warning signs:**
-Employees complain that a late-night shift shows up on the next day, or portal totals do not match admin reports.
+Release discussions focus on Kotlin 2.x before the current `flutter build` errors in `shift_scheduler_screen.dart` and `schedule_sqlite_service.dart` are closed.
 
 **Phase to address:**
-Phase 42
+Phase 46
 
 ---
 
-### Pitfall 2: Employee data leakage through admin-shaped queries
+### Pitfall 2: Shipping a release signed with the debug keystore
 
 **What goes wrong:**
-Portal pages accidentally read attendance data with broader scope than the authenticated employee should see.
+Artifacts are distributed with debug signing because `release` still points to the debug config.
 
 **Why it happens:**
-The shortest path is often to reuse existing admin/service-role query patterns from internal tooling.
+The template TODO is easy to leave in place and still allows `flutter run --release` to work locally.
 
 **How to avoid:**
-Keep recap reads behind authenticated RPCs, resolve employee identity server-side, and fail closed when mapping is missing.
+Move to an upload-keystore flow through `android/key.properties` and treat the absence of release signing as a blocker, not a convenience.
 
 **Warning signs:**
-Browser code needs direct table access, or recap pages receive employee IDs from the client.
+`android/app/build.gradle.kts` still references `signingConfigs.getByName("debug")` inside `release`.
 
 **Phase to address:**
-Phase 42
+Phase 48
 
 ---
 
-### Pitfall 3: Confusing exception states
+### Pitfall 3: Java runtime drift across machines
 
 **What goes wrong:**
-Employees cannot tell whether a day was libur, sakit, izin, missing clock-out, or simply has no qualifying attendance record.
+One machine uses Android Studio JBR, another uses shell Java 25, and releases fail or behave differently depending on PATH order.
 
 **Why it happens:**
-The UI compresses too many states into one generic "masalah" badge.
+`local.properties` captures one local path but the repo does not yet express the long-term build JVM contract.
 
 **How to avoid:**
-Define exception categories in the recap model before building the UI and render them with distinct copy and styling.
+Check in daemon JVM criteria or make the release script set the known-good Java runtime explicitly.
 
 **Warning signs:**
-Support questions start with "Kenapa ini merah?" instead of the portal itself explaining the reason.
+`java -version` differs from the Java path used by successful releases, or operators need tribal knowledge to know which JDK to use.
 
 **Phase to address:**
-Phase 43
+Phase 47
 
 ---
 
-### Pitfall 4: Turning a read-only recap milestone into a workflow milestone
+### Pitfall 4: Version drift between planning, pubspec, and artifacts
 
 **What goes wrong:**
-The milestone grows to include correction requests, manager approvals, or notifications before recap is stable.
+Planning says the project shipped v6.3, but `pubspec.yaml` and output artifact names still identify a previous release.
 
 **Why it happens:**
-Recap naturally exposes issues, so it is tempting to add the write path immediately.
+Version updates are handled manually and not treated as part of the release contract.
 
 **How to avoid:**
-Treat v6.3 as visibility only. Capture exceptions clearly now, then plan employee requests as the next milestone.
+Make version metadata part of the hardening milestone and validate artifact names against the milestone version before distribution.
 
 **Warning signs:**
-Requirements start mentioning forms, mutation endpoints, or admin approval queues.
+Release artifact names or app metadata mention `6.2.0` while the active milestone is v7.0.
 
 **Phase to address:**
-Phase 43
+Phase 46
 
 ---
 
-### Pitfall 5: Cross-repo execution drift
+### Pitfall 5: Obfuscation without retained symbols
 
 **What goes wrong:**
-Planning, SQL, and website implementation stop matching after the first portal hardening pass.
+A shrunken or obfuscated release ships, but later crash stacks cannot be symbolized.
 
 **Why it happens:**
-Portal work spans the Flutter planning repo and the separate Astro website repo, so quick fixes bypass documentation.
+Teams enable `--obfuscate` or rely on shrink tools without a versioned storage location for debug artifacts.
 
 **How to avoid:**
-Keep the recap read model, portal helpers, and planning traceability in sync from the start of the milestone.
+Retain `--split-debug-info` output per version and document it as a required release artifact alongside the APK/AAB.
 
 **Warning signs:**
-Shipped code references new RPCs or page states that never appear in planning artifacts.
+Release scripts mention obfuscation, but there is no stable `build/debug-info/<version>/` retention rule.
 
 **Phase to address:**
-Phase 44
+Phase 48
+
+---
+
+### Pitfall 6: Secret leakage through committed keystore material
+
+**What goes wrong:**
+The keystore or `key.properties` ends up in git, shared folders, or copied into scripts.
+
+**Why it happens:**
+The team wants a "working release fast" and shortcuts private secret handling.
+
+**How to avoid:**
+Keep the keystore and key properties private, gitignored, and documented only through placeholder/bootstrap instructions.
+
+**Warning signs:**
+Passwords appear in Gradle files, batch scripts, or README snippets.
+
+**Phase to address:**
+Phase 48
+
+---
+
+### Pitfall 7: Automating a release flow that is not yet deterministic locally
+
+**What goes wrong:**
+CI/CD is added, but failures remain opaque because the local release lane was never stabilized first.
+
+**Why it happens:**
+Automation feels like the fix, but it only amplifies local ambiguity.
+
+**How to avoid:**
+Finish the local release runbook and acceptance verification before introducing CI secrets and runners.
+
+**Warning signs:**
+The team cannot state one exact local command sequence that reliably produces the intended artifact set.
+
+**Phase to address:**
+Phase 49
 
 ## Technical Debt Patterns
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Build recap from multiple ad hoc page queries | Faster first render | Hard-to-debug drift between summary and daily history | Never for this milestone |
-| Skip explicit exception labels | Less UI copy work | Employees still need admin help to interpret recap | Never |
-| Leave planning artifacts behind the shipped website path | Faster closeout | Repeats the v6.1/v6.2 documentation drift | Never |
+| Keep debug signing for release | No secret setup today | Unsafe and ambiguous release provenance | Never for a distributed release |
+| Bypass dependency validation flags | Build may proceed once | Toolchain drift stays hidden and will resurface later | Only for short-lived local diagnosis, never for the canonical release lane |
+| Manually remember the correct Java path | No repo changes | Future operators and CI cannot reproduce the release | Never once more than one machine can ship |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Astro SSR + Supabase auth | Trusting a stale session object client-side | Verify the user on the server and resolve employee identity before loading recap data. |
-| Attendance recap + schedules | Joining raw logs without business-local day rules | Normalize recap dates with the same timezone and logical-day contract used elsewhere. |
-| Portal UI + planning docs | Treating website changes as "small enough" to skip planning updates | Keep roadmap and requirements aligned with the actual RPC/page changes. |
+| Flutter CLI + Gradle | Assume shell Java is what Gradle should use | Pin the supported Gradle JVM explicitly |
+| Release signing + Gradle | Hardcode passwords or paths in build files | Load private values from `android/key.properties` |
+| Planning docs + version metadata | Treat milestone naming as separate from app version | Update milestone docs and `pubspec.yaml` together |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Unbounded attendance history windows | Slow recap loads as logs grow | Limit v6.3 to current month plus recent history and index by employee/date | Noticeable once logs grow well beyond the current staff footprint |
-| Duplicate summary calculations in UI | Counts disagree across cards and lists | Derive summary and history from one trusted recap dataset | As soon as exception rules evolve |
+| Running full packaging to discover basic code errors | 30-60 second failures before obvious compile issues surface | Add preflight analyze/test/compile gates | Immediately on every broken release attempt |
+| Enabling shrink/obfuscation without verification | Release artifact builds, but runtime behavior or diagnostics degrade | Smoke-test the shrunken artifact and retain symbol output | As soon as a release-only issue appears |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Passing employee IDs from the browser into recap reads | Horizontal data access | Resolve employee identity entirely server-side. |
-| Granting broad table access to portal roles | Exposure of internal HR data | Keep portal reads behind authenticated functions with narrow grants. |
-| Reusing admin-only endpoints for employees | Scope bypass and maintenance drift | Create employee-scoped recap contracts explicitly. |
+| Committing keystore files or `key.properties` | Credential leakage and permanent key rotation pain | Keep them private and out of VCS |
+| Shipping debug-signed artifacts | Invalid production trust model | Require upload-key signing for release |
+| Reusing one operator's local secrets without documentation | Single point of failure | Document the bootstrap contract without exposing secrets |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Showing raw event jargon only | Employees do not know what action to take | Pair timestamps with clear daily status labels and short explanation text. |
-| Hiding exceptions deep in the list | Problems are missed | Surface attention states and counts prominently near the top. |
-| Desktop-shaped tables in the portal | Poor phone usability | Reuse the card/list layout already proven in the portal schedule view. |
+| Artifact names do not match the milestone | Operators install the wrong build or cannot trace the shipped binary | Encode milestone version consistently in app metadata and output files |
+| Release flow depends on tribal knowledge | Only one person can ship confidently | Turn the release flow into a short, deterministic runbook or script |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Attendance recap:** Summary counts and day history come from the same trusted dataset.
-- [ ] **Overnight handling:** Cross-day scans match the existing logical-day rule in portal output.
-- [ ] **Exception states:** Missing clock-out, sakit, izin, libur, and empty history each have distinct behavior.
-- [ ] **Cross-repo artifact sync:** Planning docs, SQL migration, and website loader/component names match shipped code.
+- [ ] **Release compile:** The repo passes the chosen preflight gates before signing starts.
+- [ ] **Toolchain:** The supported Java/Flutter/Gradle contract is explicit, not implied by one developer machine.
+- [ ] **Signing:** `release` no longer references the debug signing config.
+- [ ] **Artifacts:** AAB/APK names and retained symbols match the active milestone version.
+- [ ] **Operations:** Another operator could follow the documented steps without guessing hidden prerequisites.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Logical-day drift | HIGH | Correct the recap contract centrally, backfill tests, and verify against known overnight examples. |
-| Query scope leak | HIGH | Revoke the broken path immediately, replace it with a narrowed RPC, and re-verify grants. |
-| Cross-repo drift | MEDIUM | Update planning artifacts before milestone closeout and document the actual shipped RPC/page surface. |
+| Debug-signed release | HIGH | Generate or rotate the upload keystore, reconfigure signing, rebuild, and redistribute the corrected artifact |
+| Java drift | MEDIUM | Pin the known-good JVM, document it, and rerun the release from a clean checkout |
+| Version drift | MEDIUM | Align `pubspec.yaml`, planning docs, and artifact naming in one change set, then rebuild |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Logical-day drift | Phase 42 | Recap output matches known overnight attendance cases. |
-| Query scope leak | Phase 42 | Employee recap loads without client-supplied employee identifiers. |
-| Confusing exception states | Phase 43 | Each exception day renders with distinct copy and styling. |
-| Workflow scope creep | Phase 43 | Requirements remain read-only and exclude requests/approvals. |
-| Cross-repo drift | Phase 44 | Planning artifacts match the shipped SQL and website implementation. |
+| Compile blockers hidden by packaging | Phase 46 | Release preflight catches and closes code errors before packaging |
+| Java runtime drift | Phase 47 | The supported JVM is explicit and reproducible on another machine |
+| Debug signing | Phase 48 | `release` uses upload-key signing from private config |
+| Missing symbols | Phase 48 | The release lane stores split debug info by version |
+| Premature automation | Phase 49 | The local release runbook works end-to-end before CI is introduced |
 
 ## Sources
 
-- Local repo: existing portal code and SQL functions from phases 37-39
-- `.planning/PROJECT.md` and `.planning/STATE.md` known debt notes for v6.1/v6.2
-- https://supabase.com/docs/guides/database/postgres/row-level-security
-- https://supabase.com/docs/reference/javascript/auth-getuser
+- Local repo: `android/app/build.gradle.kts`
+- Local repo: `android/local.properties`
+- Local repo: `build.log`
+- Local repo: `flutter_build.log`
+- [Flutter: Build and release an Android app](https://docs.flutter.dev/deployment/android)
+- [Flutter: Continuous delivery with Flutter](https://docs.flutter.dev/deployment/cd)
+- [Gradle: Gradle Daemon](https://docs.gradle.org/current/userguide/gradle_daemon.html)
 
 ---
-*Pitfalls research for: employee portal attendance recap*
+*Pitfalls research for: Flutter Android release hardening*
 *Researched: 2026-03-23*

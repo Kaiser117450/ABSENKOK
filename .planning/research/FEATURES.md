@@ -1,6 +1,6 @@
 # Feature Research
 
-**Domain:** Employee-facing attendance recap in a restaurant attendance portal
+**Domain:** Android release reliability for a Flutter kiosk app
 **Researched:** 2026-03-23
 **Confidence:** HIGH
 
@@ -10,95 +10,106 @@
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Day-by-day attendance history | Employees need to confirm what the system recorded for their recent workdays | MEDIUM | Must show status and the recorded timestamps that explain that status. |
-| Month-to-date summary counts | A recap feels incomplete without a quick totals view | MEDIUM | Keep counts concrete and simple, not payroll-style calculations. |
-| Clear exception visibility | Employees mainly check recap when something looks wrong | MEDIUM | Missing clock-out, sakit, izin, and libur need distinct presentation. |
-| Mobile-first portal layout | The current portal is phone-first and employees already access it that way | LOW | Reuse the existing portal shell and card/list patterns. |
+| Clean release build from a clean checkout | Operators cannot ship or verify anything if release packaging fails on fresh state | HIGH | Current release logs already fail before Android packaging completes. |
+| Secure release signing | A distributed Android app must not ship with debug credentials | MEDIUM | This is the most obvious configuration gap in the current repo. |
+| Version and artifact alignment | Operators need to know which APK/AAB matches which milestone | MEDIUM | `pubspec.yaml`, planning docs, and file names must stop drifting. |
+| Documented release steps | Release work is operationally fragile without a repeatable checklist or script | MEDIUM | Especially important because this repo has both Flutter and Astro toolchains in one tree. |
 
-### Differentiators (Competitive Advantage)
+### Differentiators (High-Leverage Hardening)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Schedule context beside recap days | Helps employees understand whether a missing punch is tied to a scheduled shift | MEDIUM | Leverages the existing schedule model instead of making recap a blind log dump. |
-| Exception-first attention markers | Directs employees to days that need follow-up without scanning the whole list | MEDIUM | Useful foundation before a later correction or request workflow exists. |
-| Consistent logical-day handling | Builds trust because the portal matches kiosk/admin interpretations of overnight work | MEDIUM | Critical for restaurant shifts that cross midnight. |
+| Checked-in Java daemon contract | Turns "works on my machine" into a versioned toolchain baseline | MEDIUM | Particularly valuable because shell Java is 25 while known-good Java is Android Studio JBR. |
+| Fast-fail validation lane | Catches analyze/test/compile drift before expensive signing/packaging work | MEDIUM | Release reliability improves most when packaging is not the first signal of breakage. |
+| Dual artifact discipline (AAB + operator APK + symbols) | Supports both store-grade packaging and outlet side-loading without divergent flows | MEDIUM | Keep one canonical release contract, then derive the needed artifacts from it. |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Time-off request submission in the same milestone | Feels related to attendance recap | Adds write paths, approval rules, and admin workflow complexity to a read-only milestone | Ship recap first, then build requests as the next milestone. |
-| Payroll-grade calculations or downloadable statements | Employees often equate recap with payroll | Pulls the milestone into salary policy, deductions, and finance accuracy concerns | Keep v6.3 focused on attendance visibility, not payroll output. |
-| Real-time push updates | Sounds modern | Unnecessary for a recap page and adds state complexity | Use standard page refresh on the server-rendered portal. |
+| Build-speed-only tuning first | "Optimasi build" often gets interpreted as shorter build times | Fast builds do not matter if the release still fails, signs incorrectly, or drifts in versioning | Establish the reliable release baseline first, then optimize time/caching later. |
+| New product features inside the same milestone | Teams want to "just ship one small thing too" once they touch release code | It mixes acceptance criteria and makes it impossible to tell whether release failures come from product scope or release hardening | Freeze feature work during v7.0 and resume after the pipeline is reproducible. |
+| Blind Kotlin or AGP upgrade | Flutter warns that Kotlin 1.9.25 will be unsupported soon | The repo explicitly depends on staying off Kotlin 2.x because of `nfc_manager` compatibility concerns | Capture the warning as risk, pin the current baseline, then research the plugin compatibility separately. |
+| CI/CD before a stable local release lane exists | Automation sounds like the final answer | Broken local assumptions just become broken CI with harder debugging and secret handling | First prove one local clean-checkout release flow, then automate it. |
 
 ## Feature Dependencies
 
 ```text
-Attendance recap surface
-    └──requires──> employee-scoped recap read model
-                          └──requires──> existing portal auth + employee resolution
+Release artifact generation
+    └──requires──> compile/analyze/test baseline
+    └──requires──> supported Flutter/Java/Gradle contract
+    └──requires──> secure signing config
 
-Month summary cards ──enhances──> day-by-day attendance history
+Secure signing
+    └──requires──> private key material outside VCS
 
-Request submission workflow ──conflicts──> tight read-only v6.3 scope
+CI / automated release
+    └──requires──> stable local release lane
 ```
 
 ### Dependency Notes
 
-- **Attendance recap surface requires employee-scoped recap read model:** the UI should not compose attendance meaning from multiple ad hoc queries.
-- **Month summary cards enhance day-by-day history:** summary counts make the history scannable but depend on the same trusted dataset.
-- **Request workflow conflicts with tight recap scope:** it introduces writes, approvals, and notifications that are better handled as a follow-up milestone.
+- **Packaging depends on build health first:** toolchain cleanup will not help if the repo still has compile blockers in release mode.
+- **Secure signing depends on secret handling:** the keystore path and passwords must exist outside git before `release` can safely stop using debug signing.
+- **Automation depends on a proven local lane:** until local release is deterministic, CI only adds noise and secret-management complexity.
 
 ## MVP Definition
 
-### Launch With (v6.3)
+### Launch With (v7.0)
 
-- [ ] Attendance recap entry point in the existing portal
-- [ ] Month-to-date summary counts with concrete attendance states
-- [ ] Recent day-by-day history with timestamps and shift context
-- [ ] Exception highlighting for incomplete or non-standard attendance days
+- [ ] Release build succeeds from a clean checkout on the supported toolchain
+- [ ] Release signing no longer uses the debug keystore
+- [ ] Version/build metadata and output artifact names match the milestone version
+- [ ] Release workflow includes analyze/test/build gates plus symbol retention
+- [ ] One local operator runbook can produce the expected artifact set consistently
 
-### Add After Validation (v6.3.x)
+### Add After Validation (v7.0.x)
 
-- [ ] Short date-range switches (for example current month vs previous month) once the base recap proves useful
-- [ ] Better employee-facing explanation text for exception days based on support feedback
+- [ ] Optional GitHub Release or internal distribution automation once the local lane is stable
+- [ ] More polished operator UX around release notes and artifact publishing
 
-### Future Consideration (v6.4+)
+### Future Consideration (v7.1+)
 
-- [ ] Employee attendance correction requests
-- [ ] Admin approval workflow for employee requests
-- [ ] Shift reminders or attendance notifications
+- [ ] Build-speed optimization and cache tuning
+- [ ] APK size investigation and runtime startup profiling
+- [ ] Kotlin / plugin upgrade program once `nfc_manager` compatibility is proven
+- [ ] Resume the deferred employee portal request/approval milestone
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Day-by-day attendance history | HIGH | MEDIUM | P1 |
-| Month-to-date summary counts | HIGH | MEDIUM | P1 |
-| Exception visibility | HIGH | MEDIUM | P1 |
-| Date-range filters | MEDIUM | MEDIUM | P2 |
-| Correction request workflow | HIGH | HIGH | P3 |
+| Clean release build | HIGH | HIGH | P1 |
+| Secure upload signing | HIGH | MEDIUM | P1 |
+| Version/artifact alignment | HIGH | MEDIUM | P1 |
+| Local release runbook | HIGH | MEDIUM | P1 |
+| CI automation | MEDIUM | MEDIUM | P2 |
+| Build-speed optimization | MEDIUM | HIGH | P3 |
 
 **Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+- P1: Must have for the milestone to be credible
+- P2: Valuable once the baseline is stable
+- P3: Future optimization work
 
 ## Competitor Feature Analysis
 
-| Feature | Attendance/time portals commonly do | Enterprise time-tracking suites commonly do | Our Approach |
-|---------|-------------------------------------|--------------------------------------------|--------------|
-| Personal attendance history | Show recent daily records with status and punch times | Show day/week/month time sheets | Deliver a recent-history view first, optimized for mobile employees. |
-| Summary counts | Show current-period totals or worked-day summaries | Show period totals plus approval context | Keep month-to-date count cards without dragging v6.3 into approvals. |
-| Exceptions | Highlight missing punches or irregular days | Highlight alerts before approval | Surface attention states clearly so employees know which day needs follow-up. |
+| Concern | Mature Android release pipelines typically do | Current repo state | Our Approach |
+|---------|-----------------------------------------------|--------------------|--------------|
+| Signing | Use a private upload key, never debug signing | `release` still points at the debug signing config | Move to upload-key signing through `key.properties` and secret handling |
+| Toolchain | Lock wrapper/tool versions and document the supported JDK | Wrapper is pinned, but the runtime Java contract is still implicit | Check in the supported Java contract and document it in the release lane |
+| Packaging | Build a signed AAB and retain diagnostics for post-release failures | APK flow exists, but artifact strategy and symbol retention are inconsistent | Make AAB canonical, keep operator APK optional, and retain symbol output by version |
 
 ## Sources
 
-- Local repo: current deferred backlog in `.planning/PROJECT.md`
-- Local repo: shipped portal UX in `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\pages\portal\index.astro`
-- Local repo: mobile schedule component patterns in `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\components\portal\PortalScheduleSection.astro`
-- https://help.sap.com/doc/8cd7b02f4e9c4a569bab136a7caa116e/2405/en-US/SAP%20SuccessFactors%20Time%20Tracking%201H%202024.pdf — reference point for employee-facing time sheet, alert, and approval feature norms
+- Local repo: `android/app/build.gradle.kts`
+- Local repo: `android/settings.gradle.kts`
+- Local repo: `android/local.properties`
+- Local repo: `build.log`
+- Local repo: `flutter_build.log`
+- [Flutter: Build and release an Android app](https://docs.flutter.dev/deployment/android)
+- [Flutter: Continuous delivery with Flutter](https://docs.flutter.dev/deployment/cd)
+- [Android Developers: Configure your build](https://developer.android.com/build)
 
 ---
-*Feature research for: employee portal attendance recap*
+*Feature research for: Android release reliability*
 *Researched: 2026-03-23*

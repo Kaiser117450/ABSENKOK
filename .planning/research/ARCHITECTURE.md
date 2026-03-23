@@ -1,6 +1,6 @@
 # Architecture Research
 
-**Domain:** Authenticated employee portal attendance recap
+**Domain:** Flutter Android release hardening
 **Researched:** 2026-03-23
 **Confidence:** HIGH
 
@@ -9,137 +9,152 @@
 ### System Overview
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                     Astro Portal Routes                     │
-├─────────────────────────────────────────────────────────────┤
-│  /portal index  │  recap loader  │  mobile components      │
-├─────────────────────────────────────────────────────────────┤
-│                Server-side Portal Helpers                  │
-├─────────────────────────────────────────────────────────────┤
-│  resolvePortalEmployee  │  loadPortalRecap  │  state model │
-├─────────────────────────────────────────────────────────────┤
-│                 Supabase Authenticated RPCs                │
-├─────────────────────────────────────────────────────────────┤
-│  recap overview RPC  │  schedule context RPC  │  RLS       │
-├─────────────────────────────────────────────────────────────┤
-│                   Postgres Source Tables                   │
-│  attendance_logs  │  schedule_entries  │  schedules        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     Source & Validation                      │
+├──────────────────────────────────────────────────────────────┤
+│  pubspec version  │  flutter analyze  │  flutter test       │
+├──────────────────────────────────────────────────────────────┤
+│                  Flutter Release Commands                    │
+├──────────────────────────────────────────────────────────────┤
+│  build appbundle  │  build apk  │  symbolize/debug info     │
+├──────────────────────────────────────────────────────────────┤
+│                 Android Build Configuration                  │
+├──────────────────────────────────────────────────────────────┤
+│  settings.gradle  │  build.gradle  │  gradle.properties      │
+├──────────────────────────────────────────────────────────────┤
+│              Toolchain & Secret Configuration                │
+├──────────────────────────────────────────────────────────────┤
+│ daemon JVM / JBR  │  key.properties  │  upload-keystore.jks  │
+├──────────────────────────────────────────────────────────────┤
+│                     Release Artifacts                        │
+│  signed .aab  │  operator .apk  │  split-debug-info bundle  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
 | Component | Responsibility | Typical Implementation |
 |-----------|----------------|------------------------|
-| Portal page/loaders | Request the recap once and branch on typed page state | Astro page calling a server helper from `src/lib/portal/*` |
-| Employee resolver | Guarantee one authenticated employee identity before recap reads | Reuse `resolvePortalEmployee()` and fail closed on missing mapping |
-| Recap RPC | Merge attendance logs, schedule context, and logical-day rules | Authenticated `SECURITY DEFINER` function with additive indexes |
-| Portal components | Render summary + daily history for phone-sized screens | Reuse existing card/list patterns from the shipped portal |
+| Source validation layer | Prove the repo can still compile and pass core checks before packaging | `flutter analyze`, `flutter test`, and any focused release-only compile check |
+| Flutter release layer | Produce the release artifact set | `flutter build appbundle`, optional `flutter build apk`, `flutter symbolize` |
+| Android config layer | Define signing, shrinking, version, and packaging behavior | `android/app/build.gradle.kts`, `android/settings.gradle.kts`, wrapper, Gradle properties |
+| Toolchain/secret layer | Freeze the supported JVM and private signing inputs | Android Studio JBR / daemon JVM criteria, `android/key.properties`, private keystore |
+| Release operations layer | Turn the above into a repeatable operator flow | Local runbook or script, then optional CI automation |
 
 ## Recommended Project Structure
 
 ```text
-absenkok-website/
-├── src/pages/portal/           # portal routes
-│   └── index.astro             # entry point or recap surface
-├── src/lib/portal/             # server-side portal loaders/helpers
-│   ├── employee.ts             # employee identity resolution
-│   ├── schedule.ts             # existing schedule model
-│   └── recap.ts                # new attendance recap loader
-├── src/components/portal/      # mobile portal components
-│   ├── PortalScheduleSection.astro
-│   └── PortalAttendanceRecapSection.astro
-└── src/layouts/                # shared portal shell
-
 absensi_enakko_flutter/
-└── sql/                        # additive recap RPC + index migrations
+├── pubspec.yaml                         # versionName + build number source of truth
+├── android/
+│   ├── settings.gradle.kts             # AGP + Kotlin plugin versions
+│   ├── build.gradle.kts                # root Gradle behavior
+│   ├── gradle.properties               # Gradle memory/build defaults
+│   ├── gradle/
+│   │   ├── wrapper/gradle-wrapper.properties
+│   │   └── gradle-daemon-jvm.properties   # recommended to check in during v7.0
+│   ├── app/build.gradle.kts            # signing, shrink, artifact contract
+│   ├── key.properties                  # private, gitignored
+│   └── local.properties                # local SDK paths, not the long-term contract
+├── build/
+│   ├── app/outputs/...                 # generated release artifacts
+│   └── debug-info/<version>/           # retained symbol/debug output
+└── .planning/
+    ├── PROJECT.md
+    ├── REQUIREMENTS.md
+    ├── ROADMAP.md
+    └── research/                       # release hardening rationale and pitfalls
 ```
 
 ### Structure Rationale
 
-- **`src/lib/portal/`:** keeps employee-scoped business logic on the server side and prevents page files from owning auth or RPC details.
-- **`src/components/portal/`:** keeps recap rendering consistent with the current mobile-first schedule UI.
-- **`sql/`:** keeps the database contract versioned beside the main app planning and rollout history.
+- **`pubspec.yaml` remains the version source of truth:** Flutter propagates versionName/versionCode from here, so release hardening should fix drift at the source rather than in ad hoc scripts.
+- **`local.properties` is not enough for the toolchain contract:** it can point to a good local Java path, but it is not the versioned multi-machine answer. Use checked-in daemon JVM criteria or an explicit release script.
+- **The release lane should own symbol retention:** obfuscation or shrink steps are only supportable if debug artifacts are stored by milestone version.
 
 ## Architectural Patterns
 
-### Pattern 1: Authenticated server-side portal loaders
+### Pattern 1: Fail-fast release preflight
 
-**What:** Route loaders resolve the portal employee and fetch recap data on the server before rendering.
-**When to use:** For every employee-facing page that needs protected data.
-**Trade-offs:** Slightly more backend ceremony, but it avoids exposing internal query shape to the browser.
+**What:** Run lightweight validation before expensive packaging and signing.
+**When to use:** Every time a release artifact is cut.
+**Trade-offs:** Slightly longer scripted flow, but much faster diagnosis than discovering basic compile issues after packaging starts.
 
-### Pattern 2: Read-optimized recap RPC
+### Pattern 2: Checked-in daemon JVM contract
 
-**What:** One RPC returns summary-ready recap rows with exception semantics already resolved.
-**When to use:** When the UI needs attendance meaning, not raw `attendance_logs` events.
-**Trade-offs:** More SQL design upfront, but much lower cross-repo drift and better consistency with kiosk/admin rules.
+**What:** Version the supported JVM for running Gradle rather than relying on ambient shell state.
+**When to use:** As soon as more than one machine can cut releases or shell Java differs from the proven-good JBR.
+**Trade-offs:** One more file in VCS, but dramatically less guesswork on Windows workstations and future CI runners.
 
-### Pattern 3: Discriminated page state model
+### Pattern 3: Private signing indirection
 
-**What:** Map low-level RPC outcomes into page-level states such as `ready`, `empty`, `error`, or `not-linked`.
-**When to use:** For portal pages where mobile UX clarity matters more than raw backend errors.
-**Trade-offs:** Requires a small translation layer, but keeps page templates simple and testable.
+**What:** Reference the upload keystore via `android/key.properties` instead of baking secrets into Gradle files.
+**When to use:** All release builds that leave local development.
+**Trade-offs:** Requires one-time secret setup, but protects credentials and matches Flutter's documented Android signing flow.
+
+### Pattern 4: One release contract, multiple artifacts
+
+**What:** One validated release lane produces the AAB, optional operator APK, and retained debug artifacts.
+**When to use:** When the project needs both store-grade and side-loadable distribution.
+**Trade-offs:** Slightly more artifact management, but avoids divergent and untested packaging paths.
 
 ## Data Flow
 
-### Request Flow
+### Release Flow
 
 ```text
-Employee opens /portal
+pubspec version update
     ↓
-Astro page loader
+analyze / test / focused release compile checks
     ↓
-resolvePortalEmployee()
+toolchain verification (Flutter + Java baseline)
     ↓
-attendance recap RPC
+Gradle loads signing + shrink config
     ↓
-typed recap model + state mapping
+Flutter builds AAB/APK
     ↓
-summary cards + daily history UI
-```
-
-### State Management
-
-```text
-Server loader result
-    ↓
-Portal page state union
-    ↓
-Portal components render by state
+artifacts + debug-info retained by version
 ```
 
 ### Key Data Flows
 
-1. **Identity flow:** Auth session -> server-side employee resolution -> scoped recap query.
-2. **Recap flow:** Attendance logs + schedule context -> logical-day normalization -> summary counts + day history.
+1. **Version flow:** `.planning` milestone -> `pubspec.yaml` -> `flutter.versionName` / `flutter.versionCode` -> artifact file names.
+2. **Toolchain flow:** repo contract -> Gradle daemon JVM -> AGP/Kotlin execution -> Flutter packaging.
+3. **Secret flow:** local secret file -> Gradle signing config -> signed release artifact.
 
 ## Scaling Considerations
 
 | Scale | Architecture Adjustments |
 |-------|--------------------------|
-| 0-200 employees | Current RPC + indexed tables are sufficient; keep the portal monolithic. |
-| 200-2,000 employees | Add more targeted recap indexes and tighten query plans before changing architecture. |
-| 2,000+ employees | Consider materialized summary support only if recap query latency becomes a proven problem. |
+| Single operator, local-only releases | Local runbook plus checked-in toolchain contract is enough |
+| Multiple operators or multiple Windows machines | Add daemon JVM criteria and a shared release checklist immediately |
+| CI-driven release automation | Add encrypted secrets and scripted release lanes only after the local flow is stable |
 
 ### Scaling Priorities
 
-1. **First bottleneck:** recap SQL shape on `attendance_logs` date windows; fix with query-specific indexes and bounded history windows.
-2. **Second bottleneck:** duplicated logic across website loaders and SQL; fix by keeping recap semantics centralized in one RPC.
+1. **First bottleneck:** release compile drift in app code. Fix this before touching automation.
+2. **Second bottleneck:** machine-specific Java and signing behavior. Codify both in files or scripts.
+3. **Third bottleneck:** publication/distribution automation. Only automate a release path that is already deterministic.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Rebuilding employee scope inside every page
+### Anti-Pattern 1: Treat packaging as the first validation step
 
-**What people do:** Each page hand-rolls auth checks and employee joins.
-**Why it's wrong:** Scope drift and edge cases appear quickly across portal routes.
-**Do this instead:** Keep `resolvePortalEmployee()` as the one identity gate and build recap loaders on top of it.
+**What people do:** Go straight to `flutter build apk --release` and hope packaging tells the whole story.
+**Why it's wrong:** You waste time reaching the packaging stage only to find basic Dart compile or analysis failures.
+**Do this instead:** Put preflight gates before packaging and keep the failure surface small.
 
-### Anti-Pattern 2: Treating recap as a raw event log dump
+### Anti-Pattern 2: Use debug signing because it "works for now"
 
-**What people do:** Expose raw punches and let the UI infer workday meaning.
-**Why it's wrong:** Cross-day rules and exception semantics will diverge from kiosk/admin behavior.
-**Do this instead:** Normalize recap semantics in SQL or a single server helper before UI rendering.
+**What people do:** Leave `release` pointing at the debug signing config indefinitely.
+**Why it's wrong:** It produces an unsafe and operationally ambiguous release contract.
+**Do this instead:** Move to a private upload-keystore flow and document the secret bootstrap.
+
+### Anti-Pattern 3: Rely on ambient Java from the shell
+
+**What people do:** Assume whichever `java` is first on PATH is the supported build runtime.
+**Why it's wrong:** This repo already proves the mismatch risk: shell Java is 25 while local project config points to Android Studio JBR.
+**Do this instead:** Version the Gradle daemon JVM criteria or make the release script set the known-good Java path.
 
 ## Integration Points
 
@@ -147,25 +162,29 @@ Portal components render by state
 
 | Service | Integration Pattern | Notes |
 |---------|---------------------|-------|
-| Supabase Auth | Cookie-aware server client | Verify employee sessions server-side before recap reads. |
-| Supabase Postgres | Authenticated RPCs | Keep recap and exception logic close to the data. |
+| Android toolchain / JDK | Known-good local path or daemon JVM criteria | Must be explicit for reproducibility |
+| Optional GitHub Release / CI tooling | Scripted after artifact generation | Not required for the MVP hardening milestone |
 
 ### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Website repo ↔ SQL migrations | Versioned files + planning docs | Cross-repo portal work needs explicit planning to avoid drift. |
-| Portal loaders ↔ components | Typed models | Components should not know raw RPC schema details. |
+| Planning docs -> release metadata | Milestone version and artifact naming | Prevent v6.3/v6.2-style drift |
+| Gradle config -> secrets | `key.properties` indirection | Never commit keystore or passwords |
+| Packaging -> operations | Release runbook or script | Operators need a deterministic path |
 
 ## Sources
 
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\employee.ts`
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\schedule.ts`
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_38_employee_schedule_read_model_20260322.sql`
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_39_portal_read_path_hardening_20260323.sql`
-- https://docs.astro.build/en/guides/on-demand-rendering/
-- https://supabase.com/docs/reference/javascript/auth-getuser
+- Local repo: `pubspec.yaml`
+- Local repo: `android/app/build.gradle.kts`
+- Local repo: `android/settings.gradle.kts`
+- Local repo: `android/local.properties`
+- Local repo: `build.log`
+- [Flutter: Build and release an Android app](https://docs.flutter.dev/deployment/android)
+- [Flutter: Continuous delivery with Flutter](https://docs.flutter.dev/deployment/cd)
+- [Android Developers: Configure your build](https://developer.android.com/build)
+- [Gradle: Gradle Daemon](https://docs.gradle.org/current/userguide/gradle_daemon.html)
 
 ---
-*Architecture research for: employee portal attendance recap*
+*Architecture research for: Flutter Android release hardening*
 *Researched: 2026-03-23*

@@ -1,6 +1,6 @@
 # Stack Research
 
-**Domain:** Employee portal attendance recap for an existing Astro + Supabase product
+**Domain:** Flutter Android release hardening for an internally distributed kiosk app
 **Researched:** 2026-03-23
 **Confidence:** HIGH
 
@@ -10,76 +10,100 @@
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| `astro` | `5.18.1` | Server-rendered portal routes and page composition | The employee portal already ships inside the Astro site, so extending the current SSR path is lower-risk than introducing a second frontend. |
-| `@astrojs/vercel` | `9.0.5` | Deploy on-demand portal pages on the existing hosting target | Keeps portal recap on the same deployment model already used by the protected portal routes. |
-| `@supabase/supabase-js` + `@supabase/ssr` | `2.99.3` + `0.9.0` | Cookie-aware server/client auth and typed RPC access | Matches the shipped portal auth pattern and keeps employee data scoped server-side. |
-| Supabase Postgres RPCs | existing database surface | Read-optimized attendance recap contract | The attendance recap depends on schedule and attendance logs with business rules; an authenticated RPC keeps those rules in one place. |
+| Flutter SDK | 3.41.1 stable | Primary build entry point for `appbundle`, `apk`, obfuscation, and symbolize flows | This is already the repo-local and global SDK in use, so the milestone should harden around the current proven baseline instead of mixing hardening with a framework migration. |
+| Dart SDK | 3.11.0 | Compiler/runtime behind Flutter release builds | Comes with Flutter 3.41.1 and should stay pinned through the milestone so release failures are attributable to repo changes, not SDK churn. |
+| Android Gradle Plugin | 8.11.1 | Android build DSL for signing, shrink, resources, and packaging | Already configured in `android/settings.gradle.kts`; modern enough for current release work without introducing migration risk. |
+| Gradle Wrapper | 8.14 | Reproducible Gradle runtime for every machine and CI host | The wrapper is already checked in, which makes it the correct place to lock build behavior instead of relying on whatever Gradle a machine happens to have. |
+| Gradle Daemon JVM | Java 21 (Android Studio JBR) | Known-good JVM for running Gradle and AGP | Local project state and `android/local.properties` already point to Android Studio JBR, while the shell currently resolves to Temurin 25. That mismatch needs to become explicit and versioned. |
 
 ### Supporting Libraries
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `Intl.DateTimeFormat` in server loaders | built-in | Anchor recap dates to `Asia/Makassar` | Use for all portal reference dates so the recap matches kiosk/admin logical-day behavior. |
-| Existing portal components and state unions | local app code | Reuse mobile-first shell and ready/empty/error patterns | Use instead of adding a new client framework or duplicating portal layout logic. |
-| Postgres indexes on `attendance_logs` and `schedule_entries` | existing + additive | Keep recap queries fast for current + future staff counts | Add or tune only when the recap query shape shows a real lookup gap. |
+| Library / Tool | Version | Purpose | When to Use |
+|----------------|---------|---------|-------------|
+| `keytool` | JDK-provided | Generate the upload keystore | Use once to create or rotate the private upload key for release signing. |
+| `key.properties` | project-local secret file | Private indirection between Gradle and the upload keystore | Use for release signing values; keep it out of source control. |
+| R8 | Built into Android release builds | Shrink code/resources for release artifacts | Keep enabled, but only after the release build compiles cleanly and the shrunken artifact is smoke-tested. |
+| `flutter symbolize` + `--split-debug-info` | Flutter CLI feature | Preserve readable crash diagnostics after obfuscation | Use whenever Dart obfuscation is enabled for release packaging. |
+| `flutter build appbundle` | Flutter CLI feature | Produce the canonical Play-distribution artifact | Use as the primary release artifact once the pipeline is healthy. |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| `astro check` | Validate website TypeScript/Astro changes | Run in the website repo after portal recap pages/helpers change. |
-| Focused SQL migrations in `sql/` | Add authenticated recap RPCs and indexes | Keep migrations additive because the production database is live for 4 outlets. |
-| Existing planning workflow | Maintain traceability across Flutter repo + website repo | Capture portal recap work in planning docs so cross-repo execution does not drift again. |
+| `flutter analyze` | Fast-fail static validation before packaging | Should run before release packaging so compile drift is caught early. |
+| `flutter test` | Regression gate before release | The release workflow should fail before signing if tests fail. |
+| `flutter doctor -v` | Environment diagnosis | Useful for verifying the effective Java binary and Flutter SDK path. |
+| `gradlew updateDaemonJvm` | Check in supported Gradle daemon JVM criteria | Recommended once the team commits to Java 21 as the build baseline. |
 
 ## Installation
 
-```bash
-# No new framework packages are required for the milestone baseline.
-# Reuse the existing website stack and add SQL/read-model changes only if the implementation proves they are necessary.
+```powershell
+# Verify repo-local SDK baseline
+& 'C:\Users\HYPE R Series\Desktop\projekan\absensi apk\flutter\bin\flutter.bat' --version
+
+# Fail fast before packaging
+flutter analyze
+flutter test
+
+# Canonical release artifact
+flutter build appbundle --release
+
+# Operator APK when side-loading is still needed
+flutter build apk --release --obfuscate --split-debug-info=build/debug-info
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Extend the existing Astro portal | Build a separate React/Next frontend | Only if the portal grows into a much larger product surface than the current employee self-service scope. |
-| Authenticated recap RPCs | Direct multi-query reads from the page layer | Only if the recap can be expressed as a trivial single-table read, which is not true once logical-day and exception rules apply. |
-| Reuse current portal shell | Embed recap inside the Flutter app | Only if the user explicitly wants kiosk/admin reuse instead of employee self-service web access. |
+| Check in a daemon JVM contract for Java 21 | Rely on per-machine `JAVA_HOME` and shell Java | Only acceptable if one trusted machine is the only build host; not acceptable once releases can be cut from multiple machines or CI. |
+| `flutter build appbundle` as the canonical release output | APK-only release flow | Acceptable only for direct outlet side-loads with no Play/Internal App Sharing path. Even then, keep AAB support available for future distribution. |
+| Local scripted release lane first | Immediate cloud CI release automation | Use CI only after a local clean-checkout release path is stable and secrets handling is proven. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| A new frontend stack for recap only | Adds deployment, auth, and state duplication for one focused milestone | Keep recap inside the current Astro portal. |
-| Service-role or admin-shaped reads from the website | Risks employee data leakage and bypasses the shipped portal trust boundary | Use authenticated RPCs and employee resolution from the current portal path. |
-| Real-time streaming as v6.3 scope | Adds complexity without changing the core employee job of reviewing recent attendance | Ship a reliable pull-based recap first. |
+| Release builds signed with the debug keystore | Debug signing is not a safe or supportable distribution contract | Private upload keystore referenced through `android/key.properties` |
+| `--android-skip-build-dependency-validation` as the normal release path | It hides real toolchain drift instead of fixing it | Codify the supported Java/Kotlin/Gradle baseline and fix the actual incompatibility or compile issue |
+| Unversioned shell `JAVA_HOME` assumptions | The current shell resolves to Java 25, which is not the repo's proven-good setup | Checked-in daemon JVM criteria or explicit release script that pins Android Studio JBR |
+| Manual version bumps that drift from milestone docs | The repo is already at v6.3 in planning while `pubspec.yaml` still says `6.2.0+8012` | One release contract that updates milestone version, build number, and artifact name together |
 
 ## Stack Patterns by Variant
 
-**If the recap stays read-only:**
-- Keep everything server-rendered through existing portal loaders
-- Because the current portal already works well with SSR and does not need client state complexity
+**If the artifact is for Play or Internal App Sharing:**
+- Use `flutter build appbundle --release`
+- Because Flutter and Android docs both treat the signed bundle as the main distribution artifact
 
-**If a later milestone adds employee actions:**
-- Add dedicated mutation endpoints or Astro actions behind the same portal auth boundary
-- Because request submission and approvals should evolve separately from the recap read model
+**If the artifact is for manual outlet tablet installation:**
+- Use a signed release APK from the same validated config
+- Because operators may still need a side-loadable binary, but it should come from the exact same release baseline
+
+**If Dart obfuscation is enabled:**
+- Use `--split-debug-info` and retain the symbol directory per version
+- Because obfuscation without symbols turns post-release crash analysis into guesswork
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|-----------------|-------|
-| `astro@5.18.1` | `@astrojs/vercel@9.0.5` | Matches the current website repo and deployed portal model. |
-| `@supabase/ssr@0.9.0` | `@supabase/supabase-js@2.99.3` | Supports the current cookie-aware portal auth flow. |
+| Flutter 3.41.1 | Dart 3.11.0 | Current repo-local baseline; keep fixed through v7.0 hardening. |
+| AGP 8.11.1 | Gradle 8.14 | Already paired in checked-in Gradle files; preserve this pair unless a blocker proves otherwise. |
+| Java 21 daemon | Java 17 `sourceCompatibility` / `jvmTarget` | Running Gradle on 21 while compiling app code for 17 is a valid split; codify it explicitly. |
+| Kotlin 1.9.25 | Flutter 3.41.1 with warning | Current builds warn that future Flutter support expects Kotlin 2.1.0+, but repo constraints around `nfc_manager` mean this should be treated as an explicit compatibility risk, not an ad hoc upgrade. |
 
 ## Sources
 
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json` — current website stack and versions
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\employee.ts` — current server-side employee resolution pattern
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_39_portal_read_path_hardening_20260323.sql` — current authenticated portal RPC pattern
-- https://docs.astro.build/en/guides/on-demand-rendering/ — on-demand SSR route model
-- https://supabase.com/docs/reference/javascript/auth-getuser — server-side user verification guidance
-- https://supabase.com/docs/guides/database/postgres/row-level-security — RLS and exposed-schema guidance
+- Local repo: `android/settings.gradle.kts` — AGP 8.11.1 and Kotlin 1.9.25
+- Local repo: `android/gradle/wrapper/gradle-wrapper.properties` — Gradle 8.14 wrapper
+- Local repo: `android/local.properties` — current Java home points to Android Studio JBR
+- Local repo: `android/app/build.gradle.kts` — release signing still uses `debug`
+- Local repo: `build.log` and `flutter_build.log` — current release failures and Kotlin validation warning
+- [Flutter: Build and release an Android app](https://docs.flutter.dev/deployment/android) — signing, `key.properties`, Gradle release config, AAB/APK release flow
+- [Flutter: Continuous delivery with Flutter](https://docs.flutter.dev/deployment/cd) — local-first release automation guidance and `flutter build appbundle`
+- [Android Developers: Configure your build](https://developer.android.com/build) — release signing expectations, wrapper consistency, AAB recommendation
+- [Gradle: Gradle Daemon](https://docs.gradle.org/current/userguide/gradle_daemon.html) — checked-in daemon JVM criteria and JVM precedence rules
 
 ---
-*Stack research for: employee portal attendance recap*
+*Stack research for: Flutter Android release hardening*
 *Researched: 2026-03-23*
