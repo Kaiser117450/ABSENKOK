@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$CheckOnly,
-    [switch]$IncludeSideLoadApk,
+    [Alias("IncludeSideLoadApk")]
+    [switch]$IncludeAppBundle,
     [switch]$SmokeVerify
 )
 
@@ -105,7 +106,20 @@ function Get-RelativePathOrOriginal {
     )
 
     if ($Path.StartsWith($RepositoryRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        return [System.IO.Path]::GetRelativePath($RepositoryRoot, $Path)
+        $basePath = [System.IO.Path]::GetFullPath($RepositoryRoot)
+        if (-not $basePath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+            $basePath += [System.IO.Path]::DirectorySeparatorChar
+        }
+
+        $targetPath = [System.IO.Path]::GetFullPath($Path)
+        $baseUri = [System.Uri]$basePath
+        $targetUri = [System.Uri]$targetPath
+        $relativeUri = $baseUri.MakeRelativeUri($targetUri)
+        $relativePath = [System.Uri]::UnescapeDataString($relativeUri.ToString()) -replace '/', '\'
+
+        if (-not [string]::IsNullOrWhiteSpace($relativePath)) {
+            return $relativePath
+        }
     }
 
     return $Path
@@ -539,11 +553,9 @@ Assert-PathExists -Path $buildGradlePath -Description "Android app build config"
 
 $releaseVersion = Get-TrackedReleaseVersion -Path $pubspecPath
 $releasePaths = New-ReleasePaths -Root $artifactRoot -ReleaseLabel $releaseVersion.ReleaseLabel
-$shouldBuildApk = $IncludeSideLoadApk -or $SmokeVerify
-$apkRetentionState = if ($IncludeSideLoadApk) {
+$shouldBuildBundle = [bool]$IncludeAppBundle
+$bundleRetentionState = if ($IncludeAppBundle) {
     "retained"
-} elseif ($SmokeVerify) {
-    "smoke-only"
 } else {
     "omitted"
 }
@@ -566,39 +578,33 @@ if ($CheckOnly) {
     Write-Host "  Release version : $($releaseVersion.VersionString)"
     Write-Host "  Release label   : $($releaseVersion.ReleaseLabel)"
     Write-Host "  Release dir     : $($releasePaths.ReleaseDirectory)"
-    Write-Host "  Canonical .aab  : $($releasePaths.BundlePath)"
+    Write-Host "  Canonical .apk  : $($releasePaths.ApkPath)"
+    Write-Host "  Bundle target   : $($releasePaths.BundlePath)"
     Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory) (--split-debug-info, obfuscate disabled)"
     Write-Host "  Mapping target  : $($releasePaths.MappingPath)"
-    Write-Host "  APK retention   : $apkRetentionState"
+    Write-Host "  Bundle retention: $bundleRetentionState"
     Write-Host "  Manifest        : $($releasePaths.ManifestPath)"
     Write-Host "  Preflight gate  : $releasePreflight"
     if ($SmokeVerify) {
-        $smokeApkPlan = if ($IncludeSideLoadApk) {
-            $releasePaths.ApkPath
-        } else {
-            ("newest *.apk under {0}" -f (($apkOutputRoots | ForEach-Object {
-                Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $_
-            }) -join ", "))
-        }
-
         Write-Host "  Smoke verify   : enabled"
         Write-Host "  ADB            : $adbCli"
         Write-Host "  App package    : $applicationId"
-        Write-Host "  Smoke APK      : $smokeApkPlan"
+        Write-Host "  Smoke APK      : $($releasePaths.ApkPath)"
         Write-Host "  Smoke evidence : $($releasePaths.SmokeEvidencePath)"
     } else {
         Write-Host "  Smoke verify   : not requested"
     }
-    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build appbundle --release --split-debug-info -> optional flutter build apk --release --split-debug-info -> optional adb smoke verification -> stage release-manifest.json"
+    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build apk --release --split-debug-info -> optional flutter build appbundle --release --split-debug-info -> optional adb smoke verification -> stage release-manifest.json"
 
     $response = [ordered]@{
         Mode               = "check-only"
         ReleaseLabel       = $releaseVersion.ReleaseLabel
         ReleaseDirectory   = $releasePaths.ReleaseDirectory
-        CanonicalArtifact  = $releasePaths.BundlePath
+        CanonicalArtifact  = $releasePaths.ApkPath
+        BundleArtifactPath = $releasePaths.BundlePath
         SymbolsDirectory   = $releasePaths.SymbolsDirectory
         MappingTarget      = $releasePaths.MappingPath
-        ApkRetentionState  = $apkRetentionState
+        BundleRetentionState = $bundleRetentionState
         ManifestPath       = $releasePaths.ManifestPath
         SmokeEvidencePath  = $releasePaths.SmokeEvidencePath
         FlutterCli         = $contract.FlutterCli
@@ -609,10 +615,9 @@ if ($CheckOnly) {
         $response["SmokeVerify"] = [ordered]@{
             AdbCli         = $adbCli
             ApplicationId  = $applicationId
-            SmokeApkPlan   = if ($IncludeSideLoadApk) { $releasePaths.ApkPath } else { $null }
-            SmokeApkLookup = if ($IncludeSideLoadApk) { $null } else { $apkOutputRoots }
+            SmokeApkPath   = $releasePaths.ApkPath
             EvidencePath   = $releasePaths.SmokeEvidencePath
-            ApkRetention   = $apkRetentionState
+            BundleRetention = $bundleRetentionState
         }
     }
 
@@ -630,10 +635,10 @@ $adbCli = if ($SmokeVerify) {
 
 Write-Host "ABSENKOK release packaging"
 Write-Host "  Release version : $($releaseVersion.VersionString)"
-Write-Host "  Canonical .aab  : retained"
+Write-Host "  Canonical .apk  : retained"
+Write-Host "  Bundle output   : $bundleRetentionState"
 Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory)"
 Write-Host "  Mapping target  : $($releasePaths.MappingPath)"
-Write-Host "  APK retention   : $apkRetentionState"
 Write-Host "  Smoke verify    : $SmokeVerify"
 Write-Host "  Staging dir     : $($releasePaths.ReleaseDirectory)"
 
@@ -641,9 +646,9 @@ Push-Location $repoRoot
 try {
     & $releasePreflight
 
-    Clear-GeneratedArtifacts -Roots @($bundleOutputRoot) -Filter "*.aab"
-    if ($shouldBuildApk) {
-        Clear-GeneratedArtifacts -Roots $apkOutputRoots -Filter "*.apk"
+    Clear-GeneratedArtifacts -Roots $apkOutputRoots -Filter "*.apk"
+    if ($shouldBuildBundle) {
+        Clear-GeneratedArtifacts -Roots @($bundleOutputRoot) -Filter "*.aab"
     }
 
     if (Test-Path -LiteralPath $releasePaths.ReleaseDirectory) {
@@ -655,43 +660,37 @@ try {
 
     & $contract.FlutterCli @(
         "build",
-        "appbundle",
+        "apk",
         "--release",
         "--split-debug-info=$($releasePaths.SymbolsDirectory)"
     )
-    $bundleSource = Find-GeneratedArtifact -Roots @($bundleOutputRoot) -Filter "*.aab" -Description "release .aab"
-    Copy-Item -LiteralPath $bundleSource.FullName -Destination $releasePaths.BundlePath -Force
+    $apkSource = Find-GeneratedArtifact -Roots $apkOutputRoots -Filter "*.apk" -Description "release .apk"
+    Copy-Item -LiteralPath $apkSource.FullName -Destination $releasePaths.ApkPath -Force
 
     $artifacts = @(
         (New-ArtifactRecord `
             -RepositoryRoot $repoRoot `
-            -Kind "aab" `
+            -Kind "apk" `
             -Purpose "canonical-release" `
-            -SourcePath $bundleSource.FullName `
-            -StagedPath $releasePaths.BundlePath)
+            -SourcePath $apkSource.FullName `
+            -StagedPath $releasePaths.ApkPath)
     )
 
-    $smokeInstallApk = $null
-    if ($shouldBuildApk) {
+    if ($shouldBuildBundle) {
         & $contract.FlutterCli @(
             "build",
-            "apk",
+            "appbundle",
             "--release",
             "--split-debug-info=$($releasePaths.SymbolsDirectory)"
         )
-        $apkSource = Find-GeneratedArtifact -Roots $apkOutputRoots -Filter "*.apk" -Description "release .apk"
-        $smokeInstallApk = $apkSource.FullName
-
-        if ($IncludeSideLoadApk) {
-            Copy-Item -LiteralPath $apkSource.FullName -Destination $releasePaths.ApkPath -Force
-            $smokeInstallApk = $releasePaths.ApkPath
-            $artifacts += New-ArtifactRecord `
-                -RepositoryRoot $repoRoot `
-                -Kind "apk" `
-                -Purpose "side-load-retained" `
-                -SourcePath $apkSource.FullName `
-                -StagedPath $releasePaths.ApkPath
-        }
+        $bundleSource = Find-GeneratedArtifact -Roots @($bundleOutputRoot) -Filter "*.aab" -Description "release .aab"
+        Copy-Item -LiteralPath $bundleSource.FullName -Destination $releasePaths.BundlePath -Force
+        $artifacts += New-ArtifactRecord `
+            -RepositoryRoot $repoRoot `
+            -Kind "aab" `
+            -Purpose "supplementary-bundle" `
+            -SourcePath $bundleSource.FullName `
+            -StagedPath $releasePaths.BundlePath
     }
 
     $symbolRecords = Get-SymbolArtifactRecords -RepositoryRoot $repoRoot -SymbolsDirectory $releasePaths.SymbolsDirectory
@@ -717,7 +716,7 @@ try {
         version          = $releaseVersion.VersionString
         applicationId    = $applicationId
         adbPath          = if ($adbCli) { Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $adbCli } else { $null }
-        apkInstallSource = if ($smokeInstallApk) { Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $smokeInstallApk } else { $null }
+        apkInstallSource = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.ApkPath
         evidencePath     = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.SmokeEvidencePath
         deviceSerial     = $null
         commands         = @()
@@ -729,21 +728,18 @@ try {
             -RepositoryRoot $repoRoot `
             -AdbCli $adbCli `
             -ApplicationId $applicationId `
-            -ApkPath $smokeInstallApk `
+            -ApkPath $releasePaths.ApkPath `
             -EvidencePath $releasePaths.SmokeEvidencePath `
             -VersionString $releaseVersion.VersionString
     }
 
     $notes = @(
-        "Signed .aab is the canonical retained Android release artifact.",
+        "Signed .apk is the canonical retained Android release artifact.",
         "Dart symbols are retained with --split-debug-info while obfuscation stays disabled for v7.0.",
-        "Signed release .apk is retained only when tool/release_build.ps1 runs with -IncludeSideLoadApk."
+        "Signed .aab is retained only when tool/release_build.ps1 runs with -IncludeAppBundle."
     )
     if ($SmokeVerify) {
         $notes += "Smoke verification records install and launch evidence in smoke-check.txt before distribution."
-    }
-    if ($apkRetentionState -eq "smoke-only") {
-        $notes += "Smoke verification built an APK for local installation only; it is not retained as a distributable artifact."
     }
 
     $manifest = [ordered]@{
@@ -751,15 +747,15 @@ try {
         versionName        = $releaseVersion.VersionName
         versionCode        = $releaseVersion.VersionCode
         generatedAtUtc     = $generatedAtUtc
-        releaseDirectory   = [System.IO.Path]::GetRelativePath($repoRoot, $releasePaths.ReleaseDirectory)
-        canonicalArtifact  = [System.IO.Path]::GetRelativePath($repoRoot, $releasePaths.BundlePath)
-        apkRetentionState  = $apkRetentionState
-        supportedApkStates = @("retained", "omitted", "smoke-only")
+        releaseDirectory   = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.ReleaseDirectory
+        canonicalArtifact  = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.ApkPath
+        bundleRetentionState = $bundleRetentionState
+        supportedBundleStates = @("retained", "omitted")
         git                = $gitMetadata
         artifacts          = $artifacts
         debugArtifacts     = [ordered]@{
             obfuscationEnabled = $false
-            splitDebugInfoPath = [System.IO.Path]::GetRelativePath($repoRoot, $releasePaths.SymbolsDirectory)
+            splitDebugInfoPath = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.SymbolsDirectory
             symbolFiles        = $symbolRecords
             mappingFile        = $mappingRecord
         }
@@ -779,10 +775,10 @@ try {
         Mode              = "build"
         ReleaseLabel      = $releaseVersion.ReleaseLabel
         ReleaseDirectory  = $releasePaths.ReleaseDirectory
-        CanonicalArtifact = $releasePaths.BundlePath
+        CanonicalArtifact = $releasePaths.ApkPath
         SymbolsDirectory  = $releasePaths.SymbolsDirectory
         MappingPath       = $releasePaths.MappingPath
-        ApkRetentionState = $apkRetentionState
+        BundleRetentionState = $bundleRetentionState
         ManifestPath      = $releasePaths.ManifestPath
         SmokeEvidencePath = if ($SmokeVerify) { $releasePaths.SmokeEvidencePath } else { $null }
     }
