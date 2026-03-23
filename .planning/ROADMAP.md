@@ -23,7 +23,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 42 | 1/2 | In Progress|  | 3 |
+| 42 | 2/2 | Complete   | 2026-03-23 | 3 |
 | 43 | Portal Attendance Recap Surface | Add the month summary and recent history experience inside the existing portal shell. | `ATTN-01`, `ATTN-04`, `PORT-03` | 3 |
 | 44 | Portal Exception States & Hardening | Surface follow-up days clearly and close the cross-repo hardening gap before implementation drift returns. | `ATTN-05`, `PORT-04` | 3 |
 
