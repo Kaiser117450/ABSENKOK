@@ -107,6 +107,12 @@ powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly -Smok
 
 Command ini tidak menggantikan release nyata. Fungsinya hanya mengonfirmasi release label, canonical APK path, optional bundle path, dan smoke evidence target.
 
+Pada baseline v7.0 saat ini, check-only smoke lane juga harus memperlihatkan:
+
+- `Bundle retention: omitted` pada default APK-first lane
+- `App package: com.enakko.absensi_enakko_flutter`
+- path `adb.exe` yang akan dipakai untuk smoke verification
+
 ### Step 4. Cut the canonical APK-first release and smoke-verify it
 
 ```powershell
@@ -122,6 +128,8 @@ Command ini harus:
 5. install canonical APK ke device/emulator
 6. launch app
 7. tulis `smoke-check.txt`
+
+Kalau run ini sukses, `release-manifest.json` harus tetap menyatakan canonical artifact sebagai `.apk` dan `BundleRetentionState` harus tetap `omitted` kecuali operator sengaja memakai `-IncludeAppBundle`.
 
 ### Step 5. Optional bundle retention
 
