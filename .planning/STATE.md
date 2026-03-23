@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
 status: phase_in_progress
-stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-03-23T13:48:16.073Z"
-last_activity: "2026-03-23 — completed 48-01: private upload-key signing scaffold and fail-fast release validation"
+stopped_at: Completed 48-02-PLAN.md
+last_updated: "2026-03-23T14:00:27.989Z"
+last_activity: "2026-03-23 — completed 48-02: canonical Android artifacts now stage from one tracked lane with signed .aab-first retention rules"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # STATE.md — Project Memory
@@ -18,25 +18,25 @@ progress:
 ## Current Position
 
 Phase: 48 - Secure Signing & Artifact Discipline
-Plan: 48-02 pending
-Status: 48-01 complete; release signing now requires the private upload-key scaffold in tracked code
-Last activity: 2026-03-23 — Completed 48-01 and verified `:app:bundleRelease` fails clearly when private signing inputs are missing
+Plan: 48-03 pending
+Status: 48-02 complete; the canonical artifact lane now stages signed .aab releases with opt-in retained .apk handling
+Last activity: 2026-03-23 — Completed 48-02 and verified `tool/release_build.ps1 -CheckOnly` reports the staged artifact contract without cutting artifacts
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
 - **Next phase:** Phase 48: Secure Signing & Artifact Discipline
-- **Current focus:** Build the canonical v7.0 artifact lane and retention rules on top of the private upload-key signing contract
+- **Current focus:** Add symbol retention and smoke-verification evidence on top of the staged v7.0 artifact lane
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```text
 v7.0 milestone in progress
-[######----] 2 of 4 phases complete (6/10 plans)
+[######----] 2 of 4 phases complete (7/10 plans)
 ```
 
-- **Next action:** Execute Phase 48-02 to stage the canonical artifact set from one validated release lane
+- **Next action:** Execute Phase 48-03 to retain split debug info and smoke-verify the shrunken release output
 
 ## Project Reference
 
@@ -155,6 +155,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 47-03 | v7.0 stays pinned to Flutter 3.41.1, AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, and Java 21 JBR with no bypass flags | Release hardening forbids surprise upgrades until a dedicated compatibility spike replaces the contract |
 | 48-01 | Release signing validates private inputs only for release-capable Gradle tasks | Keeps debug/profile workflows unchanged while removing the unsafe debug-signing fallback for `release` |
 | 48-01 | Track `android/key.properties.example` while gitignoring the real signing files | Keeps the repo shareable while documenting the private upload-key schema |
+| 48-02 | Signed `.aab` stays the canonical retained Android release artifact; signed `.apk` retention remains opt-in via `tool/release_build.ps1 -IncludeSideLoadApk` | Keeps v7.0 artifact policy explicit and avoids default APK distribution drift |
+| 48-02 | `tool/release_build.ps1` stages retained outputs into `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/` with `release-manifest.json` | Gives one deterministic retention location tied to tracked version metadata instead of AGP output folders |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -165,6 +167,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 48-02 completed on 2026-03-23: `tool/release_build.ps1` is now the single tracked packaging entrypoint; `-CheckOnly` validates the release lane without cutting artifacts; real builds always gate through `tool/release_preflight.ps1`; the canonical retained output is a signed `.aab` staged under `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`, while a signed release `.apk` is retained only with `-IncludeSideLoadApk`; `docs/android-release-contract.md` now records the staged artifact and `release-manifest.json` contract.
 - Phase 48-01 completed on 2026-03-23: `.gitignore` now excludes `android/key.properties` and common Android keystore patterns; `android/key.properties.example` tracks the required signing schema; `android/app/build.gradle.kts` loads `key.properties`, uses `signingConfigs.release`, and `:app:bundleRelease` now fails clearly when private signing inputs are missing instead of falling back to debug signing.
 - Phase 47 completed on 2026-03-23: `tool/release_env.ps1` now resolves Java 21 JBR and the canonical `C:\flutter\bin\flutter.bat`; `docs/android-release-contract.md` is the tracked v7.0 contract; `tool/release_preflight.ps1` fails fast before packaging/signing and currently stops at `flutter analyze` with 152 issues while also asserting the pinned AGP/Gradle/Kotlin/Flutter/Java contract.
 - Phase 46-02 completed on 2026-03-23: `pubspec.yaml` is now `7.0.0+8013`, Flutter regenerated `android/local.properties` to `7.0.0 / 8013`, and the release artifact path is `build/app/outputs/apk/release/ABSENKOK-v7.0.0.apk` without changing the version-derived Gradle naming rule.
@@ -212,8 +215,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T13:48:16.069Z
-**Stopped at:** Completed 48-01-PLAN.md
+**Last session:** 2026-03-23T14:00:27.985Z
+**Stopped at:** Completed 48-02-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules

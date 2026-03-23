@@ -17,7 +17,7 @@
 ## 3. Signing & Artifacts
 
 - [x] **REL-01**: Operator can produce a release artifact signed with the private upload keystore instead of the debug keystore.
-- [ ] **REL-02**: Operator can produce the agreed release artifact set from one validated release lane: canonical `.aab`, plus release `.apk` only if outlet side-loading still requires it.
+- [x] **REL-02**: Operator can produce the agreed release artifact set from one validated release lane: canonical `.aab`, plus release `.apk` only if outlet side-loading still requires it.
 - [ ] **REL-03**: Operator can retain the matching split debug info or symbol artifacts for each signed release and verify the shrunken release build before distribution.
 
 ## 4. Release Operations
@@ -64,7 +64,7 @@
 | TOOL-01 | Phase 47 | Complete |
 | TOOL-02 | Phase 47 | Complete |
 | REL-01 | Phase 48 | Complete |
-| REL-02 | Phase 48 | Pending |
+| REL-02 | Phase 48 | Complete |
 | REL-03 | Phase 48 | Pending |
 | OPS-01 | Phase 49 | Pending |
 
@@ -75,4 +75,4 @@
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after completing Phase 47 Toolchain Contract & Preflight Gates*
+*Last updated: 2026-03-23 after completing Phase 48 Plan 02*
