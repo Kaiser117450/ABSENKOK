@@ -35,13 +35,13 @@ Plans:
 
 **Goal:** Turn the current machine-specific release setup into an explicit, fail-fast build contract.
 **Depends on:** Phase 46
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 
-- [ ] 47-01: Codify the supported Java runtime for Gradle and document the Flutter/Gradle baseline
-- [ ] 47-02: Add a release preflight lane for analyze, test, and release-compile checks
-- [ ] 47-03: Record the v7.0 Kotlin compatibility decision so operators do not rely on bypass flags or surprise upgrades
+- [x] 47-01: Codify the supported Java runtime for Gradle and document the Flutter/Gradle baseline
+- [x] 47-02: Add a release preflight lane for analyze, test, and release-compile checks
+- [x] 47-03: Record the v7.0 Kotlin compatibility decision so operators do not rely on bypass flags or surprise upgrades
 
 **Details:**
 - Requirements: `BUILD-02`, `TOOL-01`, `TOOL-02`

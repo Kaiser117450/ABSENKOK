@@ -3,47 +3,47 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
 status: phase_completed
-stopped_at: Completed Phase 46 execution
-last_updated: "2026-03-23T12:18:24.3738370Z"
-last_activity: "2026-03-23 — completed Phase 46: restored the Windows release baseline and packaged ABSENKOK-v7.0.0.apk for milestone v7.0"
+stopped_at: Completed Phase 47 execution
+last_updated: "2026-03-23T21:17:21.1861323+08:00"
+last_activity: "2026-03-23 — completed Phase 47: tracked the Java 21 JBR contract, fail-fast preflight lane, and v7.0 compatibility guardrails"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 2
+  completed_plans: 5
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: Ready for Phase 47 - Toolchain Contract & Preflight Gates
+Phase: Ready for Phase 48 - Secure Signing & Artifact Discipline
 Plan: —
-Status: Phase 46 complete; release baseline restored and v7.0 metadata aligned
-Last activity: 2026-03-23 — Packaged `ABSENKOK-v7.0.0.apk` from the canonical `C:\flutter` release lane
+Status: Phase 47 complete; release contract and fail-fast preflight gates are now tracked
+Last activity: 2026-03-23 — Completed Phase 47 and verified the preflight lane fails in `flutter analyze` before any packaging/signing work
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
-- **Next phase:** Phase 47: Toolchain Contract & Preflight Gates
-- **Current focus:** Codify the supported Java/Flutter/Gradle contract and add fail-fast release preflight gates
+- **Next phase:** Phase 48: Secure Signing & Artifact Discipline
+- **Current focus:** Replace debug signing with a private upload-key flow and formalize the canonical v7.0 artifact set
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
-```
+```text
 v7.0 milestone in progress
-[##--------] 1 of 4 phases complete (2/10 plans)
+[#####-----] 2 of 4 phases complete (5/10 plans)
 ```
 
-- **Next action:** Start Phase 47 with `$gsd-discuss-phase 47` or `$gsd-plan-phase 47`
+- **Next action:** Start Phase 48 with `$gsd-discuss-phase 48` or `$gsd-plan-phase 48`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 47 Toolchain Contract & Preflight Gates after Phase 46 release baseline recovery.
+**Current focus:** Phase 48 Secure Signing & Artifact Discipline after locking the v7.0 toolchain contract.
 
 ## What Was Shipped
 
@@ -150,6 +150,9 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 44-03-01 | Recap empty state (ok:true + zero days) at page level with PortalStatePanel, not inside history component | Scope guard: empty/error responsibility stays at page layer |
 | 44-03-02 | followUpCount derived via countFollowUpDays from recap.days — no second query | Scope guard: single fetch for recap page |
 | 44-03-03 | Shell click listener scoped to /portal same-origin paths only | Avoids interfering with external links or admin routes |
+| 47-01 | `tool/release_env.ps1` resolves `ABSENKOK_JAVA_HOME` first, then Android Studio JBR Java 21 | Keeps the supported Gradle runtime explicit without force-tracking `android/local.properties` |
+| 47-02 | Release preflight lane is `flutter analyze` -> `flutter test` -> `:app:compileReleaseSources` | Fails before package/sign tasks while still exercising release-only compilation when earlier stages are green |
+| 47-03 | v7.0 stays pinned to Flutter 3.41.1, AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, and Java 21 JBR with no bypass flags | Release hardening forbids surprise upgrades until a dedicated compatibility spike replaces the contract |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -160,6 +163,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 47 completed on 2026-03-23: `tool/release_env.ps1` now resolves Java 21 JBR and the canonical `C:\flutter\bin\flutter.bat`; `docs/android-release-contract.md` is the tracked v7.0 contract; `tool/release_preflight.ps1` fails fast before packaging/signing and currently stops at `flutter analyze` with 152 issues while also asserting the pinned AGP/Gradle/Kotlin/Flutter/Java contract.
 - Phase 46-02 completed on 2026-03-23: `pubspec.yaml` is now `7.0.0+8013`, Flutter regenerated `android/local.properties` to `7.0.0 / 8013`, and the release artifact path is `build/app/outputs/apk/release/ABSENKOK-v7.0.0.apk` without changing the version-derived Gradle naming rule.
 - Phase 46-01 completed on 2026-03-23: the canonical Windows release lane is now `C:\flutter\bin\flutter.bat build apk --release`, which packaged `ABSENKOK-v6.2.0.apk` again without changing AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, or the debug-signing baseline.
 - `android/local.properties` remains gitignored by repo design, so the C:\flutter baseline is machine-local until Phase 47 codifies the tracked toolchain contract.
@@ -205,8 +209,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T12:18:24.3738370Z
-**Stopped at:** Completed Phase 46 execution
+**Last session:** 2026-03-23T21:17:21.1861323+08:00
+**Stopped at:** Completed Phase 47 execution
 **Resume file:** None
 
 ## Database Safety Rules

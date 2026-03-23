@@ -6,13 +6,13 @@
 ## 1. Build Baseline
 
 - [x] **BUILD-01**: Operator can run the canonical Android release command from a clean checkout and reach release packaging without the current Dart compile failures.
-- [ ] **BUILD-02**: Operator can run one preflight release check that fails before signing when analysis, tests, or release-only compile steps are broken.
+- [x] **BUILD-02**: Operator can run one preflight release check that fails before signing when analysis, tests, or release-only compile steps are broken.
 - [x] **BUILD-03**: Operator can identify the active milestone version from `pubspec.yaml` and generated release artifact names without cross-checking planning docs manually.
 
 ## 2. Toolchain Contract
 
-- [ ] **TOOL-01**: Operator can build with an explicitly documented Java runtime for Gradle instead of relying on whichever `java` is first on PATH.
-- [ ] **TOOL-02**: Operator can follow a pinned Flutter/Kotlin/Gradle compatibility decision for v7.0 without using ad hoc bypass flags or surprise upgrades.
+- [x] **TOOL-01**: Operator can build with an explicitly documented Java runtime for Gradle instead of relying on whichever `java` is first on PATH.
+- [x] **TOOL-02**: Operator can follow a pinned Flutter/Kotlin/Gradle compatibility decision for v7.0 without using ad hoc bypass flags or surprise upgrades.
 
 ## 3. Signing & Artifacts
 
@@ -60,9 +60,9 @@
 |-------------|-------|--------|
 | BUILD-01 | Phase 46 | Complete |
 | BUILD-03 | Phase 46 | Complete |
-| BUILD-02 | Phase 47 | Pending |
-| TOOL-01 | Phase 47 | Pending |
-| TOOL-02 | Phase 47 | Pending |
+| BUILD-02 | Phase 47 | Complete |
+| TOOL-01 | Phase 47 | Complete |
+| TOOL-02 | Phase 47 | Complete |
 | REL-01 | Phase 48 | Pending |
 | REL-02 | Phase 48 | Pending |
 | REL-03 | Phase 48 | Pending |
@@ -75,4 +75,4 @@
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after defining v7.0 Android Release Hardening*
+*Last updated: 2026-03-23 after completing Phase 47 Toolchain Contract & Preflight Gates*
