@@ -17,7 +17,7 @@
 **Status:** Planned
 **Phases:** 42-44
 **Requirements:** 7 mapped / 7 total
-**Next phase:** Phase 42 — Attendance Recap Read Model
+**Next phase:** Phase 43 — Portal Attendance Recap Surface
 
 ## Phase Overview
 
@@ -45,6 +45,12 @@
 **Goal:** Deliver the recap entry point and main mobile-first portal experience using the trusted read model from Phase 42.
 **Depends on:** Phase 42
 **Requirements:** `ATTN-01`, `ATTN-04`, `PORT-03`
+**Plans:** 3 plans
+
+Plans:
+- [ ] `43-01-PLAN.md` — Shared recap summary and recent-history components
+- [ ] `43-02-PLAN.md` — Portal shell navigation and home recap entry point
+- [ ] `43-03-PLAN.md` — Attendance recap page wiring
 
 **Success criteria:**
 1. Employee can open the recap inside the existing portal shell without leaving the employee-facing flow.
