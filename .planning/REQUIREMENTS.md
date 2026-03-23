@@ -20,7 +20,7 @@
 ### Portal Experience
 
 - [x] **PORT-03**: Portal attendance recap is usable on a phone-sized browser and fits the existing employee portal shell.
-- [ ] **PORT-04**: Portal attendance recap shows clear loading, empty, and error states when recap data is unavailable.
+- [x] **PORT-04**: Portal attendance recap shows clear loading, empty, and error states when recap data is unavailable.
 
 ## v6.4+ Candidate Requirements
 
@@ -52,13 +52,13 @@ Roadmap mapping for the approved v6.3 milestone:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ATTN-01 | Phase 45 | Complete |
-| ATTN-02 | Phase 45 | Complete |
-| ATTN-03 | Phase 45 | Complete |
-| ATTN-04 | Phase 45 | Complete |
-| ATTN-05 | Phase 45 | Complete |
-| PORT-03 | Phase 45 | Complete |
-| PORT-04 | Phase 45 | Pending |
+| ATTN-01 | Phase 43 | Complete |
+| ATTN-02 | Phase 42 | Complete |
+| ATTN-03 | Phase 42 | Complete |
+| ATTN-04 | Phase 43 | Complete |
+| ATTN-05 | Phase 44 | Complete |
+| PORT-03 | Phase 43 | Complete |
+| PORT-04 | Phase 44 | Complete |
 
 **Coverage:**
 - v6.3 requirements: 7 total
@@ -67,4 +67,4 @@ Roadmap mapping for the approved v6.3 milestone:
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after planning Phase 45 gap closure for v6.3 audit blockers*
+*Last updated: 2026-03-23 after Phase 45 audit closure — all 7 v6.3 requirements verified*

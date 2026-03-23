@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ◆ **v6.3 Employee Attendance Recap** — Phases 42-45 in progress 2026-03-23.
+- ✅ **v6.3 Employee Attendance Recap** — Phases 42-45 complete 2026-03-23. Audit closed.
 - ✅ **v6.2 Dashboard & Report Foundation** — Phases 40-41 shipped 2026-03-23. Archive: [`milestones/v6.2-ROADMAP.md`](milestones/v6.2-ROADMAP.md)
 - ✅ **v6.1 Employee Portal** — Phases 37-39 shipped 2026-03-23. Archive: [`milestones/v6.1-ROADMAP.md`](milestones/v6.1-ROADMAP.md)
 - ✅ **v6.0 Multi-Outlet & Multi-Device Control** — Phases 31-36 shipped 2026-03-22. Archive: [`milestones/v6.0-ROADMAP.md`](milestones/v6.0-ROADMAP.md)
@@ -14,10 +14,10 @@
 
 ## Current Milestone: v6.3 Employee Attendance Recap
 
-**Status:** In Progress
+**Status:** Complete — Audit Closed
 **Phases:** 42-45
-**Requirements:** 7 mapped / 7 total
-**Next phase:** Phase 45 — Attendance Recap Audit Closure
+**Requirements:** 7 mapped / 7 total / 7 verified
+**Next phase:** v6.4 (TBD)
 
 ## Phase Overview
 
@@ -26,7 +26,7 @@
 | 42 | 2/2 | Complete | 2026-03-23 | 3 |
 | 43 | 3/3 | Complete | 2026-03-23 | 3 |
 | 44 | 3/3 | Complete | 2026-03-23 | 3 |
-| 45 | 2/3 | In Progress|  | 3 |
+| 45 | 3/3 | Complete | 2026-03-23 | 3 |
 
 ## Phases
 
