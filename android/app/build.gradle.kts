@@ -1,3 +1,50 @@
+import org.gradle.api.GradleException
+import java.util.Properties
+
+val keyProperties = Properties()
+val keyPropertiesFile = rootProject.file("key.properties")
+
+if (keyPropertiesFile.exists()) {
+    keyPropertiesFile.inputStream().use { keyProperties.load(it) }
+}
+
+val requestedTasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':').lowercase() }
+val releaseTaskRequested = requestedTasks.any { taskName ->
+    taskName.contains("release") || taskName in setOf("assemble", "build", "bundle", "package")
+}
+
+fun requireReleaseProperty(name: String): String {
+    val value = keyProperties.getProperty(name)?.trim()
+    if (value.isNullOrEmpty()) {
+        throw GradleException(
+            "Release signing requires '$name' in android/key.properties. " +
+                "Copy android/key.properties.example and provide your private upload key values."
+        )
+    }
+    return value
+}
+
+if (releaseTaskRequested) {
+    if (!keyPropertiesFile.exists()) {
+        throw GradleException(
+            "Release signing requires private android/key.properties. " +
+                "Copy android/key.properties.example and keep the real file out of source control."
+        )
+    }
+
+    val releaseStoreFilePath = requireReleaseProperty("storeFile")
+    requireReleaseProperty("storePassword")
+    requireReleaseProperty("keyPassword")
+    requireReleaseProperty("keyAlias")
+
+    if (!rootProject.file(releaseStoreFilePath).exists()) {
+        throw GradleException(
+            "Release signing requires the private upload keystore referenced by " +
+                "android/key.properties at '$releaseStoreFilePath'."
+        )
+    }
+}
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -29,10 +76,20 @@ android {
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProperties.getProperty("keyAlias")
+            keyPassword = keyProperties.getProperty("keyPassword")
+            storeFile = keyProperties.getProperty("storeFile")?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                rootProject.file(it)
+            }
+            storePassword = keyProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
         release {
-            // Signing with debug keys for now
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
 
             // ProGuard — removes unused Java/Kotlin code
             isMinifyEnabled = true
