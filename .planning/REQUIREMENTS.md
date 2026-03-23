@@ -20,7 +20,7 @@
 ### Portal Experience
 
 - [x] **PORT-03**: Portal attendance recap is usable on a phone-sized browser and fits the existing employee portal shell.
-- [ ] **PORT-04**: Portal attendance recap shows clear loading, empty, and error states when recap data is unavailable.
+- [x] **PORT-04**: Portal attendance recap shows clear loading, empty, and error states when recap data is unavailable.
 
 ## v6.4+ Candidate Requirements
 
@@ -58,7 +58,7 @@ Roadmap mapping for the approved v6.3 milestone:
 | ATTN-04 | Phase 43 | Complete |
 | ATTN-05 | Phase 44 | Complete |
 | PORT-03 | Phase 43 | Complete |
-| PORT-04 | Phase 44 | Pending |
+| PORT-04 | Phase 44 | Complete |
 
 **Coverage:**
 - v6.3 requirements: 7 total

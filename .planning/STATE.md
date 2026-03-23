@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.3
 milestone_name: Employee Attendance Recap
 status: Phase 42 Plan 01 executed; attendance recap RPC deployed to sql/
-stopped_at: Completed 44-02-PLAN.md
-last_updated: "2026-03-23T07:55:35.269Z"
+stopped_at: Completed 44-03-PLAN.md
+last_updated: "2026-03-23T07:56:38.895Z"
 last_activity: "2026-03-23 — Phase 42 Plan 01 executed: get_portal_attendance_recap RPC + recap index"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # STATE.md — Project Memory
@@ -136,6 +136,9 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 41-02 | Final admin branding uses `src/assets/images/logogoenakko.png` | Matches the intended Enakko dashboard logo after the initial placeholder asset mismatch |
 | 42-01 | Break duration uses outer envelope (first_break to last_kembali) — matches admin Rekap Harian approximation | Detailed per-break timelines deferred to a later phase |
 | 42-01 | sedang_bekerja status suppresses belum_pulang false alarm for the active current workday | Prevents portal from showing false incomplete-attendance alarm while employee is still working |
+| 44-03-01 | Recap empty state (ok:true + zero days) at page level with PortalStatePanel, not inside history component | Scope guard: empty/error responsibility stays at page layer |
+| 44-03-02 | followUpCount derived via countFollowUpDays from recap.days — no second query | Scope guard: single fetch for recap page |
+| 44-03-03 | Shell click listener scoped to /portal same-origin paths only | Avoids interfering with external links or admin routes |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -186,8 +189,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T07:55:35.261Z
-**Stopped at:** Completed 44-02-PLAN.md
+**Last session:** 2026-03-23T07:56:38.890Z
+**Stopped at:** Completed 44-03-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules
