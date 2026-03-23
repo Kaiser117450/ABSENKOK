@@ -63,6 +63,29 @@ Ekspektasi Phase 47:
 
 Hasil observasi 2026-03-23: lane berhenti di `flutter analyze` dengan exit code `1` setelah menemukan 152 issue. Itu membuktikan preflight gagal sebelum packaging/signing dimulai, sehingga operator tidak perlu lompat ke `build apk --release` untuk mengetahui repo sedang merah.
 
+## Release Artifact Contract
+
+Packaging Android v7.0 sekarang masuk lewat satu entrypoint yang ditrack:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly
+```
+
+Mode `-CheckOnly` hanya memvalidasi kontrak packaging dan target staging tanpa memotong signed artifact. Saat operator benar-benar membangun release, lane yang sama selalu:
+
+1. masuk lewat `tool/release_env.ps1`
+2. menjalankan `tool/release_preflight.ps1`
+3. membangun signed `.aab`
+4. menyalin artifact yang dipertahankan ke `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`
+5. menulis `release-manifest.json`
+
+Kebijakan artifact untuk v7.0:
+
+- Signed `.aab` adalah artifact Android release yang canonical dan selalu dipertahankan.
+- Signed release `.apk` hanya dipertahankan bila side-loading masih dibutuhkan secara sengaja, yaitu saat lane dijalankan dengan `-IncludeSideLoadApk`.
+- `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, dan apakah APK dipertahankan atau dihilangkan.
+- Detail operator sequencing tetap ditahan untuk Phase 49; dokumen ini hanya mengunci kontrak artifact dan lokasi staging yang harus konsisten.
+
 ## v7.0 Compatibility Decision
 
 v7.0 sengaja menahan compatibility line berikut:
