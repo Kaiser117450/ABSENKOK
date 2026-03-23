@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.3
-milestone_name: Employee Attendance Recap
-status: verifying
-stopped_at: Completed 45-03-PLAN.md
-last_updated: "2026-03-23T08:51:42.527Z"
-last_activity: "2026-03-23 — Phase 45 Plan 03 executed: 44-VERIFICATION.md authored, v6.3 milestone audit regenerated and closed"
+milestone: none
+milestone_name: Next Milestone Not Defined
+status: ready_for_planning
+stopped_at: Completed v6.3 milestone closeout
+last_updated: "2026-03-23T09:22:01.3000103Z"
+last_activity: "2026-03-23 — v6.3 milestone archived, recap migration applied to production Supabase, and planning docs reset for the next milestone"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -17,35 +17,42 @@ progress:
 
 ## Current Position
 
-Phase: 45
-Plan: 03 (complete)
-Status: v6.3 audit closed — all 7 requirements verified, milestone ready to archive
-Last activity: 2026-03-23 — Phase 45 Plan 03 executed: 44-VERIFICATION.md authored, v6.3 milestone audit regenerated and closed
+Phase: none
+Plan: none
+Status: v6.3 archived; ready to define the next milestone
+Last activity: 2026-03-23 — v6.3 milestone archived, recap migration applied to production Supabase, and planning docs reset for the next milestone
 
 ## Current Status
-- **Active milestone:** v6.3 Employee Attendance Recap — CLOSED
-- **Last shipped milestone:** v6.2 Dashboard & Report Foundation
-- **Next phase:** v6.4 (TBD)
-- **Current focus:** v6.3 milestone audit closure complete; archive when ready
+- **Active milestone:** None — next milestone not defined
+- **Last shipped milestone:** v6.3 Employee Attendance Recap
+- **Next phase:** `$gsd-new-milestone`
+- **Current focus:** Define the next milestone scope and requirements
 - **Scope guard:** Request submission, approvals, and reminder notifications stay out of v6.3
 
 ## Progress
 
 ```
-v6.3 milestone audit closed
+v6.3 milestone archived
 [##########] 4 of 4 phases complete (11/11 plans)
 ```
 
-- **Next action:** Archive v6.3 milestone and open v6.4 planning
+- **Next action:** Start the next milestone with `$gsd-new-milestone`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Plan Phase 42 for the v6.3 employee portal attendance recap milestone.
+**Current focus:** Plan the next milestone after shipping v6.3 Employee Attendance Recap.
 
 ## What Was Shipped
+
+### v6.3 (Released, 2026-03-23)
+- Phase 42: Attendance recap read model
+- Phase 43: Portal attendance recap surface
+- Phase 44: Portal exception states and hardening
+- Phase 45: Attendance recap audit closure
+- Notes: audit closed with 7/7 requirements verified; production Supabase now includes `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap`
 
 ### v6.2 (Released, 2026-03-23)
 - Phase 40: Admin dashboard restoration and brand refresh
@@ -136,6 +143,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 41-02 | Final admin branding uses `src/assets/images/logogoenakko.png` | Matches the intended Enakko dashboard logo after the initial placeholder asset mismatch |
 | 42-01 | Break duration uses outer envelope (first_break to last_kembali) — matches admin Rekap Harian approximation | Detailed per-break timelines deferred to a later phase |
 | 42-01 | sedang_bekerja status suppresses belum_pulang false alarm for the active current workday | Prevents portal from showing false incomplete-attendance alarm while employee is still working |
+| 42-02 | summaryCounts stays month-scoped while recentDays can include the 14-day lookback window | Keeps one recap dataset serving both monthly chips and recent history without a second query |
+| 43-02 | Portal shell navigation state lives in `activeSection` props, not client router state | Keeps portal recap navigation SSR-friendly and additive to the existing shell |
+| 44-01 | Only `belum_pulang` and `tidak_hadir` are follow-up gaps; current-day states stay informational | Portal follow-up UI remains actionable without false warning noise |
+| 45-01 | Historical recap copy is row-aware via `getRecapDayPresentationForDay(day, referenceDate)` | Past exception rows no longer use misleading "hari ini" wording |
 | 44-03-01 | Recap empty state (ok:true + zero days) at page level with PortalStatePanel, not inside history component | Scope guard: empty/error responsibility stays at page layer |
 | 44-03-02 | followUpCount derived via countFollowUpDays from recap.days — no second query | Scope guard: single fetch for recap page |
 | 44-03-03 | Shell click listener scoped to /portal same-origin paths only | Avoids interfering with external links or admin routes |
@@ -149,6 +160,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- v6.3 archived on 2026-03-23. Archive set now includes roadmap, requirements, and milestone audit files under `.planning/milestones/`; no active milestone is currently defined.
+- Production Supabase now includes `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap`; the Phase 42 recap migration was applied during milestone closeout.
 - v6.3 initialized on 2026-03-23 as a read-only employee portal attendance recap milestone. Phase numbering now continues at 42 with phases 42-44 reserved for this milestone.
 - v6.2 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; v6.3 is now the active milestone.
 - Final v6.2 release must be built with Java 21 from Android Studio JBR; JDK 25 breaks the Android/Kotlin toolchain in this repo.

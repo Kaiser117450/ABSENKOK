@@ -83,7 +83,7 @@ The following checks require a live Supabase session and cannot be automated fro
 
 2. **`sedang_bekerja` active shift:** Verify that a currently-on-shift employee sees `sedang_bekerja` (not `belum_pulang`) for today's row while they are mid-shift.
 
-3. **SQL migration applied:** Confirm `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap` are present in the production Supabase project (`tmapxdftdhxovthgbhww`). The migration `sql/phase_42_portal_attendance_recap_20260323.sql` must be run in the SQL Editor before the portal can serve recap data.
+3. **SQL migration applied:** Completed during v6.3 milestone closeout on 2026-03-23. `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap` were confirmed present in the production Supabase project (`tmapxdftdhxovthgbhww`) after applying migration `phase_42_portal_attendance_recap_20260323`.
 
 ---
 

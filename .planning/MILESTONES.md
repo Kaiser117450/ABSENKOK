@@ -1,4 +1,28 @@
 # Milestones
+## v6.3 Employee Attendance Recap (Shipped: 2026-03-23)
+
+**Phases completed:** 4 phases, 11 plans, 20 tracked tasks
+**Timeline:** 2026-03-23 → 2026-03-23
+**Git range:** `0a494ed` → `8f32b6e`
+
+**Key accomplishments:**
+1. Added an employee-scoped portal attendance recap RPC and supporting index with logical-day-aware overnight repair.
+2. Derived month-to-date summary counts and recent logical-day history from one typed recap dataset in the Astro portal.
+3. Shipped a dedicated attendance entry point and `/portal/attendance` surface inside the existing employee portal shell.
+4. Centralized exception-state presentation so follow-up gaps are explicit while current-day in-progress states stay informational.
+5. Hardened recap empty/error/loading states and fixed historical row copy so past days no longer read as "hari ini".
+6. Closed the v6.3 audit with verification artifacts for phases 42-44 and applied the recap RPC/index to production Supabase during closeout.
+
+### Notes
+- Production now has `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap` after migration `phase_42_portal_attendance_recap_20260323` was applied during closeout.
+- Repo-wide `npm run check` in `absenkok-website` still reports pre-existing Deno edge-function typing noise outside the portal recap surface.
+- `followUpCount` derives from `recap.days` (14-day history horizon) while summary chips stay month-scoped; accepted as minimal overlap.
+
+### Delivered
+Employee portal now includes a phone-friendly attendance recap with month-to-date summary counts, recent logical-day history, explicit follow-up labeling, and verified closeout evidence.
+
+---
+
 ## v6.2 Dashboard & Report Foundation (Shipped: 2026-03-23)
 
 **Phases completed:** 2 phases, 0 formal plans, 0 tracked tasks
