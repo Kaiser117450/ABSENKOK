@@ -15,7 +15,7 @@
 ### Summary & Exceptions
 
 - [ ] **ATTN-04**: Employee can see month-to-date summary counts for the attendance states surfaced in the recap.
-- [ ] **ATTN-05**: Employee can identify days that need follow-up, including incomplete attendance outcomes and scheduled days without a completed attendance record.
+- [x] **ATTN-05**: Employee can identify days that need follow-up, including incomplete attendance outcomes and scheduled days without a completed attendance record.
 
 ### Portal Experience
 
@@ -56,7 +56,7 @@ Roadmap mapping for the approved v6.3 milestone:
 | ATTN-02 | Phase 45 | Pending |
 | ATTN-03 | Phase 45 | Pending |
 | ATTN-04 | Phase 45 | Pending |
-| ATTN-05 | Phase 45 | Pending |
+| ATTN-05 | Phase 45 | Complete |
 | PORT-03 | Phase 45 | Pending |
 | PORT-04 | Phase 45 | Pending |
 
