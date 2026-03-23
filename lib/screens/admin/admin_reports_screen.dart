@@ -44,7 +44,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   bool _exportingCsv = false;
   bool _exportingPdf = false;
   bool _hasLoaded = false;
-  
+
   // Pagination
   static const int _limit = 50;
   int _currentOffset = 0;
@@ -115,7 +115,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   dynamic _buildAttendanceBaseQuery() {
     final start = DateTime(_startDate.year, _startDate.month, _startDate.day);
-    final end = DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
+    final end =
+        DateTime(_endDate.year, _endDate.month, _endDate.day, 23, 59, 59);
 
     dynamic query = SupabaseClientFactory.admin
         .from('attendance_logs')
@@ -180,7 +181,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         final newRows = (data as List)
             .map((e) => _ReportRow.fromJson(e as Map<String, dynamic>))
             .toList();
-            
+
         setState(() {
           if (reset) {
             _rows = newRows;
@@ -238,7 +239,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final buffer = StringBuffer();
 
       if (isRekap) {
-        buffer.writeln('Tanggal,Nama,Outlet,Status,Masuk,Pulang,Kerja,Istirahat,Jumlah Scan,Catatan');
+        buffer.writeln(
+            'Tanggal,Nama,Outlet,Status,Masuk,Pulang,Kerja,Istirahat,Jumlah Scan,Catatan');
         final summaries = _computeDailySummaries(sourceRows: allRows);
         for (final summary in summaries) {
           final date = _escapeCsv(_formatDateLabelForExport(summary.dateLabel));
@@ -251,12 +253,15 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           final istirahat = _escapeCsv(_durationText(summary.totalBreak));
           final scanCount = summary.scanCount.toString();
           final notes = _escapeCsv(summary.statusNotes ?? '');
-          buffer.writeln('$date,$name,$outlet,$status,$masuk,$pulang,$kerja,$istirahat,$scanCount,$notes');
+          buffer.writeln(
+              '$date,$name,$outlet,$status,$masuk,$pulang,$kerja,$istirahat,$scanCount,$notes');
         }
       } else {
-        buffer.writeln('Nama,Jabatan,Outlet,Jenis,Waktu Lokal,Latitude,Longitude,Catatan');
-        final sorted = [...allRows]
-          ..sort((a, b) => _safeDateTime(b.log.scannedAt).compareTo(_safeDateTime(a.log.scannedAt)));
+        buffer.writeln(
+            'Nama,Jabatan,Outlet,Jenis,Waktu Lokal,Latitude,Longitude,Catatan');
+        final sorted = [...allRows]..sort((a, b) =>
+            _safeDateTime(b.log.scannedAt)
+                .compareTo(_safeDateTime(a.log.scannedAt)));
 
         for (final row in sorted) {
           final name = _escapeCsv(row.employee?.name ?? '-');
@@ -280,7 +285,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'text/csv')],
-        subject: isRekap ? 'Laporan Rekap Harian Enakko' : 'Laporan Per Scan Enakko',
+        subject:
+            isRekap ? 'Laporan Rekap Harian Enakko' : 'Laporan Per Scan Enakko',
       );
     } catch (_) {
       if (mounted) {
@@ -336,8 +342,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           outletName: outletName,
         );
       } else {
-        final sorted = [...allRows]
-          ..sort((a, b) => _safeDateTime(b.log.scannedAt).compareTo(_safeDateTime(a.log.scannedAt)));
+        final sorted = [...allRows]..sort((a, b) =>
+            _safeDateTime(b.log.scannedAt)
+                .compareTo(_safeDateTime(a.log.scannedAt)));
 
         final rows = sorted
             .map(
@@ -376,7 +383,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       sanitized = "'$sanitized";
     }
 
-    if (sanitized.contains(',') || sanitized.contains('"') || sanitized.contains('\n')) {
+    if (sanitized.contains(',') ||
+        sanitized.contains('"') ||
+        sanitized.contains('\n')) {
       return '"${sanitized.replaceAll('"', '""')}"';
     }
     return sanitized;
@@ -522,7 +531,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final rows = entry.value;
 
       final hasMasuk = rows.any((r) => r.log.type == AttendanceType.masuk);
-      if (hasMasuk) continue; // Group already has masuk — no re-attachment needed
+      if (hasMasuk)
+        continue; // Group already has masuk — no re-attachment needed
 
       final employeeId = key.split('|')[0];
       final dateStr = key.split('|')[1];
@@ -562,7 +572,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
     for (final entry in rowsToAdd.entries) {
       groups[entry.key]!.addAll(entry.value);
-      groups[entry.key]!.sort((a, b) => a.log.scannedAt.compareTo(b.log.scannedAt));
+      groups[entry.key]!
+          .sort((a, b) => a.log.scannedAt.compareTo(b.log.scannedAt));
     }
 
     final summaries = <DailySummary>[];
@@ -687,25 +698,28 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
 
     final employeeRows = <AttendanceDailyPdfEmployeeRow>[];
-    int globalHadir = 0;
-    int globalSakit = 0;
+    int globalMasuk = 0;
+    int globalTidakHadir = 0;
+    int globalBelumPulang = 0;
     int globalScan = 0;
-    Duration globalWork = Duration.zero;
 
     for (final entry in byEmployee.entries) {
       final empSummaries = entry.value;
       final name = empSummaries.first.employee?.name ?? 'Tidak Diketahui';
 
-      final hadirDays = empSummaries
+      final masukDays =
+          empSummaries.where((s) => s.firstMasuk != null).toList();
+      final tidakHadirDays = empSummaries
           .where((s) =>
-              s.status == DailySummaryStatus.normal && s.firstMasuk != null)
+              s.status == DailySummaryStatus.sakit ||
+              s.status == DailySummaryStatus.izin)
           .toList();
-      final sakitDays = empSummaries
-          .where((s) => s.status == DailySummaryStatus.sakit)
+      final belumPulangDays = empSummaries
+          .where((s) => s.status == DailySummaryStatus.belumPulang)
           .toList();
 
       // Avg masuk
-      final masukTimes = hadirDays
+      final masukTimes = masukDays
           .where((s) => s.firstMasuk != null)
           .map((s) => s.firstMasuk!.hour * 60 + s.firstMasuk!.minute)
           .toList();
@@ -713,7 +727,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           masukTimes.isEmpty ? '--:--' : _avgMinutesToHm(masukTimes);
 
       // Avg pulang
-      final pulangTimes = hadirDays
+      final pulangTimes = masukDays
           .where((s) => s.lastPulang != null)
           .map((s) => s.lastPulang!.hour * 60 + s.lastPulang!.minute)
           .toList();
@@ -722,7 +736,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
       // Total kerja
       Duration totalKerja = Duration.zero;
-      for (final s in hadirDays) {
+      for (final s in masukDays) {
         if (s.workDuration != null && !s.workDuration!.isNegative) {
           totalKerja += s.workDuration!;
         }
@@ -730,49 +744,32 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final totalKerjaStr =
           _durationText(totalKerja.inMinutes > 0 ? totalKerja : null);
 
-      // Resolve badge name from employee's active badge
-      final empObj = empSummaries.first.employee;
-      final badge = BadgeService.instance.getBadgeByIdSync(empObj?.activeBadgeId);
-
       employeeRows.add(AttendanceDailyPdfEmployeeRow(
         nama: name,
-        hadirCount: hadirDays.length,
+        masukCount: masukDays.length,
+        tidakHadirCount: tidakHadirDays.length,
+        belumPulangCount: belumPulangDays.length,
         avgMasukStr: avgMasukStr,
         avgPulangStr: avgPulangStr,
         totalKerjaStr: totalKerjaStr,
-        sakitCount: sakitDays.length,
-        badgeName: badge?.name ?? '',
       ));
 
-      globalHadir += hadirDays.length;
-      globalSakit += sakitDays.length;
+      globalMasuk += masukDays.length;
+      globalTidakHadir += tidakHadirDays.length;
+      globalBelumPulang += belumPulangDays.length;
       globalScan += empSummaries.fold(0, (sum, s) => sum + s.scanCount);
-      globalWork += totalKerja;
     }
 
     // Sort by name
     employeeRows
         .sort((a, b) => a.nama.toLowerCase().compareTo(b.nama.toLowerCase()));
-
-    // Attendance rate
-    final totalDays = summaries.map((s) => s.dateLabel).toSet().length;
     final totalEmployees = byEmployee.keys.length;
-    final attendanceRate = (totalEmployees > 0 && totalDays > 0)
-        ? (globalHadir / (totalDays * totalEmployees) * 100)
-        : 0.0;
-
-    // Avg work
-    final avgWorkMinutes =
-        globalHadir > 0 ? globalWork.inMinutes ~/ globalHadir : 0;
-    final avgH = avgWorkMinutes ~/ 60;
-    final avgM = avgWorkMinutes % 60;
-    final avgWorkStr = avgWorkMinutes > 0 ? '${avgH}j ${avgM}m' : '-';
 
     return AttendanceDailyPdfStats(
       totalKaryawan: totalEmployees,
-      attendanceRate: attendanceRate,
-      avgWorkStr: avgWorkStr,
-      totalSakit: globalSakit,
+      totalMasuk: globalMasuk,
+      totalTidakHadir: globalTidakHadir,
+      totalBelumPulang: globalBelumPulang,
       totalScan: globalScan,
       employeeRows: employeeRows,
     );
@@ -877,8 +874,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                                     value: null,
                                     child: Text('Semua Outlet'),
                                   ),
-                                  ..._outlets.map(
-                                      (o) => DropdownMenuItem<String?>(
+                                  ..._outlets
+                                      .map((o) => DropdownMenuItem<String?>(
                                             value: o.id,
                                             child: Text(
                                               o.name,
@@ -897,10 +894,12 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                         width: buttonWidth,
                         height: 48,
                         child: ElevatedButton(
-                          onPressed: _loading ? null : () {
-                            _loadReport(reset: true);
-                            _loadDailySummaryData();
-                          },
+                          onPressed: _loading
+                              ? null
+                              : () {
+                                  _loadReport(reset: true);
+                                  _loadDailySummaryData();
+                                },
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.zero,
                             shape: RoundedRectangleBorder(
@@ -911,8 +910,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white))
+                                      strokeWidth: 2, color: Colors.white))
                               : const Text('Tampilkan'),
                         ),
                       ),
@@ -933,10 +931,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
               indicatorColor: AppColors.primary,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textSecondary,
-              labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w500, fontSize: 13),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
               tabs: const [
                 Tab(text: 'Per Scan'),
                 Tab(text: 'Rekap Harian'),
@@ -965,7 +963,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
-                  onPressed: (_exportingCsv || _exportingPdf || _loading || _loadingDaily)
+                  onPressed: (_exportingCsv ||
+                          _exportingPdf ||
+                          _loading ||
+                          _loadingDaily)
                       ? null
                       : _exportCsv,
                   icon: _exportingCsv
@@ -978,13 +979,16 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                           size: 16, color: AppColors.primary),
                   label: Text(
                     _exportingCsv ? '...' : 'CSV',
-                    style: const TextStyle(
-                        color: AppColors.primary, fontSize: 13),
+                    style:
+                        const TextStyle(color: AppColors.primary, fontSize: 13),
                   ),
                 ),
                 const SizedBox(width: 4),
                 TextButton.icon(
-                  onPressed: (_exportingPdf || _exportingCsv || _loading || _loadingDaily)
+                  onPressed: (_exportingPdf ||
+                          _exportingCsv ||
+                          _loading ||
+                          _loadingDaily)
                       ? null
                       : _exportPdf,
                   icon: _exportingPdf
@@ -997,8 +1001,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                           size: 16, color: AppColors.primary),
                   label: Text(
                     _exportingPdf ? '...' : 'PDF',
-                    style: const TextStyle(
-                        color: AppColors.primary, fontSize: 13),
+                    style:
+                        const TextStyle(color: AppColors.primary, fontSize: 13),
                   ),
                 ),
               ],
@@ -1020,7 +1024,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                       ? const AppEmptyState(
                           icon: Icons.bar_chart_outlined,
                           heading: 'Belum Ada Data',
-                          subtext: 'Tidak ada data absensi pada rentang waktu ini',
+                          subtext:
+                              'Tidak ada data absensi pada rentang waktu ini',
                         )
                       : TabBarView(
                           controller: _tabCtrl,
@@ -1032,18 +1037,25 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                               itemBuilder: (context, i) {
                                 if (i == _rows.length) {
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 24),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 24),
                                     child: Center(
                                       child: _isLoadingMore
-                                          ? const CircularProgressIndicator(color: AppColors.primary)
+                                          ? const CircularProgressIndicator(
+                                              color: AppColors.primary)
                                           : ElevatedButton(
-                                              onPressed: () => _loadReport(reset: false),
+                                              onPressed: () =>
+                                                  _loadReport(reset: false),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppColors.surface,
-                                                foregroundColor: AppColors.primary,
-                                                side: const BorderSide(color: AppColors.border),
+                                                backgroundColor:
+                                                    AppColors.surface,
+                                                foregroundColor:
+                                                    AppColors.primary,
+                                                side: const BorderSide(
+                                                    color: AppColors.border),
                                               ),
-                                              child: const Text('Muat Lebih Banyak'),
+                                              child: const Text(
+                                                  'Muat Lebih Banyak'),
                                             ),
                                     ),
                                   );
@@ -1100,9 +1112,11 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ShimmerSkeleton(width: 120, height: 13, borderRadius: 4),
+                        ShimmerSkeleton(
+                            width: 120, height: 13, borderRadius: 4),
                         SizedBox(height: 6),
-                        ShimmerSkeleton(width: 180, height: 11, borderRadius: 4),
+                        ShimmerSkeleton(
+                            width: 180, height: 11, borderRadius: 4),
                       ],
                     ),
                   ),
@@ -1376,7 +1390,8 @@ class _DailySummaryTile extends StatelessWidget {
     final outletName = summary.outlet?.name ?? '-';
     final hasWork = summary.firstMasuk != null;
     final hasPulang = summary.lastPulang != null;
-    final badge = BadgeService.instance.getBadgeByIdSync(summary.employee?.activeBadgeId);
+    final badge =
+        BadgeService.instance.getBadgeByIdSync(summary.employee?.activeBadgeId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1437,8 +1452,8 @@ class _DailySummaryTile extends StatelessWidget {
 
                 // Scan count badge
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(20),
@@ -1487,11 +1502,12 @@ class _DailySummaryTile extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.logout_rounded, size: 12,
-                                  color: Color(0xFFD97706)),
+                              const Icon(Icons.logout_rounded,
+                                  size: 12, color: Color(0xFFD97706)),
                               const SizedBox(width: 4),
                               Text('Pulang',
-                                  style: TextStyle(fontSize: 10,
+                                  style: TextStyle(
+                                      fontSize: 10,
                                       color: AppColors.textSecondary)),
                             ],
                           ),

@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: none
-current_plan: Not started
-status: ready_for_next_milestone
-stopped_at: Completed v6.1 milestone closeout
-last_updated: "2026-03-23T12:10:00+08:00"
-last_activity: "2026-03-23 — archived v6.1 Employee Portal milestone with accepted verification debt"
+milestone: v6.2
+milestone_name: Dashboard & Report Foundation
+current_plan: Phase 40 milestone execution prep
+status: implementing_foundation
+stopped_at: Initializing milestone v6.2 and preparing implementation
+last_updated: "2026-03-23T12:35:00+08:00"
+last_activity: "2026-03-23 — started v6.2 Dashboard & Report Foundation milestone"
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,34 +18,34 @@ progress:
 
 ## Current Position
 
-Phase: None
-Plan: None
-Status: v6.1 archived — ready to define the next milestone
-Last activity: 2026-03-23 — archived v6.1 Employee Portal milestone with accepted verification debt
+Phase: 40
+Plan: Phase 40 milestone execution prep
+Status: v6.2 initialized — implementing dashboard and PDF foundation fixes
+Last activity: 2026-03-23 — started v6.2 Dashboard & Report Foundation milestone
 
 ## Current Status
-- **Milestone:** None active
-- **Phase:** None
-- **Current Plan:** Not started
-- **Last Updated:** 2026-03-23 — v6.1 archived and planning reset for next milestone definition
+- **Milestone:** v6.2 Dashboard & Report Foundation
+- **Phase:** 40
+- **Current Plan:** Phase 40 milestone execution prep
+- **Last Updated:** 2026-03-23 — v6.2 initialized for dashboard, branding, and PDF hardening
 
 ## Progress
 
 ```
-No active milestone
-[..........] 0% · next milestone not defined
+v6.2 Dashboard & Report Foundation
+[..........] 0% · 2 phases planned, execution starting at phase 40
 ```
 
 - **Next starting phase:** 40
-- **Milestone focus:** Define the next self-service or operational scope after the employee portal launch
-- **Roadmap state:** v6.1 archived; no active roadmap beyond the archive summary
+- **Milestone focus:** Restore admin dashboard flow, separate network control center access, refresh branding, and harden large-volume PDF reporting
+- **Roadmap state:** v6.2 active with phases 40-41 planned
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Start the next milestone definition; v6.1 verification debt is accepted into the archive, not scheduled yet.
+**Current focus:** Execute v6.2 foundation fixes before new features are added.
 
 ## What Was Shipped
 

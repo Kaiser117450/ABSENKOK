@@ -20,10 +20,15 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,400 tracked LOC Dart across 102 tracked files plus the separate Astro website repo and portal-specific Supabase RPCs
 **Archive note:** v6.1 shipped with accepted verification debt; see `.planning/milestones/v6.1-MILESTONE-AUDIT.md`
 
-## Next Milestone Goals
-- Define the next employee self-service scope after schedule visibility.
-- Choose whether the next portal release focuses on attendance recap, requests workflow, or notifications.
-- Continue phase numbering from 40 onward.
+## Current Milestone: v6.2 Dashboard & Report Foundation
+
+**Goal:** Stabilize the admin operational baseline before future feature work by restoring the preferred dashboard flow, separating chain-wide network visibility, refreshing Enakko branding, and hardening large-volume PDF reporting.
+
+**Target features:**
+- Restore the classic admin dashboard as the default full-admin landing surface.
+- Move chain-wide ringkasan jaringan and status per gerai into a dedicated control-center screen reachable from the admin dashboard.
+- Replace the utensil-only dashboard branding with the official `logo_enakko.png` asset.
+- Fix Rekap Harian PDF so per-employee summaries remain visible on large exports and show count-based attendance metrics.
 
 ### What v6.1 Added
 - ✅ Employee portal provisioning flow for existing employees
@@ -165,13 +170,20 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Employee can see current and upcoming schedules in a mobile-first portal shell — v6.1
 - ✓ Portal logout is scoped locally to the portal session — v6.1
 
-### Active (Next Milestone Discovery)
-- Employee attendance recap inside the portal
-- Employee time-off or absence request submission
-- Manager/admin approval workflow for employee requests
-- Shift reminders or notifications for upcoming work
+### Active (v6.2)
+- Restore `/admin/dashboard` for full admin to the classic operational dashboard (`DASH-01`)
+- Add a dedicated path/CTA for chain-wide ringkasan jaringan and status per gerai (`DASH-02`)
+- Keep kepala gerai constrained to outlet-scoped admin visibility while full-admin-only network views stay separate (`DASH-03`)
+- Use the official `assets/images/logo_enakko.png` asset in the admin dashboard header (`BRAND-01`)
+- Keep Rekap Harian PDF per-employee summaries visible on large exports (`PDF-01`)
+- Replace percentage-based PDF attendance summary with concrete counts for hadir, tidak absen, and belum absen pulang (`PDF-02`)
+- Show per-karyawan count metrics for hadir, tidak absen, and belum absen pulang while preserving useful time context (`PDF-03`)
 
 ### Deferred (Future)
+- [ ] Employee attendance recap inside the portal
+- [ ] Employee time-off or absence request submission
+- [ ] Manager/admin approval workflow for employee requests
+- [ ] Shift reminders or notifications for upcoming work
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
 - [ ] Schedule grid today-column highlight (GRID-D3)
@@ -287,4 +299,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after v6.1 milestone completion*
+*Last updated: 2026-03-23 after initializing milestone v6.2 Dashboard & Report Foundation*
