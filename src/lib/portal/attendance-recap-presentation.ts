@@ -11,6 +11,9 @@
 //
 // Phase 44 UI components should import from here instead of re-deriving the
 // same follow-up semantics inline.
+//
+// Phase 45 addition: `getRecapDayPresentationForDay(day, referenceDate)` makes
+// supporting copy accurate for historical rows without changing the data model.
 // ---------------------------------------------------------------------------
 
 import type { AttendanceStatus, PortalRecapDay } from './attendance-recap';
@@ -76,14 +79,14 @@ const PRESENTATION_MAP: Record<NonNullable<AttendanceStatus>, RecapDayPresentati
     tone: 'neutral',
     needsFollowUp: false,
     followUpLabel: null,
-    supportingCopy: 'Karyawan tercatat sakit pada hari ini.',
+    supportingCopy: 'Karyawan tercatat sakit.',
   },
   izin: {
     label: 'Izin',
     tone: 'neutral',
     needsFollowUp: false,
     followUpLabel: null,
-    supportingCopy: 'Karyawan tercatat izin pada hari ini.',
+    supportingCopy: 'Karyawan tercatat izin.',
   },
   libur: {
     label: 'Libur',
@@ -99,7 +102,7 @@ const PRESENTATION_MAP: Record<NonNullable<AttendanceStatus>, RecapDayPresentati
     needsFollowUp: true,
     followUpLabel: 'Absensi pulang belum tercatat',
     supportingCopy:
-      'Karyawan tercatat masuk namun tidak ada scan pulang pada hari ini. Perlu ditindaklanjuti.',
+      'Karyawan tercatat masuk namun tidak ada scan pulang. Perlu ditindaklanjuti.',
   },
   tidak_hadir: {
     label: 'Tidak Hadir',
@@ -107,7 +110,7 @@ const PRESENTATION_MAP: Record<NonNullable<AttendanceStatus>, RecapDayPresentati
     needsFollowUp: true,
     followUpLabel: 'Tidak ada kehadiran tercatat',
     supportingCopy:
-      'Karyawan terjadwal masuk namun tidak ada scan kehadiran sama sekali pada hari ini. Perlu ditindaklanjuti.',
+      'Karyawan terjadwal masuk namun tidak ada scan kehadiran sama sekali. Perlu ditindaklanjuti.',
   },
   // ── Current-day informational states — not follow-up ─────────────────────
   sedang_bekerja: {
@@ -169,4 +172,63 @@ export function isFollowUpStatus(status: AttendanceStatus): boolean {
  */
 export function countFollowUpDays(days: PortalRecapDay[]): number {
   return days.filter((d) => isFollowUpStatus(d.attendanceStatus)).length;
+}
+
+/**
+ * Return the employee-facing presentation data for a given recap day row,
+ * aware of whether the row is the current active workday or a historical entry.
+ *
+ * This is the preferred helper for history components that have access to both
+ * the row's `logicalDate` and the recap `referenceDate`.
+ *
+ * Differences from `getRecapDayPresentation(status)`:
+ * - Current-day rows (`logicalDate === referenceDate`) use "hari ini" phrasing
+ *   for `sakit`, `izin`, `sedang_bekerja`, and `belum_masuk`.
+ * - Historical rows with `sakit` or `izin` use date-specific copy instead of
+ *   generic "hari ini" wording.
+ * - Follow-up gaps (`belum_pulang`, `tidak_hadir`) always represent prior-day
+ *   unresolved states by definition — their copy is unchanged.
+ *
+ * Always returns a valid `RecapDayPresentation` — null status maps to the
+ * neutral fallback so callers do not need null-guards.
+ */
+export function getRecapDayPresentationForDay(
+  day: Pick<PortalRecapDay, 'logicalDate' | 'attendanceStatus'>,
+  referenceDate: string,
+): RecapDayPresentation {
+  const { logicalDate, attendanceStatus } = day;
+  const isCurrentDay = logicalDate === referenceDate;
+
+  // For current-day rows, fall through to the standard map which already
+  // contains appropriate "hari ini" phrasing.
+  if (isCurrentDay) {
+    return getRecapDayPresentation(attendanceStatus);
+  }
+
+  // For historical rows, override supportingCopy on statuses that previously
+  // used "hari ini" wording, replacing it with date-neutral historical phrasing.
+  const base = getRecapDayPresentation(attendanceStatus);
+
+  switch (attendanceStatus) {
+    case 'sakit':
+      return { ...base, supportingCopy: 'Karyawan tercatat sakit pada hari tersebut.' };
+    case 'izin':
+      return { ...base, supportingCopy: 'Karyawan tercatat izin pada hari tersebut.' };
+    // belum_pulang and tidak_hadir are by definition prior-day gaps — their
+    // copy is already history-appropriate (no "hari ini" in the base map).
+    // sedang_bekerja and belum_masuk are current-day-only states and will not
+    // appear on historical rows, but we handle them defensively anyway.
+    case 'sedang_bekerja':
+      return {
+        ...base,
+        supportingCopy: 'Karyawan sedang dalam jam kerja pada hari tersebut.',
+      };
+    case 'belum_masuk':
+      return {
+        ...base,
+        supportingCopy: 'Karyawan terjadwal masuk namun belum melakukan scan absensi pada hari tersebut.',
+      };
+    default:
+      return base;
+  }
 }
