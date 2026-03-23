@@ -2,41 +2,41 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
-status: phase_completed
-stopped_at: Completed Phase 47 execution
-last_updated: "2026-03-23T21:17:21.1861323+08:00"
-last_activity: "2026-03-23 — completed Phase 47: tracked the Java 21 JBR contract, fail-fast preflight lane, and v7.0 compatibility guardrails"
+status: phase_in_progress
+stopped_at: Completed 48-01-PLAN.md
+last_updated: "2026-03-23T13:48:16.073Z"
+last_activity: "2026-03-23 — completed 48-01: private upload-key signing scaffold and fail-fast release validation"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 10
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: Ready for Phase 48 - Secure Signing & Artifact Discipline
-Plan: —
-Status: Phase 47 complete; release contract and fail-fast preflight gates are now tracked
-Last activity: 2026-03-23 — Completed Phase 47 and verified the preflight lane fails in `flutter analyze` before any packaging/signing work
+Phase: 48 - Secure Signing & Artifact Discipline
+Plan: 48-02 pending
+Status: 48-01 complete; release signing now requires the private upload-key scaffold in tracked code
+Last activity: 2026-03-23 — Completed 48-01 and verified `:app:bundleRelease` fails clearly when private signing inputs are missing
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
 - **Next phase:** Phase 48: Secure Signing & Artifact Discipline
-- **Current focus:** Replace debug signing with a private upload-key flow and formalize the canonical v7.0 artifact set
+- **Current focus:** Build the canonical v7.0 artifact lane and retention rules on top of the private upload-key signing contract
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```text
 v7.0 milestone in progress
-[#####-----] 2 of 4 phases complete (5/10 plans)
+[######----] 2 of 4 phases complete (6/10 plans)
 ```
 
-- **Next action:** Start Phase 48 with `$gsd-discuss-phase 48` or `$gsd-plan-phase 48`
+- **Next action:** Execute Phase 48-02 to stage the canonical artifact set from one validated release lane
 
 ## Project Reference
 
@@ -153,6 +153,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 47-01 | `tool/release_env.ps1` resolves `ABSENKOK_JAVA_HOME` first, then Android Studio JBR Java 21 | Keeps the supported Gradle runtime explicit without force-tracking `android/local.properties` |
 | 47-02 | Release preflight lane is `flutter analyze` -> `flutter test` -> `:app:compileReleaseSources` | Fails before package/sign tasks while still exercising release-only compilation when earlier stages are green |
 | 47-03 | v7.0 stays pinned to Flutter 3.41.1, AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, and Java 21 JBR with no bypass flags | Release hardening forbids surprise upgrades until a dedicated compatibility spike replaces the contract |
+| 48-01 | Release signing validates private inputs only for release-capable Gradle tasks | Keeps debug/profile workflows unchanged while removing the unsafe debug-signing fallback for `release` |
+| 48-01 | Track `android/key.properties.example` while gitignoring the real signing files | Keeps the repo shareable while documenting the private upload-key schema |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -163,6 +165,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - None
 
 ## Accumulated Context
+- Phase 48-01 completed on 2026-03-23: `.gitignore` now excludes `android/key.properties` and common Android keystore patterns; `android/key.properties.example` tracks the required signing schema; `android/app/build.gradle.kts` loads `key.properties`, uses `signingConfigs.release`, and `:app:bundleRelease` now fails clearly when private signing inputs are missing instead of falling back to debug signing.
 - Phase 47 completed on 2026-03-23: `tool/release_env.ps1` now resolves Java 21 JBR and the canonical `C:\flutter\bin\flutter.bat`; `docs/android-release-contract.md` is the tracked v7.0 contract; `tool/release_preflight.ps1` fails fast before packaging/signing and currently stops at `flutter analyze` with 152 issues while also asserting the pinned AGP/Gradle/Kotlin/Flutter/Java contract.
 - Phase 46-02 completed on 2026-03-23: `pubspec.yaml` is now `7.0.0+8013`, Flutter regenerated `android/local.properties` to `7.0.0 / 8013`, and the release artifact path is `build/app/outputs/apk/release/ABSENKOK-v7.0.0.apk` without changing the version-derived Gradle naming rule.
 - Phase 46-01 completed on 2026-03-23: the canonical Windows release lane is now `C:\flutter\bin\flutter.bat build apk --release`, which packaged `ABSENKOK-v6.2.0.apk` again without changing AGP 8.11.1, Gradle 8.14, Kotlin 1.9.25, or the debug-signing baseline.
@@ -209,8 +212,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T21:17:21.1861323+08:00
-**Stopped at:** Completed Phase 47 execution
+**Last session:** 2026-03-23T13:48:16.069Z
+**Stopped at:** Completed 48-01-PLAN.md
 **Resume file:** None
 
 ## Database Safety Rules

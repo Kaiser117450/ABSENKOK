@@ -57,11 +57,11 @@ Plans:
 
 **Goal:** Replace debug signing with a secure upload-key flow and formalize the release artifact set.
 **Depends on:** Phase 47
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 
-- [ ] 48-01: Wire release signing through a private upload-keystore and `android/key.properties`
+- [x] 48-01: Wire release signing through a private upload-keystore and `android/key.properties`
 - [ ] 48-02: Produce the agreed artifact set from one validated lane: canonical `.aab` plus release `.apk` only if outlet side-loading still needs it
 - [ ] 48-03: Retain split debug info or symbol artifacts and smoke-verify the shrunken release output before distribution
 
