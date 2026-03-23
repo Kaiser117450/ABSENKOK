@@ -71,7 +71,7 @@ Packaging Android v7.0 sekarang masuk lewat satu entrypoint yang ditrack:
 powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly
 ```
 
-Mode `-CheckOnly` hanya memvalidasi kontrak packaging dan target staging tanpa memotong signed artifact. Untuk memvalidasi jalur smoke verification tanpa perangkat terpasang, gunakan:
+Mode `-CheckOnly` hanya memvalidasi kontrak packaging dan target staging tanpa memotong signed artifact. Command surface ini harus berjalan di Windows PowerShell 5.1 (`powershell.exe`), bukan hanya di `pwsh`. Untuk memvalidasi jalur smoke verification tanpa perangkat terpasang, gunakan:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly -IncludeAppBundle -SmokeVerify
@@ -93,7 +93,7 @@ Kebijakan artifact untuk v7.0:
 - `symbols/` di bawah release directory wajib dipertahankan untuk setiap signed release melalui `--split-debug-info`, dan v7.0 tetap tidak menyalakan `--obfuscate` secara default.
 - `mapping.txt` dari shrinker Android harus disalin ke release directory bila file itu dihasilkan.
 - Signed `.aab` bukan output default; artifact itu hanya dipertahankan bila operator memang meminta jalur bundle tambahan lewat `-IncludeAppBundle`.
-- Evidence `smoke-check.txt` hasil `-SmokeVerify` wajib ada sebelum distribusi; file itu mencatat timestamp UTC, serial device, versi release, dan hasil command install/launch.
+- Evidence `smoke-check.txt` hasil `-SmokeVerify` wajib ada sebelum distribusi; smoke lane selalu menginstal canonical signed `.apk` yang sama dengan `canonicalArtifact`, lalu mencatat timestamp UTC, serial device, versi release, dan hasil command install/launch.
 - `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, `canonicalArtifact` yang menunjuk ke signed `.apk`, `bundleRetentionState`, jalur symbol/mapping yang dipertahankan, dan status smoke verification untuk release tersebut.
 - Release tidak dianggap siap distribusi sebelum symbol retention dan smoke evidence sama-sama ada di release directory yang sama.
 - Detail operator sequencing tetap ditahan untuk Phase 49; dokumen ini hanya mengunci kontrak artifact dan lokasi staging yang harus konsisten.

@@ -738,7 +738,7 @@ try {
         "Signed .aab is retained only when tool/release_build.ps1 runs with -IncludeAppBundle."
     )
     if ($SmokeVerify) {
-        $notes += "Smoke verification records install and launch evidence in smoke-check.txt before distribution."
+        $notes += "Smoke verification installs the canonical retained APK and records install and launch evidence in smoke-check.txt before distribution."
     }
 
     $manifest = [ordered]@{
