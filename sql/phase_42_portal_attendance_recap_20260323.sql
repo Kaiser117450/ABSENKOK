@@ -254,10 +254,29 @@ BEGIN
   --   sakit          — sakit scan logged
   --   izin           — izin scan logged
   --   belum_pulang   — has masuk but no pulang yet; suppressed for the active day
-  --                    so that the current workday is not falsely flagged incomplete
-  --   tidak_hadir    — scheduled workday with no attendance at all
+  --                    so that the current workday is not falsely flagged incomplete.
+  --                    FOLLOW-UP GAP: this is a prior-day incomplete-attendance flag.
+  --                    The employee clocked in but no clock-out was recorded. Needs
+  --                    review. Only applies to logical_date < effective_date.
+  --   sedang_bekerja — has masuk but no pulang yet on the CURRENT effective_date.
+  --                    CURRENT-DAY INFORMATIONAL STATE: the employee is actively
+  --                    working right now. Not a follow-up gap. Do not surface as a
+  --                    warning or action item.
+  --   tidak_hadir    — scheduled workday with no attendance at all (prior days only).
+  --                    FOLLOW-UP GAP: a scheduled workday where no attendance scan of
+  --                    any type was recorded. Needs review. Only applies to
+  --                    logical_date < effective_date.
+  --   belum_masuk    — scheduled workday, current effective_date, no attendance yet.
+  --                    CURRENT-DAY INFORMATIONAL STATE: the employee is scheduled today
+  --                    but has not yet scanned in. Not a follow-up gap because the
+  --                    workday is still in progress.
   --   libur          — scheduled day-off
   --   (null)         — unscheduled day with no attendance (should not appear in output)
+  --
+  -- EXCEPTION TAXONOMY SUMMARY (for portal presentation helpers):
+  --   Follow-up gaps (prior-day unresolved):  belum_pulang, tidak_hadir
+  --   Current-day in-progress (informational): sedang_bekerja, belum_masuk
+  --   Resolved outcomes (no follow-up needed): hadir, sakit, izin, libur
   with_status AS (
     SELECT
       m.logical_date,
