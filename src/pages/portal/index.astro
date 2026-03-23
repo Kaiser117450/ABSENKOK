@@ -18,12 +18,45 @@ if (state.kind === 'unauthenticated') {
 ---
 
 {state.kind === 'ready' && (
-  <PortalLayout title="Beranda" employee={state.schedule.employee}>
+  <PortalLayout title="Beranda" employee={state.schedule.employee} activeSection="home">
     <!-- Greeting -->
     <div class="mb-6">
       <p class="text-sm text-gray-500">Selamat datang,</p>
       <h1 class="text-2xl font-bold text-gray-900">{state.schedule.employee.employee_name}</h1>
     </div>
+
+    <!-- Attendance recap CTA — compact entry card below greeting -->
+    <a
+      href="/portal/attendance"
+      class="flex items-center justify-between gap-3 w-full mb-6 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-[#E91E8C]/40 hover:bg-[#E91E8C]/5 transition group"
+      aria-label="Lihat rekap kehadiran Anda"
+    >
+      <div class="flex items-center gap-3 min-w-0">
+        <span
+          class="shrink-0 w-9 h-9 rounded-full bg-[#E91E8C]/10 flex items-center justify-center text-[#E91E8C]"
+          aria-hidden="true"
+        >
+          <!-- calendar-check icon (inline SVG, no dependency) -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <polyline points="9 16 11 18 15 14"/>
+          </svg>
+        </span>
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-gray-900 leading-tight">Rekap Kehadiran</p>
+          <p class="text-xs text-gray-500 truncate">Lihat riwayat dan ringkasan bulan ini</p>
+        </div>
+      </div>
+      <svg
+        class="shrink-0 text-gray-400 group-hover:text-[#E91E8C] transition"
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      >
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </a>
 
     <!-- Schedule surface — today + week rows via shared component -->
     <PortalScheduleSection schedule={state.schedule} />
@@ -31,7 +64,7 @@ if (state.kind === 'unauthenticated') {
 )}
 
 {state.kind === 'empty' && (
-  <PortalLayout title="Beranda" employee={state.employee}>
+  <PortalLayout title="Beranda" employee={state.employee} activeSection="home">
     <!-- Greeting retained even with no schedule -->
     <div class="mb-6">
       <p class="text-sm text-gray-500">Selamat datang,</p>
