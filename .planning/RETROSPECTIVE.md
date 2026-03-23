@@ -237,12 +237,53 @@
 
 ---
 
+## Milestone: v6.1 — Employee Portal
+
+**Shipped:** 2026-03-23
+**Phases:** 3 (37-39) | **Plans:** 8 | **Timeline:** 2 days
+
+### What Was Built
+- Employee portal provisioning contract and initial admin provisioning flow
+- Password-based name-search login on the Astro website
+- Protected employee portal shell with server-side identity resolution
+- Employee schedule visibility for today, this week, and next week
+- Mobile-first portal UX with empty, not-linked, and error states
+- Hardened authenticated RPC read path for the shipped portal backend
+
+### What Worked
+- Tight milestone scope kept the portal release small enough to ship quickly
+- Cross-repo split remained clear: Flutter repo kept planning and app state, Astro repo carried the website implementation
+- The later hardening pass improved portal security without changing employee UX
+
+### What Was Inefficient
+- Verification discipline broke again: Phase 37 had no verification artifact, and 38/39 validation files stayed draft
+- Planning summaries drifted behind the shipped website implementation after the hardening pass
+- Milestone closeout required a proceed-anyway decision because the archive trail lagged the actual implementation
+
+### Patterns Established
+- Employee self-service belongs in the separate Astro portal, not in kiosk or admin surfaces
+- Portal auth and schedule reads should stay server-side and employee-scoped
+- When work spans a second repo, planning artifacts need a mandatory backfill step before milestone archive
+
+### Key Lessons
+1. Cross-repo milestones need explicit verification ownership; otherwise the implementation ships faster than the planning evidence.
+2. Security hardening landed smoothly because the portal already had a clean server-side boundary.
+3. Accepting verification debt at archive time is possible, but it should stay exceptional and documented.
+
+### Cost Observations
+- Model mix: balanced profile with targeted manual verification
+- Sessions: short burst across 2 days
+- Notable: implementation moved faster than archive hygiene; closeout time was spent on traceability debt, not feature work
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
+| v6.1 | 2 days | 3 | First employee portal milestone; implementation shipped fast but verification/traceability lagged |
 | v6.0 | 3 days | 6 | Implementation milestone expanded with explicit rollout/acceptance closure phases before archive |
 | v1.1 | 5 days | 11 | Initial release — all planned milestones collapsed into one |
 | v2.0 | 1 day | 4 | Rapid iteration — admin tools + live activity |
@@ -256,6 +297,7 @@
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
+| v6.1 | Website build checks plus pending manual portal validation | Partial (requirements implemented, audit passed only by proceed-anyway decision) | 4 items |
 | v6.0 | Targeted unit/widget tests plus validation packets | Extended (device identity, kiosk devices, analytics/routing, milestone traceability) | 4 items |
 | v1.1 | 71 | Partial (concentrated in overlay, PDF, schedule) | 8 items |
 | v2.0 | 127+ | Extended (CSV, live content, overlay model) | 9 items |
@@ -268,3 +310,4 @@
 3. Injectable dependencies (callbacks, not singletons) = fast unit tests
 4. Top-level functions beat methods for widget extraction — less context binding, more composable
 5. Device verification is a separate concern — add it as an explicit plan, not an afterthought
+6. Cross-repo milestones need a deliberate backfill step for verification and planning artifacts before archive

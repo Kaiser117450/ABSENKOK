@@ -5,31 +5,33 @@ NFC attendance kiosk app for **Ayam Guling Enakko** restaurant chain — Android
 at each outlet. Replaces paper attendance. Features: real-time reports with PDF/CSV export,
 persistent floating pill overlay (Dynamic Island-style), employee badge system, Supabase-synced
 schedule grid (week-view TableView), employee archive/restore, batch CSV import, and premium
-kiosk UI. Marketing website at absenkok.vercel.app. Admin can manage employees, attendance,
-schedules, and badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+kiosk UI. Marketing website at absenkok.vercel.app now also hosts a protected employee portal
+for self-service schedule visibility. Admin can manage employees, attendance, schedules, and
+badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
 
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v6.1 Employee Portal
-
-**Goal:** Launch the first employee-facing web portal so staff can see their own schedules without touching kiosk or admin-only surfaces.
-
-**Target features:**
-- Employee-facing web access separate from kiosk/admin flows
-- Employee can view assigned shifts and upcoming work days
-- Portal foundation that can expand into attendance and request workflows later
-
 ## Current State
 
-**Shipped:** v6.0 Multi-Outlet & Multi-Device Control (2026-03-22)
+**Shipped:** v6.1 Employee Portal (2026-03-23)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
-**Codebase:** ~28,400 tracked LOC Dart across 102 tracked files; Supabase Edge Functions: `create-admin-user`
+**Web surfaces:** marketing site + protected employee portal on the Astro website
+**Codebase:** ~28,400 tracked LOC Dart across 102 tracked files plus the separate Astro website repo and portal-specific Supabase RPCs
+**Archive note:** v6.1 shipped with accepted verification debt; see `.planning/milestones/v6.1-MILESTONE-AUDIT.md`
 
 ## Next Milestone Goals
-- Define the first employee self-service surface around schedule visibility.
-- Keep the release focused enough to ship as `v6.1`.
-- Continue phase numbering from 37 onward.
+- Define the next employee self-service scope after schedule visibility.
+- Choose whether the next portal release focuses on attendance recap, requests workflow, or notifications.
+- Continue phase numbering from 40 onward.
+
+### What v6.1 Added
+- ✅ Employee portal provisioning flow for existing employees
+- ✅ Password-based name-search login on the Astro website
+- ✅ Protected portal shell with employee identity resolution before schedule reads
+- ✅ Employee schedule visibility for today, this week, and next week
+- ✅ Mobile-first portal states for loading, empty, not-linked, and error
+- ✅ Portal-only logout plus hardened authenticated RPC read path in the website backend
 
 ### What v6.0 Added
 - ✅ Persistent installation UUIDv4 per kiosk that survives logout/re-setup
@@ -59,6 +61,8 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
+- v6.1 verification debt accepted at archive time: Phase 37 has no verification artifact; Phase 38 and 39 validation files remained draft
+- v6.1 planning summaries lag the shipped website hardening (`get_portal_schedule_overview`, authenticated RPC ACL tightening, and portal UI follow-up tweaks)
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
 - Dual PDF service files (pdf_report_service.dart + pdf_service.dart)
 - Phase 15 has no formal PLAN/SUMMARY files (SQL-only phase)
@@ -154,10 +158,18 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Full-admin Central Dashboard with chain-wide device visibility — v6.0
 - ✓ Firm-wide daily attendance aggregation in the Central Dashboard — v6.0
 
-### Active (v6.1)
-- Employee-facing web portal foundation
-- Employee schedule visibility and self-service access
-- Clear separation between employee, kiosk, and admin surfaces
+### Validated (v6.1)
+- ✓ Admin can provision initial employee portal access for existing staff records — v6.1
+- ✓ Employee can find their profile through name search and sign in with password — v6.1
+- ✓ Protected portal routes resolve exactly one employee before schedule data is shown — v6.1
+- ✓ Employee can see current and upcoming schedules in a mobile-first portal shell — v6.1
+- ✓ Portal logout is scoped locally to the portal session — v6.1
+
+### Active (Next Milestone Discovery)
+- Employee attendance recap inside the portal
+- Employee time-off or absence request submission
+- Manager/admin approval workflow for employee requests
+- Shift reminders or notifications for upcoming work
 
 ### Deferred (Future)
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
@@ -253,6 +265,11 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 23 | Sentry NFC noise filter via type+message check | ✓ Zero spam; real errors still captured |
 | 24 | HeartbeatService in background isolate (not main) | ✓ Never blocks NFC scan, survives app minimize |
 | 25 | Diagnostics screen behind long-press logo (hidden) | ✓ No UI clutter; ops can access without training |
+| 26 | Hidden portal auth email uses `employee+<uuid>@portal.absenkok.internal` | ✓ Stable employee-linked auth key without exposing user-entered identifiers |
+| 27 | Portal search normalization stays in Postgres via generated column + trigram gate | ✓ Fast duplicate-safe employee search without mutating display names |
+| 28 | Astro SSR portal auth validates with `getUser()` in middleware | ✓ Server-side portal access does not trust stale client session state |
+| 29 | Portal schedule UI derives today and upcoming views from one schedule dataset | ✓ Portal surfaces stay internally consistent across current and future schedule sections |
+| 30 | Portal logout uses `scope: 'local'` and blocked states stay inside `PortalLayout` | ✓ Employee portal can sign out safely without affecting kiosk/admin sessions |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -270,4 +287,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-22 after v6.1 milestone start*
+*Last updated: 2026-03-23 after v6.1 milestone completion*

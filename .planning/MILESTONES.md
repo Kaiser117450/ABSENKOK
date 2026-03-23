@@ -1,4 +1,26 @@
 # Milestones
+## v6.1 Employee Portal (Shipped: 2026-03-23)
+
+**Phases completed:** 3 phases, 8 plans, 15 tasks
+**Timeline:** 2026-03-22 → 2026-03-23
+**Git range:** `0082be6` → `3d9d3f2`
+
+**Key accomplishments:**
+1. Added a deterministic employee portal account contract with indexed name search and server-side provisioning for existing staff records.
+2. Extended the Astro website with password-based employee login, SSR auth guards, and server-side employee identity resolution.
+3. Shipped an employee-scoped portal schedule read model with current-week visibility, overnight handling, and mobile-first portal surfaces.
+4. Delivered portal state handling for loading, empty, not-linked, and error cases plus portal-only logout behavior.
+5. Hardened the shipped portal read path in the website repo around authenticated RPCs, current-plus-next-week schedule visibility, and status-tinted schedule cards.
+
+### Known Gaps
+- Archived with audit status `gaps_found` because Phase 37 has no verification artifact and Phase 38/39 validation artifacts remained draft at closeout.
+- Planning summaries for Phase 37-38 lag the shipped website hardening (`get_portal_schedule_overview`, RPC ACL tightening, and portal UI follow-up tweaks).
+
+### Delivered
+First employee-facing ABSENKOK web portal: admin-provisioned password login, employee-scoped schedule visibility, mobile-first portal UX, and hardened server-side schedule reads.
+
+---
+
 ## v6.0 Multi-Outlet & Multi-Device Control (Shipped: 2026-03-22)
 
 **Phases completed:** 6 phases, 12 plans, 33 tasks

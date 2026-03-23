@@ -1,53 +1,59 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.1
-milestone_name: milestone
+milestone: none
+milestone_name: none
 current_plan: Not started
-status: completed
-stopped_at: Completed 39-02-PLAN.md
-last_updated: "2026-03-22T16:21:42.016Z"
-last_activity: "2026-03-23 — executed 39-02: portal shell hardened (AUTH-04), portal home rewritten as page-state router"
+status: ready_for_next_milestone
+stopped_at: Completed v6.1 milestone closeout
+last_updated: "2026-03-23T12:10:00+08:00"
+last_activity: "2026-03-23 — archived v6.1 Employee Portal milestone with accepted verification debt"
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 7
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 39 — Employee Portal Schedule UX
-Plan: 39-02 — Portal shell wiring and page integration (COMPLETE)
-Status: Phase 39 complete — all plans executed
-Last activity: 2026-03-23 — executed 39-02: portal shell hardened (AUTH-04), portal home rewritten as page-state router
+Phase: None
+Plan: None
+Status: v6.1 archived — ready to define the next milestone
+Last activity: 2026-03-23 — archived v6.1 Employee Portal milestone with accepted verification debt
 
 ## Current Status
-- **Milestone:** v6.1 — Employee Portal
-- **Phase:** 39 — Employee Portal Schedule UX
+- **Milestone:** None active
+- **Phase:** None
 - **Current Plan:** Not started
-- **Last Updated:** 2026-03-23 — 39-02 complete: portal shell hardened, local-scope logout, portal home rewritten as page-state router
+- **Last Updated:** 2026-03-23 — v6.1 archived and planning reset for next milestone definition
 
 ## Progress
 
 ```
-v6.1 Employee Portal — PHASE 39 COMPLETE
-[██████████] 100% · 8/8 plans complete
+No active milestone
+[..........] 0% · next milestone not defined
 ```
 
-- **Next starting phase:** 39
-- **Milestone focus:** Employee-facing web portal with schedule visibility first
-- **Roadmap state:** Phase 39 planned; milestone ready for final execution
+- **Next starting phase:** 40
+- **Milestone focus:** Define the next self-service or operational scope after the employee portal launch
+- **Roadmap state:** v6.1 archived; no active roadmap beyond the archive summary
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-22)
+See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Execute Phase 39 to finish the employee-facing schedule UX, explicit portal states, and portal-only logout behavior.
+**Current focus:** Start the next milestone definition; v6.1 verification debt is accepted into the archive, not scheduled yet.
 
 ## What Was Shipped
+
+### v6.1 (Released, 2026-03-23)
+- Phase 37: Portal foundation and employee auth
+- Phase 38: Employee schedule read model
+- Phase 39: Employee portal schedule UX
+- Notes: archived with accepted verification debt and planning/implementation drift documented in `v6.1-MILESTONE-AUDIT.md`
 
 ### v6.0 (Released, 2026-03-22)
 - Phase 31: Device identity foundation
@@ -132,6 +138,9 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 - None
 
 ## Accumulated Context
+- v6.1 archived on 2026-03-23. Archive set lives under `.planning/milestones/`; no active milestone is defined yet, and next phase numbering should start at 40.
+- v6.1 archive intentionally accepts verification debt: Phase 37 has no verification artifact, while Phase 38 and 39 validation files remained draft at closeout.
+- The shipped website portal path is ahead of planning summaries: current implementation uses hardened authenticated RPCs such as `get_portal_schedule_overview`.
 - v6.0 archived on 2026-03-22. Archive set lives under `.planning/milestones/`; current `.planning/ROADMAP.md` is reset for next-milestone planning.
 - v6.1 initialized on 2026-03-22 as a focused employee-facing web portal milestone. Primary first job: employee can view assigned schedule and upcoming work days. Preferred surface: separate web portal, not kiosk/admin flow reuse.
 - NFC double-scan crash is a production bug — must fix before new features
