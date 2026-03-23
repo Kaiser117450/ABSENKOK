@@ -1,0 +1,107 @@
+---
+/**
+ * PortalAttendanceSummary — month-to-date attendance summary card surface.
+ *
+ * Renders the month-to-date recap summary counts from the Phase 42 typed
+ * recap model. Phone-first stacked layout — no table/grid.
+ *
+ * Props:
+ *   summaryCounts — the `AttendanceSummaryCounts` from the recap model.
+ *   monthStart    — ISO date "YYYY-MM-DD" for the first day of the current month.
+ *
+ * Scope guard:
+ *   - does not fetch data or derive counts
+ *   - does not include exception/warning copy reserved for Phase 44
+ *   - no client framework or new dependencies
+ */
+
+import type { AttendanceSummaryCounts } from '../../lib/portal/attendance-recap';
+
+interface Props {
+  summaryCounts: AttendanceSummaryCounts;
+  monthStart: string;
+}
+
+const { summaryCounts, monthStart } = Astro.props;
+
+/** Format "YYYY-MM-DD" into a localized month name, e.g. "Maret 2026". */
+function formatMonthLabel(isoDate: string): string {
+  const d = new Date(isoDate + 'T00:00:00');
+  return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+}
+
+interface SummaryChip {
+  label: string;
+  count: number;
+  chipBg: string;
+  countColor: string;
+  labelColor: string;
+}
+
+const chips: SummaryChip[] = [
+  {
+    label: 'Hadir',
+    count: summaryCounts.hadir,
+    chipBg: 'bg-emerald-50 border border-emerald-200',
+    countColor: 'text-emerald-700',
+    labelColor: 'text-emerald-600',
+  },
+  {
+    label: 'Tidak Hadir',
+    count: summaryCounts.tidakHadir,
+    chipBg: 'bg-red-50 border border-red-200',
+    countColor: 'text-red-700',
+    labelColor: 'text-red-600',
+  },
+  {
+    label: 'Sakit',
+    count: summaryCounts.sakit,
+    chipBg: 'bg-orange-50 border border-orange-200',
+    countColor: 'text-orange-700',
+    labelColor: 'text-orange-600',
+  },
+  {
+    label: 'Izin',
+    count: summaryCounts.izin,
+    chipBg: 'bg-sky-50 border border-sky-200',
+    countColor: 'text-sky-700',
+    labelColor: 'text-sky-600',
+  },
+  {
+    label: 'Belum Pulang',
+    count: summaryCounts.belumPulang,
+    chipBg: 'bg-amber-50 border border-amber-200',
+    countColor: 'text-amber-700',
+    labelColor: 'text-amber-600',
+  },
+  {
+    label: 'Libur',
+    count: summaryCounts.libur,
+    chipBg: 'bg-gray-50 border border-gray-200',
+    countColor: 'text-gray-600',
+    labelColor: 'text-gray-500',
+  },
+];
+---
+
+<section aria-label="Ringkasan kehadiran bulan ini">
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+    Ringkasan {formatMonthLabel(monthStart)}
+  </h2>
+
+  <div class="grid grid-cols-3 gap-2" role="list">
+    {chips.map((chip) => (
+      <div
+        class={`${chip.chipBg} rounded-2xl p-3 flex flex-col items-center text-center`}
+        role="listitem"
+      >
+        <span class={`text-2xl font-bold leading-none ${chip.countColor}`}>
+          {chip.count}
+        </span>
+        <span class={`text-xs mt-1 font-medium leading-tight ${chip.labelColor}`}>
+          {chip.label}
+        </span>
+      </div>
+    ))}
+  </div>
+</section>
