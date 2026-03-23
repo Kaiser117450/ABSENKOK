@@ -141,9 +141,9 @@ function getMetaClasses(entry: PortalScheduleEntry): string {
 function getTodayCardClasses(entry: PortalScheduleEntry): string {
   switch (getEntryStatus(entry)) {
     case 'sakit':
-      return 'bg-red-50 border-red-200';
+      return 'bg-red-100 border-red-200';
     case 'izin':
-      return 'bg-sky-50 border-sky-200';
+      return 'bg-sky-100 border-sky-200';
     default:
       return 'bg-white border-[#E91E8C]/30';
   }
@@ -171,6 +171,66 @@ function getStatusBadgeClasses(status: PortalScheduleStatus): string {
   }
 }
 
+function getWeekEntryCardClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'bg-red-100 border-red-200';
+    case 'izin':
+      return 'bg-sky-100 border-sky-200';
+    default:
+      return today ? 'bg-[#E91E8C]/5 border-[#E91E8C]/20' : 'bg-white border-gray-200';
+  }
+}
+
+function getDayLabelClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-600';
+    case 'izin':
+      return 'text-sky-600';
+    default:
+      return today ? 'text-[#E91E8C]' : 'text-gray-400';
+  }
+}
+
+function getDayNumberClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-700';
+    case 'izin':
+      return 'text-sky-700';
+    default:
+      return today ? 'text-[#E91E8C]' : 'text-gray-700';
+  }
+}
+
+function getTodayMarkerClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-600';
+    case 'izin':
+      return 'text-sky-600';
+    default:
+      return 'text-[#E91E8C]';
+  }
+}
+
+function getOutletMetaDotClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-400';
+    case 'izin':
+      return 'text-sky-400';
+    default:
+      return 'text-gray-400';
+  }
+}
+
 function getFallbackMeta(entry: PortalScheduleEntry): string | null {
   if (entry.outletName) {
     return entry.outletName;
@@ -195,8 +255,8 @@ function getFallbackMeta(entry: PortalScheduleEntry): string | null {
   {todayEntry ? (
     todayStatus === 'libur' ? (
       <!-- Day off -->
-      <div class="bg-red-50 rounded-2xl border border-red-200 p-5 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0" aria-hidden="true">
+      <div class="bg-red-100 rounded-2xl border border-red-200 p-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center shrink-0" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M4.22 19.78l.707-.707M18.364 5.636l.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
           </svg>
@@ -272,21 +332,21 @@ function getFallbackMeta(entry: PortalScheduleEntry): string | null {
 
     {section.entries.length > 0 ? (
       <!-- One-column stacked list — no table/grid -->
-      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100" role="list" aria-label={section.ariaLabel}>
+      <div class="space-y-3" role="list" aria-label={section.ariaLabel}>
         {section.entries.map((entry) => {
         const today = isToday(entry, schedule.referenceDate);
         const status = getEntryStatus(entry);
         return (
           <div
-            class={`p-4 flex items-center gap-3 ${today ? 'bg-[#E91E8C]/5' : ''}`}
+            class={`${getWeekEntryCardClasses(entry, today)} rounded-2xl border p-4 flex items-center gap-3 shadow-sm`}
             role="listitem"
           >
             <!-- Day indicator column -->
             <div class="w-12 shrink-0 text-center">
-              <p class={`text-xs font-semibold uppercase ${today ? 'text-[#E91E8C]' : 'text-gray-400'}`}>
+              <p class={`text-xs font-semibold uppercase ${getDayLabelClasses(entry, today)}`}>
                 {new Date(entry.logicalDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' })}
               </p>
-              <p class={`text-lg font-bold leading-none ${today ? 'text-[#E91E8C]' : 'text-gray-700'}`}>
+              <p class={`text-lg font-bold leading-none ${getDayNumberClasses(entry, today)}`}>
                 {new Date(entry.logicalDate + 'T00:00:00').getDate()}
               </p>
             </div>
@@ -298,7 +358,7 @@ function getFallbackMeta(entry: PortalScheduleEntry): string | null {
                   {getEntryTitle(entry)}
                 </p>
                 {today && (
-                  <span class="text-xs font-normal text-[#E91E8C]">Hari ini</span>
+                  <span class={`text-xs font-normal ${getTodayMarkerClasses(entry)}`}>Hari ini</span>
                 )}
                 {hasIconOnlyBadge(entry) && (
                   <span
@@ -321,7 +381,7 @@ function getFallbackMeta(entry: PortalScheduleEntry): string | null {
                         <span class="ml-1 text-amber-600 font-medium">(Selesai besok)</span>
                       )}
                       {entry.outletName && (
-                        <span class="ml-1 text-gray-400">&middot; {entry.outletName}</span>
+                        <span class={`ml-1 ${getOutletMetaDotClasses(entry)}`}>&middot; {entry.outletName}</span>
                       )}
                     </>
                   ) : (
