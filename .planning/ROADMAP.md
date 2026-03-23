@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ◆ **v6.3 Employee Attendance Recap** — Phases 42-44 planned 2026-03-23.
+- ◆ **v6.3 Employee Attendance Recap** — Phases 42-45 in progress 2026-03-23.
 - ✅ **v6.2 Dashboard & Report Foundation** — Phases 40-41 shipped 2026-03-23. Archive: [`milestones/v6.2-ROADMAP.md`](milestones/v6.2-ROADMAP.md)
 - ✅ **v6.1 Employee Portal** — Phases 37-39 shipped 2026-03-23. Archive: [`milestones/v6.1-ROADMAP.md`](milestones/v6.1-ROADMAP.md)
 - ✅ **v6.0 Multi-Outlet & Multi-Device Control** — Phases 31-36 shipped 2026-03-22. Archive: [`milestones/v6.0-ROADMAP.md`](milestones/v6.0-ROADMAP.md)
@@ -14,18 +14,19 @@
 
 ## Current Milestone: v6.3 Employee Attendance Recap
 
-**Status:** Planned
-**Phases:** 42-44
+**Status:** In Progress
+**Phases:** 42-45
 **Requirements:** 7 mapped / 7 total
-**Next phase:** Phase 43 — Portal Attendance Recap Surface
+**Next phase:** Phase 45 — Attendance Recap Audit Closure
 
 ## Phase Overview
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 42 | 2/2 | Complete    | 2026-03-23 | 3 |
-| 43 | 3/3 | Complete    | 2026-03-23 | 3 |
-| 44 | 3/3 | Complete    | 2026-03-23 | 3 |
+| # | Plans | Status | Updated | Success Criteria |
+|---|-------|--------|---------|------------------|
+| 42 | 2/2 | Complete | 2026-03-23 | 3 |
+| 43 | 3/3 | Complete | 2026-03-23 | 3 |
+| 44 | 3/3 | Complete | 2026-03-23 | 3 |
+| 45 | 0/0 | Planned | 2026-03-23 | 3 |
 
 ## Phases
 
@@ -67,6 +68,18 @@ Plans:
 1. Days needing follow-up are clearly labeled, including incomplete attendance outcomes and scheduled days without a completed attendance record.
 2. Loading, empty, and error states are explicit and usable inside the portal shell.
 3. The shipped recap path, SQL contract, and planning artifacts all describe the same implementation surface.
+
+### Phase 45: Attendance Recap Audit Closure
+
+**Goal:** Close the v6.3 audit blockers so the milestone can be archived without accepted verification debt.
+**Depends on:** Phase 44
+**Requirements:** `ATTN-01`, `ATTN-02`, `ATTN-03`, `ATTN-04`, `ATTN-05`, `PORT-03`, `PORT-04`
+**Gap Closure:** Closes gaps from `v6.3-MILESTONE-AUDIT.md`
+
+**Success criteria:**
+1. Historical recap exception copy describes the relevant workday accurately instead of using generic "hari ini" wording for past rows.
+2. Phases 42-44 each have verification evidence on disk that can be used by the milestone audit workflow.
+3. Re-running the v6.3 milestone audit no longer reports orphaned requirements or the historical exception-copy gap as blockers.
 
 ## Coverage Check
 
