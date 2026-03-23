@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$CheckOnly,
-    [switch]$IncludeSideLoadApk
+    [switch]$IncludeSideLoadApk,
+    [switch]$SmokeVerify
 )
 
 Set-StrictMode -Version Latest
@@ -11,6 +12,8 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $releaseEnv = Join-Path $PSScriptRoot "release_env.ps1"
 $releasePreflight = Join-Path $PSScriptRoot "release_preflight.ps1"
 $pubspecPath = Join-Path $repoRoot "pubspec.yaml"
+$buildGradlePath = Join-Path $repoRoot "android\app\build.gradle.kts"
+$localPropertiesPath = Join-Path $repoRoot "android\local.properties"
 $artifactRoot = Join-Path $repoRoot "build\releases\android"
 $bundleOutputRoot = Join-Path $repoRoot "build\app\outputs\bundle\release"
 $apkOutputRoots = @(
@@ -19,6 +22,7 @@ $apkOutputRoots = @(
 )
 $mappingSourcePath = Join-Path $repoRoot "build\app\outputs\mapping\release\mapping.txt"
 $manifestName = "release-manifest.json"
+$smokeEvidenceName = "smoke-check.txt"
 
 function Assert-PathExists {
     param(
@@ -121,15 +125,100 @@ function New-ReleasePaths {
     $apkPath = Join-Path $releaseDirectory ("{0}.apk" -f $ReleaseLabel)
     $mappingPath = Join-Path $releaseDirectory "mapping.txt"
     $manifestPath = Join-Path $releaseDirectory $manifestName
+    $smokeEvidencePath = Join-Path $releaseDirectory $smokeEvidenceName
 
     return [pscustomobject]@{
-        ReleaseDirectory = $releaseDirectory
-        SymbolsDirectory = $symbolsDirectory
-        BundlePath       = $bundlePath
-        ApkPath          = $apkPath
-        MappingPath      = $mappingPath
-        ManifestPath     = $manifestPath
+        ReleaseDirectory  = $releaseDirectory
+        SymbolsDirectory  = $symbolsDirectory
+        BundlePath        = $bundlePath
+        ApkPath           = $apkPath
+        MappingPath       = $mappingPath
+        ManifestPath      = $manifestPath
+        SmokeEvidencePath = $smokeEvidencePath
     }
+}
+
+function Get-LocalPropertyValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$Key
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+
+    $content = Get-Content -LiteralPath $Path -Raw
+    $match = [regex]::Match(
+        $content,
+        '(?m)^\s*' + [regex]::Escape($Key) + '\s*=\s*(?<value>.+?)\s*$'
+    )
+
+    if (-not $match.Success) {
+        return $null
+    }
+
+    return ($match.Groups["value"].Value.Trim() -replace '\\\\', '\')
+}
+
+function Resolve-AdbCli {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$LocalPropertiesPath
+    )
+
+    $candidates = @()
+
+    $command = Get-Command adb.exe -ErrorAction SilentlyContinue
+    if (-not $command) {
+        $command = Get-Command adb -ErrorAction SilentlyContinue
+    }
+    if ($command) {
+        $candidates += $command.Path
+    }
+
+    $sdkRoots = @(
+        $env:ANDROID_HOME,
+        $env:ANDROID_SDK_ROOT,
+        (Get-LocalPropertyValue -Path $LocalPropertiesPath -Key "sdk.dir")
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        $sdkRoots += Join-Path $env:LOCALAPPDATA "Android\Sdk"
+    }
+
+    foreach ($sdkRoot in ($sdkRoots | Select-Object -Unique)) {
+        $candidates += Join-Path $sdkRoot "platform-tools\adb.exe"
+    }
+
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path -LiteralPath $candidate)) {
+            return $candidate
+        }
+    }
+
+    throw "Smoke verification requires adb.exe. Add Android platform-tools to PATH, set ANDROID_HOME/ANDROID_SDK_ROOT, or keep android/local.properties sdk.dir available."
+}
+
+function Get-AndroidApplicationId {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    Assert-PathExists -Path $Path -Description "Android app build config"
+
+    $content = Get-Content -LiteralPath $Path -Raw
+    $match = [regex]::Match($content, '(?m)^\s*applicationId\s*=\s*"(?<id>[^"]+)"')
+    if (-not $match.Success) {
+        throw "Unable to resolve Android applicationId from '$Path'."
+    }
+
+    return $match.Groups["id"].Value
 }
 
 function Clear-GeneratedArtifacts {
@@ -232,16 +321,245 @@ function Get-SymbolArtifactRecords {
     )
 }
 
+function Format-CommandLine {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$Arguments = @()
+    )
+
+    if ($Arguments.Count -eq 0) {
+        return '"{0}"' -f $FilePath
+    }
+
+    $formattedArguments = foreach ($argument in $Arguments) {
+        if ($argument -match '\s') {
+            '"{0}"' -f $argument
+        } else {
+            $argument
+        }
+    }
+
+    return '"{0}" {1}' -f $FilePath, ($formattedArguments -join ' ')
+}
+
+function Invoke-ExternalCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$Arguments = @(),
+        [Parameter(Mandatory = $true)]
+        [string]$Description
+    )
+
+    $global:LASTEXITCODE = 0
+    $output = & $FilePath @Arguments 2>&1 | Out-String
+    $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
+
+    return [ordered]@{
+        description = $Description
+        command     = Format-CommandLine -FilePath $FilePath -Arguments $Arguments
+        exitCode    = $exitCode
+        output      = $output.TrimEnd()
+    }
+}
+
+function Get-ConnectedAndroidTargets {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AdbCli
+    )
+
+    $deviceList = Invoke-ExternalCommand -FilePath $AdbCli -Arguments @("devices") -Description "adb devices"
+    $targets = @()
+
+    foreach ($line in ($deviceList.output -split "`r?`n")) {
+        $trimmed = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed) -or $trimmed -eq "List of devices attached") {
+            continue
+        }
+
+        $parts = $trimmed -split '\s+'
+        if ($parts.Count -lt 2) {
+            continue
+        }
+
+        $targets += [pscustomobject]@{
+            Serial = $parts[0]
+            State  = $parts[1]
+        }
+    }
+
+    return [pscustomobject]@{
+        Command = $deviceList
+        Targets = @($targets | Where-Object { $_.State -eq "device" })
+    }
+}
+
+function Write-SmokeEvidence {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SmokeRecord
+    )
+
+    $directory = Split-Path -Parent $Path
+    if (-not (Test-Path -LiteralPath $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+
+    $lines = [System.Collections.Generic.List[string]]::new()
+    $lines.Add("ABSENKOK smoke verification")
+    $lines.Add(("Checked at (UTC): {0}" -f $SmokeRecord.checkedAtUtc))
+    $lines.Add(("Status: {0}" -f $SmokeRecord.status))
+    $lines.Add(("Version: {0}" -f $SmokeRecord.version))
+    $lines.Add(("Application ID: {0}" -f $SmokeRecord.applicationId))
+    $lines.Add(("Device serial: {0}" -f ($(if ($SmokeRecord.deviceSerial) { $SmokeRecord.deviceSerial } else { "<none>" }))))
+    $lines.Add(("ADB: {0}" -f $SmokeRecord.adbPath))
+    $lines.Add(("APK source: {0}" -f $SmokeRecord.apkInstallSource))
+    $lines.Add(("Evidence file: {0}" -f $SmokeRecord.evidencePath))
+
+    if ($SmokeRecord.error) {
+        $lines.Add(("Error: {0}" -f $SmokeRecord.error))
+    }
+
+    foreach ($command in $SmokeRecord.commands) {
+        $lines.Add("")
+        $lines.Add(("Command: {0}" -f $command.command))
+        $lines.Add(("Exit code: {0}" -f $command.exitCode))
+        $lines.Add("Output:")
+        if ([string]::IsNullOrWhiteSpace($command.output)) {
+            $lines.Add("<no output>")
+        } else {
+            foreach ($line in ($command.output -split "`r?`n")) {
+                $lines.Add($line)
+            }
+        }
+    }
+
+    Set-Content -LiteralPath $Path -Value $lines -Encoding UTF8
+}
+
+function Invoke-SmokeVerification {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$AdbCli,
+        [Parameter(Mandatory = $true)]
+        [string]$ApplicationId,
+        [Parameter(Mandatory = $true)]
+        [string]$ApkPath,
+        [Parameter(Mandatory = $true)]
+        [string]$EvidencePath,
+        [Parameter(Mandatory = $true)]
+        [string]$VersionString
+    )
+
+    $record = [ordered]@{
+        requested        = $true
+        status           = "pending"
+        checkedAtUtc     = (Get-Date).ToUniversalTime().ToString("o")
+        version          = $VersionString
+        applicationId    = $ApplicationId
+        adbPath          = Get-RelativePathOrOriginal -RepositoryRoot $RepositoryRoot -Path $AdbCli
+        apkInstallSource = Get-RelativePathOrOriginal -RepositoryRoot $RepositoryRoot -Path $ApkPath
+        evidencePath     = Get-RelativePathOrOriginal -RepositoryRoot $RepositoryRoot -Path $EvidencePath
+        deviceSerial     = $null
+        commands         = @()
+        error            = $null
+    }
+
+    if (-not (Test-Path -LiteralPath $ApkPath)) {
+        $record.status = "failed-missing-apk"
+        $record.error = "Smoke verification expected a signed release APK at '$ApkPath', but it was not found."
+        Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
+        return $record
+    }
+
+    $deviceSnapshot = Get-ConnectedAndroidTargets -AdbCli $AdbCli
+    $record.commands += $deviceSnapshot.Command
+
+    if ($deviceSnapshot.Targets.Count -eq 0) {
+        $record.status = "failed-no-device"
+        $record.error = "Smoke verification requires an attached Android device or emulator visible to adb devices."
+        Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
+        return $record
+    }
+
+    $target = $deviceSnapshot.Targets | Select-Object -First 1
+    $record.deviceSerial = $target.Serial
+
+    $installResult = Invoke-ExternalCommand `
+        -FilePath $AdbCli `
+        -Arguments @("-s", $target.Serial, "install", "-r", $ApkPath) `
+        -Description "adb install -r"
+    $record.commands += $installResult
+
+    if ($installResult.exitCode -ne 0) {
+        $record.status = "failed-install"
+        $record.error = "Smoke verification failed while installing the signed release APK on device '$($target.Serial)'."
+        Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
+        return $record
+    }
+
+    $launchResult = Invoke-ExternalCommand `
+        -FilePath $AdbCli `
+        -Arguments @(
+            "-s",
+            $target.Serial,
+            "shell",
+            "monkey",
+            "-p",
+            $ApplicationId,
+            "-c",
+            "android.intent.category.LAUNCHER",
+            "1"
+        ) `
+        -Description "adb shell monkey launch"
+    $record.commands += $launchResult
+
+    if ($launchResult.exitCode -ne 0) {
+        $record.status = "failed-launch"
+        $record.error = "Smoke verification failed while launching '$ApplicationId' on device '$($target.Serial)'."
+        Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
+        return $record
+    }
+
+    $record.status = "passed"
+    Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
+    return $record
+}
+
 Assert-PathExists -Path $releaseEnv -Description "release environment helper"
 Assert-PathExists -Path $releasePreflight -Description "release preflight helper"
 Assert-PathExists -Path $pubspecPath -Description "tracked project metadata"
+Assert-PathExists -Path $buildGradlePath -Description "Android app build config"
 
 $releaseVersion = Get-TrackedReleaseVersion -Path $pubspecPath
 $releasePaths = New-ReleasePaths -Root $artifactRoot -ReleaseLabel $releaseVersion.ReleaseLabel
-$apkRetentionState = if ($IncludeSideLoadApk) { "retained" } else { "omitted" }
+$shouldBuildApk = $IncludeSideLoadApk -or $SmokeVerify
+$apkRetentionState = if ($IncludeSideLoadApk) {
+    "retained"
+} elseif ($SmokeVerify) {
+    "smoke-only"
+} else {
+    "omitted"
+}
+$applicationId = if ($SmokeVerify) {
+    Get-AndroidApplicationId -Path $buildGradlePath
+} else {
+    $null
+}
 
 if ($CheckOnly) {
     $contract = & $releaseEnv -CheckOnly
+    $adbCli = if ($SmokeVerify) {
+        Resolve-AdbCli -RepositoryRoot $repoRoot -LocalPropertiesPath $localPropertiesPath
+    } else {
+        $null
+    }
 
     Write-Host ""
     Write-Host "ABSENKOK release packaging lane (check only)"
@@ -254,9 +572,26 @@ if ($CheckOnly) {
     Write-Host "  APK retention   : $apkRetentionState"
     Write-Host "  Manifest        : $($releasePaths.ManifestPath)"
     Write-Host "  Preflight gate  : $releasePreflight"
-    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build appbundle --release --split-debug-info -> optional flutter build apk --release --split-debug-info -> stage release-manifest.json"
+    if ($SmokeVerify) {
+        $smokeApkPlan = if ($IncludeSideLoadApk) {
+            $releasePaths.ApkPath
+        } else {
+            ("newest *.apk under {0}" -f (($apkOutputRoots | ForEach-Object {
+                Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $_
+            }) -join ", "))
+        }
 
-    return [pscustomobject]@{
+        Write-Host "  Smoke verify   : enabled"
+        Write-Host "  ADB            : $adbCli"
+        Write-Host "  App package    : $applicationId"
+        Write-Host "  Smoke APK      : $smokeApkPlan"
+        Write-Host "  Smoke evidence : $($releasePaths.SmokeEvidencePath)"
+    } else {
+        Write-Host "  Smoke verify   : not requested"
+    }
+    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build appbundle --release --split-debug-info -> optional flutter build apk --release --split-debug-info -> optional adb smoke verification -> stage release-manifest.json"
+
+    $response = [ordered]@{
         Mode               = "check-only"
         ReleaseLabel       = $releaseVersion.ReleaseLabel
         ReleaseDirectory   = $releasePaths.ReleaseDirectory
@@ -265,14 +600,33 @@ if ($CheckOnly) {
         MappingTarget      = $releasePaths.MappingPath
         ApkRetentionState  = $apkRetentionState
         ManifestPath       = $releasePaths.ManifestPath
+        SmokeEvidencePath  = $releasePaths.SmokeEvidencePath
         FlutterCli         = $contract.FlutterCli
         ObfuscationEnabled = $false
     }
+
+    if ($SmokeVerify) {
+        $response["SmokeVerify"] = [ordered]@{
+            AdbCli         = $adbCli
+            ApplicationId  = $applicationId
+            SmokeApkPlan   = if ($IncludeSideLoadApk) { $releasePaths.ApkPath } else { $null }
+            SmokeApkLookup = if ($IncludeSideLoadApk) { $null } else { $apkOutputRoots }
+            EvidencePath   = $releasePaths.SmokeEvidencePath
+            ApkRetention   = $apkRetentionState
+        }
+    }
+
+    return [pscustomobject]$response
 }
 
 $contract = & $releaseEnv
 $gitMetadata = Get-GitMetadata -RepositoryRoot $repoRoot
 $generatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+$adbCli = if ($SmokeVerify) {
+    Resolve-AdbCli -RepositoryRoot $repoRoot -LocalPropertiesPath $localPropertiesPath
+} else {
+    $null
+}
 
 Write-Host "ABSENKOK release packaging"
 Write-Host "  Release version : $($releaseVersion.VersionString)"
@@ -280,6 +634,7 @@ Write-Host "  Canonical .aab  : retained"
 Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory)"
 Write-Host "  Mapping target  : $($releasePaths.MappingPath)"
 Write-Host "  APK retention   : $apkRetentionState"
+Write-Host "  Smoke verify    : $SmokeVerify"
 Write-Host "  Staging dir     : $($releasePaths.ReleaseDirectory)"
 
 Push-Location $repoRoot
@@ -287,7 +642,7 @@ try {
     & $releasePreflight
 
     Clear-GeneratedArtifacts -Roots @($bundleOutputRoot) -Filter "*.aab"
-    if ($IncludeSideLoadApk) {
+    if ($shouldBuildApk) {
         Clear-GeneratedArtifacts -Roots $apkOutputRoots -Filter "*.apk"
     }
 
@@ -316,7 +671,8 @@ try {
             -StagedPath $releasePaths.BundlePath)
     )
 
-    if ($IncludeSideLoadApk) {
+    $smokeInstallApk = $null
+    if ($shouldBuildApk) {
         & $contract.FlutterCli @(
             "build",
             "apk",
@@ -324,13 +680,18 @@ try {
             "--split-debug-info=$($releasePaths.SymbolsDirectory)"
         )
         $apkSource = Find-GeneratedArtifact -Roots $apkOutputRoots -Filter "*.apk" -Description "release .apk"
-        Copy-Item -LiteralPath $apkSource.FullName -Destination $releasePaths.ApkPath -Force
-        $artifacts += New-ArtifactRecord `
-            -RepositoryRoot $repoRoot `
-            -Kind "apk" `
-            -Purpose "side-load-retained" `
-            -SourcePath $apkSource.FullName `
-            -StagedPath $releasePaths.ApkPath
+        $smokeInstallApk = $apkSource.FullName
+
+        if ($IncludeSideLoadApk) {
+            Copy-Item -LiteralPath $apkSource.FullName -Destination $releasePaths.ApkPath -Force
+            $smokeInstallApk = $releasePaths.ApkPath
+            $artifacts += New-ArtifactRecord `
+                -RepositoryRoot $repoRoot `
+                -Kind "apk" `
+                -Purpose "side-load-retained" `
+                -SourcePath $apkSource.FullName `
+                -StagedPath $releasePaths.ApkPath
+        }
     }
 
     $symbolRecords = Get-SymbolArtifactRecords -RepositoryRoot $repoRoot -SymbolsDirectory $releasePaths.SymbolsDirectory
@@ -347,6 +708,42 @@ try {
             -Purpose "r8-shrinker-mapping" `
             -SourcePath $mappingSourcePath `
             -StagedPath $releasePaths.MappingPath
+    }
+
+    $smokeVerification = [ordered]@{
+        requested        = [bool]$SmokeVerify
+        status           = if ($SmokeVerify) { "pending" } else { "not-requested" }
+        checkedAtUtc     = $null
+        version          = $releaseVersion.VersionString
+        applicationId    = $applicationId
+        adbPath          = if ($adbCli) { Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $adbCli } else { $null }
+        apkInstallSource = if ($smokeInstallApk) { Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $smokeInstallApk } else { $null }
+        evidencePath     = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.SmokeEvidencePath
+        deviceSerial     = $null
+        commands         = @()
+        error            = $null
+    }
+
+    if ($SmokeVerify) {
+        $smokeVerification = Invoke-SmokeVerification `
+            -RepositoryRoot $repoRoot `
+            -AdbCli $adbCli `
+            -ApplicationId $applicationId `
+            -ApkPath $smokeInstallApk `
+            -EvidencePath $releasePaths.SmokeEvidencePath `
+            -VersionString $releaseVersion.VersionString
+    }
+
+    $notes = @(
+        "Signed .aab is the canonical retained Android release artifact.",
+        "Dart symbols are retained with --split-debug-info while obfuscation stays disabled for v7.0.",
+        "Signed release .apk is retained only when tool/release_build.ps1 runs with -IncludeSideLoadApk."
+    )
+    if ($SmokeVerify) {
+        $notes += "Smoke verification records install and launch evidence in smoke-check.txt before distribution."
+    }
+    if ($apkRetentionState -eq "smoke-only") {
+        $notes += "Smoke verification built an APK for local installation only; it is not retained as a distributable artifact."
     }
 
     $manifest = [ordered]@{
@@ -366,14 +763,15 @@ try {
             symbolFiles        = $symbolRecords
             mappingFile        = $mappingRecord
         }
-        notes              = @(
-            "Signed .aab is the canonical retained Android release artifact.",
-            "Dart symbols are retained with --split-debug-info while obfuscation stays disabled for v7.0.",
-            "Signed release .apk is retained only when tool/release_build.ps1 runs with -IncludeSideLoadApk."
-        )
+        smokeVerification  = $smokeVerification
+        notes              = $notes
     }
 
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $releasePaths.ManifestPath -Encoding UTF8
+
+    if ($SmokeVerify -and $smokeVerification.error) {
+        throw $smokeVerification.error
+    }
 
     Write-Host "Release artifacts staged at '$($releasePaths.ReleaseDirectory)'."
 
@@ -386,6 +784,7 @@ try {
         MappingPath       = $releasePaths.MappingPath
         ApkRetentionState = $apkRetentionState
         ManifestPath      = $releasePaths.ManifestPath
+        SmokeEvidencePath = if ($SmokeVerify) { $releasePaths.SmokeEvidencePath } else { $null }
     }
 }
 finally {

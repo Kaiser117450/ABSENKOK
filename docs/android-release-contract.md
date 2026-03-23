@@ -71,19 +71,32 @@ Packaging Android v7.0 sekarang masuk lewat satu entrypoint yang ditrack:
 powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly
 ```
 
-Mode `-CheckOnly` hanya memvalidasi kontrak packaging dan target staging tanpa memotong signed artifact. Saat operator benar-benar membangun release, lane yang sama selalu:
+Mode `-CheckOnly` hanya memvalidasi kontrak packaging dan target staging tanpa memotong signed artifact. Untuk memvalidasi jalur smoke verification tanpa perangkat terpasang, gunakan:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -CheckOnly -IncludeSideLoadApk -SmokeVerify
+```
+
+Mode itu harus bisa menjelaskan lokasi `adb`, jalur signed APK yang akan dipakai, dan target `smoke-check.txt` tanpa menuntut device aktif. Saat operator benar-benar membangun release, lane yang sama selalu:
 
 1. masuk lewat `tool/release_env.ps1`
 2. menjalankan `tool/release_preflight.ps1`
-3. membangun signed `.aab`
-4. menyalin artifact yang dipertahankan ke `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`
-5. menulis `release-manifest.json`
+3. membangun signed `.aab` dengan `--split-debug-info`
+4. bila perlu, membangun signed release `.apk` untuk side-load atau `-SmokeVerify`
+5. menyalin artifact yang dipertahankan ke `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`
+6. menulis `release-manifest.json`
+7. saat `-SmokeVerify` dipakai, menginstal signed release APK ke device/emulator Android, meluncurkan package app, lalu menulis `smoke-check.txt`
 
 Kebijakan artifact untuk v7.0:
 
 - Signed `.aab` adalah artifact Android release yang canonical dan selalu dipertahankan.
+- `symbols/` di bawah release directory wajib dipertahankan untuk setiap signed release melalui `--split-debug-info`, dan v7.0 tetap tidak menyalakan `--obfuscate` secara default.
+- `mapping.txt` dari shrinker Android harus disalin ke release directory bila file itu dihasilkan.
 - Signed release `.apk` hanya dipertahankan bila side-loading masih dibutuhkan secara sengaja, yaitu saat lane dijalankan dengan `-IncludeSideLoadApk`.
-- `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, dan apakah APK dipertahankan atau dihilangkan.
+- Bila `-SmokeVerify` membutuhkan APK hanya untuk instalasi lokal dan `-IncludeSideLoadApk` tidak dipakai, `release-manifest.json` harus menandai state itu sebagai `smoke-only`, bukan artifact distribusi.
+- Evidence `smoke-check.txt` hasil `-SmokeVerify` wajib ada sebelum distribusi; file itu mencatat timestamp UTC, serial device, versi release, dan hasil command install/launch.
+- `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, `apkRetentionState`, jalur symbol/mapping yang dipertahankan, dan status smoke verification untuk release tersebut.
+- Release tidak dianggap siap distribusi sebelum symbol retention dan smoke evidence sama-sama ada di release directory yang sama.
 - Detail operator sequencing tetap ditahan untuk Phase 49; dokumen ini hanya mengunci kontrak artifact dan lokasi staging yang harus konsisten.
 
 ## v7.0 Compatibility Decision
