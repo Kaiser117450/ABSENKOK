@@ -1,130 +1,129 @@
 # Project Research Summary
 
 **Project:** Absensi Enakko
-**Domain:** Employee-facing schedule portal
-**Researched:** 2026-03-22
+**Domain:** Employee portal attendance recap
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Executive Summary
 
-`v6.1` should not introduce a second web stack. The lowest-risk path is to extend the existing Astro 5 website into a mixed static + SSR application: keep the marketing pages public and prerendered, then add protected `/portal/*` routes rendered on demand for employees. Supabase already owns the source-of-truth schedule data, so it should also own employee auth/session scope and row-level access rules.
+`v6.3` should stay inside the existing employee portal and remain read-only. The safest path is to extend the shipped Astro SSR portal with one attendance recap surface backed by an authenticated recap contract, rather than broadening into requests, approvals, or a second frontend stack.
 
-The main product risk is not frontend rendering; it is identity and data scope. The portal only works if an authenticated user can be mapped cleanly to a single employee record and if schedule reads are enforced at the server/RLS layer. The safest milestone shape is therefore narrow: portal foundation, employee identity mapping, and a mobile-first read-only schedule experience.
+The main risks are consistency and scope. The recap must match the product's existing logical-day rules for overnight work, and it must explain exception days clearly enough that employees can trust what they see. That pushes the milestone toward three phases: recap data contract first, portal recap UX second, and cross-repo hardening/verification third.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing website repo already uses `astro@5.18.1` with `@astrojs/vercel@9.0.5`, so adding server output is cheaper than introducing Next.js or another app shell. Supabase's SSR guidance supports separate browser/server clients with cookie-aware auth handling, which fits a protected employee portal well.
+No new framework is justified for this milestone. The current `astro@5.18.1` + `@astrojs/vercel@9.0.5` website, the shipped portal auth flow built on `@supabase/ssr@0.9.0` + `@supabase/supabase-js@2.99.3`, and additive Supabase RPCs are the right baseline.
 
 **Core technologies:**
-- `astro@5.18.1`: server-rendered employee portal routes inside the existing website
-- `@astrojs/vercel@9.0.5`: deploy SSR routes on the current hosting target
-- `@supabase/supabase-js@2.99.3` + `@supabase/ssr@0.9.0`: authenticated browser/server clients for portal access
-- Supabase Auth + Postgres RLS: enforce employee-specific data visibility safely
+- Astro SSR routes: extend the existing protected portal
+- Supabase SSR/authenticated RPCs: keep employee recap reads server-side and scoped
+- Existing portal components/state model: preserve the phone-first UX already shipped
 
 ### Expected Features
 
-The user chose a focused milestone with "view schedule" as the first employee job, so the portal should launch with secure access and a read-only personal schedule rather than broader workforce workflows.
+The milestone should solve one job: employees can review their recent attendance confidently without asking admin.
 
 **Must have (table stakes):**
-- Employee login to a private portal
-- Employee can view only their own upcoming shifts
-- Mobile-friendly "today / this week" schedule view
-- Clear "not linked" and "no shifts" states
+- Month-to-date summary counts
+- Recent day-by-day attendance history
+- Clear exception visibility for sakit, izin, libur, and incomplete days
+- Mobile-first recap inside the current portal shell
 
 **Should have (competitive):**
-- Attendance recap beside schedule
-- Better filters and personal account context
+- Schedule context beside attendance days
+- Attention markers that make problematic days obvious
 
-**Defer (v2+):**
-- Time-off requests
-- Shift swaps
-- Notifications/reminders
+**Defer (v6.4+):**
+- Attendance correction requests
+- Manager/admin approvals
+- Shift reminders or notifications
 
 ### Architecture Approach
 
-Use the Astro website as the portal shell, add auth middleware plus Supabase SSR helpers, and build a read-optimized schedule query layer instead of exposing the admin planning model directly.
+Keep employee identity resolution in the current server-side portal helpers, add a recap-specific authenticated RPC or loader contract, and render the result through typed portal page states. The portal page should receive recap meaning, not raw attendance log rows that force the UI to guess.
 
 **Major components:**
-1. Portal routes under `/portal/*` - employee-facing pages only
-2. Auth middleware + Supabase SSR clients - protected routing and session refresh
-3. Employee identity mapping + schedule query layer - safe bridge from auth user to employee schedule
+1. Portal recap loader — resolves employee identity and fetches recap data
+2. Recap contract — merges attendance logs with schedule context and logical-day rules
+3. Portal recap components — summary cards plus daily history cards for phone-sized screens
 
 ### Critical Pitfalls
 
-1. **No employee identity mapping** - solve the auth-user to employee-record bridge before building the UI
-2. **Static-site assumptions** - protected routes need server output and SSR sessions, not browser-only auth hacks
-3. **Data leakage from admin-shaped queries** - scope all reads server-side with RLS or dedicated RPCs
-4. **Date logic drift** - carry the existing timezone and cross-day schedule rules into the portal
-5. **Over-scoping v6.1** - keep the release centered on schedule visibility, not approvals or swaps
+1. **Logical-day drift** — keep recap dates aligned with `Asia/Makassar` and existing overnight rules
+2. **Employee scope leakage** — keep recap reads behind authenticated employee-scoped RPCs
+3. **Exception ambiguity** — define and render exception states explicitly
+4. **Scope creep into request workflows** — keep v6.3 read-only
+5. **Cross-repo planning drift** — keep SQL, website, and planning artifacts synchronized
 
 ## Implications for Roadmap
 
 Based on research, suggested phase structure:
 
-### Phase 37: Portal Foundation and Employee Auth
-**Rationale:** Protected employee routes and session handling must exist before any self-service feature can ship.
-**Delivers:** Astro server output setup, portal route tree, auth/session middleware, and employee identity mapping foundation.
-**Addresses:** employee login and access separation.
-**Avoids:** static-site auth hacks and weak identity mapping.
+### Phase 42: Attendance Recap Read Model
+**Rationale:** Portal recap trust depends on correct employee scope and logical-day semantics before any UI work.
+**Delivers:** Authenticated recap query contract, exception definitions, and any supporting indexes.
+**Addresses:** `ATTN-02`, `ATTN-03`
+**Avoids:** logical-day drift and query-scope leaks
 
-### Phase 38: Employee Schedule Read Model
-**Rationale:** The portal needs a safe, employee-scoped data path before the UI can be trusted.
-**Delivers:** additive schema/mapping support if needed, RLS-safe schedule queries or RPCs, and cross-day-aware schedule formatting inputs.
-**Uses:** Supabase Auth, Postgres RLS, existing schedule tables.
-**Implements:** server-side employee schedule query layer.
+### Phase 43: Portal Attendance Recap Surface
+**Rationale:** Once the data contract is trustworthy, the employee-facing recap can stay focused and mobile-first.
+**Delivers:** recap section/page, month summary cards, recent history list, and explicit exception presentation.
+**Uses:** existing portal shell and state patterns
+**Implements:** `ATTN-01`, `ATTN-04`, `ATTN-05`, `PORT-03`, `PORT-04`
 
-### Phase 39: Portal Schedule UI
-**Rationale:** Once access and data scope are correct, build the mobile-first employee-facing pages.
-**Delivers:** login page, employee home, schedule page, and empty/error states optimized for phone usage.
-**Uses:** Astro pages/components with optional minimal client interactivity.
-**Implements:** the focused "view schedule" v6.1 milestone outcome.
+### Phase 44: Portal Recap Hardening
+**Rationale:** Portal work spans SQL and the separate website repo, so a closeout/hardening slice is needed to keep artifacts and shipped behavior aligned.
+**Delivers:** verification pass, copy/polish fixes, and planning artifact synchronization.
+**Uses:** the shipped recap path from phases 42-43
+**Implements:** cross-repo release readiness and documentation discipline
 
 ### Phase Ordering Rationale
 
-- Auth and identity mapping come first because every employee feature depends on them.
-- The read model comes before UI so data scope, RLS, and date rules are solved once in the backend layer.
-- The final UI phase stays focused because v6.1 is intentionally narrow and should not absorb approval workflows.
+- Data and semantics come first because employees will distrust recap immediately if dates or exception states are wrong.
+- UI comes second because it should consume one stable recap contract.
+- Hardening closes the cross-repo drift that was accepted in the last two milestone archives.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 37:** employee auth and identity-linking details, because the current system is kiosk/admin oriented
-- **Phase 38:** exact RLS/query strategy, because employee access must be safer than admin-only internal reads
+- **Phase 42:** exact SQL shape for summary counts and exception detection
 
 Phases with standard patterns (skip research-phase):
-- **Phase 39:** schedule UI composition, because the product is already clear and the main unknowns are data and auth
+- **Phase 43:** portal card/list rendering inside the existing shell
+- **Phase 44:** verification and planning synchronization
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
 | Stack | HIGH | Verified against the current website repo and official Astro/Supabase docs |
-| Features | HIGH | Driven directly by the user's chosen milestone scope |
-| Architecture | HIGH | Mixed static + SSR Astro is a straightforward fit for the current deployment model |
-| Pitfalls | HIGH | The main risks are standard for auth-scoped employee portals and clear in this domain |
+| Features | HIGH | Driven by the chosen milestone scope and existing portal backlog |
+| Architecture | HIGH | Extending the current portal is clearly lower-risk than adding a new surface |
+| Pitfalls | HIGH | Risks are already visible in prior portal and milestone-closeout work |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- Employee auth UX is not chosen yet (magic link, password, or admin-invited credentials) and should be finalized during requirements
-- The exact employee-to-auth mapping path needs confirmation from the current Supabase schema before Phase 37 planning
+- Exact summary metrics should stay count-based and not drift into payroll logic
+- The recap read model should be tested against at least one overnight-shift example before shipping
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json` - current website stack
-- [Astro on-demand rendering docs](https://docs.astro.build/en/guides/on-demand-rendering/) - server output model
-- [Astro actions docs](https://docs.astro.build/en/guides/actions/) - backend mutations/forms pattern
-- [Astro sessions docs](https://docs.astro.build/en/guides/sessions/) - session support in Astro server apps
-- [Supabase SSR client docs](https://supabase.com/docs/guides/auth/server-side/creating-a-client) - browser/server client split
-- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security) - exposed-schema policy requirements
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\employee.ts`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_39_portal_read_path_hardening_20260323.sql`
+- https://docs.astro.build/en/guides/on-demand-rendering/
+- https://supabase.com/docs/reference/javascript/auth-getuser
+- https://supabase.com/docs/guides/database/postgres/row-level-security
 
 ### Secondary (MEDIUM confidence)
-- Existing product context in `.planning/PROJECT.md` and `.planning/STATE.md` - current platform constraints and deferred roadmap items
+- https://help.sap.com/doc/8cd7b02f4e9c4a569bab136a7caa116e/2405/en-US/SAP%20SuccessFactors%20Time%20Tracking%201H%202024.pdf
 
 ---
-*Research completed: 2026-03-22*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*

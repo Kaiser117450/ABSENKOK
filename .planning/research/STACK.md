@@ -1,7 +1,7 @@
 # Stack Research
 
-**Domain:** Employee-facing schedule portal for Absensi Enakko
-**Researched:** 2026-03-22
+**Domain:** Employee portal attendance recap for an existing Astro + Supabase product
+**Researched:** 2026-03-23
 **Confidence:** HIGH
 
 ## Recommended Stack
@@ -10,84 +10,76 @@
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| `astro` | `5.18.1` | Portal shell with protected routes and server-rendered pages | The existing website already runs on Astro, and Astro supports on-demand rendering so the same app can keep marketing pages static while rendering employee portal routes on the server. |
-| `@astrojs/vercel` | `9.0.5` | Deployment adapter for server output on Vercel | The website already ships on Vercel, so this is the lowest-friction way to add authenticated SSR routes without introducing a second hosting model. |
-| `@supabase/supabase-js` | `2.99.3` | Browser and server database/auth client | Supabase already backs the attendance system, so reusing it keeps employee auth, schedules, and future attendance data in one security model. |
-| `@supabase/ssr` | `0.9.0` | Cookie-aware SSR auth helpers | Supabase documents SSR clients for browser and server contexts so auth tokens can be refreshed and read correctly in server-rendered apps. |
-| Supabase Auth + Postgres RLS | existing backend | Employee authentication and row-level data isolation | Employee self-service is only safe if schedule reads are scoped per authenticated employee, which is exactly what RLS is for. |
+| `astro` | `5.18.1` | Server-rendered portal routes and page composition | The employee portal already ships inside the Astro site, so extending the current SSR path is lower-risk than introducing a second frontend. |
+| `@astrojs/vercel` | `9.0.5` | Deploy on-demand portal pages on the existing hosting target | Keeps portal recap on the same deployment model already used by the protected portal routes. |
+| `@supabase/supabase-js` + `@supabase/ssr` | `2.99.3` + `0.9.0` | Cookie-aware server/client auth and typed RPC access | Matches the shipped portal auth pattern and keeps employee data scoped server-side. |
+| Supabase Postgres RPCs | existing database surface | Read-optimized attendance recap contract | The attendance recap depends on schedule and attendance logs with business rules; an authenticated RPC keeps those rules in one place. |
 
 ### Supporting Libraries
 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| `zod` | `4.3.6` | Shared validation for login and future request forms | Use when Astro Actions alone are not enough and the same schema needs to validate server actions and client-side UI. |
-| `@astrojs/react` | `5.0.1` | Interactive islands for richer schedule filters or request flows | Add only if the employee portal grows past simple SSR pages and small form interactions. |
-| `@astrojs/check` | existing | Type and route validation in the website repo | Keep using it as the first guardrail when the static marketing site becomes a mixed static+server application. |
+| `Intl.DateTimeFormat` in server loaders | built-in | Anchor recap dates to `Asia/Makassar` | Use for all portal reference dates so the recap matches kiosk/admin logical-day behavior. |
+| Existing portal components and state unions | local app code | Reuse mobile-first shell and ready/empty/error patterns | Use instead of adding a new client framework or duplicating portal layout logic. |
+| Postgres indexes on `attendance_logs` and `schedule_entries` | existing + additive | Keep recap queries fast for current + future staff counts | Add or tune only when the recap query shape shows a real lookup gap. |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| `astro check` | Validate routes, props, and integration mistakes early | Run it on every portal phase because server output adds more routing and typing surface than the current static site. |
-| Supabase SQL migrations | Keep employee auth mapping and RLS policy changes explicit | The production database is live, so every portal-facing schema change must stay additive and reviewable. |
+| `astro check` | Validate website TypeScript/Astro changes | Run in the website repo after portal recap pages/helpers change. |
+| Focused SQL migrations in `sql/` | Add authenticated recap RPCs and indexes | Keep migrations additive because the production database is live for 4 outlets. |
+| Existing planning workflow | Maintain traceability across Flutter repo + website repo | Capture portal recap work in planning docs so cross-repo execution does not drift again. |
 
 ## Installation
 
 ```bash
-# Core
-npm install @supabase/supabase-js @supabase/ssr
-
-# Supporting
-npm install zod
-
-# Optional interactive UI
-npm install @astrojs/react react react-dom
+# No new framework packages are required for the milestone baseline.
+# Reuse the existing website stack and add SQL/read-model changes only if the implementation proves they are necessary.
 ```
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Extend the existing Astro site into mixed static + SSR | Create a brand new Next.js app | Use a new app only if the employee portal quickly grows into a highly interactive dashboard with deep client-side state. |
-| Supabase Auth + SSR cookies | Custom auth layer on top of existing tables | Use custom auth only if business rules become incompatible with Supabase Auth; that is not justified for v6.1. |
-| Mostly SSR Astro pages with optional islands | Full SPA from day one | Use a SPA only if offline behavior or live collaborative interactions become a first-order requirement. |
+| Extend the existing Astro portal | Build a separate React/Next frontend | Only if the portal grows into a much larger product surface than the current employee self-service scope. |
+| Authenticated recap RPCs | Direct multi-query reads from the page layer | Only if the recap can be expressed as a trivial single-table read, which is not true once logical-day and exception rules apply. |
+| Reuse current portal shell | Embed recap inside the Flutter app | Only if the user explicitly wants kiosk/admin reuse instead of employee self-service web access. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| A brand new web stack for v6.1 | It adds another deployment surface, auth model, and component system for a focused release. | Reuse the existing Astro/Vercel site and add server-rendered portal routes. |
-| Static-only auth hacks with `localStorage` tokens | They fight the current static site architecture and make protected route handling brittle. | Use Astro server output with Supabase SSR cookies and middleware. |
-| Exposing schedule reads through unrestricted public tables | Employee-facing data leaks are the fastest way to invalidate the portal. | Add employee mapping plus RLS-scoped queries or RPCs. |
+| A new frontend stack for recap only | Adds deployment, auth, and state duplication for one focused milestone | Keep recap inside the current Astro portal. |
+| Service-role or admin-shaped reads from the website | Risks employee data leakage and bypasses the shipped portal trust boundary | Use authenticated RPCs and employee resolution from the current portal path. |
+| Real-time streaming as v6.3 scope | Adds complexity without changing the core employee job of reviewing recent attendance | Ship a reliable pull-based recap first. |
 
 ## Stack Patterns by Variant
 
-**If v6.1 stays read-mostly:**
-- Use Astro SSR pages with minimal JavaScript.
-- Because schedule viewing and account access can be delivered quickly without building a heavy client app.
+**If the recap stays read-only:**
+- Keep everything server-rendered through existing portal loaders
+- Because the current portal already works well with SSR and does not need client state complexity
 
-**If v6.2 adds richer employee workflows:**
-- Keep Astro as the shell and add isolated React islands only where interaction density demands it.
-- Because the product can evolve incrementally without rewriting the portal foundation.
+**If a later milestone adds employee actions:**
+- Add dedicated mutation endpoints or Astro actions behind the same portal auth boundary
+- Because request submission and approvals should evolve separately from the recap read model
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|-----------------|-------|
-| `astro@5.18.1` | `@astrojs/vercel@9.0.5` | Matches the current website repo and supports server output on Vercel. |
-| `@supabase/supabase-js@2.99.3` | `@supabase/ssr@0.9.0` | Pin exact versions in the website repo because `@supabase/ssr` is still pre-1.0. |
-| `@astrojs/react@5.0.1` | `react` / `react-dom` current stable | Optional only; do not add unless a phase explicitly needs interactive islands. |
+| `astro@5.18.1` | `@astrojs/vercel@9.0.5` | Matches the current website repo and deployed portal model. |
+| `@supabase/ssr@0.9.0` | `@supabase/supabase-js@2.99.3` | Supports the current cookie-aware portal auth flow. |
 
 ## Sources
 
-- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json` - verified current Astro/Vercel stack
-- [Astro on-demand rendering docs](https://docs.astro.build/en/guides/on-demand-rendering/) - verified server output support for protected routes
-- [Astro actions docs](https://docs.astro.build/en/guides/actions/) - verified backend actions pattern for forms and protected mutations
-- [Astro sessions docs](https://docs.astro.build/en/guides/sessions/) - verified built-in session support for server-rendered apps
-- [Supabase SSR client docs](https://supabase.com/docs/guides/auth/server-side/creating-a-client) - verified browser/server client split and cookie-aware SSR setup
-- [Supabase RLS docs](https://supabase.com/docs/guides/database/postgres/row-level-security) - verified policy requirements for exposed schemas
-- `npm view` on 2026-03-22 - verified current package versions for `@supabase/supabase-js`, `@supabase/ssr`, `zod`, and `@astrojs/react`
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\package.json` — current website stack and versions
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\src\lib\portal\employee.ts` — current server-side employee resolution pattern
+- Local repo: `C:\Users\HYPE R Series\Desktop\projekan\absensi apk\absensi_enakko_flutter\sql\phase_39_portal_read_path_hardening_20260323.sql` — current authenticated portal RPC pattern
+- https://docs.astro.build/en/guides/on-demand-rendering/ — on-demand SSR route model
+- https://supabase.com/docs/reference/javascript/auth-getuser — server-side user verification guidance
+- https://supabase.com/docs/guides/database/postgres/row-level-security — RLS and exposed-schema guidance
 
 ---
-*Stack research for: employee-facing schedule portal*
-*Researched: 2026-03-22*
+*Stack research for: employee portal attendance recap*
+*Researched: 2026-03-23*
