@@ -22,15 +22,17 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, and portal-specific Supabase RPCs
 **Archive note:** v6.3 archived with audit status `closed`; the Phase 42 recap RPC/index were applied to production Supabase during closeout
+**Release note:** Android release hardening is the new active milestone because the current release path is blocked by compile errors, still signs with the debug key, and depends on a Java/toolchain setup that is not yet codified in version control
 
-## Next Milestone Goals
+## Current Milestone: v7.0 Android Release Hardening
 
-**Status:** Not defined yet
+**Goal:** Re-establish a reproducible, supportable Android release pipeline for the Flutter kiosk app before the next feature milestone.
 
-**Likely focus areas:**
-- Let employees browse older attendance windows or custom date ranges from the portal recap
-- Add employee-initiated correction/time-off request flows with auditable manager approval
-- Introduce reminder or notification flows only after the request lifecycle is defined
+**Target features:**
+- Clean release packaging succeeds from a supported toolchain without bypass flags
+- Release builds use a private upload-signing configuration instead of the debug keystore
+- Version/build metadata, artifact names, and release notes align with the active milestone
+- Release validation, symbol retention, and operator runbook steps are explicit and repeatable
 
 ### What v6.3 Added
 - ✅ Employee-scoped portal attendance recap RPC with overnight logical-day repair and named timestamp contract
@@ -81,6 +83,10 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 - ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
 
 ### Known Tech Debt
+- `pubspec.yaml` still reports `version: 6.2.0+8012` even though the latest shipped milestone is v6.3, so release metadata is already drifting from planning reality
+- `android/app/build.gradle.kts` still points the `release` build type at the debug signing config
+- Recent release builds fail in Dart compile stage (`shift_scheduler_screen.dart`, `schedule_sqlite_service.dart`) before Android packaging can complete
+- Shell `java -version` resolves to Temurin 25 while this repo's proven-good path still depends on Android Studio JBR; the supported Java baseline is not pinned in VCS
 - v6.2 archived without a dedicated milestone audit or per-phase PLAN/SUMMARY artifacts for phases 40-41
 - Final admin logo correction landed after the first `v6.2.0` build; milestone closeout rebuilds from the corrected asset path `src/assets/images/logogoenakko.png`
 - v6.1 verification debt accepted at archive time: Phase 37 has no verification artifact; Phase 38 and 39 validation files remained draft
@@ -205,14 +211,21 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Portal attendance recap is usable on a phone-sized browser inside the existing portal shell — v6.3
 - ✓ Portal attendance recap has explicit loading, empty, and error states when data is unavailable — v6.3
 
-### Active (Next Milestone Candidates)
+### Active (v7.0 Android Release Hardening)
+- [ ] Release build succeeds from a clean checkout on the supported Flutter/Java/Gradle toolchain without `--android-skip-build-dependency-validation`
+- [ ] Release signing uses a private upload keystore flow instead of the debug keystore
+- [ ] `pubspec.yaml`, Android version metadata, and generated artifact names all reflect the active milestone version
+- [ ] Release packaging retains the required symbol/debug artifacts and validates the shrunken build before distribution
+- [ ] Operators can follow one documented local release workflow without guessing environment variables or secret file locations
+
+### Deferred (Future)
 - [ ] Employee can filter attendance recap by custom date range or prior month
 - [ ] Employee can submit an attendance correction or dispute request from an exception day
 - [ ] Employee can submit time-off or absence requests through the portal
 - [ ] Manager/admin can approve or reject employee requests with an auditable status change
 - [ ] Employee receives reminders or status notifications for upcoming work or request changes
-
-### Deferred (Future)
+- [ ] Build-speed optimization and incremental caching beyond the reliable release baseline
+- [ ] APK size/runtime tuning once signed release packaging is reproducible
 - [ ] Employee-facing attendance export or payroll-grade reporting
 - [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
 - [ ] Schedule grid copy-week feature (GRID-D2)
@@ -220,6 +233,11 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
 
 ### Out of Scope
+- Employee portal request/approval features — deferred until Android release packaging is stable again
+- Reminder/notification workflows — depends on future request lifecycle design, not build hardening
+- Website/Astro deployment automation — this milestone is scoped to the Flutter Android release path
+- Build-speed-only work — reliability comes first; performance tuning is deferred until the release path is reproducible
+- APK size-only work — defer until signed release artifacts are consistently generated and verifiable
 - iOS app — Android-only kiosk, no iOS target
 - WhatsApp/email daily summary — external integration, low priority
 - Blog/pricing on website — internal tool, not SaaS
@@ -334,4 +352,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after shipping v6.3 Employee Attendance Recap*
+*Last updated: 2026-03-23 after starting v7.0 Android Release Hardening*
