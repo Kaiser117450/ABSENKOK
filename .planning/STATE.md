@@ -3,14 +3,13 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Android Release Hardening
 status: phase_in_progress
-stopped_at: Completed 48-03-PLAN.md
-last_updated: "2026-03-23T14:16:23.815Z"
-last_activity: "2026-03-23 — completed 48-03: retained release directories now capture symbols, optional mapping, and smoke-verification evidence for the same signed version"
+stopped_at: Awaiting 49-02 bootstrap checkpoint
+last_updated: "2026-03-24T15:17:22+08:00"
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 8
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # STATE.md — Project Memory
@@ -18,32 +17,32 @@ progress:
 ## Current Position
 
 Phase: 49 - Release Runbook & Acceptance
-Plan: 49-01 pending
-Status: 48-03 complete; retained release directories now capture symbols, optional mapping, and smoke-verification evidence for the same signed version
-Last activity: 2026-03-23 — Completed 48-03 and verified `tool/release_build.ps1 -CheckOnly -IncludeSideLoadApk -SmokeVerify` resolves the smoke lane without cutting artifacts
+Plan: 49-02 bootstrap checkpoint
+Status: 49-01 complete; the tracked local runbook now documents the APK-first release lane and matches the live check-only helper contract
+Last activity: 2026-03-24 — Completed 49-01, verified runbook markers, and confirmed `tool/release_build.ps1 -CheckOnly -SmokeVerify` resolves the expected v7.0 release contract
 
 ## Current Status
 - **Active milestone:** v7.0 Android Release Hardening
 - **Last shipped milestone:** v6.3 Employee Attendance Recap
 - **Next phase:** Phase 49: Release Runbook & Acceptance
-- **Current focus:** Document the local v7.0 release runbook and capture acceptance evidence from the now-complete signed artifact lane
+- **Current focus:** Finish Phase 49 acceptance once local signing bootstrap exists and an `adb`-visible Android target is online
 - **Scope guard:** New portal/product features stay out of v7.0 until the Android release path is reproducible and safely signed
 
 ## Progress
 
 ```text
 v7.0 milestone in progress
-[########--] 3 of 4 phases complete (8/10 plans)
+[#########-] 4 of 5 phases complete (11/12 plans)
 ```
 
-- **Next action:** Execute Phase 49-01 to write the local release runbook with the now-finalized signing, artifact, symbol, and smoke-verification contract
+- **Next action:** Complete the 49-02 bootstrap checkpoint: create local `android/key.properties`, make the upload keystore reachable, and reconnect an Android target until `adb devices` no longer reports `offline`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 49 Release Runbook & Acceptance now that the v7.0 signing, artifact, symbol, and smoke-verification contract is complete.
+**Current focus:** Phase 49 Release Runbook & Acceptance now that the v7.0 artifact contract is locked back to an APK-first release lane.
 
 ## What Was Shipped
 
@@ -159,6 +158,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 | 48-02 | `tool/release_build.ps1` stages retained outputs into `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/` with `release-manifest.json` | Gives one deterministic retention location tied to tracked version metadata instead of AGP output folders |
 | 48-03 | Keep `--split-debug-info` enabled by default while leaving `--obfuscate` off for v7.0 | Retains symbolization output without widening the release rollout risk |
 | 48-03 | `release-manifest.json` records `apkRetentionState: smoke-only` when smoke verification needs an APK but side-load retention was not requested | Keeps smoke-install evidence explicit without quietly turning every APK into a distribution artifact |
+| 48.1-01 | Canonical retained Android release artifact is the signed optimized `.apk`; `.aab` retention is opt-in via `tool/release_build.ps1 -IncludeAppBundle` | Restores the intended v7.0 shipped product before Phase 49 locks the operator contract |
+| 48.1-02 | `tool/release_build.ps1` must remain truthful in Windows PowerShell 5.1; smoke verification installs the canonical retained APK and records evidence beside it | Matches the documented operator shell and removes stale smoke-only side-path semantics |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -166,11 +167,14 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 - Android only — no iOS target
 
 ### Open Blockers
-- None
+- `android/key.properties` is still missing locally, so the Phase 49 acceptance lane cannot sign a release yet
+- `adb devices` currently reports `V8X8ROMVSWVKIVW8` as `offline`, so smoke verification cannot proceed until a device or emulator is online
 
 ## Accumulated Context
+- Phase 49-01 completed on 2026-03-24: `docs/android-release-runbook.md` now documents the exact `powershell.exe` helper order, the private signing placeholder schema, the expected `ABSENKOK-v7.0.0+8013` staged release directory, and the operator readiness checklist. Runbook marker audit plus `tool/release_build.ps1 -CheckOnly -SmokeVerify` both passed on this machine.
+- Phase 48.1 completed on 2026-03-23: `tool/release_build.ps1` now retains the signed optimized `.apk` as the canonical artifact, keeps `.aab` output behind `-IncludeAppBundle`, records `bundleRetentionState` instead of `apkRetentionState`, and keeps smoke evidence attached to the same staged APK record in both `powershell.exe` 5.1 and `pwsh`.
 - Phase 48-03 completed on 2026-03-23: `tool/release_build.ps1` now retains split-debug-info under `symbols/`, copies `mapping.txt` into the staged release directory when available, records both in `release-manifest.json`, and supports `-SmokeVerify`; `-CheckOnly -IncludeSideLoadApk -SmokeVerify` now resolves `adb`, the signed APK plan, and `smoke-check.txt` without needing an attached device; real smoke verification records install and launch results or fails clearly when no Android target is visible.
-- Phase 48-02 completed on 2026-03-23: `tool/release_build.ps1` is now the single tracked packaging entrypoint; `-CheckOnly` validates the release lane without cutting artifacts; real builds always gate through `tool/release_preflight.ps1`; the canonical retained output is a signed `.aab` staged under `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/`, while a signed release `.apk` is retained only with `-IncludeSideLoadApk`; `docs/android-release-contract.md` now records the staged artifact and `release-manifest.json` contract.
+- Phase 48-02 completed on 2026-03-23: `tool/release_build.ps1` is now the single tracked packaging entrypoint; `-CheckOnly` validates the release lane without cutting artifacts; real builds always gate through `tool/release_preflight.ps1`; the delivered Phase 48 contract retained a signed `.aab` under `build/releases/android/ABSENKOK-v<versionName>+<versionCode>/` and kept the signed release `.apk` behind `-IncludeSideLoadApk`, but urgent Phase 48.1 now exists specifically to reverse that policy back to APK-first.
 - Phase 48-01 completed on 2026-03-23: `.gitignore` now excludes `android/key.properties` and common Android keystore patterns; `android/key.properties.example` tracks the required signing schema; `android/app/build.gradle.kts` loads `key.properties`, uses `signingConfigs.release`, and `:app:bundleRelease` now fails clearly when private signing inputs are missing instead of falling back to debug signing.
 - Phase 47 completed on 2026-03-23: `tool/release_env.ps1` now resolves Java 21 JBR and the canonical `C:\flutter\bin\flutter.bat`; `docs/android-release-contract.md` is the tracked v7.0 contract; `tool/release_preflight.ps1` fails fast before packaging/signing and currently stops at `flutter analyze` with 152 issues while also asserting the pinned AGP/Gradle/Kotlin/Flutter/Java contract.
 - Phase 46-02 completed on 2026-03-23: `pubspec.yaml` is now `7.0.0+8013`, Flutter regenerated `android/local.properties` to `7.0.0 / 8013`, and the release artifact path is `build/app/outputs/apk/release/ABSENKOK-v7.0.0.apk` without changing the version-derived Gradle naming rule.
@@ -218,8 +222,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Session Continuity
 
-**Last session:** 2026-03-23T14:16:23.808Z
-**Stopped at:** Completed 48-03-PLAN.md
+**Last session:** 2026-03-24T15:17:22+08:00
+**Stopped at:** Awaiting 49-02 bootstrap checkpoint
 **Resume file:** None
 
 ## Database Safety Rules

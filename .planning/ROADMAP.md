@@ -101,11 +101,11 @@ Plans:
 
 **Goal:** Prove that the release baseline is reproducible by an operator who did not invent it.
 **Depends on:** Phase 48.1
-**Plans:** 2 planned
+**Plans:** 1/2 plans complete
 
 Plans:
 
-- [ ] 49-01-PLAN.md — document the local PowerShell 5.1 APK-first release runbook with bootstrap placeholders, exact commands, and expected staged outputs
+- [x] 49-01-PLAN.md — document the local PowerShell 5.1 APK-first release runbook with bootstrap placeholders, exact commands, and expected staged outputs
 - [ ] 49-02-PLAN.md — bootstrap local signing prerequisites, run the documented release lane, and capture acceptance evidence for the staged release record
 
 **Details:**
