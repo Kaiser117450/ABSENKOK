@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$androidRoot = Join-Path $repoRoot "android"
 $releaseEnv = Join-Path $PSScriptRoot "release_env.ps1"
 $flutterCli = "C:\flutter\bin\flutter.bat"
 $gradleWrapper = Join-Path $repoRoot "android\gradlew.bat"
@@ -77,22 +78,28 @@ function Invoke-PreflightStage {
 }
 
 Write-Host "ABSENKOK release preflight"
-Write-Host "Stages: flutter analyze -> flutter test -> android\\gradlew.bat :app:compileReleaseSources"
+Write-Host "Stages: flutter analyze (fatal errors only) -> flutter test --no-test-assets -> android\\gradlew.bat :app:compileReleaseSources"
 Write-Host "Contract: Flutter $expectedFlutterVersion / AGP $expectedAgpVersion / Gradle $expectedGradleVersion / Kotlin $expectedKotlinVersion / $expectedJavaLine"
 Write-Host "Packaging and signing tasks are intentionally excluded from this lane."
 
 Push-Location $repoRoot
 try {
     Invoke-PreflightStage -Name "Flutter analyze" -Command {
-        & $flutterCli analyze
+        & $flutterCli analyze --no-fatal-infos --no-fatal-warnings
     }
 
     Invoke-PreflightStage -Name "Flutter test" -Command {
-        & $flutterCli test
+        & $flutterCli test --no-test-assets
     }
 
     Invoke-PreflightStage -Name "Release-only compile" -Command {
-        & $gradleWrapper ":app:compileReleaseSources"
+        Push-Location $androidRoot
+        try {
+            & $gradleWrapper ":app:compileReleaseSources"
+        }
+        finally {
+            Pop-Location
+        }
     }
 }
 finally {

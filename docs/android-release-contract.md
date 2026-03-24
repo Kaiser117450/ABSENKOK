@@ -90,13 +90,14 @@ Mode itu harus bisa menjelaskan lokasi `adb`, canonical signed `.apk` yang akan 
 Kebijakan artifact untuk v7.0:
 
 - Signed optimized `.apk` adalah artifact Android release yang canonical dan selalu dipertahankan.
-- `symbols/` di bawah release directory wajib dipertahankan untuk setiap signed release melalui `--split-debug-info`, dan v7.0 tetap tidak menyalakan `--obfuscate` secara default.
+- `symbols/` di bawah release directory selalu disediakan sebagai lokasi staging debug artifact. Jika operator menjalankan release dengan `-Obfuscate`, file `split-debug-info` yang dihasilkan Flutter wajib dipertahankan di sana. Jika operator sengaja tetap non-obfuscated dan Flutter tidak mengeluarkan file apa pun, `release-manifest.json` harus merekam `splitDebugInfoStatus: not-generated` secara eksplisit.
 - `mapping.txt` dari shrinker Android harus disalin ke release directory bila file itu dihasilkan.
 - Signed `.aab` bukan output default; artifact itu hanya dipertahankan bila operator memang meminta jalur bundle tambahan lewat `-IncludeAppBundle`.
 - Evidence `smoke-check.txt` hasil `-SmokeVerify` wajib ada sebelum distribusi; smoke lane selalu menginstal canonical signed `.apk` yang sama dengan `canonicalArtifact`, lalu mencatat timestamp UTC, serial device, versi release, dan hasil command install/launch.
-- `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, `canonicalArtifact` yang menunjuk ke signed `.apk`, `bundleRetentionState`, jalur symbol/mapping yang dipertahankan, dan status smoke verification untuk release tersebut.
-- Release tidak dianggap siap distribusi sebelum symbol retention dan smoke evidence sama-sama ada di release directory yang sama.
+- `release-manifest.json` harus menyatakan versi, timestamp UTC, git revision bila tersedia, `canonicalArtifact` yang menunjuk ke signed `.apk`, `bundleRetentionState`, jalur symbol/mapping yang dipertahankan atau status ketiadaannya, dan status smoke verification untuk release tersebut.
+- Release tidak dianggap siap distribusi sebelum smoke evidence ada di release directory yang sama dan manifest menjelaskan status debug artifact secara jujur.
 - Detail operator sequencing tetap ditahan untuk Phase 49; dokumen ini hanya mengunci kontrak artifact dan lokasi staging yang harus konsisten.
+- Publikasi ke GitHub Release masih manual; fallback saat ini adalah `gh release upload` terhadap APK yang sudah staged.
 
 ## v7.0 Compatibility Decision
 

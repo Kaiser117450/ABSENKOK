@@ -9,6 +9,16 @@ import '../../main.dart' show supabaseReady;
 import '../../providers/app_provider.dart';
 import '../../services/biometric_service.dart';
 
+bool canUseBiometricLogin({
+  required bool hasBiometricHardware,
+  required bool biometricEnabled,
+  required bool hasSupabaseSession,
+}) {
+  return hasBiometricHardware &&
+      biometricEnabled &&
+      hasSupabaseSession;
+}
+
 class AdminLoginScreen extends ConsumerStatefulWidget {
   const AdminLoginScreen({super.key});
 
@@ -47,18 +57,24 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     final hasBio = await BiometricService.isAvailable();
     if (mounted) setState(() => _hasBiometric = hasBio);
 
-    if (!hasBio) return;
-
     final prefs = await SharedPreferences.getInstance();
     final bioEnabled = prefs.getBool(AppConstants.biometricEnabledKey) ?? false;
-    if (!bioEnabled) return;
 
     // Check Supabase session — biometric only works with an existing session
+    var hasSupabaseSession = false;
     try {
       if (!supabaseReady) return;
       final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) return;
+      hasSupabaseSession = session != null;
     } catch (_) {
+      return;
+    }
+
+    if (!canUseBiometricLogin(
+      hasBiometricHardware: hasBio,
+      biometricEnabled: bioEnabled,
+      hasSupabaseSession: hasSupabaseSession,
+    )) {
       return;
     }
 

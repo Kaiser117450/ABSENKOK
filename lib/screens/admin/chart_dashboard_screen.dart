@@ -17,10 +17,36 @@ import '../../widgets/shimmer_skeleton.dart';
 // Chart Dashboard Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
+@visibleForTesting
+class ChartDashboardDebugData {
+  final AttendanceRateData? rateData;
+  final List<Map<String, dynamic>> weeklyTrend;
+  final List<OvertimeFlag> overtimeFlags;
+  final List<StreakLeaderEntry> leaderboard;
+  final List<Map<String, dynamic>> outletComparison;
+
+  const ChartDashboardDebugData({
+    this.rateData,
+    this.weeklyTrend = const [],
+    this.overtimeFlags = const [],
+    this.leaderboard = const [],
+    this.outletComparison = const [],
+  });
+}
+
 class ChartDashboardScreen extends ConsumerStatefulWidget {
   final String outletId;
+  final ChartDashboardDebugData? debugData;
 
-  const ChartDashboardScreen({super.key, required this.outletId});
+  const ChartDashboardScreen({super.key, required this.outletId})
+      : debugData = null;
+
+  @visibleForTesting
+  const ChartDashboardScreen.testable({
+    super.key,
+    required this.outletId,
+    required this.debugData,
+  });
 
   @override
   ConsumerState<ChartDashboardScreen> createState() =>
@@ -50,6 +76,20 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
   @override
   void initState() {
     super.initState();
+    final debugData = widget.debugData;
+    if (debugData != null) {
+      _rateData = debugData.rateData;
+      _weeklyTrend = debugData.weeklyTrend
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+      _overtimeFlags = List<OvertimeFlag>.from(debugData.overtimeFlags);
+      _leaderboard = List<StreakLeaderEntry>.from(debugData.leaderboard);
+      _outletComparison = debugData.outletComparison
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+      _isLoading = false;
+      return;
+    }
     _loadAllSections();
   }
 
@@ -216,7 +256,8 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
         child: AppEmptyState(
           icon: Icons.bar_chart_outlined,
           heading: 'Belum Ada Data',
-          subtext: 'Data kehadiran akan muncul setelah karyawan mulai absen di kiosk.',
+          subtext:
+              'Data kehadiran akan muncul setelah karyawan mulai absen di kiosk.',
         ),
       );
     }
@@ -246,7 +287,8 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
           const SizedBox(height: 4),
           Text(
             'Hadir ${data.totalPresent}/${data.totalEmployees * data.daysInRange} hari',
-            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            style:
+                const TextStyle(fontSize: 14, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -441,9 +483,12 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -575,7 +620,9 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: rank == 1 ? const Color(0xFFD97706) : AppColors.surfaceVariant,
+              color: rank == 1
+                  ? const Color(0xFFD97706)
+                  : AppColors.surfaceVariant,
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
@@ -643,7 +690,8 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
               child: AppEmptyState(
                 icon: Icons.compare_arrows_outlined,
                 heading: 'Belum Ada Data',
-                subtext: 'Perbandingan outlet akan muncul setelah ada data kehadiran.',
+                subtext:
+                    'Perbandingan outlet akan muncul setelah ada data kehadiran.',
               ),
             )
           else
@@ -749,8 +797,8 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
           spacing: 16,
           runSpacing: 8,
           children: List.generate(_outletComparison.length, (i) {
-            final name =
-                _outletComparison[i]['outlet_name'] as String? ?? 'Outlet ${i + 1}';
+            final name = _outletComparison[i]['outlet_name'] as String? ??
+                'Outlet ${i + 1}';
             return _buildLegendDot(barColors[i % barColors.length], name);
           }),
         ),

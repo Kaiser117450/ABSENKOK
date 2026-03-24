@@ -14,86 +14,43 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 ## Current State
 
-**Shipped:** v6.3 Employee Attendance Recap (2026-03-23)
+**Shipped:** v7.0 Android Release Hardening (2026-03-25)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Web surfaces:** marketing site + protected employee portal with schedules plus attendance recap on the Astro website
 **Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
-**Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, and portal-specific Supabase RPCs
-**Archive note:** v6.3 archived with audit status `closed`; the Phase 42 recap RPC/index were applied to production Supabase during closeout
-**Release note:** Phase 46 restored the canonical local release lane to `C:\flutter\bin\flutter.bat build apk --release`, aligned metadata to `7.0.0+8013`, and produced `ABSENKOK-v7.0.0.apk`; signing still uses the debug key and the supported Java/toolchain contract still needs tracked documentation
+**Release lane:** `tool/release_env.ps1` -> `tool/release_preflight.ps1` -> `tool/release_build.ps1` now produces the canonical signed APK, optional bundle, manifest, smoke evidence, and retained debug artifacts from one tracked PowerShell lane
+**Distribution:** GitHub Release `v7.0.0` now includes the obfuscated smoke-verified asset `ABSENKOK-v7.0.0+8013.apk`
+**Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, portal-specific Supabase RPCs, and the tracked Android release helper chain
+**Archive note:** v7.0 archived after all 9 milestone requirements and all 12 plan summaries were complete; no dedicated v7.0 milestone audit was run
 
-## Current Milestone: v7.0 Android Release Hardening
+## Next Milestone Goals
 
-**Goal:** Re-establish a reproducible, supportable Android release pipeline for the Flutter kiosk app before the next feature milestone.
-
-**Target features:**
-- Clean release packaging succeeds from a supported toolchain without bypass flags
-- Release builds use a private upload-signing configuration instead of the debug keystore
-- Version/build metadata, artifact names, and release notes align with the active milestone
-- Release validation, symbol retention, and operator runbook steps are explicit and repeatable
-
-### What v6.3 Added
-- ✅ Employee-scoped portal attendance recap RPC with overnight logical-day repair and named timestamp contract
-- ✅ Typed Astro recap loader plus shared summary/history components derived from one dataset
-- ✅ `/portal/attendance` route, shell navigation, and home CTA inside the existing employee portal
-- ✅ Shared exception taxonomy and historical copy hardening for follow-up vs in-progress days
-- ✅ Verification backfill and audit closure for phases 42-44, with production recap migration applied during closeout
-
-### What v6.2 Added
-- ✅ Restored the classic admin dashboard as the default `/admin/dashboard` landing surface for full admin users
-- ✅ Moved chain-wide ringkasan jaringan and status per gerai to a dedicated full-admin screen reachable from the dashboard
-- ✅ Replaced the admin dashboard utensil branding with the official Enakko dashboard logo asset
-- ✅ Hardened Rekap Harian PDF for large exports and switched summary metrics from percentages to concrete counts
-
-### What v6.1 Added
-- ✅ Employee portal provisioning flow for existing employees
-- ✅ Password-based name-search login on the Astro website
-- ✅ Protected portal shell with employee identity resolution before schedule reads
-- ✅ Employee schedule visibility for today, this week, and next week
-- ✅ Mobile-first portal states for loading, empty, not-linked, and error
-- ✅ Portal-only logout plus hardened authenticated RPC read path in the website backend
-
-### What v6.0 Added
-- ✅ Persistent installation UUIDv4 per kiosk that survives logout/re-setup
-- ✅ `kiosk_devices` heartbeat pipeline with dedicated nickname/archive RPCs
-- ✅ Multi-device admin dashboard with one live card per active kiosk device
-- ✅ Full-admin Central Dashboard with chain-wide KPIs and outlet drilldown
-- ✅ Gap-closure phases for rollout evidence, validation approval, and final requirement synchronization
-
-### What v5.0 Added
-- ✅ Background heartbeat — kiosk pings Supabase every 15 min with battery, charging state, app version, pending sync count
-- ✅ Sentry crash reporting — unhandled Dart/native exceptions captured; NFC "Tag lost" noise filtered; background isolate covered
-- ✅ Kiosk diagnostics screen (long-press logo) — shows outlet, battery, connectivity, pending/failed counts + Force Sync button
-- ✅ Sync indicator strip on kiosk idle screen — amber strip appears when pending logs > 0, auto-hides on clear
-- ✅ Admin dashboard "Status Kiosk" section — per-outlet online/offline, battery warning (<20%), sync badge
-
-### What v4.0 Added
-- ✅ NFC double-scan crash fix during employee registration
-- ✅ Smart attendance pattern detection (BETA) — median arrival time per day-of-week, late notification
-- ✅ Overtime tracking flags from shift template duration comparison
-- ✅ Missing clock-out batched notification per outlet ("3 karyawan belum pulang di Outlet A")
-- ✅ Attendance rate card on admin dashboard (hadir %, concrete counts)
-- ✅ Gamification streak system — consecutive on-time attendance, kiosk scan streak display
-- ✅ Auto-badge awards at 7/30/90-day streak milestones
-- ✅ Chart dashboard with fl_chart — donut chart, weekly trend bar, streak leaderboard, overtime alerts
-- ✅ Cross-outlet attendance comparison grouped bar chart (admin-only)
-- ✅ Kepala Gerai onboarding via app — CreateAdminScreen (3-state UI), Edge Function user creation, WhatsApp share, PDF audit trail
-- ✅ All chart/analytics aggregations via Supabase RPC (server-side PostgreSQL)
+- Resume product work after the Android release lane hardening is closed out
+- Add release automation only on top of the proven local lane, not as a replacement for it
+- Tackle build-speed and APK-size tuning only after release guarantees stay stable
 
 ### Known Tech Debt
-- `android/app/build.gradle.kts` still points the `release` build type at the debug signing config
-- `android/local.properties` still carries the working `C:\flutter` + Android Studio JBR baseline as a machine-local, gitignored file, so the supported toolchain contract is not yet codified in tracked files
-- Shell `java -version` resolves to Temurin 25 while this repo's proven-good path still depends on Android Studio JBR; the supported Java baseline is not pinned in VCS
-- v6.2 archived without a dedicated milestone audit or per-phase PLAN/SUMMARY artifacts for phases 40-41
-- Final admin logo correction landed after the first `v6.2.0` build; milestone closeout rebuilds from the corrected asset path `src/assets/images/logogoenakko.png`
-- v6.1 verification debt accepted at archive time: Phase 37 has no verification artifact; Phase 38 and 39 validation files remained draft
-- v6.1 planning summaries lag the shipped website hardening (`get_portal_schedule_overview`, authenticated RPC ACL tightening, and portal UI follow-up tweaks)
+- GitHub release publication still needs `gh release upload` fallback in this environment because the app automation could not read the local staged artifact path directly
+- Real signing files (`android/key.properties` and the upload keystore) remain intentionally machine-local, so release bootstrap is still an operator task
+- Shell `java` may still drift to Temurin 25; operators must enter the release lane through `tool/release_env.ps1` or set `ABSENKOK_JAVA_HOME`
+- Flutter 3.41.1 still warns that Kotlin 1.9.25 will age out in a future cycle
 - Live Activity pill not confirmed rotating on physical device (code correct, needs device debugging)
-- Dual PDF service files (pdf_report_service.dart + pdf_service.dart)
+- Dual PDF service files (`pdf_report_service.dart` + `pdf_service.dart`)
 - Phase 15 has no formal PLAN/SUMMARY files (SQL-only phase)
 - Pattern detection `compute()` isolate: first use in this app — monitor production performance
+
+<details>
+<summary>v7.0 Closeout Notes (shipped 2026-03-25)</summary>
+
+- Restored the canonical Windows release baseline at `C:\flutter\bin\flutter.bat` and aligned tracked metadata to `7.0.0+8013`.
+- Pinned the supported Java 21 / Flutter / Gradle / Kotlin contract in tracked PowerShell helpers and docs.
+- Replaced debug signing with a private upload-key flow and staged release evidence under `build/releases/android/ABSENKOK-v7.0.0+8013/`.
+- Final published asset is the obfuscated smoke-verified `ABSENKOK-v7.0.0+8013.apk` with retained `symbols/` files plus `mapping.txt`.
+- GitHub Release `v7.0.0` was updated manually via `gh release upload`; cloud release automation remains future work.
+
+</details>
 
 <details>
 <summary>v3.1 Context (shipped 2026-03-18)</summary>
@@ -210,19 +167,20 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Portal attendance recap is usable on a phone-sized browser inside the existing portal shell — v6.3
 - ✓ Portal attendance recap has explicit loading, empty, and error states when data is unavailable — v6.3
 
-### Active (v7.0 Android Release Hardening)
-- [x] Release build succeeds from a clean checkout on the supported Flutter/Java/Gradle toolchain without `--android-skip-build-dependency-validation` — Phase 46
-- [ ] Release signing uses a private upload keystore flow instead of the debug keystore
-- [x] `pubspec.yaml`, Android version metadata, and generated artifact names all reflect the active milestone version — Phase 46
-- [ ] Release packaging retains the required symbol/debug artifacts and validates the shrunken build before distribution
-- [ ] Operators can follow one documented local release workflow without guessing environment variables or secret file locations
+### Validated (v7.0)
+- ✓ Release build succeeds from a clean checkout on the supported Flutter/Java/Gradle toolchain without `--android-skip-build-dependency-validation` — v7.0
+- ✓ Release signing uses a private upload keystore flow instead of the debug keystore — v7.0
+- ✓ `pubspec.yaml`, Android version metadata, and generated artifact names all reflect the active milestone version — v7.0
+- ✓ Release packaging retains the canonical APK, mapping output, obfuscation-aware debug artifacts, and smoke evidence before distribution — v7.0
+- ✓ Operators can follow one documented local PowerShell release workflow without guessing hidden bootstrap prerequisites — v7.0
 
-### Deferred (Future)
+### Active
 - [ ] Employee can filter attendance recap by custom date range or prior month
 - [ ] Employee can submit an attendance correction or dispute request from an exception day
 - [ ] Employee can submit time-off or absence requests through the portal
 - [ ] Manager/admin can approve or reject employee requests with an auditable status change
 - [ ] Employee receives reminders or status notifications for upcoming work or request changes
+- [ ] Release automation can publish artifacts or GitHub releases after the local release lane is proven
 - [ ] Build-speed optimization and incremental caching beyond the reliable release baseline
 - [ ] APK size/runtime tuning once signed release packaging is reproducible
 - [ ] Employee-facing attendance export or payroll-grade reporting
@@ -353,4 +311,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-23 after completing Phase 46*
+*Last updated: 2026-03-25 after v7.0 milestone closeout*

@@ -1,4 +1,31 @@
 # Milestones
+## v7.0 Android Release Hardening (Shipped: 2026-03-25)
+
+**Phases completed:** 5 phases, 12 plans, 20 tracked tasks
+**Timeline:** 2026-03-23 → 2026-03-25
+**Git range:** `4449d4e` → `71ea220`
+
+**Key accomplishments:**
+1. Restored the canonical Windows release lane and aligned tracked Android metadata to `7.0.0+8013`.
+2. Published a tracked Java 21 / Flutter / Gradle contract plus a fail-fast release preflight lane.
+3. Replaced debug signing with a private upload-key scaffold and a single `tool/release_build.ps1` packaging entrypoint.
+4. Re-centered release retention on a canonical staged APK with manifest, mapping, smoke evidence, and optional bundle output.
+5. Documented the PowerShell 5.1 operator runbook and closed acceptance on a real Android device.
+6. Rebuilt the final distributable APK with `-Obfuscate`, retained Dart symbol files plus `mapping.txt`, and uploaded `ABSENKOK-v7.0.0+8013.apk` to GitHub Release `v7.0.0`.
+
+### Known Gaps
+- Archived without a dedicated `v7.0-MILESTONE-AUDIT.md`; closeout proceeded because all 9 milestone requirements and all 12 plan summaries were complete.
+
+### Notes
+- Final published asset digest: `sha256:600eb099456f981a3a4b38af083d7f676c7dce1aed5db96b17aa9141ac0dfab1`.
+- GitHub release upload in this environment required `gh release upload` fallback because the app automation could not read the local staged artifact path directly.
+- Local release bootstrap still depends on private `android/key.properties` and upload keystore files staying machine-local and untracked.
+
+### Delivered
+ABSENKOK now has a reproducible local Android release lane with private signing, APK-first artifact staging, smoke evidence, retained debug artifacts, and a published obfuscated v7.0 GitHub release asset.
+
+---
+
 ## v6.3 Employee Attendance Recap (Shipped: 2026-03-23)
 
 **Phases completed:** 4 phases, 11 plans, 20 tracked tasks

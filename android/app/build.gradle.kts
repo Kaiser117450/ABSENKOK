@@ -106,7 +106,9 @@ android {
         val variant = this
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            output.outputFileName = "ABSENKOK-v${variant.versionName}.apk"
+            val abi = output.getFilter("ABI")
+            val suffix = if (abi != null) "-$abi" else ""
+            output.outputFileName = "ABSENKOK-v${variant.versionName}$suffix.apk"
         }
     }
 }

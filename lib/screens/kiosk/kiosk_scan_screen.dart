@@ -24,8 +24,29 @@ import '../../widgets/badge_avatar.dart';
 
 enum _ScanStep { selectAction, submitting, success, error }
 
+@visibleForTesting
+class KioskScanSuccessDebugState {
+  final AttendanceType submittedType;
+  final int currentStreak;
+  final int? milestoneCelebration;
+
+  const KioskScanSuccessDebugState({
+    required this.submittedType,
+    this.currentStreak = 0,
+    this.milestoneCelebration,
+  });
+}
+
 class KioskScanScreen extends ConsumerStatefulWidget {
-  const KioskScanScreen({super.key});
+  final KioskScanSuccessDebugState? debugSuccessState;
+
+  const KioskScanScreen({super.key}) : debugSuccessState = null;
+
+  @visibleForTesting
+  const KioskScanScreen.testable({
+    super.key,
+    required this.debugSuccessState,
+  });
 
   @override
   ConsumerState<KioskScanScreen> createState() => _KioskScanScreenState();
@@ -71,6 +92,17 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       parent: _successScaleCtrl,
       curve: Curves.elasticOut,
     );
+
+    final debugSuccessState = widget.debugSuccessState;
+    if (debugSuccessState != null) {
+      _step = _ScanStep.success;
+      _submittedType = debugSuccessState.submittedType;
+      _currentStreak = debugSuccessState.currentStreak;
+      _milestoneCelebration = debugSuccessState.milestoneCelebration;
+      _loadingLastType = false;
+      _successScaleCtrl.value = 1;
+      return;
+    }
 
     // Load smart break status
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -193,10 +225,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           unawaited(
             PatternDetectionService.instance
                 .checkAndNotifyIfLate(
-                  employeeId: employee.id,
-                  outletId: session.outletId,
-                  scanTime: scanTime,
-                )
+              employeeId: employee.id,
+              outletId: session.outletId,
+              scanTime: scanTime,
+            )
                 .catchError((Object error) {
               debugPrint('[KioskScan] pattern check error: $error');
             }),
@@ -226,7 +258,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   }) async {
     try {
       final employee = ref.read(appProvider).detectedEmployee;
-      final badge = BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
+      final badge =
+          BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
       final badgeEmoji = badge?.emoji ?? '';
 
       final now = DateTime.now();
@@ -287,7 +320,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         setState(() => _currentStreak = streak);
 
         // Check for milestone badge award
-        final milestone = await StreakBadgeService.instance.checkAndAwardMilestone(
+        final milestone =
+            await StreakBadgeService.instance.checkAndAwardMilestone(
           employeeId: employeeId,
           currentStreak: streak,
         );
@@ -333,7 +367,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   Widget _buildActionSelection(Employee? employee) {
     final name = employee?.name ?? '-';
     final position = employee?.position;
-    final badge = BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
+    final badge =
+        BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
 
     return Column(
       children: [
@@ -783,8 +818,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                   ),
                   // Badge label (emoji + name)
                   Builder(builder: (_) {
-                    final badge = BadgeService.instance.getBadgeByIdSync(employee.activeBadgeId);
-                    if (badge == null || badge.name.isEmpty) return const SizedBox.shrink();
+                    final badge = BadgeService.instance
+                        .getBadgeByIdSync(employee.activeBadgeId);
+                    if (badge == null || badge.name.isEmpty)
+                      return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Row(
@@ -810,7 +847,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                 ],
 
                 // Streak display (only shown for masuk with streak >= 2)
-                if (_submittedType == AttendanceType.masuk && _currentStreak >= 2) ...[
+                if (_submittedType == AttendanceType.masuk &&
+                    _currentStreak >= 2) ...[
                   const SizedBox(height: 16),
                   _buildStreakRow(),
                 ],
@@ -856,7 +894,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_fire_department, size: 24, color: Color(0xFFF59E0B)),
+          const Icon(Icons.local_fire_department,
+              size: 24, color: Color(0xFFF59E0B)),
           const SizedBox(width: 8),
           Text(
             milestoneText,
@@ -873,7 +912,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.local_fire_department, size: 24, color: Color(0xFFF59E0B)),
+        const Icon(Icons.local_fire_department,
+            size: 24, color: Color(0xFFF59E0B)),
         const SizedBox(width: 8),
         Text(
           '$_currentStreak hari berturut-turut!',

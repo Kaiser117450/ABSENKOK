@@ -1,18 +1,25 @@
 import 'package:flutter/foundation.dart';
+
 import '../core/supabase_client.dart';
 import '../main.dart'; // supabaseReady
 import 'badge_service.dart';
 
+const _streakMilestones = {
+  7: _MilestoneDef(name: 'Streak 7 Hari', emoji: '\u{1F525}', color: '#F59E0B'),
+  30: _MilestoneDef(name: 'Streak 30 Hari', emoji: '\u{2B50}', color: '#F59E0B'),
+  90: _MilestoneDef(name: 'Streak 90 Hari', emoji: '\u{1F3C6}', color: '#F59E0B'),
+};
+
+int? streakMilestoneFor(int currentStreak) {
+  return _streakMilestones.keys.cast<int?>().firstWhere(
+    (milestone) => currentStreak == milestone,
+    orElse: () => null,
+  );
+}
+
 class StreakBadgeService {
   StreakBadgeService._();
   static final instance = StreakBadgeService._();
-
-  /// Milestone thresholds and their badge definitions
-  static const _milestones = {
-    7: _MilestoneDef(name: 'Streak 7 Hari', emoji: '\u{1F525}', color: '#F59E0B'),
-    30: _MilestoneDef(name: 'Streak 30 Hari', emoji: '\u{2B50}', color: '#F59E0B'),
-    90: _MilestoneDef(name: 'Streak 90 Hari', emoji: '\u{1F3C6}', color: '#F59E0B'),
-  };
 
   /// Check if currentStreak hits a milestone and award badge if so.
   /// Returns the milestone hit (7, 30, or 90) or null if no milestone.
@@ -20,13 +27,10 @@ class StreakBadgeService {
     required String employeeId,
     required int currentStreak,
   }) async {
-    final milestone = _milestones.keys.cast<int?>().firstWhere(
-      (m) => currentStreak == m,
-      orElse: () => null,
-    );
+    final milestone = streakMilestoneFor(currentStreak);
     if (milestone == null) return null;
 
-    final def = _milestones[milestone]!;
+    final def = _streakMilestones[milestone]!;
     try {
       // Find or create the milestone badge definition
       final badgeId = await _ensureBadgeExists(def);
@@ -71,5 +75,9 @@ class _MilestoneDef {
   final String name;
   final String emoji;
   final String color;
-  const _MilestoneDef({required this.name, required this.emoji, required this.color});
+  const _MilestoneDef({
+    required this.name,
+    required this.emoji,
+    required this.color,
+  });
 }

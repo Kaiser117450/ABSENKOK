@@ -7,6 +7,7 @@ Runbook ini adalah panduan operator untuk memproduksi release Android lokal v7.0
 - Target release: `ABSENKOK-v7.0.0+8013`
 - Shell yang didukung: `powershell.exe` / Windows PowerShell 5.1
 - Canonical artifact: signed optimized `.apk`
+- Published v7.0 asset: obfuscated smoke-verified `.apk`
 - Optional artifact: `.aab` hanya jika operator memang meminta `-IncludeAppBundle`
 - Smoke evidence wajib berasal dari lane yang sama dengan canonical APK
 
@@ -68,8 +69,13 @@ Isi minimum yang diharapkan:
 - `ABSENKOK-v7.0.0+8013.apk`
 - `release-manifest.json`
 - `smoke-check.txt`
-- `symbols/`
+- `symbols/` directory
 - `mapping.txt` bila dihasilkan shrinker
+
+Catatan:
+
+- Pada build v7.0 final yang dipublikasikan, operator menjalankan lane dengan `-Obfuscate`, sehingga `release-manifest.json` harus mencatat `debugArtifacts.obfuscationEnabled = true` dan `debugArtifacts.splitDebugInfoStatus = retained`.
+- Jika operator sengaja membangun tanpa obfuscation untuk diagnostik lokal, Flutter bisa tidak mengeluarkan file `split-debug-info`. Dalam kasus itu directory `symbols/` tetap ada, tetapi `release-manifest.json` akan mencatat `debugArtifacts.splitDebugInfoStatus = not-generated`.
 
 Optional only:
 
@@ -116,30 +122,38 @@ Pada baseline v7.0 saat ini, check-only smoke lane juga harus memperlihatkan:
 ### Step 4. Cut the canonical APK-first release and smoke-verify it
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -SmokeVerify
+powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -SmokeVerify -Obfuscate
 ```
 
 Command ini harus:
 
 1. masuk lewat `tool/release_env.ps1`
 2. menjalankan `tool/release_preflight.ps1`
-3. build signed `.apk` dengan `--split-debug-info`
+3. build signed obfuscated `.apk` dengan `--split-debug-info`
 4. stage release record ke `build/releases/android/ABSENKOK-v7.0.0+8013/`
 5. install canonical APK ke device/emulator
 6. launch app
 7. tulis `smoke-check.txt`
 
-Kalau run ini sukses, `release-manifest.json` harus tetap menyatakan canonical artifact sebagai `.apk` dan `BundleRetentionState` harus tetap `omitted` kecuali operator sengaja memakai `-IncludeAppBundle`.
+Kalau run ini sukses, `release-manifest.json` harus tetap menyatakan canonical artifact sebagai `.apk`, `debugArtifacts.obfuscationEnabled` harus `true`, `debugArtifacts.splitDebugInfoStatus` harus `retained`, dan `BundleRetentionState` harus tetap `omitted` kecuali operator sengaja memakai `-IncludeAppBundle`.
 
 ### Step 5. Optional bundle retention
 
 Jalankan ini hanya jika operator memang butuh `.aab` selain canonical APK:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -SmokeVerify -IncludeAppBundle
+powershell -ExecutionPolicy Bypass -File tool/release_build.ps1 -SmokeVerify -Obfuscate -IncludeAppBundle
 ```
 
 `-IncludeAppBundle` tidak mengubah canonical artifact. Canonical artifact tetap `.apk`.
+
+### Step 6. Optional GitHub Release upload fallback
+
+Jika asset final perlu dipublikasikan ke GitHub Release dan tool otomatis tidak bisa membaca file lokal, gunakan fallback berikut terhadap APK yang sudah di-stage:
+
+```powershell
+gh release upload v7.0.0 "build\releases\android\ABSENKOK-v7.0.0+8013\ABSENKOK-v7.0.0+8013.apk#ABSENKOK-v7.0.0+8013 obfuscated smoke-verified APK" --repo Kaiser117450/ABSENKOK
+```
 
 ## Acceptance Checklist
 
@@ -149,10 +163,12 @@ Release lokal siap ditinjau hanya jika semua poin ini benar:
 - release directory `build/releases/android/ABSENKOK-v7.0.0+8013/` dibuat
 - canonical APK ada di `build/releases/android/ABSENKOK-v7.0.0+8013/ABSENKOK-v7.0.0+8013.apk`
 - `release-manifest.json` menunjuk canonical artifact ke `.apk`
+- `release-manifest.json` mencatat `debugArtifacts.obfuscationEnabled = true`
 - `smoke-check.txt` berasal dari run yang sama
-- `symbols/` retained
+- `symbols/` directory staged dan `release-manifest.json` menyatakan `debugArtifacts.splitDebugInfoStatus = retained`
 - `mapping.txt` retained bila file itu dihasilkan
 - `.aab` hanya ada bila memang diminta lewat `-IncludeAppBundle`
+- Bila dipublikasikan, GitHub Release asset harus memakai APK staged yang sama
 
 ## If The Run Blocks
 
@@ -174,5 +190,5 @@ Kalau salah satu blocker muncul:
 ## Notes
 
 - Runbook ini sengaja fokus pada local deterministic release lane.
-- CI/CD, GitHub Release publishing, dan Play Store flow tetap di luar scope Phase 49.
+- CI/CD dan Play Store flow tetap di luar scope Phase 49; hanya fallback upload GitHub asset manual yang didokumentasikan di sini.
 - `docs/android-release-contract.md` tetap menjadi contract summary; runbook ini adalah operator sequence yang lebih konkret.

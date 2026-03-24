@@ -104,43 +104,47 @@ void main() {
     test('can construct with all fields', () {
       final stats = AttendanceDailyPdfStats(
         totalKaryawan: 10,
-        attendanceRate: 85.5,
-        avgWorkStr: '8j 15m',
-        totalSakit: 2,
+        totalMasuk: 8,
+        totalTidakHadir: 1,
+        totalBelumPulang: 1,
         totalScan: 24,
         employeeRows: [
           const AttendanceDailyPdfEmployeeRow(
             nama: 'Alice',
-            hadirCount: 5,
+            masukCount: 5,
+            tidakHadirCount: 0,
+            belumPulangCount: 1,
             avgMasukStr: '08:30',
             avgPulangStr: '17:15',
             totalKerjaStr: '40j 0m',
-            sakitCount: 1,
           ),
         ],
       );
 
       expect(stats.totalKaryawan, 10);
-      expect(stats.attendanceRate, 85.5);
-      expect(stats.avgWorkStr, '8j 15m');
-      expect(stats.totalSakit, 2);
+      expect(stats.totalMasuk, 8);
+      expect(stats.totalTidakHadir, 1);
+      expect(stats.totalBelumPulang, 1);
       expect(stats.totalScan, 24);
       expect(stats.employeeRows.length, 1);
       expect(stats.employeeRows.first.nama, 'Alice');
+      expect(stats.employeeRows.first.masukCount, 5);
     });
 
     test('empty employeeRows is valid (no crash)', () {
       final stats = AttendanceDailyPdfStats(
         totalKaryawan: 0,
-        attendanceRate: 0.0,
-        avgWorkStr: '-',
-        totalSakit: 0,
+        totalMasuk: 0,
+        totalTidakHadir: 0,
+        totalBelumPulang: 0,
         totalScan: 0,
         employeeRows: [],
       );
 
       expect(stats.employeeRows, isEmpty);
-      expect(stats.attendanceRate, 0.0);
+      expect(stats.totalMasuk, 0);
+      expect(stats.totalTidakHadir, 0);
+      expect(stats.totalBelumPulang, 0);
     });
   });
 }

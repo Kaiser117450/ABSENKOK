@@ -3,10 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../core/supabase_client.dart';
 import '../main.dart' show supabaseReady;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data classes
-// ─────────────────────────────────────────────────────────────────────────────
-
 /// A single entry in the streak leaderboard.
 class StreakLeaderEntry {
   final String employeeId;
@@ -21,19 +17,35 @@ class StreakLeaderEntry {
     required this.longestStreak,
   });
 
-  factory StreakLeaderEntry.fromJson(Map<String, dynamic> json) =>
-      StreakLeaderEntry(
-        employeeId: json['employee_id'] as String,
-        employeeName:
-            json['employee_name'] as String? ?? json['name'] as String? ?? 'Unknown',
-        currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
-        longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
-      );
+  factory StreakLeaderEntry.fromJson(Map<String, dynamic> json) {
+    return StreakLeaderEntry(
+      employeeId: json['employee_id'] as String,
+      employeeName:
+          json['employee_name'] as String? ?? json['name'] as String? ?? 'Unknown',
+      currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
+      longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StreakService
-// ─────────────────────────────────────────────────────────────────────────────
+List<StreakLeaderEntry> buildStreakLeaderboard(
+  List<dynamic> rows, {
+  int limit = 5,
+}) {
+  final entries = rows.map((row) {
+    final data = Map<String, dynamic>.from(row as Map);
+    final employeeData = data['employees'];
+    if (employeeData is Map<String, dynamic>) {
+      data['employee_name'] ??= employeeData['name'];
+    } else if (employeeData is Map) {
+      data['employee_name'] ??= employeeData['name'];
+    }
+    return StreakLeaderEntry.fromJson(data);
+  }).toList();
+
+  entries.sort((a, b) => b.currentStreak.compareTo(a.currentStreak));
+  return entries.take(limit).toList();
+}
 
 /// Streak service for attendance streak leaderboard and updates.
 ///
@@ -59,15 +71,7 @@ class StreakService {
           .gt('current_streak', 0)
           .order('current_streak', ascending: false)
           .limit(limit);
-      return (data as List).map((e) {
-        final empData = e['employees'] as Map<String, dynamic>?;
-        return StreakLeaderEntry(
-          employeeId: e['employee_id'] as String,
-          employeeName: empData?['name'] as String? ?? 'Unknown',
-          currentStreak: (e['current_streak'] as num?)?.toInt() ?? 0,
-          longestStreak: (e['longest_streak'] as num?)?.toInt() ?? 0,
-        );
-      }).toList();
+      return buildStreakLeaderboard(data as List, limit: limit);
     } catch (e) {
       debugPrint('[StreakService] getLeaderboard failed: $e');
       return [];

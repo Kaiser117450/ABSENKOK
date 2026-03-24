@@ -13,6 +13,10 @@ void main() {
     }) async {
       await tester.pumpWidget(
         MaterialApp(
+          theme: ThemeData(
+            useMaterial3: false,
+            splashFactory: NoSplash.splashFactory,
+          ),
           home: Scaffold(
             body: Center(
               child: BadgeColorPickerField(
@@ -59,9 +63,14 @@ void main() {
       expect(find.text('Warna Utama'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('color2 field hidden when style is not gradient', (tester) async {
+    testWidgets('color2 field hidden when style is not gradient',
+        (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          theme: ThemeData(
+            useMaterial3: false,
+            splashFactory: NoSplash.splashFactory,
+          ),
           home: Scaffold(
             body: _BadgeColorFieldVisibilityHarness(),
           ),
@@ -79,7 +88,11 @@ void main() {
     testWidgets('picking a color updates the preview swatch in real time',
         (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
+          theme: ThemeData(
+            useMaterial3: false,
+            splashFactory: NoSplash.splashFactory,
+          ),
           home: Scaffold(
             body: _BadgeColorPickerRealtimeHarness(),
           ),

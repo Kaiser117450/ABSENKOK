@@ -2,7 +2,8 @@
 param(
     [switch]$CheckOnly,
     [switch]$IncludeAppBundle,
-    [switch]$SmokeVerify
+    [switch]$SmokeVerify,
+    [switch]$Obfuscate
 )
 
 Set-StrictMode -Version Latest
@@ -15,6 +16,7 @@ $pubspecPath = Join-Path $repoRoot "pubspec.yaml"
 $buildGradlePath = Join-Path $repoRoot "android\app\build.gradle.kts"
 $localPropertiesPath = Join-Path $repoRoot "android\local.properties"
 $artifactRoot = Join-Path $repoRoot "build\releases\android"
+$debugInfoBuildRoot = Join-Path $repoRoot "build\debug-info"
 $bundleOutputRoot = Join-Path $repoRoot "build\app\outputs\bundle\release"
 $apkOutputRoots = @(
     (Join-Path $repoRoot "build\app\outputs\flutter-apk"),
@@ -23,6 +25,7 @@ $apkOutputRoots = @(
 $mappingSourcePath = Join-Path $repoRoot "build\app\outputs\mapping\release\mapping.txt"
 $manifestName = "release-manifest.json"
 $smokeEvidenceName = "smoke-check.txt"
+$obfuscationEnabled = [bool]$Obfuscate
 
 function Assert-PathExists {
     param(
@@ -72,19 +75,19 @@ function Get-GitMetadata {
     $dirty = $false
 
     $global:LASTEXITCODE = 0
-    $revisionOutput = & git -C $RepositoryRoot rev-parse HEAD 2>$null
+    $revisionOutput = cmd.exe /d /c ('git -C "{0}" rev-parse HEAD 2>NUL' -f $RepositoryRoot)
     if (($null -ne $revisionOutput) -and ($LASTEXITCODE -eq 0)) {
         $revision = ($revisionOutput | Select-Object -First 1).Trim()
     }
 
     $global:LASTEXITCODE = 0
-    $shortOutput = & git -C $RepositoryRoot rev-parse --short HEAD 2>$null
+    $shortOutput = cmd.exe /d /c ('git -C "{0}" rev-parse --short HEAD 2>NUL' -f $RepositoryRoot)
     if (($null -ne $shortOutput) -and ($LASTEXITCODE -eq 0)) {
         $shortRevision = ($shortOutput | Select-Object -First 1).Trim()
     }
 
     $global:LASTEXITCODE = 0
-    & git -C $RepositoryRoot diff --quiet --ignore-submodules HEAD -- 2>$null
+    cmd.exe /d /c ('git -C "{0}" diff --quiet --ignore-submodules HEAD -- 2>NUL' -f $RepositoryRoot) | Out-Null
     if ($LASTEXITCODE -eq 1) {
         $dirty = $true
     }
@@ -334,6 +337,61 @@ function Get-SymbolArtifactRecords {
     )
 }
 
+function Stage-SymbolArtifacts {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SourceDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$DestinationDirectory
+    )
+
+    if (-not (Test-Path -LiteralPath $SourceDirectory)) {
+        return
+    }
+
+    $sourceRoot = [System.IO.Path]::GetFullPath($SourceDirectory)
+    if (-not $sourceRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+        $sourceRoot += [System.IO.Path]::DirectorySeparatorChar
+    }
+
+    foreach ($file in (Get-ChildItem -LiteralPath $SourceDirectory -File -Recurse -ErrorAction SilentlyContinue)) {
+        $fullPath = [System.IO.Path]::GetFullPath($file.FullName)
+        $relativePath = $fullPath.Substring($sourceRoot.Length)
+        $destinationPath = Join-Path $DestinationDirectory $relativePath
+        $destinationParent = Split-Path -Parent $destinationPath
+
+        if (-not (Test-Path -LiteralPath $destinationParent)) {
+            New-Item -ItemType Directory -Path $destinationParent -Force | Out-Null
+        }
+
+        Copy-Item -LiteralPath $file.FullName -Destination $destinationPath -Force
+    }
+}
+
+function New-FlutterBuildArguments {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("apk", "appbundle")]
+        [string]$ArtifactKind,
+        [Parameter(Mandatory = $true)]
+        [string]$SplitDebugInfoDirectory,
+        [Parameter(Mandatory = $true)]
+        [bool]$ObfuscationEnabled
+    )
+
+    $arguments = [System.Collections.Generic.List[string]]::new()
+    $arguments.Add("build")
+    $arguments.Add($ArtifactKind)
+    $arguments.Add("--release")
+    $arguments.Add("--split-debug-info=$SplitDebugInfoDirectory")
+
+    if ($ObfuscationEnabled) {
+        $arguments.Add("--obfuscate")
+    }
+
+    return [string[]]$arguments.ToArray()
+}
+
 function Format-CommandLine {
     param(
         [Parameter(Mandatory = $true)]
@@ -341,11 +399,13 @@ function Format-CommandLine {
         [string[]]$Arguments = @()
     )
 
-    if ($Arguments.Count -eq 0) {
+    $argumentList = [System.Object[]]@($Arguments)
+
+    if ($argumentList.Count -eq 0) {
         return '"{0}"' -f $FilePath
     }
 
-    $formattedArguments = foreach ($argument in $Arguments) {
+    $formattedArguments = foreach ($argument in $argumentList) {
         if ($argument -match '\s') {
             '"{0}"' -f $argument
         } else {
@@ -365,9 +425,45 @@ function Invoke-ExternalCommand {
         [string]$Description
     )
 
-    $global:LASTEXITCODE = 0
-    $output = & $FilePath @Arguments 2>&1 | Out-String
-    $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
+    $argumentList = [System.Object[]]@($Arguments)
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $FilePath
+    $startInfo.Arguments = (
+        $argumentList |
+            ForEach-Object {
+                $argument = [string]$_
+                if ([string]::IsNullOrEmpty($argument)) {
+                    '""'
+                } elseif ($argument -match '\s') {
+                    '"{0}"' -f $argument
+                } else {
+                    $argument
+                }
+            }
+    ) -join ' '
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+
+    $exitCode = 0
+    try {
+        [void]$process.Start()
+        $standardOutput = $process.StandardOutput.ReadToEnd()
+        $standardError = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+        $exitCode = [int]$process.ExitCode
+    } finally {
+        $process.Dispose()
+    }
+
+    $output = @($standardOutput, $standardError) |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { $_.TrimEnd() } |
+        Out-String
 
     return [ordered]@{
         description = $Description
@@ -392,7 +488,7 @@ function Get-ConnectedAndroidTargets {
             continue
         }
 
-        $parts = $trimmed -split '\s+'
+        $parts = [string[]]@($trimmed -split '\s+')
         if ($parts.Count -lt 2) {
             continue
         }
@@ -403,9 +499,11 @@ function Get-ConnectedAndroidTargets {
         }
     }
 
+    $connectedTargets = [System.Object[]]@($targets | Where-Object { $_.State -eq "device" })
+
     return [pscustomobject]@{
         Command = $deviceList
-        Targets = @($targets | Where-Object { $_.State -eq "device" })
+        Targets = $connectedTargets
     }
 }
 
@@ -492,16 +590,17 @@ function Invoke-SmokeVerification {
     }
 
     $deviceSnapshot = Get-ConnectedAndroidTargets -AdbCli $AdbCli
+    $connectedTargets = [System.Object[]]@($deviceSnapshot.Targets)
     $record.commands += $deviceSnapshot.Command
 
-    if ($deviceSnapshot.Targets.Count -eq 0) {
+    if ($connectedTargets.Count -eq 0) {
         $record.status = "failed-no-device"
         $record.error = "Smoke verification requires an attached Android device or emulator visible to adb devices."
         Write-SmokeEvidence -Path $EvidencePath -SmokeRecord $record
         return $record
     }
 
-    $target = $deviceSnapshot.Targets | Select-Object -First 1
+    $target = $connectedTargets | Select-Object -First 1
     $record.deviceSerial = $target.Serial
 
     $installResult = Invoke-ExternalCommand `
@@ -579,9 +678,10 @@ if ($CheckOnly) {
     Write-Host "  Release dir     : $($releasePaths.ReleaseDirectory)"
     Write-Host "  Canonical .apk  : $($releasePaths.ApkPath)"
     Write-Host "  Bundle target   : $($releasePaths.BundlePath)"
-    Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory) (--split-debug-info, obfuscate disabled)"
+    Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory) (--split-debug-info, obfuscate $(if ($obfuscationEnabled) { 'enabled' } else { 'disabled' }))"
     Write-Host "  Mapping target  : $($releasePaths.MappingPath)"
     Write-Host "  Bundle retention: $bundleRetentionState"
+    Write-Host "  Obfuscation     : $(if ($obfuscationEnabled) { 'enabled' } else { 'disabled' })"
     Write-Host "  Manifest        : $($releasePaths.ManifestPath)"
     Write-Host "  Preflight gate  : $releasePreflight"
     if ($SmokeVerify) {
@@ -593,7 +693,7 @@ if ($CheckOnly) {
     } else {
         Write-Host "  Smoke verify   : not requested"
     }
-    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build apk --release --split-debug-info -> optional flutter build appbundle --release --split-debug-info -> optional adb smoke verification -> stage release-manifest.json"
+    Write-Host "  Real build flow : release_env.ps1 -> release_preflight.ps1 -> flutter build apk --release --split-debug-info$(if ($obfuscationEnabled) { ' --obfuscate' } else { '' }) -> optional flutter build appbundle --release --split-debug-info$(if ($obfuscationEnabled) { ' --obfuscate' } else { '' }) -> optional adb smoke verification -> stage release-manifest.json"
 
     $response = [ordered]@{
         Mode               = "check-only"
@@ -607,7 +707,7 @@ if ($CheckOnly) {
         ManifestPath       = $releasePaths.ManifestPath
         SmokeEvidencePath  = $releasePaths.SmokeEvidencePath
         FlutterCli         = $contract.FlutterCli
-        ObfuscationEnabled = $false
+        ObfuscationEnabled = $obfuscationEnabled
     }
 
     if ($SmokeVerify) {
@@ -639,6 +739,7 @@ Write-Host "  Bundle output   : $bundleRetentionState"
 Write-Host "  Symbols dir     : $($releasePaths.SymbolsDirectory)"
 Write-Host "  Mapping target  : $($releasePaths.MappingPath)"
 Write-Host "  Smoke verify    : $SmokeVerify"
+Write-Host "  Obfuscation     : $(if ($obfuscationEnabled) { 'enabled' } else { 'disabled' })"
 Write-Host "  Staging dir     : $($releasePaths.ReleaseDirectory)"
 
 Push-Location $repoRoot
@@ -653,16 +754,14 @@ try {
     if (Test-Path -LiteralPath $releasePaths.ReleaseDirectory) {
         Remove-Item -LiteralPath $releasePaths.ReleaseDirectory -Recurse -Force
     }
+    if (Test-Path -LiteralPath $debugInfoBuildRoot) {
+        Remove-Item -LiteralPath $debugInfoBuildRoot -Recurse -Force
+    }
 
     New-Item -ItemType Directory -Path $releasePaths.ReleaseDirectory -Force | Out-Null
     New-Item -ItemType Directory -Path $releasePaths.SymbolsDirectory -Force | Out-Null
 
-    & $contract.FlutterCli @(
-        "build",
-        "apk",
-        "--release",
-        "--split-debug-info=$($releasePaths.SymbolsDirectory)"
-    )
+    & $contract.FlutterCli @(New-FlutterBuildArguments -ArtifactKind "apk" -SplitDebugInfoDirectory $debugInfoBuildRoot -ObfuscationEnabled $obfuscationEnabled)
     $apkSource = Find-GeneratedArtifact -Roots $apkOutputRoots -Filter "*.apk" -Description "release .apk"
     Copy-Item -LiteralPath $apkSource.FullName -Destination $releasePaths.ApkPath -Force
 
@@ -676,12 +775,7 @@ try {
     )
 
     if ($shouldBuildBundle) {
-        & $contract.FlutterCli @(
-            "build",
-            "appbundle",
-            "--release",
-            "--split-debug-info=$($releasePaths.SymbolsDirectory)"
-        )
+        & $contract.FlutterCli @(New-FlutterBuildArguments -ArtifactKind "appbundle" -SplitDebugInfoDirectory $debugInfoBuildRoot -ObfuscationEnabled $obfuscationEnabled)
         $bundleSource = Find-GeneratedArtifact -Roots @($bundleOutputRoot) -Filter "*.aab" -Description "release .aab"
         Copy-Item -LiteralPath $bundleSource.FullName -Destination $releasePaths.BundlePath -Force
         $artifacts += New-ArtifactRecord `
@@ -692,9 +786,17 @@ try {
             -StagedPath $releasePaths.BundlePath
     }
 
-    $symbolRecords = Get-SymbolArtifactRecords -RepositoryRoot $repoRoot -SymbolsDirectory $releasePaths.SymbolsDirectory
-    if ($symbolRecords.Count -eq 0) {
-        throw "No split-debug-info files were generated under '$($releasePaths.SymbolsDirectory)'."
+    Stage-SymbolArtifacts -SourceDirectory $debugInfoBuildRoot -DestinationDirectory $releasePaths.SymbolsDirectory
+    $symbolRecords = [System.Object[]]@(Get-SymbolArtifactRecords -RepositoryRoot $repoRoot -SymbolsDirectory $releasePaths.SymbolsDirectory)
+    $splitDebugInfoStatus = if ($symbolRecords.Count -eq 0) {
+        if ($obfuscationEnabled) {
+            throw "Obfuscation was enabled, but no split-debug-info files were generated under '$($releasePaths.SymbolsDirectory)'."
+        }
+
+        Write-Warning "No split-debug-info files were generated for this release build. Continuing because v7.0 keeps obfuscation disabled."
+        "not-generated"
+    } else {
+        "retained"
     }
 
     $mappingRecord = $null
@@ -734,9 +836,14 @@ try {
 
     $notes = @(
         "Signed .apk is the canonical retained Android release artifact.",
-        "Dart symbols are retained with --split-debug-info while obfuscation stays disabled for v7.0.",
+        $(if ($obfuscationEnabled) { "Dart obfuscation is enabled for this release build." } else { "Dart obfuscation stays disabled for this release build." }),
         "Signed .aab is retained only when tool/release_build.ps1 runs with -IncludeAppBundle."
     )
+    if ($splitDebugInfoStatus -eq "retained") {
+        $notes += "Flutter emitted split-debug-info files and they were staged under the versioned release symbols directory."
+    } else {
+        $notes += "Flutter did not emit split-debug-info files for this non-obfuscated release build, so the staged symbols directory is empty by design."
+    }
     if ($SmokeVerify) {
         $notes += "Smoke verification installs the canonical retained APK and records install and launch evidence in smoke-check.txt before distribution."
     }
@@ -753,8 +860,9 @@ try {
         git                = $gitMetadata
         artifacts          = $artifacts
         debugArtifacts     = [ordered]@{
-            obfuscationEnabled = $false
+            obfuscationEnabled = $obfuscationEnabled
             splitDebugInfoPath = Get-RelativePathOrOriginal -RepositoryRoot $repoRoot -Path $releasePaths.SymbolsDirectory
+            splitDebugInfoStatus = $splitDebugInfoStatus
             symbolFiles        = $symbolRecords
             mappingFile        = $mappingRecord
         }

@@ -2,6 +2,45 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v7.0 — Android Release Hardening
+
+**Shipped:** 2026-03-25
+**Phases:** 5 (46-49 plus 48.1) | **Plans:** 12 | **Timeline:** 3 days
+
+### What Was Built
+- Canonical Windows release baseline through `C:\flutter\bin\flutter.bat` with tracked metadata aligned to `7.0.0+8013`
+- `tool/release_env.ps1` plus `docs/android-release-contract.md` to pin Java 21 JBR, Flutter 3.41.1, AGP 8.11.1, Gradle 8.14, and Kotlin 1.9.25
+- `tool/release_preflight.ps1` fail-fast lane for analyze, tests, and `:app:compileReleaseSources`
+- Private upload-key signing scaffold plus a single `tool/release_build.ps1` entrypoint for APK-first staging, manifest generation, smoke evidence, and optional bundle output
+- PowerShell 5.1 operator runbook, real-device smoke verification, obfuscated release rerun with retained `symbols/` plus `mapping.txt`, and GitHub Release `v7.0.0` upload of `ABSENKOK-v7.0.0+8013.apk`
+
+### What Worked
+- Splitting the work into baseline, contract, signing, artifact policy, and runbook phases kept the milestone narrow and easy to verify
+- `-CheckOnly` plus `-SmokeVerify` gave cheap contract feedback before expensive release runs
+- Staging the manifest, smoke log, symbols, and mapping output beside the canonical APK made release verification objective instead of verbal
+
+### What Was Inefficient
+- Phase 49 acceptance originally closed against a non-obfuscated build, then the final shipped artifact was regenerated with `-Obfuscate`, so the same staged directory had to be resynchronized in docs
+- The app automation could not read the local staged APK path for GitHub upload, so release publication needed `gh` CLI fallback
+- Dirty worktree context and partially incompatible GSD state helpers forced manual planning-file reconciliation during closeout
+
+### Patterns Established
+- Windows release sequence: `tool/release_env.ps1` -> `tool/release_preflight.ps1` -> `tool/release_build.ps1 -CheckOnly` -> `tool/release_build.ps1 -SmokeVerify [-Obfuscate]`
+- `release-manifest.json` is the source of truth for obfuscation, retained symbols, mapping output, git metadata, and smoke verification status
+- Manual GitHub release upload via `gh release upload` is a reliable fallback when higher-level tooling cannot access local artifacts
+
+### Key Lessons
+1. Decide the final distribution mode, including obfuscation, before freezing acceptance evidence, otherwise the staged release record and planning docs drift.
+2. A reproducible local release lane is a prerequisite for any later CI/CD or GitHub Release automation work.
+3. Release evidence should stay in one versioned directory tied to the canonical artifact, not across ad hoc folders or shell history.
+
+### Cost Observations
+- Model mix: balanced profile with manual release operations
+- Sessions: milestone work spread across 3 days
+- Notable: most late effort went into truthfully aligning tooling, docs, and release evidence rather than adding new product features
+
+---
+
 ## Milestone: v5.0 — Observability & Recovery
 
 **Shipped:** 2026-03-20
@@ -361,6 +400,7 @@
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
+| v7.0 | 3 days | 5 | Release hardening milestone; moved from baseline recovery to a documented APK-first lane, then shipped an obfuscated smoke-verified GitHub release asset |
 | v6.3 | 1 day | 4 | Added an explicit audit-closure phase and live production migration verification before archive |
 | v6.2 | 1 day | 2 | Foundation-only milestone; shipped fast but archive evidence had to be reconstructed after direct execution |
 | v6.1 | 2 days | 3 | First employee portal milestone; implementation shipped fast but verification/traceability lagged |
@@ -377,6 +417,7 @@
 
 | Milestone | Tests | Coverage | Tech Debt Items |
 |-----------|-------|----------|----------------|
+| v7.0 | `flutter test --no-test-assets`, `tool/release_preflight.ps1`, real-device smoke verification, obfuscated manifest/symbol retention, GitHub release asset verification | Strong (9/9 requirements complete, 12/12 plan summaries complete, published release asset matches staged digest) | 4 items |
 | v6.3 | Astro build checks + 3 verification reports + live Supabase migration presence check | Strong (7/7 requirements verified, audit closed, production RPC/index confirmed) | 2 items |
 | v6.2 | Targeted analyze/build plus release APK verification | Partial (requirements implemented, no dedicated audit or phase summaries) | 3 items |
 | v6.1 | Website build checks plus pending manual portal validation | Partial (requirements implemented, audit passed only by proceed-anyway decision) | 4 items |
