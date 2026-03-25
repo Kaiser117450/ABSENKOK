@@ -17,16 +17,25 @@ DECLARE
   v_verify_result jsonb;
   v_verified_outlet_id uuid;
   v_verified_outlet_name text;
+  v_outlet_name text := NULLIF(btrim(p_outlet_name), '');
   v_device_uuid text := NULLIF(btrim(p_device_uuid), '');
   v_existing_outlet_id uuid;
 BEGIN
+  IF v_outlet_name IS NULL THEN
+    RAISE EXCEPTION 'Outlet name is required for kiosk activation';
+  END IF;
+
+  IF p_password IS NULL OR p_password = '' THEN
+    RAISE EXCEPTION 'Password is required for kiosk activation';
+  END IF;
+
   IF v_device_uuid IS NULL THEN
     RAISE EXCEPTION 'Device UUID is required for kiosk activation';
   END IF;
 
   v_verify_result :=
     public.verify_kiosk_password(
-      p_outlet_name,
+      v_outlet_name,
       p_password
     )::jsonb;
 
