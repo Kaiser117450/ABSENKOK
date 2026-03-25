@@ -30,6 +30,48 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     super.dispose();
   }
 
+  String _extractActivationMessage(Object? error) {
+    if (error == null) return '';
+
+    final raw = error.toString().trim();
+    final match = RegExp(r'message:\s*([^,]+)').firstMatch(raw);
+    final message = match?.group(1) ?? raw;
+    return message.replaceFirst(RegExp(r'^Exception:\s*'), '').trim();
+  }
+
+  String _formatActivationError(Object? error) {
+    final message = _extractActivationMessage(error);
+    if (message.isEmpty) {
+      return 'Aktivasi perangkat gagal. Coba lagi atau hubungi admin.';
+    }
+
+    final normalized = message.toLowerCase();
+
+    if (normalized.contains('timeout')) {
+      return 'Aktivasi perangkat timeout. Periksa internet lalu coba lagi.';
+    }
+
+    if (normalized.contains('device uuid')) {
+      return 'Aktivasi gagal. Identitas perangkat tidak valid.';
+    }
+
+    if (normalized.contains('different outlet') ||
+        (normalized.contains('already activated') &&
+            normalized.contains('outlet'))) {
+      return 'Aktivasi gagal. Perangkat ini sudah terikat ke gerai lain.';
+    }
+
+    if (normalized.contains('password') ||
+        normalized.contains('outlet') ||
+        normalized.contains('not found') ||
+        normalized.contains('tidak ditemukan') ||
+        normalized.contains('tidak valid')) {
+      return 'Aktivasi gagal. Nama gerai atau password tidak valid.';
+    }
+
+    return 'Aktivasi gagal. $message';
+  }
+
   Future<void> _activate() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -41,7 +83,8 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       // Guard: Supabase must be initialized before making any RPC call
       if (!supabaseReady) {
         setState(() {
-          _error = 'Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi.';
+          _error =
+              'Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi.';
           _isLoading = false;
         });
         return;
@@ -49,40 +92,39 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
       final outletName = _outletNameCtrl.text.trim();
       final password = _passwordCtrl.text;
+      final deviceId = await DeviceIdentityService.getOrCreateDeviceUuid();
 
-      // Verify password via Supabase RPC — server checks bcrypt hash.
+      // Activate the persistent device UUID via Supabase RPC.
       // Hard timeout of 15 s so the UI never blocks indefinitely (ANR fix).
       dynamic result;
       try {
-        result = await Supabase.instance.client
-            .rpc(
-              'verify_kiosk_password',
-              params: {
-                'p_outlet_name': outletName,
-                'p_password': password,
-              },
-            )
-            .timeout(
-              const Duration(seconds: 15),
-              onTimeout: () => throw Exception('timeout'),
-            );
+        result = await Supabase.instance.client.rpc(
+          'activate_kiosk_device',
+          params: {
+            'p_outlet_name': outletName,
+            'p_password': password,
+            'p_device_uuid': deviceId,
+          },
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw Exception('timeout'),
+        );
       } on Exception catch (e) {
         if (mounted) {
           setState(() {
-            _error = e.toString().contains('timeout')
-                ? 'Koneksi timeout. Periksa internet lalu coba lagi.'
-                : 'RPC Error: ${e.toString()}';
+            _error = _formatActivationError(e);
             _isLoading = false;
           });
         }
         return;
       }
 
-      // RPC returned null — function belum ada atau outlet tidak ditemukan
+      // RPC returned null — function belum ada atau server tidak merespons
       if (result == null) {
         if (mounted) {
           setState(() {
-            _error = 'Server tidak merespons. Pastikan RPC verify_kiosk_password sudah dibuat di Supabase.';
+            _error =
+                'Server tidak merespons. Pastikan RPC activate_kiosk_device sudah dibuat di Supabase.';
             _isLoading = false;
           });
         }
@@ -91,21 +133,23 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
       // Pastikan result adalah Map
       if (result is! Map) {
+        debugPrint(
+            '[Setup] Invalid activation response type: ${result.runtimeType}');
         if (mounted) {
           setState(() {
-            _error = 'Format respons tidak valid: ${result.runtimeType} = $result';
+            _error = 'Respons aktivasi perangkat tidak valid dari server.';
             _isLoading = false;
           });
         }
         return;
       }
 
-      final map = Map<String, dynamic>.from(result as Map);
+      final map = Map<String, dynamic>.from(result);
 
       if (map.containsKey('error')) {
         if (mounted) {
           setState(() {
-            _error = map['error']?.toString() ?? 'Error tidak diketahui';
+            _error = _formatActivationError(map['error']);
             _isLoading = false;
           });
         }
@@ -114,18 +158,33 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
       final outletId = map['outlet_id']?.toString();
       final confirmedName = map['outlet_name']?.toString();
+      final activatedDeviceId = map['device_uuid']?.toString();
 
-      if (outletId == null || confirmedName == null) {
+      if (outletId == null ||
+          confirmedName == null ||
+          activatedDeviceId == null) {
+        debugPrint('[Setup] Incomplete activation response: $map');
         if (mounted) {
           setState(() {
-            _error = 'Respons tidak lengkap dari server: $map';
+            _error = 'Respons aktivasi perangkat tidak lengkap.';
             _isLoading = false;
           });
         }
         return;
       }
 
-      final deviceId = await DeviceIdentityService.getOrCreateDeviceUuid();
+      if (activatedDeviceId != deviceId) {
+        debugPrint(
+          '[Setup] Activation device mismatch: local=$deviceId response=$activatedDeviceId',
+        );
+        if (mounted) {
+          setState(() {
+            _error = 'Aktivasi gagal. Identitas perangkat tidak cocok.';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       final session = KioskSession(
         outletId: outletId,
@@ -135,11 +194,11 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
 
       await ref.read(appProvider.notifier).setKioskSession(session);
       // Router auto-redirects to /kiosk
-
     } catch (e, stack) {
+      debugPrint('[Setup] Activation failed: $e\n$stack');
       if (mounted) {
         setState(() {
-          _error = 'Error: ${e.toString()}\n${stack.toString().split('\n').take(4).join('\n')}';
+          _error = _formatActivationError(e);
           _isLoading = false;
         });
       }
@@ -173,21 +232,23 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.nfc, color: Colors.white, size: 48),
+                      child:
+                          const Icon(Icons.nfc, color: Colors.white, size: 48),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       'Absensi Enakko',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -210,7 +271,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     border: Border.all(color: AppColors.border),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -224,7 +285,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(Icons.settings_outlined,
@@ -299,10 +360,10 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.08),
+                            color: AppColors.danger.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color: AppColors.danger.withOpacity(0.3)),
+                                color: AppColors.danger.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -338,8 +399,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                                   ),
                                 )
                               : const Icon(Icons.check_circle_outline),
-                          label: Text(
-                              _isLoading ? 'Memverifikasi...' : 'Aktifkan Perangkat'),
+                          label: Text(_isLoading
+                              ? 'Mengaktifkan...'
+                              : 'Aktifkan Perangkat'),
                         ),
                       ),
                     ],
