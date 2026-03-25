@@ -27,16 +27,19 @@ class KioskDevice {
       lastHeartbeatAt != null &&
       DateTime.now().difference(lastHeartbeatAt!).inMinutes <= 30;
 
-  String get displayName =>
-      nickname ?? 'Kiosk ${deviceUuid.substring(0, 8)}';
+  String get displayName {
+    final trimmedNickname = nickname?.trim();
+    if (trimmedNickname != null && trimmedNickname.isNotEmpty) {
+      return trimmedNickname;
+    }
+    return _buildFallbackDisplayName(deviceUuid);
+  }
 
   factory KioskDevice.fromJson(Map<String, dynamic> json) => KioskDevice(
         id: json['id'] as String,
-        deviceUuid: json['device_uuid'] as String,
+        deviceUuid: _parseDeviceUuid(json['device_uuid']),
         outletId: json['outlet_id'] as String?,
-        lastHeartbeatAt: json['last_heartbeat_at'] != null
-            ? DateTime.parse(json['last_heartbeat_at'] as String)
-            : null,
+        lastHeartbeatAt: _parseTimestamp(json['last_heartbeat_at']),
         batteryLevel: json['battery_level'] as int?,
         isCharging: json['is_charging'] as bool?,
         pendingSyncCount: json['pending_sync_count'] as int?,
@@ -65,4 +68,29 @@ class KioskDevice {
         nickname: nickname ?? this.nickname,
         isActive: isActive ?? this.isActive,
       );
+
+  static String _parseDeviceUuid(dynamic value) {
+    return value?.toString().trim() ?? '';
+  }
+
+  static DateTime? _parseTimestamp(dynamic value) {
+    final rawValue = value?.toString().trim();
+    if (rawValue == null || rawValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      return DateTime.parse(rawValue);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static String _buildFallbackDisplayName(String value) {
+    final safeValue = value.trim();
+    if (safeValue.length < 8) {
+      return 'Kiosk';
+    }
+    return 'Kiosk ${safeValue.substring(0, 8)}';
+  }
 }
