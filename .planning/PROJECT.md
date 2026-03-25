@@ -14,26 +14,16 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 ## Current State
 
-**Shipped:** v7.0 Android Release Hardening (2026-03-25)
+**Shipped:** v7.1 Security Hardening (2026-03-25)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Web surfaces:** marketing site + protected employee portal with schedules plus attendance recap on the Astro website
 **Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
 **Release lane:** `tool/release_env.ps1` -> `tool/release_preflight.ps1` -> `tool/release_build.ps1` now produces the canonical signed APK, optional bundle, manifest, smoke evidence, and retained debug artifacts from one tracked PowerShell lane
-**Distribution:** GitHub Release `v7.0.0` now includes the obfuscated smoke-verified asset `ABSENKOK-v7.0.0+8013.apk`
+**Distribution:** GitHub Release `v7.0.0` includes the obfuscated smoke-verified asset `ABSENKOK-v7.0.0+8013.apk`
+**Security:** v7.1 hardened kiosk device boundaries, admin session trust, and portal surface exposure; passwordless portal entry is an accepted product decision documented in the risk register
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, portal-specific Supabase RPCs, and the tracked Android release helper chain
-**Archive note:** v7.0 archived after all 9 milestone requirements and all 12 plan summaries were complete; no dedicated v7.0 milestone audit was run
-
-## Current Milestone: v7.1 Security Hardening
-
-**Goal:** Close the non-passwordless security findings from the 2026-03-25 Codex Security review without breaking the intentionally passwordless employee portal flow.
-
-**Target features:**
-- Harden kiosk device activation, heartbeat, and device-management trust boundaries against spoofing or public RPC abuse.
-- Remove client-side admin/kepala-gerai trust in writable metadata or stale remembered roles.
-- Minimize portal search and recovery exposure while preserving passwordless employee entry as an explicit product decision.
-- Capture rollout and verification steps for additive SQL and portal/app changes against the live production database.
 
 ### Known Tech Debt
 - GitHub release publication still needs `gh release upload` fallback in this environment because the app automation could not read the local staged artifact path directly
@@ -178,11 +168,14 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Release packaging retains the canonical APK, mapping output, obfuscation-aware debug artifacts, and smoke evidence before distribution — v7.0
 - ✓ Operators can follow one documented local PowerShell release workflow without guessing hidden bootstrap prerequisites — v7.0
 
+### Validated (v7.1)
+- ✓ Kiosk heartbeat and device-management RPCs reject spoofed or unscoped callers — v7.1
+- ✓ Dashboard/admin access trusts only server-issued `app_metadata` and a still-valid Supabase session — v7.1
+- ✓ Portal public search and repair flows expose only the minimum data needed while keeping passwordless employee entry — v7.1
+- ✓ Security rollout stays additive and production-safe for the live Supabase project — v7.1
+
 ### Active
-- [ ] Kiosk heartbeat and device-management RPCs reject spoofed or unscoped callers without breaking the current setup UX
-- [ ] Dashboard/admin access trusts only server-issued `app_metadata` and a still-valid Supabase session
-- [ ] Portal public search and repair flows expose only the minimum data needed while keeping passwordless employee entry
-- [ ] Security rollout stays additive and production-safe for the live Supabase project
+(No active requirements — start next milestone with `/gsd:new-milestone`)
 
 ### Out of Scope
 - Remove passwordless employee portal sign-in entirely — intentionally retained this milestone for employee convenience, even though it leaves accepted impersonation risk
@@ -309,4 +302,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-25 after initializing the v7.1 security hardening milestone*
+*Last updated: 2026-03-25 after v7.1 Security Hardening milestone*

@@ -1,4 +1,22 @@
 # Milestones
+## v7.1 Security Hardening (Shipped: 2026-03-25)
+
+**Phases completed:** 4 phases, 10 plans
+**Timeline:** 2026-03-25 (single day)
+
+**Key accomplishments:**
+1. Hardened kiosk device activation and heartbeat to bind persistent UUIDs at activation time, preventing spoofing and unscoped writes.
+2. Fail-closed seven privileged analytics RPCs and removed admin trust in writable metadata or stale remembered roles.
+3. Minimized portal search exposure (3-char min, 5-result cap, chooser-only DTO) while preserving passwordless employee entry.
+4. Fail-closed portal account recovery to only restore proven `employee_portal` identities with explicit employee bindings.
+5. Created canonical operator rollout checklist with ordered additive SQL for live Supabase deployment.
+6. Documented accepted risk register for passwordless portal boundary and local-only logout decisions.
+
+### Delivered
+Security hardening closes the non-passwordless Codex Security findings across kiosk device boundaries, admin session trust, and portal surface minimization — with additive SQL rollout, acceptance automation, and an explicit risk register for the retained passwordless portal flow.
+
+---
+
 ## v7.0 Android Release Hardening (Shipped: 2026-03-25)
 
 **Phases completed:** 5 phases, 12 plans, 20 tracked tasks
