@@ -2,50 +2,51 @@
 gsd_state_version: 1.0
 milestone: v7.1
 milestone_name: Security Hardening
-status: Phase 51 complete; ready to plan Phase 52
-stopped_at: Completed Phase 51 admin-session-trust-hardening; next step is Phase 52 planning
-last_updated: "2026-03-25T12:39:03+08:00"
-last_activity: 2026-03-25 — completed Phase 51 admin session trust hardening and advanced the roadmap to Phase 52
+status: Phase 52 complete; ready to plan Phase 53
+stopped_at: Completed Phase 52 portal-surface-minimization; next step is Phase 53 planning
+last_updated: "2026-03-25T14:18:00+08:00"
+last_activity: 2026-03-25 — completed Phase 52 portal surface minimization and advanced the roadmap to Phase 53
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 52
+Phase: 53
 Plan: Not started
-Status: Ready to plan Phase 52 — Portal Surface Minimization
-Last activity: 2026-03-25 — completed Phase 51 admin session trust hardening and advanced the roadmap to Phase 52
+Status: Ready to plan Phase 53 — Security Rollout & Acceptance
+Last activity: 2026-03-25 — completed Phase 52 portal surface minimization and advanced the roadmap to Phase 53
 
 ## Current Status
 - **Active milestone:** v7.1 Security Hardening
 - **Last shipped milestone:** v7.0 Android Release Hardening
-- **Next phase:** Phase 52 — Portal Surface Minimization
-- **Current focus:** Reduce portal leakage and recovery abuse while preserving the accepted passwordless portal entry flow
+- **Next phase:** Phase 53 — Security Rollout & Acceptance
+- **Current focus:** Capture additive rollout steps and acceptance evidence for the completed security hardening work while preserving the accepted passwordless portal boundary
 - **Phase 50 rollout note:** Production still needs the additive SQL in `sql/phase_50_kiosk_boundary_hardening_20260325.sql` applied manually in Supabase.
 - **Phase 51 rollout note:** Production still needs the additive SQL in `sql/phase_51_admin_session_trust_20260325.sql` reviewed and applied manually in Supabase after approval.
+- **Phase 52 rollout note:** Production still needs the additive SQL in `sql/phase_52_portal_search_minimization_20260325.sql` reviewed and applied manually in Supabase. The recovery-only script `sql/repair_employee_portal_accounts_20260325.sql` should be run only in an approved portal-account repair scenario.
 - **Scope guard:** Passwordless employee portal sign-in and local-only portal logout remain accepted product decisions for this milestone
 
 ## Progress
 
 ```text
 Security hardening underway
-[█████-----] 2 of 4 phases complete (4/4 plans)
+[████████--] 3 of 4 phases complete (7/7 plans)
 ```
 
-- **Next action:** Run `$gsd-discuss-phase 52` or `$gsd-plan-phase 52`
+- **Next action:** Run `$gsd-discuss-phase 53` or `$gsd-plan-phase 53`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 52 planning for portal surface minimization while keeping the accepted passwordless portal UX intact.
+**Current focus:** Phase 53 planning for security rollout and acceptance while keeping the accepted passwordless portal UX intact.
 
 ## What Was Shipped
 
@@ -171,6 +172,9 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 | 48-03 | `release-manifest.json` records `apkRetentionState: smoke-only` when smoke verification needs an APK but side-load retention was not requested | Keeps smoke-install evidence explicit without quietly turning every APK into a distribution artifact |
 | 48.1-01 | Canonical retained Android release artifact is the signed optimized `.apk`; `.aab` retention is opt-in via `tool/release_build.ps1 -IncludeAppBundle` | Restores the intended v7.0 shipped product before Phase 49 locks the operator contract |
 | 48.1-02 | `tool/release_build.ps1` must remain truthful in Windows PowerShell 5.1; smoke verification installs the canonical retained APK and records evidence beside it | Matches the documented operator shell and removes stale smoke-only side-path semantics |
+| 52-01 | Protected `/portal` requests now redirect before `next()` while still attaching refreshed Supabase SSR cookies | Keeps middleware as the single verified protected-route gate |
+| 52-02 | Public chooser search now requires 3 normalized characters, caps results at 5, rejects 64+ character input, and returns only the rendered chooser DTO | Reduces enumeration-friendly exposure without removing passwordless card selection |
+| 52-03 | Existing hidden portal auth users are reusable only when confirmed `employee_portal` metadata matches `employee_id`; recovery SQL skips conflicting ownership instead of repointing mappings | Recovery correctness now fails closed instead of trusting weak hidden-email inference |
 
 ## Key Constraints
 - Production database serving 4 outlets — NO destructive migrations
@@ -178,12 +182,15 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 - Android only — no iOS target
 
 ### Open Blockers
-- None at planning time. The milestone is defined; implementation work has not started.
+- Focused `flutter test test/phase52/portal_recovery_contract_test.dart` timed out repeatedly in this sandbox; rerun it during Phase 53 acceptance if a green execution record is required.
 
 ## Accumulated Context
 - Phase 50 completed on 2026-03-25: kiosk activation now binds the persistent device UUID through `activate_kiosk_device`, and heartbeat writes only refresh an existing active binding.
 - Phase 50 completed on 2026-03-25: `set_device_nickname` and `archive_device` now require authenticated `admin` or correctly scoped `kepala_gerai` callers in the additive SQL migration `sql/phase_50_kiosk_boundary_hardening_20260325.sql`.
 - Phase 50 completed on 2026-03-25: `KioskDevice` parsing and admin dashboard device loading now degrade safely on malformed UUID or timestamp payloads; focused regression coverage lives in `test/phase50/kiosk_device_model_test.dart`.
+- Phase 52 completed on 2026-03-25: protected `/portal` routes now redirect before downstream handlers run, and `resolvePortalEmployee()` trusts the middleware-cached `portalUser` boundary instead of refetching auth state.
+- Phase 52 completed on 2026-03-25: public chooser search now uses a minimal DTO with a 3-character minimum, 64-character maximum, 5-result cap, and no-store Astro endpoint responses; production still needs `sql/phase_52_portal_search_minimization_20260325.sql` applied manually after approval.
+- Phase 52 completed on 2026-03-25: `sql/repair_employee_portal_accounts_20260325.sql` restores only confirmed `employee_portal` identities with matching `employee_id` metadata, and passwordless provisioning now fails closed when an existing hidden-email auth user has conflicting metadata.
 - Phase 49 acceptance rerun on 2026-03-25 closed the remaining operator blocker after `adb devices -l` again reported device `V8X8ROMVSWVKIVW8` in `device` state.
 - Phase 49 release evidence on 2026-03-25: `tool/release_preflight.ps1` passed end-to-end, `tool/release_build.ps1 -SmokeVerify` built and staged `build/releases/android/ABSENKOK-v7.0.0+8013/ABSENKOK-v7.0.0+8013.apk`, `mapping.txt`, `release-manifest.json`, and `smoke-check.txt`, and the manifest records `smokeVerification.status = passed`.
 - Phase 49 debug-artifact truth on 2026-03-25: Flutter did not emit `split-debug-info` files for this non-obfuscated v7.0 release build, so the staged `symbols/` directory is empty and `release-manifest.json` records `debugArtifacts.splitDebugInfoStatus = not-generated`.
@@ -239,8 +246,8 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Session Continuity
 
-**Last session:** 2026-03-25T12:39:03+08:00
-**Stopped at:** Completed Phase 51 admin-session-trust-hardening; next step is Phase 52 planning
+**Last session:** 2026-03-25T14:18:00+08:00
+**Stopped at:** Completed Phase 52 portal-surface-minimization; next step is Phase 53 planning
 **Resume file:** None
 
 ## Database Safety Rules

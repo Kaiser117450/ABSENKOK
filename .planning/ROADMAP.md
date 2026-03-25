@@ -26,7 +26,7 @@
 |---|-------|------|--------------|------------------|
 | 50 | Kiosk Device Boundary Hardening | Complete 2026-03-25 — stop kiosk spoofing and public device-mutation abuse without breaking current setup UX | `SECDEV-01`, `SECDEV-02`, `SECSAFE-01` | 4 |
 | 51 | Admin Session Trust Hardening | Complete 2026-03-25 — remove privileged access paths that trust writable metadata or stale remembered roles | `SECACC-01`, `SECACC-02`, `SECACC-03` | 4 |
-| 52 | Portal Surface Minimization | Reduce portal leakage and recovery abuse while preserving passwordless entry | `SECPORT-01`, `SECPORT-02`, `SECPORT-03` | 4 |
+| 52 | Portal Surface Minimization | Complete 2026-03-25 — reduce portal leakage and recovery abuse while preserving passwordless entry | `SECPORT-01`, `SECPORT-02`, `SECPORT-03` | 4 |
 | 53 | Security Rollout & Acceptance | Capture additive deployment steps and verify accepted-risk boundaries before closeout | `SECOPS-01` | 4 |
 
 ### Phase 50: Kiosk Device Boundary Hardening
@@ -69,9 +69,17 @@ Success criteria:
 
 ### Phase 52: Portal Surface Minimization
 
+**Status:** Complete (2026-03-25)
 **Goal:** Reduce portal leakage and recovery abuse while preserving passwordless entry.
 **Depends on:** Phase 51
 **Requirements:** `SECPORT-01`, `SECPORT-02`, `SECPORT-03`
+**Plans:** 3/3 plans complete
+
+Plans:
+
+- [x] 52-01: Protected-route middleware gating and middleware-trusted portal employee resolution
+- [x] 52-02: Public chooser SQL minimization and aligned Astro search boundary hardening
+- [x] 52-03: Fail-closed portal-account recovery and passwordless hidden-user reuse hardening
 
 Success criteria:
 1. Protected `/portal` route handlers no longer execute sensitive logic before the middleware auth gate resolves.

@@ -19,9 +19,9 @@
 
 ### Portal Surface
 
-- [ ] **SECPORT-01**: Protected `/portal` requests complete the auth guard before route handlers execute any sensitive reads or mutations.
-- [ ] **SECPORT-02**: Public employee search returns only the minimum data needed to let an employee choose their card and caps enumeration-friendly query behavior.
-- [ ] **SECPORT-03**: Portal account repair and recovery logic only restores mappings for confirmed `employee_portal` auth users with an explicit employee binding and must not overwrite an existing mapping opportunistically.
+- [x] **SECPORT-01**: Protected `/portal` requests complete the auth guard before route handlers execute any sensitive reads or mutations.
+- [x] **SECPORT-02**: Public employee search returns only the minimum data needed to let an employee choose their card and caps enumeration-friendly query behavior.
+- [x] **SECPORT-03**: Portal account repair and recovery logic only restores mappings for confirmed `employee_portal` auth users with an explicit employee binding and must not overwrite an existing mapping opportunistically.
 
 ### Security Rollout
 
@@ -67,9 +67,9 @@
 | SECACC-01 | Phase 51 | Complete |
 | SECACC-02 | Phase 51 | Complete |
 | SECACC-03 | Phase 51 | Complete |
-| SECPORT-01 | Phase 52 | Pending |
-| SECPORT-02 | Phase 52 | Pending |
-| SECPORT-03 | Phase 52 | Pending |
+| SECPORT-01 | Phase 52 | Complete |
+| SECPORT-02 | Phase 52 | Complete |
+| SECPORT-03 | Phase 52 | Complete |
 | SECOPS-01 | Phase 53 | Pending |
 
 **Coverage:**
@@ -79,4 +79,4 @@
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after completing Phase 51 admin session trust hardening*
+*Last updated: 2026-03-25 after completing Phase 52 portal surface minimization*
