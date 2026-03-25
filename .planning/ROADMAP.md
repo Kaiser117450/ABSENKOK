@@ -34,6 +34,12 @@
 **Goal:** Stop kiosk spoofing and public device-mutation abuse without breaking current setup UX.
 **Depends on:** v7.0 closeout baseline
 **Requirements:** `SECDEV-01`, `SECDEV-02`, `SECSAFE-01`
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] 50-01: Activation-bound heartbeat contract and scoped device-management RPC hardening
+- [ ] 50-02: Safe kiosk device parsing and UUID fallback regression coverage
 
 Success criteria:
 1. Kiosk activation binds one physical device UUID to the verified outlet before heartbeat writes are accepted.
