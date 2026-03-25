@@ -25,7 +25,7 @@
 
 ### Security Rollout
 
-- [ ] **SECOPS-01**: Operators have one additive rollout checklist for the SQL, Astro, and Flutter hardening changes that is safe to apply against the live production database.
+- [x] **SECOPS-01**: Operators have one additive rollout checklist for the SQL, Astro, and Flutter hardening changes that is safe to apply against the live production database.
 
 ## Deferred Product Requirements
 
@@ -70,7 +70,7 @@
 | SECPORT-01 | Phase 52 | Complete |
 | SECPORT-02 | Phase 52 | Complete |
 | SECPORT-03 | Phase 52 | Complete |
-| SECOPS-01 | Phase 53 | Pending |
+| SECOPS-01 | Phase 53 | Complete |
 
 **Coverage:**
 - v7.1 requirements: 10 total

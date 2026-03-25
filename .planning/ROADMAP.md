@@ -27,7 +27,7 @@
 | 50 | Kiosk Device Boundary Hardening | Complete 2026-03-25 — stop kiosk spoofing and public device-mutation abuse without breaking current setup UX | `SECDEV-01`, `SECDEV-02`, `SECSAFE-01` | 4 |
 | 51 | Admin Session Trust Hardening | Complete 2026-03-25 — remove privileged access paths that trust writable metadata or stale remembered roles | `SECACC-01`, `SECACC-02`, `SECACC-03` | 4 |
 | 52 | Portal Surface Minimization | Complete 2026-03-25 — reduce portal leakage and recovery abuse while preserving passwordless entry | `SECPORT-01`, `SECPORT-02`, `SECPORT-03` | 4 |
-| 53 | Security Rollout & Acceptance | Capture additive deployment steps and verify accepted-risk boundaries before closeout | `SECOPS-01` | 4 |
+| 53 | 1/3 | In Progress|  | 4 |
 
 ### Phase 50: Kiosk Device Boundary Hardening
 
@@ -92,6 +92,12 @@ Success criteria:
 **Goal:** Capture additive deployment steps and verify accepted-risk boundaries before closeout.
 **Depends on:** Phase 52
 **Requirements:** `SECOPS-01`
+**Plans:** 1/3 plans executed
+
+Plans:
+- [ ] 53-01-PLAN.md — Canonical security hardening rollout checklist and production setup packet
+- [ ] 53-02-PLAN.md — Read-only acceptance helper and contract-backed verification command surface
+- [ ] 53-03-PLAN.md — Closeout packet and accepted-risk ledger for milestone archive
 
 Success criteria:
 1. The SQL rollout order is documented clearly for a live production Supabase project with additive migrations only.
