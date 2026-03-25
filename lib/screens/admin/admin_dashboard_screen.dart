@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
@@ -48,11 +47,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   int _todayBreak = 0;
   int _todayPulang = 0;
   int _todayBackup = 0; // Total backup hari ini
-  int _totalEmployees = 0;
   RealtimeChannel? _employeeChannel;
 
   List<_OpenShift> _openShifts = [];
-  bool _loadingOpenShifts = false;
 
   List<KioskDevice> _kioskDevices = [];
   RealtimeChannel? _kioskDevicesChannel;
@@ -122,11 +119,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           .eq('is_active', true)
           .order('outlet_id')
           .order('created_at');
+      final devices = <KioskDevice>[];
+      for (final rawRow in data as List) {
+        try {
+          final row = Map<String, dynamic>.from(rawRow as Map);
+          devices.add(KioskDevice.fromJson(row));
+        } catch (e) {
+          debugPrint(
+            '[Dashboard] Skipping malformed kiosk device row: $rawRow ($e)',
+          );
+        }
+      }
       if (mounted) {
         setState(() {
-          _kioskDevices = (data as List)
-              .map((e) => KioskDevice.fromJson(e as Map<String, dynamic>))
-              .toList();
+          _kioskDevices = devices;
         });
       }
     } catch (e) {
@@ -256,19 +262,17 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       if (appState.isKepalaGerai && appState.managedOutletId != null) {
         q = q.eq('home_outlet_id', appState.managedOutletId!);
       }
-      final data = await q;
-      if (mounted) {
-        setState(() => _totalEmployees = (data as List).length);
-      }
+      await q;
     } catch (_) {}
   }
 
   Future<void> _loadLogs() async {
-    if (mounted)
+    if (mounted) {
       setState(() {
         _loading = true;
         _loadError = null;
       });
+    }
     try {
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day)
@@ -314,7 +318,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Future<void> _loadOpenShifts() async {
     if (!supabaseReady) return;
-    if (mounted) setState(() => _loadingOpenShifts = true);
     try {
       final appState = ref.read(appProvider);
       // 32h window catches overnight shifts from yesterday evening
@@ -377,12 +380,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       if (mounted) {
         setState(() {
           _openShifts = openShifts;
-          _loadingOpenShifts = false;
         });
       }
     } catch (e) {
       debugPrint('[OpenShifts] Error: $e');
-      if (mounted) setState(() => _loadingOpenShifts = false);
     }
   }
 
@@ -520,7 +521,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   void _subscribeEmployeeRealtime() {
     _employeeChannel?.unsubscribe();
-    final appState = ref.read(appProvider);
     // Hanya admin penuh yang subscribe semua karyawan
     // Kepala gerai hanya subscribe karyawan di outletnya
     var builder = SupabaseClientFactory.admin
@@ -1620,7 +1620,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ? null
                       : () async {
                           if (nameCtrl.text.trim().isEmpty ||
-                              passwordCtrl.text.isEmpty) return;
+                              passwordCtrl.text.isEmpty) {
+                            return;
+                          }
                           setSheetState(() => saving = true);
                           try {
                             await SupabaseClientFactory.admin.rpc(
@@ -1938,57 +1940,6 @@ class _LogCard extends StatelessWidget {
       case AttendanceType.izin:
         return 'IZIN';
     }
-  }
-
-  Widget _buildAvatar(String? photoUrl, String initial, Color bg) {
-    if (photoUrl != null && photoUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: photoUrl,
-          width: 40,
-          height: 40,
-          fit: BoxFit.cover,
-          placeholder: (context, url) =>
-              Container(width: 40, height: 40, color: Colors.grey.shade200),
-          errorWidget: (context, url, error) => _initialBox(initial, bg),
-        ),
-      );
-    }
-    return _initialBox(initial, bg);
-  }
-
-  Widget _initialBox(String initial, Color bg) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
-              height: 1),
-        ),
-      ),
-    );
-  }
-
-  Color _avatarColor(String name) {
-    const palette = [
-      Color(0xFFDC2626),
-      Color(0xFF2563EB),
-      Color(0xFF059669),
-      Color(0xFFD97706),
-      Color(0xFF7C3AED),
-      Color(0xFFDB2777),
-      Color(0xFF0891B2),
-    ];
-    if (name.isEmpty) return palette[0];
-    return palette[name.codeUnitAt(0) % palette.length];
   }
 
   @override
