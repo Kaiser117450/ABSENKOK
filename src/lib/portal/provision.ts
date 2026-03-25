@@ -11,6 +11,13 @@ interface PortalEmployeeRow {
   archived_at: string | null;
 }
 
+interface PortalAuthUser {
+  id: string;
+  email?: string | null;
+  email_confirmed_at?: string | null;
+  app_metadata?: Record<string, unknown> | null;
+}
+
 export async function ensurePortalPasswordlessAccount(
   employeeId: string,
   authEmail: string,
@@ -48,6 +55,7 @@ export async function ensurePortalPasswordlessAccount(
   const existingAuthUser = await findPortalAuthUserByEmail(authEmail);
 
   if (existingAuthUser) {
+    assertReusablePortalAuthUser(existingAuthUser, employeeId);
     await updateSupabaseAuthAdminUser(existingAuthUser.id, userAttributes);
     return;
   }
@@ -55,7 +63,32 @@ export async function ensurePortalPasswordlessAccount(
   await createSupabaseAuthAdminUser(userAttributes);
 }
 
-async function findPortalAuthUserByEmail(email: string) {
+function assertReusablePortalAuthUser(existingAuthUser: PortalAuthUser, employeeId: string) {
+  const role = getMetadataString(existingAuthUser.app_metadata, 'app_role');
+  const boundEmployeeId = getMetadataString(existingAuthUser.app_metadata, 'employee_id');
+
+  if (!existingAuthUser.email_confirmed_at) {
+    throw new Error('Existing hidden portal auth user is not confirmed. Manual recovery required.');
+  }
+
+  if (role !== 'employee_portal') {
+    throw new Error('Existing hidden portal auth user has an unexpected app role.');
+  }
+
+  if (boundEmployeeId?.toLowerCase() !== employeeId.toLowerCase()) {
+    throw new Error('Existing hidden portal auth user has a conflicting employee binding.');
+  }
+}
+
+function getMetadataString(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+async function findPortalAuthUserByEmail(email: string): Promise<PortalAuthUser | null> {
   const admin = createSupabaseAdminClient();
   const normalizedEmail = email.toLowerCase();
   const perPage = 200;
@@ -76,7 +109,12 @@ async function findPortalAuthUserByEmail(email: string) {
     );
 
     if (existingAuthUser) {
-      return existingAuthUser;
+      return {
+        id: existingAuthUser.id,
+        email: existingAuthUser.email,
+        email_confirmed_at: existingAuthUser.email_confirmed_at,
+        app_metadata: existingAuthUser.app_metadata as Record<string, unknown> | null,
+      };
     }
 
     if (listedUsers.users.length < perPage) {

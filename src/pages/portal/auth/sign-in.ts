@@ -35,7 +35,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
       });
       signInError = retry.error;
     } catch (provisionError) {
-      console.error('[portal/auth/sign-in] passwordless provisioning error:', provisionError);
+      console.error('[portal/auth/sign-in] passwordless provisioning error:', {
+        employeeId,
+        error: provisionError,
+      });
       return redirect('/portal/login?error=invalid', 302);
     }
   }
