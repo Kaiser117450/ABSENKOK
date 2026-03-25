@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: none
-status: ready_for_next_milestone
-stopped_at: v7.0 archived after the obfuscated smoke-verified GitHub release upload; define the next milestone
-last_updated: "2026-03-25T01:10:00+08:00"
+milestone: v7.1
+milestone_name: security_hardening
+status: roadmap_defined
+stopped_at: milestone v7.1 defined; Phase 50 not started yet
+last_updated: "2026-03-25T12:00:00+08:00"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,33 +16,33 @@ progress:
 
 ## Current Position
 
-Phase: Milestone closeout
-Plan: v7.0 archive complete
-Status: v7.0 is archived; the tracked local release lane has shipped an obfuscated smoke-verified GitHub release asset
-Last activity: 2026-03-25 — `tool/release_build.ps1 -SmokeVerify -Obfuscate` restaged `ABSENKOK-v7.0.0+8013.apk` with retained `symbols/` plus `mapping.txt`, and `gh release upload` published the APK to GitHub Release `v7.0.0`
+Phase: 50
+Plan: Not started
+Status: v7.1 Security Hardening is defined; implementation has not started
+Last activity: 2026-03-25 — initialized milestone v7.1 from the Codex Security CSV, explicitly scoping only non-passwordless findings
 
 ## Current Status
-- **Active milestone:** None
+- **Active milestone:** v7.1 Security Hardening
 - **Last shipped milestone:** v7.0 Android Release Hardening
-- **Next phase:** Define the next milestone
-- **Current focus:** Decide the next milestone now that Android release hardening is archived and the published v7.0 asset is in GitHub Releases
-- **Scope guard:** New release automation should build on the proven local lane, not bypass it
+- **Next phase:** Phase 50 — Kiosk Device Boundary Hardening
+- **Current focus:** Close non-passwordless security findings without breaking the intentionally passwordless portal behavior
+- **Scope guard:** Passwordless employee portal sign-in and local-only portal logout remain accepted product decisions for this milestone
 
 ## Progress
 
 ```text
-No active milestone
-[----------] 0 of 0 phases complete (0/0 plans)
+Milestone initialized
+[----------] 0 of 4 phases complete (0/0 plans)
 ```
 
-- **Next action:** Run `$gsd-new-milestone` to define fresh requirements and roadmap scope
+- **Next action:** Run `$gsd-discuss-phase 50` or `$gsd-plan-phase 50`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Planning the next milestone while preserving the new Android release baseline.
+**Current focus:** Phase 50 planning for kiosk/device security boundaries while preserving the accepted passwordless portal UX.
 
 ## What Was Shipped
 
@@ -175,7 +175,7 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 - Android only — no iOS target
 
 ### Open Blockers
-- None. The milestone implementation work is complete; only milestone archiving remains.
+- None at planning time. The milestone is defined; implementation work has not started.
 
 ## Accumulated Context
 - Phase 49 acceptance rerun on 2026-03-25 closed the remaining operator blocker after `adb devices -l` again reported device `V8X8ROMVSWVKIVW8` in `device` state.
@@ -233,8 +233,8 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Session Continuity
 
-**Last session:** 2026-03-25T00:28:45+08:00
-**Stopped at:** v7.0 archived after the obfuscated smoke-verified GitHub release upload; next milestone not defined yet
+**Last session:** 2026-03-25T12:00:00+08:00
+**Stopped at:** v7.1 Security Hardening initialized; next step is Phase 50 planning or execution
 **Resume file:** None
 
 ## Database Safety Rules

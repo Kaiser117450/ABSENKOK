@@ -25,11 +25,15 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, portal-specific Supabase RPCs, and the tracked Android release helper chain
 **Archive note:** v7.0 archived after all 9 milestone requirements and all 12 plan summaries were complete; no dedicated v7.0 milestone audit was run
 
-## Next Milestone Goals
+## Current Milestone: v7.1 Security Hardening
 
-- Resume product work after the Android release lane hardening is closed out
-- Add release automation only on top of the proven local lane, not as a replacement for it
-- Tackle build-speed and APK-size tuning only after release guarantees stay stable
+**Goal:** Close the non-passwordless security findings from the 2026-03-25 Codex Security review without breaking the intentionally passwordless employee portal flow.
+
+**Target features:**
+- Harden kiosk device activation, heartbeat, and device-management trust boundaries against spoofing or public RPC abuse.
+- Remove client-side admin/kepala-gerai trust in writable metadata or stale remembered roles.
+- Minimize portal search and recovery exposure while preserving passwordless employee entry as an explicit product decision.
+- Capture rollout and verification steps for additive SQL and portal/app changes against the live production database.
 
 ### Known Tech Debt
 - GitHub release publication still needs `gh release upload` fallback in this environment because the app automation could not read the local staged artifact path directly
@@ -175,21 +179,15 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Operators can follow one documented local PowerShell release workflow without guessing hidden bootstrap prerequisites — v7.0
 
 ### Active
-- [ ] Employee can filter attendance recap by custom date range or prior month
-- [ ] Employee can submit an attendance correction or dispute request from an exception day
-- [ ] Employee can submit time-off or absence requests through the portal
-- [ ] Manager/admin can approve or reject employee requests with an auditable status change
-- [ ] Employee receives reminders or status notifications for upcoming work or request changes
-- [ ] Release automation can publish artifacts or GitHub releases after the local release lane is proven
-- [ ] Build-speed optimization and incremental caching beyond the reliable release baseline
-- [ ] APK size/runtime tuning once signed release packaging is reproducible
-- [ ] Employee-facing attendance export or payroll-grade reporting
-- [ ] Schedule grid tap-to-cycle shift assignment (GRID-D1)
-- [ ] Schedule grid copy-week feature (GRID-D2)
-- [ ] Schedule grid today-column highlight (GRID-D3)
-- [ ] Keterlambatan (late arrival) automatic flagging vs shift start time
+- [ ] Kiosk heartbeat and device-management RPCs reject spoofed or unscoped callers without breaking the current setup UX
+- [ ] Dashboard/admin access trusts only server-issued `app_metadata` and a still-valid Supabase session
+- [ ] Portal public search and repair flows expose only the minimum data needed while keeping passwordless employee entry
+- [ ] Security rollout stays additive and production-safe for the live Supabase project
 
 ### Out of Scope
+- Remove passwordless employee portal sign-in entirely — intentionally retained this milestone for employee convenience, even though it leaves accepted impersonation risk
+- Enforce a strict portal-account whitelist that blocks any active employee without pre-created mapping — conflicts with the chosen passwordless product behavior for now
+- Change portal logout from local scope to global token revocation — local-only logout is retained to avoid breaking concurrent admin/kiosk sessions
 - Employee portal request/approval features — deferred until Android release packaging is stable again
 - Reminder/notification workflows — depends on future request lifecycle design, not build hardening
 - Website/Astro deployment automation — this milestone is scoped to the Flutter Android release path
@@ -311,4 +309,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-25 after v7.0 milestone closeout*
+*Last updated: 2026-03-25 after initializing the v7.1 security hardening milestone*
