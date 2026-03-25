@@ -2,49 +2,50 @@
 gsd_state_version: 1.0
 milestone: v7.1
 milestone_name: Security Hardening
-status: Phase 50 complete; ready to plan Phase 51
-stopped_at: Completed Phase 50 kiosk-device-boundary-hardening; next step is Phase 51 planning
-last_updated: "2026-03-25T11:33:44+08:00"
-last_activity: 2026-03-25 — completed Phase 50 kiosk device boundary hardening and advanced the roadmap to Phase 51
+status: Phase 51 complete; ready to plan Phase 52
+stopped_at: Completed Phase 51 admin-session-trust-hardening; next step is Phase 52 planning
+last_updated: "2026-03-25T12:39:03+08:00"
+last_activity: 2026-03-25 — completed Phase 51 admin session trust hardening and advanced the roadmap to Phase 52
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 51
+Phase: 52
 Plan: Not started
-Status: Ready to plan Phase 51 — Admin Session Trust Hardening
-Last activity: 2026-03-25 — completed Phase 50 kiosk device boundary hardening and advanced the roadmap to Phase 51
+Status: Ready to plan Phase 52 — Portal Surface Minimization
+Last activity: 2026-03-25 — completed Phase 51 admin session trust hardening and advanced the roadmap to Phase 52
 
 ## Current Status
 - **Active milestone:** v7.1 Security Hardening
 - **Last shipped milestone:** v7.0 Android Release Hardening
-- **Next phase:** Phase 51 — Admin Session Trust Hardening
-- **Current focus:** Close non-passwordless security findings without breaking the intentionally passwordless portal behavior
+- **Next phase:** Phase 52 — Portal Surface Minimization
+- **Current focus:** Reduce portal leakage and recovery abuse while preserving the accepted passwordless portal entry flow
 - **Phase 50 rollout note:** Production still needs the additive SQL in `sql/phase_50_kiosk_boundary_hardening_20260325.sql` applied manually in Supabase.
+- **Phase 51 rollout note:** Production still needs the additive SQL in `sql/phase_51_admin_session_trust_20260325.sql` reviewed and applied manually in Supabase after approval.
 - **Scope guard:** Passwordless employee portal sign-in and local-only portal logout remain accepted product decisions for this milestone
 
 ## Progress
 
 ```text
 Security hardening underway
-[███-------] 1 of 4 phases complete (2/2 plans)
+[█████-----] 2 of 4 phases complete (4/4 plans)
 ```
 
-- **Next action:** Run `$gsd-discuss-phase 51` or `$gsd-plan-phase 51`
+- **Next action:** Run `$gsd-discuss-phase 52` or `$gsd-plan-phase 52`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 51 planning for admin session trust hardening while keeping the accepted passwordless portal UX intact.
+**Current focus:** Phase 52 planning for portal surface minimization while keeping the accepted passwordless portal UX intact.
 
 ## What Was Shipped
 
@@ -238,8 +239,8 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Session Continuity
 
-**Last session:** 2026-03-25T12:00:00+08:00
-**Stopped at:** v7.1 Security Hardening initialized; next step is Phase 50 planning or execution
+**Last session:** 2026-03-25T12:39:03+08:00
+**Stopped at:** Completed Phase 51 admin-session-trust-hardening; next step is Phase 52 planning
 **Resume file:** None
 
 ## Database Safety Rules

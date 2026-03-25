@@ -25,7 +25,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 50 | Kiosk Device Boundary Hardening | Complete 2026-03-25 — stop kiosk spoofing and public device-mutation abuse without breaking current setup UX | `SECDEV-01`, `SECDEV-02`, `SECSAFE-01` | 4 |
-| 51 | Admin Session Trust Hardening | Remove privileged access paths that trust writable metadata or stale remembered roles | `SECACC-01`, `SECACC-02`, `SECACC-03` | 4 |
+| 51 | Admin Session Trust Hardening | Complete 2026-03-25 — remove privileged access paths that trust writable metadata or stale remembered roles | `SECACC-01`, `SECACC-02`, `SECACC-03` | 4 |
 | 52 | Portal Surface Minimization | Reduce portal leakage and recovery abuse while preserving passwordless entry | `SECPORT-01`, `SECPORT-02`, `SECPORT-03` | 4 |
 | 53 | Security Rollout & Acceptance | Capture additive deployment steps and verify accepted-risk boundaries before closeout | `SECOPS-01` | 4 |
 
@@ -50,9 +50,16 @@ Success criteria:
 
 ### Phase 51: Admin Session Trust Hardening
 
+**Status:** Complete (2026-03-25)
 **Goal:** Remove privileged access paths that trust writable metadata or stale remembered roles.
 **Depends on:** Phase 50
 **Requirements:** `SECACC-01`, `SECACC-02`, `SECACC-03`
+**Plans:** 2/2 plans complete
+
+Plans:
+
+- [x] 51-01: Fail-closed SQL role hardening for privileged analytics RPCs and contract coverage
+- [x] 51-02: Trusted admin-session claim parsing and biometric re-entry hardening for Flutter admin flows
 
 Success criteria:
 1. Dashboard and analytics RPCs fail closed when `app_role` is missing, invalid, or outside the allowed admin roles.

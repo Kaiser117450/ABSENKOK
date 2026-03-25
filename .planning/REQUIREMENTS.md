@@ -13,9 +13,9 @@
 
 ### Access Control
 
-- [ ] **SECACC-01**: Dashboard and analytics SECURITY DEFINER RPCs reject missing or invalid role claims instead of allowing authenticated users with `NULL` app roles.
-- [ ] **SECACC-02**: Flutter admin session handling derives admin or kepala gerai access only from server-controlled `app_metadata`, never from writable `userMetadata`.
-- [ ] **SECACC-03**: Biometric admin re-entry only restores privileged UI access when the current Supabase session is still valid and still carries the expected server-issued role claim.
+- [x] **SECACC-01**: Dashboard and analytics SECURITY DEFINER RPCs reject missing or invalid role claims instead of allowing authenticated users with `NULL` app roles.
+- [x] **SECACC-02**: Flutter admin session handling derives admin or kepala gerai access only from server-controlled `app_metadata`, never from writable `userMetadata`.
+- [x] **SECACC-03**: Biometric admin re-entry only restores privileged UI access when the current Supabase session is still valid and still carries the expected server-issued role claim.
 
 ### Portal Surface
 
@@ -64,9 +64,9 @@
 | SECDEV-01 | Phase 50 | Complete |
 | SECDEV-02 | Phase 50 | Complete |
 | SECSAFE-01 | Phase 50 | Complete |
-| SECACC-01 | Phase 51 | Pending |
-| SECACC-02 | Phase 51 | Pending |
-| SECACC-03 | Phase 51 | Pending |
+| SECACC-01 | Phase 51 | Complete |
+| SECACC-02 | Phase 51 | Complete |
+| SECACC-03 | Phase 51 | Complete |
 | SECPORT-01 | Phase 52 | Pending |
 | SECPORT-02 | Phase 52 | Pending |
 | SECPORT-03 | Phase 52 | Pending |
@@ -79,4 +79,4 @@
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after initializing milestone v7.1 Security Hardening*
+*Last updated: 2026-03-25 after completing Phase 51 admin session trust hardening*
