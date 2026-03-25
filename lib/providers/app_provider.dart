@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/admin_session_claims.dart';
 import '../core/constants.dart';
 import '../models/employee.dart';
 import '../models/kiosk_session.dart';
@@ -84,8 +85,7 @@ class AppState {
         keepOverlayInForeground:
             keepOverlayInForeground ?? this.keepOverlayInForeground,
         biometricEnabled: biometricEnabled ?? this.biometricEnabled,
-        hasBiometricHardware:
-            hasBiometricHardware ?? this.hasBiometricHardware,
+        hasBiometricHardware: hasBiometricHardware ?? this.hasBiometricHardware,
       );
 }
 
@@ -140,9 +140,11 @@ class AppNotifier extends StateNotifier<AppState> {
     await prefs.remove(AppConstants.kioskSessionKey);
     // Verify removal
     final verify = prefs.getString(AppConstants.kioskSessionKey);
-    debugPrint('[AppNotifier] clearKioskSession: removed key, verify=${verify == null ? "OK (null)" : "FAILED (still exists)"}');
+    debugPrint(
+        '[AppNotifier] clearKioskSession: removed key, verify=${verify == null ? "OK (null)" : "FAILED (still exists)"}');
     state = state.copyWith(clearKiosk: true);
-    debugPrint('[AppNotifier] clearKioskSession: state.kioskSession=${state.kioskSession}');
+    debugPrint(
+        '[AppNotifier] clearKioskSession: state.kioskSession=${state.kioskSession}');
   }
 
   Future<void> setKeepOverlayInForeground(bool value) async {
@@ -155,6 +157,36 @@ class AppNotifier extends StateNotifier<AppState> {
   void forceUnblockLoading() => state = state.copyWith(isLoading: false);
 
   void setAdminMode(bool isAdmin) => state = state.copyWith(isAdmin: isAdmin);
+
+  void clearAdminSessionMode() {
+    state = state.copyWith(
+      isAdmin: false,
+      isKepalaGerai: false,
+      clearManagedOutlet: true,
+    );
+  }
+
+  void applyAdminSessionClaims(AdminSessionClaims? claims) {
+    if (claims == null) {
+      clearAdminSessionMode();
+      return;
+    }
+
+    if (claims.isAdmin) {
+      state = state.copyWith(
+        isAdmin: true,
+        isKepalaGerai: false,
+        clearManagedOutlet: true,
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      isAdmin: false,
+      isKepalaGerai: true,
+      managedOutletId: claims.managedOutletId,
+    );
+  }
 
   /// Set kepala_gerai mode: aktifkan flag + simpan outlet yang dikelola.
   /// Panggil dengan outletId=null untuk clear (saat logout).
@@ -185,6 +217,7 @@ class AppNotifier extends StateNotifier<AppState> {
   Future<void> loadBiometricPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool(AppConstants.biometricEnabledKey) ?? false;
+    await _clearLegacyRememberedAdminSession(prefs);
     final hasHardware = await BiometricService.isAvailable();
     state = state.copyWith(
       biometricEnabled: enabled,
@@ -196,23 +229,20 @@ class AppNotifier extends StateNotifier<AppState> {
   Future<void> setBiometricEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.biometricEnabledKey, value);
-    if (!value) {
-      // Clear remembered role info when disabling biometric
-      await prefs.remove(AppConstants.rememberedUserRoleKey);
-      await prefs.remove(AppConstants.rememberedManagedOutletKey);
-    }
+    await _clearLegacyRememberedAdminSession(prefs);
     state = state.copyWith(biometricEnabled: value);
   }
 
-  /// Save user role info for biometric re-login (avoids re-querying Supabase).
-  Future<void> saveRememberedRole(String role, String? managedOutletId) async {
+  Future<void> clearLegacyRememberedAdminSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.rememberedUserRoleKey, role);
-    if (managedOutletId != null) {
-      await prefs.setString(AppConstants.rememberedManagedOutletKey, managedOutletId);
-    } else {
-      await prefs.remove(AppConstants.rememberedManagedOutletKey);
-    }
+    await _clearLegacyRememberedAdminSession(prefs);
+  }
+
+  Future<void> _clearLegacyRememberedAdminSession(
+    SharedPreferences prefs,
+  ) async {
+    await prefs.remove(AppConstants.rememberedUserRoleKey);
+    await prefs.remove(AppConstants.rememberedManagedOutletKey);
   }
 }
 

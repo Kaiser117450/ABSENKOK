@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/admin_session_claims.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../main.dart' show supabaseReady;
@@ -12,11 +13,9 @@ import '../../services/biometric_service.dart';
 bool canUseBiometricLogin({
   required bool hasBiometricHardware,
   required bool biometricEnabled,
-  required bool hasSupabaseSession,
+  required bool hasTrustedAdminSession,
 }) {
-  return hasBiometricHardware &&
-      biometricEnabled &&
-      hasSupabaseSession;
+  return hasBiometricHardware && biometricEnabled && hasTrustedAdminSession;
 }
 
 class AdminLoginScreen extends ConsumerStatefulWidget {
@@ -60,12 +59,14 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final bioEnabled = prefs.getBool(AppConstants.biometricEnabledKey) ?? false;
 
-    // Check Supabase session — biometric only works with an existing session
-    var hasSupabaseSession = false;
+    // Biometric auto-login only applies when the current session still carries
+    // a trusted privileged claim from app_metadata.
+    var hasTrustedAdminSession = false;
     try {
       if (!supabaseReady) return;
       final session = Supabase.instance.client.auth.currentSession;
-      hasSupabaseSession = session != null;
+      hasTrustedAdminSession =
+          AdminSessionClaims.fromUser(session?.user) != null;
     } catch (_) {
       return;
     }
@@ -73,7 +74,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     if (!canUseBiometricLogin(
       hasBiometricHardware: hasBio,
       biometricEnabled: bioEnabled,
-      hasSupabaseSession: hasSupabaseSession,
+      hasTrustedAdminSession: hasTrustedAdminSession,
     )) {
       return;
     }
@@ -89,22 +90,21 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      // Read role from remembered prefs (saved during first email/password login)
-      final prefs = await SharedPreferences.getInstance();
-      final role = prefs.getString(AppConstants.rememberedUserRoleKey);
-      final outletId = prefs.getString(AppConstants.rememberedManagedOutletKey);
-
-      if (role == 'admin') {
-        ref.read(appProvider.notifier).setAdminMode(true);
-        ref.read(appProvider.notifier).setKepalaGeraiMode(null);
-      } else if (role == 'kepala_gerai') {
-        ref.read(appProvider.notifier).setAdminMode(false);
-        ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
-      } else {
-        // No remembered role — fallback to login form
+      if (!supabaseReady) {
         setState(() => _showBiometricLoading = false);
         return;
       }
+
+      final claims = AdminSessionClaims.fromUser(
+        Supabase.instance.client.auth.currentSession?.user,
+      );
+      if (claims == null) {
+        ref.read(appProvider.notifier).clearAdminSessionMode();
+        setState(() => _showBiometricLoading = false);
+        return;
+      }
+
+      ref.read(appProvider.notifier).applyAdminSessionClaims(claims);
       // Router redirect will handle navigation to dashboard
     } else {
       setState(() => _showBiometricLoading = false);
@@ -138,14 +138,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
           );
 
       final user = res.session?.user;
-
-      // app_role bisa ada di userMetadata (raw_user_meta_data) ATAU
-      // appMetadata (raw_app_meta_data) — cek keduanya
-      final role = (user?.userMetadata?['app_role'] as String?) ??
-          (user?.appMetadata['app_role'] as String?);
+      final claims = AdminSessionClaims.fromUser(user);
 
       // Hanya admin dan kepala_gerai yang boleh masuk dashboard
-      if (role != 'admin' && role != 'kepala_gerai') {
+      if (claims == null) {
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
           setState(() {
@@ -156,28 +152,12 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
         return;
       }
 
-      // Baca managed_outlet_id dari appMetadata (diset via SQL)
-      final managedOutletId =
-          (user?.appMetadata['managed_outlet_id'] as String?) ??
-          (user?.userMetadata?['managed_outlet_id'] as String?);
-
       if (mounted) setState(() => _loading = false);
-
-      if (role == 'admin') {
-        ref.read(appProvider.notifier).setAdminMode(true);
-        ref.read(appProvider.notifier).setKepalaGeraiMode(null);
-      } else {
-        // kepala_gerai
-        ref.read(appProvider.notifier).setAdminMode(false);
-        ref.read(appProvider.notifier).setKepalaGeraiMode(managedOutletId);
-      }
+      ref.read(appProvider.notifier).applyAdminSessionClaims(claims);
 
       // Save biometric preference if "Ingat saya" is checked
       if (_rememberMe && _hasBiometric) {
         await ref.read(appProvider.notifier).setBiometricEnabled(true);
-        await ref.read(appProvider.notifier).saveRememberedRole(
-          role!, managedOutletId,
-        );
       }
 
       // Router akan redirect ke /admin/dashboard otomatis
@@ -248,7 +228,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   Column(
                     children: [
                       const SizedBox(height: 40),
-                      const Icon(Icons.fingerprint, size: 48, color: AppColors.primary),
+                      const Icon(Icons.fingerprint,
+                          size: 48, color: AppColors.primary),
                       const SizedBox(height: 16),
                       Text(
                         'Memverifikasi...',
@@ -258,7 +239,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       ),
                       const SizedBox(height: 24),
                       TextButton(
-                        onPressed: () => setState(() => _showBiometricLoading = false),
+                        onPressed: () =>
+                            setState(() => _showBiometricLoading = false),
                         child: const Text(
                           'Gunakan email & password',
                           style: TextStyle(color: AppColors.primary),
@@ -283,7 +265,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             if (v == null || v.trim().isEmpty) {
                               return 'Email wajib diisi';
                             }
-                            final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                            final emailRegExp =
+                                RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                             if (!emailRegExp.hasMatch(v.trim())) {
                               return 'Format email tidak valid';
                             }
@@ -329,7 +312,8 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                             height: 24,
                             child: Checkbox(
                               value: _rememberMe,
-                              onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                              onChanged: (v) =>
+                                  setState(() => _rememberMe = v ?? false),
                               activeColor: AppColors.primary,
                             ),
                           ),
@@ -337,7 +321,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                           Expanded(
                             child: Text(
                               'Ingat saya di perangkat ini',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     color: AppColors.textPrimary,
                                   ),
                             ),
@@ -369,18 +356,21 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                   ],
 
                   // Biometric button (only if device has biometric + biometric is enabled)
-                  if (_hasBiometric && ref.watch(appProvider).biometricEnabled) ...[
+                  if (_hasBiometric &&
+                      ref.watch(appProvider).biometricEnabled) ...[
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _loading ? null : _triggerBiometricLogin,
-                        icon: const Icon(Icons.fingerprint, size: 24, color: AppColors.primary),
+                        icon: const Icon(Icons.fingerprint,
+                            size: 24, color: AppColors.primary),
                         label: const Text('Masuk dengan Sidik Jari'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           side: const BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),

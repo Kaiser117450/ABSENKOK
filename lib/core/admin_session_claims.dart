@@ -11,8 +11,7 @@ class AdminSessionClaims {
     this.managedOutletId,
   });
 
-  const AdminSessionClaims.admin()
-      : this._(role: AdminSessionRole.admin);
+  const AdminSessionClaims.admin() : this._(role: AdminSessionRole.admin);
 
   const AdminSessionClaims.kepalaGerai(String managedOutletId)
       : this._(

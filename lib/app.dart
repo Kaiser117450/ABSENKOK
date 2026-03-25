@@ -9,6 +9,7 @@ import 'package:toastification/toastification.dart';
 
 import 'services/kiosk_background_service.dart';
 
+import 'core/admin_session_claims.dart';
 import 'core/theme.dart';
 import 'main.dart' show supabaseReady;
 import 'providers/app_provider.dart';
@@ -211,6 +212,7 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
 
     // Subscribe to Supabase admin auth state changes.
     // Only set admin mode on EXPLICIT sign-in (signedIn event), not on
+        final notifier = ref.read(appProvider.notifier);
     // session restore (initialSession / tokenRefreshed). This ensures
     // biometric gate isn't bypassed when the app restarts with a saved session.
     if (supabaseReady) {
@@ -219,8 +221,7 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
 
         if (event == AuthChangeEvent.signedOut) {
           // Full logout — clear all roles
-          ref.read(appProvider.notifier).setAdminMode(false);
-          ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+          notifier.clearAdminSessionMode();
           return;
         }
 
@@ -228,19 +229,8 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
         // Biometric login sets admin mode itself in _triggerBiometricLogin().
         if (event != AuthChangeEvent.signedIn) return;
 
-        final session = data.session;
-        if (session == null) return;
-        final user = session.user;
-        final role = user.appMetadata['app_role'] as String?;
-
-        if (role == 'admin') {
-          ref.read(appProvider.notifier).setAdminMode(true);
-          ref.read(appProvider.notifier).setKepalaGeraiMode(null);
-        } else if (role == 'kepala_gerai') {
-          final outletId = user.appMetadata['managed_outlet_id'] as String?;
-          ref.read(appProvider.notifier).setAdminMode(false);
-          ref.read(appProvider.notifier).setKepalaGeraiMode(outletId);
-        }
+        final claims = AdminSessionClaims.fromUser(data.session?.user);
+        notifier.applyAdminSessionClaims(claims);
       });
     }
   }

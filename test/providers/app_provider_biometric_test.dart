@@ -31,13 +31,19 @@ void main() {
   });
 
   group('AppNotifier biometric methods', () {
-    test('setBiometricEnabled(true) saves to prefs and updates state', () async {
-      SharedPreferences.setMockInitialValues({});
+    test('setBiometricEnabled(true) saves to prefs and updates state',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.rememberedUserRoleKey: 'admin',
+        AppConstants.rememberedManagedOutletKey: 'outlet-1',
+      });
       final notifier = AppNotifier();
       await notifier.setBiometricEnabled(true);
       expect(notifier.debugState.biometricEnabled, isTrue);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool(AppConstants.biometricEnabledKey), isTrue);
+      expect(prefs.getString(AppConstants.rememberedUserRoleKey), isNull);
+      expect(prefs.getString(AppConstants.rememberedManagedOutletKey), isNull);
     });
 
     test('setBiometricEnabled(false) clears remembered role', () async {
@@ -54,13 +60,19 @@ void main() {
       expect(prefs.getString(AppConstants.rememberedManagedOutletKey), isNull);
     });
 
-    test('saveRememberedRole persists role and outletId', () async {
-      SharedPreferences.setMockInitialValues({});
+    test('clearLegacyRememberedAdminSession removes stored privilege keys',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.biometricEnabledKey: true,
+        AppConstants.rememberedUserRoleKey: 'kepala_gerai',
+        AppConstants.rememberedManagedOutletKey: 'outlet-abc',
+      });
       final notifier = AppNotifier();
-      await notifier.saveRememberedRole('kepala_gerai', 'outlet-abc');
+      await notifier.clearLegacyRememberedAdminSession();
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString(AppConstants.rememberedUserRoleKey), 'kepala_gerai');
-      expect(prefs.getString(AppConstants.rememberedManagedOutletKey), 'outlet-abc');
+      expect(prefs.getBool(AppConstants.biometricEnabledKey), isTrue);
+      expect(prefs.getString(AppConstants.rememberedUserRoleKey), isNull);
+      expect(prefs.getString(AppConstants.rememberedManagedOutletKey), isNull);
     });
   });
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/constants.dart';
+import '../../core/admin_session_claims.dart';
 import '../../core/theme.dart';
 import '../../providers/app_provider.dart';
 import '../../services/biometric_service.dart';
@@ -163,13 +162,8 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
             onTap: () async {
               Navigator.pop(context);
               await Supabase.instance.client.auth.signOut();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove(AppConstants.rememberedUserRoleKey);
-              await prefs.remove(AppConstants.rememberedManagedOutletKey);
-              await prefs.setBool(AppConstants.biometricEnabledKey, false);
-              ref.read(appProvider.notifier).setAdminMode(false);
-              ref.read(appProvider.notifier).setKepalaGeraiMode(null);
               ref.read(appProvider.notifier).setBiometricEnabled(false);
+              ref.read(appProvider.notifier).clearAdminSessionMode();
             },
           ),
           const Divider(),
@@ -199,25 +193,29 @@ class _SettingsDialogState extends ConsumerState<_SettingsDialog> {
                         if (!mounted) return;
                         setState(() => _toggling = false);
                         if (success) {
+                          final claims = AdminSessionClaims.fromUser(
+                            Supabase.instance.client.auth.currentSession?.user,
+                          );
+                          if (claims == null) {
+                            await ref
+                                .read(appProvider.notifier)
+                                .setBiometricEnabled(false);
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Sesi admin saat ini tidak valid untuk login biometrik',
+                                  ),
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
                           await ref
                               .read(appProvider.notifier)
                               .setBiometricEnabled(true);
-                          // Save current role for biometric re-login
-                          final user =
-                              Supabase.instance.client.auth.currentUser;
-                          final role =
-                              (user?.appMetadata['app_role'] as String?) ??
-                                  (user?.userMetadata?['app_role'] as String?);
-                          final outletId =
-                              (user?.appMetadata['managed_outlet_id']
-                                      as String?) ??
-                                  (user?.userMetadata?['managed_outlet_id']
-                                      as String?);
-                          if (role != null) {
-                            await ref
-                                .read(appProvider.notifier)
-                                .saveRememberedRole(role, outletId);
-                          }
                           if (mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(

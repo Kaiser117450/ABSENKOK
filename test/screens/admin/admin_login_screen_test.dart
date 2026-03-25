@@ -3,23 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('canUseBiometricLogin', () {
-    test('requires an active Supabase session', () {
+    test('requires a trusted privileged session', () {
       expect(
         canUseBiometricLogin(
           hasBiometricHardware: true,
           biometricEnabled: true,
-          hasSupabaseSession: false,
+          hasTrustedAdminSession: false,
         ),
         isFalse,
       );
     });
 
-    test('returns true only when hardware, preference, and session exist', () {
+    test(
+        'returns true only when hardware, preference, and trusted claims exist',
+        () {
       expect(
         canUseBiometricLogin(
           hasBiometricHardware: true,
           biometricEnabled: true,
-          hasSupabaseSession: true,
+          hasTrustedAdminSession: true,
         ),
         isTrue,
       );
@@ -30,7 +32,18 @@ void main() {
         canUseBiometricLogin(
           hasBiometricHardware: true,
           biometricEnabled: false,
-          hasSupabaseSession: true,
+          hasTrustedAdminSession: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('returns false when biometric hardware is unavailable', () {
+      expect(
+        canUseBiometricLogin(
+          hasBiometricHardware: false,
+          biometricEnabled: true,
+          hasTrustedAdminSession: true,
         ),
         isFalse,
       );
