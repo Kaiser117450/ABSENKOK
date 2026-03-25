@@ -22,7 +22,7 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
         </span>
       </a>
       <h1 class="text-2xl font-bold text-gray-900">Portal Karyawan</h1>
-      <p class="mt-2 text-sm text-gray-500">Cari nama Anda dan pilih kartu untuk masuk.</p>
+      <p class="mt-2 text-sm text-gray-500">Ketik minimal 3 huruf nama Anda, lalu pilih kartu untuk masuk.</p>
     </div>
 
     <!-- Card -->
@@ -54,7 +54,8 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
               autocomplete="off"
               autocorrect="off"
               spellcheck="false"
-              placeholder="Ketik nama Anda…"
+              maxlength="64"
+              placeholder="Ketik minimal 3 huruf nama Anda…"
               class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#E91E8C] focus:outline-none focus:ring-2 focus:ring-[#E91E8C]/20 transition"
               aria-describedby="search-status"
             />
@@ -125,6 +126,8 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
   const cache = new Map<string, EmployeeCard[]>();
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let currentController: AbortController | null = null;
+  const SEARCH_MIN_LENGTH = 3;
+  const SEARCH_MAX_LENGTH = 64;
 
   interface EmployeeCard {
     employee_id: string;
@@ -247,9 +250,25 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
 
   async function fetchResults(query: string): Promise<void> {
     const normalized = normalize(query);
-    if (normalized.length < 2) {
+    if (normalized.length < SEARCH_MIN_LENGTH) {
       chooser!.classList.add('hidden');
-      if (searchStatus) searchStatus.classList.add('hidden');
+      if (searchStatus) {
+        if (normalized.length === 0) {
+          searchStatus.classList.add('hidden');
+        } else {
+          searchStatus.textContent = 'Ketik minimal 3 huruf nama Anda.';
+          searchStatus.classList.remove('hidden');
+        }
+      }
+      return;
+    }
+
+    if (normalized.length > SEARCH_MAX_LENGTH) {
+      chooser!.classList.add('hidden');
+      if (searchStatus) {
+        searchStatus.textContent = `Pencarian terlalu panjang. Maksimal ${SEARCH_MAX_LENGTH} karakter.`;
+        searchStatus.classList.remove('hidden');
+      }
       return;
     }
 

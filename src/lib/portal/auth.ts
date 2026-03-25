@@ -63,7 +63,10 @@ export function buildPortalAuthPassword(employeeId: string): string {
 }
 
 /** Minimum query length before a search request should be sent. */
-export const SEARCH_MIN_LENGTH = 2;
+export const SEARCH_MIN_LENGTH = 3;
 
 /** Maximum result count returned by the search endpoint. */
-export const SEARCH_MAX_RESULTS = 8;
+export const SEARCH_MAX_RESULTS = 5;
+
+/** Maximum normalized query length accepted by the public chooser. */
+export const SEARCH_MAX_QUERY_LENGTH = 64;
