@@ -32,13 +32,11 @@ type PortalLocals = {
  * failure case (redirect, block render, etc.).
  */
 export async function resolvePortalEmployee(Astro: AstroGlobal): Promise<ResolveResult> {
-  const supabase = createSupabaseServerClient(
-    Astro.request.headers.get('cookie') ?? '',
-    Astro.response.headers,
-  );
+  const locals = Astro.locals as PortalLocals;
+  const hasPortalUser = Object.prototype.hasOwnProperty.call(locals, 'portalUser');
+  const portalUser = locals.portalUser;
 
-  const cachedUser = (Astro.locals as PortalLocals).portalUser;
-  if (cachedUser === null) {
+  if (!hasPortalUser || portalUser === null) {
     return {
       ok: false,
       reason: 'unauthenticated',
@@ -46,22 +44,10 @@ export async function resolvePortalEmployee(Astro: AstroGlobal): Promise<Resolve
     };
   }
 
-  if (cachedUser === undefined) {
-    // Fallback if middleware did not run for some reason. We still require
-    // a verified server-side user before invoking the portal RPC.
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return {
-        ok: false,
-        reason: 'unauthenticated',
-        message: authError?.message ?? 'No active session.',
-      };
-    }
-  }
+  const supabase = createSupabaseServerClient(
+    Astro.request.headers.get('cookie') ?? '',
+    Astro.response.headers,
+  );
 
   const { data, error } = await supabase.rpc('resolve_portal_employee');
   if (error) {
