@@ -51,18 +51,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // do not need to hit Auth again during the same request.
   (context.locals as Record<string, unknown>).portalUser = user ?? null;
 
+  const appendRefreshedCookies = (response: Response) => {
+    newCookies.forEach((cookie) => {
+      response.headers.append('Set-Cookie', cookie);
+    });
+
+    return response;
+  };
+
+  // Enforce auth on protected portal routes before the downstream handler runs.
+  if (isProtectedPortalRoute(pathname) && !user) {
+    return appendRefreshedCookies(redirect('/portal/login', 302));
+  }
+
   // Forward to the route handler.
   const response = await next();
 
   // Attach any refreshed auth cookies to the response.
-  newCookies.forEach((cookie) => {
-    response.headers.append('Set-Cookie', cookie);
-  });
-
-  // Enforce auth on protected portal routes.
-  if (isProtectedPortalRoute(pathname) && !user) {
-    return redirect('/portal/login', 302);
-  }
-
-  return response;
+  return appendRefreshedCookies(response);
 });
