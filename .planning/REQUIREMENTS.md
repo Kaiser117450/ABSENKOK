@@ -7,9 +7,9 @@
 
 ### Device Boundary
 
-- [ ] **SECDEV-01**: A kiosk device can only send heartbeat updates after successful outlet activation, and the heartbeat path cannot silently rebind that device to a different outlet.
-- [ ] **SECDEV-02**: Device rename and archive RPCs only execute for authenticated admin or kepala gerai callers whose outlet scope matches the target kiosk.
-- [ ] **SECSAFE-01**: Admin and kiosk device surfaces handle malformed or short kiosk UUID data without crashing the client.
+- [x] **SECDEV-01**: A kiosk device can only send heartbeat updates after successful outlet activation, and the heartbeat path cannot silently rebind that device to a different outlet.
+- [x] **SECDEV-02**: Device rename and archive RPCs only execute for authenticated admin or kepala gerai callers whose outlet scope matches the target kiosk.
+- [x] **SECSAFE-01**: Admin and kiosk device surfaces handle malformed or short kiosk UUID data without crashing the client.
 
 ### Access Control
 
@@ -61,9 +61,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SECDEV-01 | Phase 50 | Pending |
-| SECDEV-02 | Phase 50 | Pending |
-| SECSAFE-01 | Phase 50 | Pending |
+| SECDEV-01 | Phase 50 | Complete |
+| SECDEV-02 | Phase 50 | Complete |
+| SECSAFE-01 | Phase 50 | Complete |
 | SECACC-01 | Phase 51 | Pending |
 | SECACC-02 | Phase 51 | Pending |
 | SECACC-03 | Phase 51 | Pending |

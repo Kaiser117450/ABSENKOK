@@ -24,22 +24,23 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 50 | Kiosk Device Boundary Hardening | Stop kiosk spoofing and public device-mutation abuse without breaking current setup UX | `SECDEV-01`, `SECDEV-02`, `SECSAFE-01` | 4 |
+| 50 | Kiosk Device Boundary Hardening | Complete 2026-03-25 — stop kiosk spoofing and public device-mutation abuse without breaking current setup UX | `SECDEV-01`, `SECDEV-02`, `SECSAFE-01` | 4 |
 | 51 | Admin Session Trust Hardening | Remove privileged access paths that trust writable metadata or stale remembered roles | `SECACC-01`, `SECACC-02`, `SECACC-03` | 4 |
 | 52 | Portal Surface Minimization | Reduce portal leakage and recovery abuse while preserving passwordless entry | `SECPORT-01`, `SECPORT-02`, `SECPORT-03` | 4 |
 | 53 | Security Rollout & Acceptance | Capture additive deployment steps and verify accepted-risk boundaries before closeout | `SECOPS-01` | 4 |
 
 ### Phase 50: Kiosk Device Boundary Hardening
 
+**Status:** Complete (2026-03-25)
 **Goal:** Stop kiosk spoofing and public device-mutation abuse without breaking current setup UX.
 **Depends on:** v7.0 closeout baseline
 **Requirements:** `SECDEV-01`, `SECDEV-02`, `SECSAFE-01`
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 
-- [ ] 50-01: Activation-bound heartbeat contract and scoped device-management RPC hardening
-- [ ] 50-02: Safe kiosk device parsing and UUID fallback regression coverage
+- [x] 50-01: Activation-bound heartbeat contract and scoped device-management RPC hardening
+- [x] 50-02: Safe kiosk device parsing and UUID fallback regression coverage
 
 Success criteria:
 1. Kiosk activation binds one physical device UUID to the verified outlet before heartbeat writes are accepted.

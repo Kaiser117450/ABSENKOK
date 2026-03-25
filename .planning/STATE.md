@@ -1,48 +1,50 @@
 ---
 gsd_state_version: 1.0
 milestone: v7.1
-milestone_name: security_hardening
-status: roadmap_defined
-stopped_at: milestone v7.1 defined; Phase 50 not started yet
-last_updated: "2026-03-25T12:00:00+08:00"
+milestone_name: Security Hardening
+status: Phase 50 complete; ready to plan Phase 51
+stopped_at: Completed Phase 50 kiosk-device-boundary-hardening; next step is Phase 51 planning
+last_updated: "2026-03-25T11:33:44+08:00"
+last_activity: 2026-03-25 — completed Phase 50 kiosk device boundary hardening and advanced the roadmap to Phase 51
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 50
+Phase: 51
 Plan: Not started
-Status: v7.1 Security Hardening is defined; implementation has not started
-Last activity: 2026-03-25 — initialized milestone v7.1 from the Codex Security CSV, explicitly scoping only non-passwordless findings
+Status: Ready to plan Phase 51 — Admin Session Trust Hardening
+Last activity: 2026-03-25 — completed Phase 50 kiosk device boundary hardening and advanced the roadmap to Phase 51
 
 ## Current Status
 - **Active milestone:** v7.1 Security Hardening
 - **Last shipped milestone:** v7.0 Android Release Hardening
-- **Next phase:** Phase 50 — Kiosk Device Boundary Hardening
+- **Next phase:** Phase 51 — Admin Session Trust Hardening
 - **Current focus:** Close non-passwordless security findings without breaking the intentionally passwordless portal behavior
+- **Phase 50 rollout note:** Production still needs the additive SQL in `sql/phase_50_kiosk_boundary_hardening_20260325.sql` applied manually in Supabase.
 - **Scope guard:** Passwordless employee portal sign-in and local-only portal logout remain accepted product decisions for this milestone
 
 ## Progress
 
 ```text
-Milestone initialized
-[----------] 0 of 4 phases complete (0/0 plans)
+Security hardening underway
+[███-------] 1 of 4 phases complete (2/2 plans)
 ```
 
-- **Next action:** Run `$gsd-discuss-phase 50` or `$gsd-plan-phase 50`
+- **Next action:** Run `$gsd-discuss-phase 51` or `$gsd-plan-phase 51`
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 50 planning for kiosk/device security boundaries while preserving the accepted passwordless portal UX.
+**Current focus:** Phase 51 planning for admin session trust hardening while keeping the accepted passwordless portal UX intact.
 
 ## What Was Shipped
 
@@ -178,6 +180,9 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 - None at planning time. The milestone is defined; implementation work has not started.
 
 ## Accumulated Context
+- Phase 50 completed on 2026-03-25: kiosk activation now binds the persistent device UUID through `activate_kiosk_device`, and heartbeat writes only refresh an existing active binding.
+- Phase 50 completed on 2026-03-25: `set_device_nickname` and `archive_device` now require authenticated `admin` or correctly scoped `kepala_gerai` callers in the additive SQL migration `sql/phase_50_kiosk_boundary_hardening_20260325.sql`.
+- Phase 50 completed on 2026-03-25: `KioskDevice` parsing and admin dashboard device loading now degrade safely on malformed UUID or timestamp payloads; focused regression coverage lives in `test/phase50/kiosk_device_model_test.dart`.
 - Phase 49 acceptance rerun on 2026-03-25 closed the remaining operator blocker after `adb devices -l` again reported device `V8X8ROMVSWVKIVW8` in `device` state.
 - Phase 49 release evidence on 2026-03-25: `tool/release_preflight.ps1` passed end-to-end, `tool/release_build.ps1 -SmokeVerify` built and staged `build/releases/android/ABSENKOK-v7.0.0+8013/ABSENKOK-v7.0.0+8013.apk`, `mapping.txt`, `release-manifest.json`, and `smoke-check.txt`, and the manifest records `smokeVerification.status = passed`.
 - Phase 49 debug-artifact truth on 2026-03-25: Flutter did not emit `split-debug-info` files for this non-obfuscated v7.0 release build, so the staged `symbols/` directory is empty and `release-manifest.json` records `debugArtifacts.splitDebugInfoStatus = not-generated`.
