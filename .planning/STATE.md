@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Strict Attendance & Payroll Reporting
-status: ready_to_plan
-stopped_at: Phase 54 context gathered
-last_updated: "2026-03-26T00:30:00+08:00"
-last_activity: 2026-03-26 — captured context for Phase 54 Workforce Contract & Outlet Mode Foundation
+status: executing
+stopped_at: Phase 55 planned
+last_updated: "2026-03-26T14:19:09.2865548Z"
+last_activity: 2026-03-26 — planned Phase 55 Schedule Policy & Absence Rules
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 8
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
@@ -18,37 +18,39 @@ progress:
 ## Current Position
 
 Phase: 54
-Plan: Context gathered
-Status: Ready to plan Phase 54 — Workforce Contract & Outlet Mode Foundation
-Last activity: 2026-03-26 — captured context for Phase 54 Workforce Contract & Outlet Mode Foundation
+Plan: 1 of 4 complete
+Status: Executing Phase 54 — Plan 01 (workforce metadata foundation) complete, Plans 02-04 remain
+Last activity: 2026-03-26 — completed Phase 54 Plan 01 workforce metadata foundation
 
 ## Current Status
+
 - **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
 - **Last shipped milestone:** v7.1 Security Hardening
 - **Next phase:** Phase 54 — Workforce Contract & Outlet Mode Foundation
-- **Current focus:** Turn the captured Phase 54 decisions into an executable plan for employee contracts, outlet mode metadata, and CSV/on-screen admin surfaces
+- **Current focus:** Execute the additive Phase 54 foundation and admin-surface work now that Phase 55 is planned and ready behind the dependency gate
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Phase 54 context captured
-[----------] 0 of 7 phases complete (0 plans defined)
+Phase 54-55 planned
+[----------] 0 of 7 phases complete (8 plans defined)
 ```
 
-- **Next action:** Run `$gsd-plan-phase 54`
+- **Next action:** Execute Phase 54 Plan 02 (Wave 2) — admin employee contract surfaces. SQL migration `sql/phase_54_workforce_contract_outlet_mode_20260326.sql` still needs manual application before production use.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 54 planning with context captured for workforce contract and outlet operating mode foundation.
+**Current focus:** Phase 54 execution is now the milestone dependency, while Phase 55-56 context remains captured for schedule policy, break-first capture, offline authority, and scan feedback behavior.
 
 ## What Was Shipped
 
 ### v7.1 (Released, 2026-03-25)
+
 - Phase 50: Kiosk device boundary hardening
 - Phase 51: Admin session trust hardening
 - Phase 52: Portal surface minimization
@@ -56,6 +58,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - Notes: milestone archived after locking the accepted passwordless portal risk boundary and additive rollout checklist
 
 ### v7.0 (Released, 2026-03-25)
+
 - Phase 46: Release baseline recovery
 - Phase 47: Toolchain contract and preflight gates
 - Phase 48: Secure signing and artifact discipline
@@ -64,6 +67,7 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - Notes: archived without a dedicated audit by user choice; final published asset is the obfuscated smoke-verified `ABSENKOK-v7.0.0+8013.apk` on GitHub Release `v7.0.0`
 
 ### v6.3 (Released, 2026-03-23)
+
 - Phase 42: Attendance recap read model
 - Phase 43: Portal attendance recap surface
 - Phase 44: Portal exception states and hardening
@@ -71,17 +75,20 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - Notes: audit closed with 7/7 requirements verified; production Supabase now includes `get_portal_attendance_recap` and `idx_attendance_logs_employee_recap`
 
 ### v6.2 (Released, 2026-03-23)
+
 - Phase 40: Admin dashboard restoration and brand refresh
 - Phase 41: PDF report reliability and count metrics
 - Notes: archived with accepted planning debt because no dedicated audit or per-phase PLAN/SUMMARY artifacts were produced for phases 40-41
 
 ### v6.1 (Released, 2026-03-23)
+
 - Phase 37: Portal foundation and employee auth
 - Phase 38: Employee schedule read model
 - Phase 39: Employee portal schedule UX
 - Notes: archived with accepted verification debt and planning/implementation drift documented in `v6.1-MILESTONE-AUDIT.md`
 
 ### v6.0 (Released, 2026-03-22)
+
 - Phase 31: Device identity foundation
 - Phase 32: Multi-device dashboard
 - Phase 33: Multi-outlet control center
@@ -90,23 +97,28 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - Phase 36: Central dashboard acceptance verification
 
 ### v5.0 (Released, 2026-03-20)
+
 - Phase 27: Foundation & Kiosk Heartbeat
 - Phase 28: Failure Surfaces & Crash Reporting
 - Phase 29: Diagnostics & Recovery Tools
 - Phase 30: Multi-Outlet Admin Visibility
 
 ### v3.1 (Released, 2026-03-18)
+
 - Phase 20: Biometric Login
 - Phase 21: Badge Color Picker
 - Phase 22: Production Release (GitHub Release v3.1 with ABSENKOK-v3.1.0.apk)
 
 ### v3.0 (2026-03-13)
+
 - Phase 17-19: Schedule Grid, Landing Website, Website Polish
 
 ### v2.0 (2026-03-12)
+
 - Phase 13-16: Soft-archive, CSV Import, Kepala Gerai SQL, Live Activity Pill
 
 ### v1.1 (Released, 2026-03-05)
+
 - Phase 1-12: Bug fixes, overlay pill, PDF/CSV reports, kiosk polish, admin UI, badges, logout resilience
 
 ## Key Decisions (Cumulative)
@@ -182,18 +194,31 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 | 52-03 | Existing hidden portal auth users are reusable only when confirmed `employee_portal` metadata matches `employee_id`; recovery SQL skips conflicting ownership instead of repointing mappings | Recovery correctness now fails closed instead of trusting weak hidden-email inference |
 
 ## Key Constraints
+
 - Production database serving 4 outlets — NO destructive migrations
 - Kotlin 1.9.25 — no upgrade (breaks nfc_manager)
 - Android only — no iOS target
 
 ### Open Blockers
+
 - None currently. Any future v8.0 production migration still needs explicit user approval before execution.
 
 ## Accumulated Context
+
 - Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
 - Phase 54 context captured on 2026-03-26: employee contract must surface as a badge plus filter in the employee list, remain editable by kepala gerai within their outlet scope, and stay visible in archived employee history.
 - Phase 54 context captured on 2026-03-26: batch CSV import must require a contract column, normalize aliases into canonical `FULLTIME` / `PARTTIME`, reject legacy templates without the field, and update the downloadable template accordingly.
+- Phase 55 context captured on 2026-03-26: scheduled workdays must show `band + required hours`, required hours default from employee contract but stay editable, quick chips remain the primary assignment interaction, and exact clock ranges survive only as small hints.
+- Phase 55 context captured on 2026-03-26: lateness cutoffs are `07:00` for pagi, `10:00` for siang, and `15:00` for sore; early scans stay valid; late arrivals remain present with a late tag; and admin needs separate audit filters for normal late vs break-first late.
+- Phase 55 context captured on 2026-03-26: break-first rules apply to any shift only when there are no `break` / `kembali` logs; `PARTTIME` gets a 1-hour break-first window after the cutoff and `FULLTIME` gets a 2-hour window; saying "no" to break-first falls back to normal late.
+- Phase 55 context captured on 2026-03-26: same-day zero-log scheduled rows stay `belum_masuk`, `tidak_hadir` is finalized only after the logical workday ends, leave states always override absence, and late-arriving valid logs or retroactive leave corrections automatically replace `tidak_hadir`.
+- Phase 55 context captured on 2026-03-26: kepala gerai keeps the weekly grid, bulk assign stays with a short review step, the familiar 2-shift / 3-shift templates stay in place, and policy info should live in header/detail summaries instead of every schedule cell.
+- Phase 55 deferred idea noted on 2026-03-26: per-schedule role labels (`Housekeeping`, `Kasir`, `Assambler`, `Kitchen`) plus PDF export visibility belong to a future phase, not the Phase 55 policy rewrite.
+- Phase 56 context captured on 2026-03-26: eligible first scans should expose an extra `Istirahat Dulu` path, still require a short confirmation, ask every eligible time, and confirm success with a hint that the next expected tap is `Selesai Istirahat`.
+- Phase 56 context captured on 2026-03-26: if server time is unavailable, scans stay operational for cached employees by queueing pending events locally, syncing automatically later, and flagging suspicious reconciliations for admin review instead of silently rewriting history.
+- Phase 56 context captured on 2026-03-26: live server-confirmed scans should show the authoritative WITA time, queued scans should use a visibly distinct success state, wording should stay human-first, and the current fast auto-close plus idle pending badge/banner remains the persistent follow-up signal.
+- Phase 56 deferred idea noted on 2026-03-26: richer admin audit labeling for break-first-late vs normal late can stay flexible for planning, and any supervisor-only offline override remains a separate future capability.
 - Phase 50 completed on 2026-03-25: kiosk activation now binds the persistent device UUID through `activate_kiosk_device`, and heartbeat writes only refresh an existing active binding.
 - Phase 50 completed on 2026-03-25: `set_device_nickname` and `archive_device` now require authenticated `admin` or correctly scoped `kepala_gerai` callers in the additive SQL migration `sql/phase_50_kiosk_boundary_hardening_20260325.sql`.
 - Phase 50 completed on 2026-03-25: `KioskDevice` parsing and admin dashboard device loading now degrade safely on malformed UUID or timestamp payloads; focused regression coverage lives in `test/phase50/kiosk_device_model_test.dart`.
@@ -255,21 +280,24 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Session Continuity
 
-**Last session:** 2026-03-26T00:30:00+08:00
-**Stopped at:** Phase 54 context gathered
-**Resume file:** .planning/phases/54-workforce-contract-outlet-mode-foundation/54-CONTEXT.md
+**Last session:** 2026-03-26T15:00:00Z
+**Stopped at:** Completed 54-01-PLAN.md
+**Resume file:** .planning/phases/54-workforce-contract-outlet-mode-foundation/54-02-PLAN.md
 
 ## Database Safety Rules
+
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
 - **WAJIB konfirmasi ke user sebelum setiap perubahan database**
 - Selalu jalankan migration additive (tidak merusak data yang ada)
 
 ## Supabase Project
+
 - Project ID: `tmapxdftdhxovthgbhww`
 - Region: ap-south-1 (Mumbai)
 - Status: ACTIVE_HEALTHY
 
 ## File Locations
+
 - Flutter project: `absensi apk/absensi_enakko_flutter/`
 - Planning: `absensi apk/absensi_enakko_flutter/.planning/`
 - Website project: `C:\Users\HYPE R Series\Desktop\projekan\absenkok-website\`
