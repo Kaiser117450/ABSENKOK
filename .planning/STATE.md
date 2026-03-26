@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Strict Attendance & Payroll Reporting
 status: ready_to_plan
-stopped_at: Milestone initialized; Phase 54 not planned yet
-last_updated: "2026-03-26T00:00:00+08:00"
-last_activity: 2026-03-26 — initialized milestone v8.0 Strict Attendance & Payroll Reporting
+stopped_at: Phase 54 context gathered
+last_updated: "2026-03-26T00:30:00+08:00"
+last_activity: 2026-03-26 — captured context for Phase 54 Workforce Contract & Outlet Mode Foundation
 progress:
   total_phases: 7
   completed_phases: 0
@@ -18,22 +18,22 @@ progress:
 ## Current Position
 
 Phase: 54
-Plan: —
-Status: Roadmap initialized — ready to plan Phase 54 — Workforce Contract & Outlet Mode Foundation
-Last activity: 2026-03-26 — initialized milestone v8.0 Strict Attendance & Payroll Reporting
+Plan: Context gathered
+Status: Ready to plan Phase 54 — Workforce Contract & Outlet Mode Foundation
+Last activity: 2026-03-26 — captured context for Phase 54 Workforce Contract & Outlet Mode Foundation
 
 ## Current Status
 - **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
 - **Last shipped milestone:** v7.1 Security Hardening
 - **Next phase:** Phase 54 — Workforce Contract & Outlet Mode Foundation
-- **Current focus:** Establish employment contracts and outlet operating modes as the new attendance rules foundation without breaking live attendance history
+- **Current focus:** Turn the captured Phase 54 decisions into an executable plan for employee contracts, outlet mode metadata, and CSV/on-screen admin surfaces
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Milestone initialized
+Phase 54 context captured
 [----------] 0 of 7 phases complete (0 plans defined)
 ```
 
@@ -44,7 +44,7 @@ Milestone initialized
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 54 planning for workforce contract and outlet operating mode foundation.
+**Current focus:** Phase 54 planning with context captured for workforce contract and outlet operating mode foundation.
 
 ## What Was Shipped
 
@@ -190,6 +190,10 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - None currently. Any future v8.0 production migration still needs explicit user approval before execution.
 
 ## Accumulated Context
+- Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
+- Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
+- Phase 54 context captured on 2026-03-26: employee contract must surface as a badge plus filter in the employee list, remain editable by kepala gerai within their outlet scope, and stay visible in archived employee history.
+- Phase 54 context captured on 2026-03-26: batch CSV import must require a contract column, normalize aliases into canonical `FULLTIME` / `PARTTIME`, reject legacy templates without the field, and update the downloadable template accordingly.
 - Phase 50 completed on 2026-03-25: kiosk activation now binds the persistent device UUID through `activate_kiosk_device`, and heartbeat writes only refresh an existing active binding.
 - Phase 50 completed on 2026-03-25: `set_device_nickname` and `archive_device` now require authenticated `admin` or correctly scoped `kepala_gerai` callers in the additive SQL migration `sql/phase_50_kiosk_boundary_hardening_20260325.sql`.
 - Phase 50 completed on 2026-03-25: `KioskDevice` parsing and admin dashboard device loading now degrade safely on malformed UUID or timestamp payloads; focused regression coverage lives in `test/phase50/kiosk_device_model_test.dart`.
@@ -251,9 +255,9 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Session Continuity
 
-**Last session:** 2026-03-26T00:00:00+08:00
-**Stopped at:** Milestone v8.0 initialized; ready for `$gsd-plan-phase 54`
-**Resume file:** None
+**Last session:** 2026-03-26T00:30:00+08:00
+**Stopped at:** Phase 54 context gathered
+**Resume file:** .planning/phases/54-workforce-contract-outlet-mode-foundation/54-CONTEXT.md
 
 ## Database Safety Rules
 - Sistem absensi SEDANG BERJALAN di production (4 gerai, karyawan aktif)
