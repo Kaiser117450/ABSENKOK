@@ -10,6 +10,8 @@ import '../../widgets/shimmer_skeleton.dart';
 import '../../widgets/app_toast.dart';
 
 import '../../models/outlet.dart';
+import '../../models/outlet_operating_mode.dart';
+import '../../widgets/outlet_mode_badge.dart';
 
 class AdminOutletsScreen extends ConsumerStatefulWidget {
   const AdminOutletsScreen({super.key});
@@ -405,6 +407,8 @@ class _OutletCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
+                        OutletModeBadge(mode: outlet.operatingMode),
+                        const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 2),
@@ -545,10 +549,11 @@ class _OutletSheetState extends State<_OutletSheet> {
   late final TextEditingController _passwordCtrl;
   late final TextEditingController _newPasswordCtrl; // untuk reset password saat edit
   bool _isActive = true;
+  late OutletOperatingMode _selectedMode;
   bool _saving = false;
   bool _obscure = true;
   bool _obscureNew = true;
-  bool _showPasswordReset = false; // toggle tampilkan section reset password saat edit
+  bool _showPasswordReset = false;
   String? _error;
 
   @override
@@ -560,6 +565,7 @@ class _OutletSheetState extends State<_OutletSheet> {
     _passwordCtrl = TextEditingController();
     _newPasswordCtrl = TextEditingController();
     _isActive = o?.isActive ?? true;
+    _selectedMode = o?.operatingMode ?? OutletOperatingMode.normal;
   }
 
   @override
@@ -586,6 +592,7 @@ class _OutletSheetState extends State<_OutletSheet> {
               ? null
               : _addressCtrl.text.trim(),
           'is_active': _isActive,
+          'operating_mode': _selectedMode.dbValue,
         };
         await SupabaseClientFactory.admin
             .from('outlets')
@@ -726,6 +733,73 @@ class _OutletSheetState extends State<_OutletSheet> {
                           ),
                           maxLines: 2,
                           minLines: 1,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Operating mode segmented control
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Mode Operasi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                for (final m in OutletOperatingMode.values) ...[
+                                  if (m.index > 0) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () =>
+                                          setState(() => _selectedMode = m),
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: _selectedMode == m
+                                              ? AppColors.primary
+                                              : AppColors.surface,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: _selectedMode == m
+                                                ? AppColors.primary
+                                                : AppColors.border,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          m.label,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: _selectedMode == m
+                                                ? Colors.white
+                                                : AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Mode 24 Jam akan digunakan untuk pengelompokan absensi shift malam.',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 14),
 

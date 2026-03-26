@@ -10,6 +10,7 @@ import '../../providers/app_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
+import '../../widgets/employee_contract_badge.dart';
 import '../../widgets/shimmer_skeleton.dart';
 
 class ArchivedEmployeesScreen extends ConsumerStatefulWidget {
@@ -234,6 +235,9 @@ class _ArchivedEmployeeCard extends StatelessWidget {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                EmployeeContractBadge(
+                    contract: employee.employmentContract),
                 const SizedBox(height: 4),
                 if (outletName != null)
                   Text(

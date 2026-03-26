@@ -6,8 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/employee.dart';
+import '../../models/employee_contract.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../widgets/employee_contract_badge.dart';
 import '../../services/nfc_service.dart';
 import '../../services/badge_service.dart';
 import '../../widgets/app_card.dart';
@@ -33,6 +35,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   bool _loading = true;
   String _searchQuery = '';
   String? _filterOutletId;
+  EmployeeContract? _filterContract; // null = all
   RealtimeChannel? _channel;
 
   final _searchCtrl = TextEditingController();
@@ -122,6 +125,9 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     var list = _employees;
     if (_filterOutletId != null) {
       list = list.where((e) => e.homeOutletId == _filterOutletId).toList();
+    }
+    if (_filterContract != null) {
+      list = list.where((e) => e.employmentContract == _filterContract).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -524,6 +530,39 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
               );
             }),
 
+          // ── CONTRACT FILTER CHIPS ───────────────────────────────────────
+          Container(
+            color: Colors.white,
+            child: SizedBox(
+              height: 40,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _FilterChip2(
+                    label: 'Semua Kontrak',
+                    selected: _filterContract == null,
+                    onTap: () => setState(() => _filterContract = null),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterChip2(
+                    label: 'Full-Time',
+                    selected: _filterContract == EmployeeContract.fulltime,
+                    onTap: () => setState(
+                        () => _filterContract = EmployeeContract.fulltime),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterChip2(
+                    label: 'Part-Time',
+                    selected: _filterContract == EmployeeContract.parttime,
+                    onTap: () => setState(
+                        () => _filterContract = EmployeeContract.parttime),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // ── LIST ─────────────────────────────────────────────────────────
           Expanded(
             child: _loading
@@ -845,6 +884,9 @@ class _EmployeeCard extends StatelessWidget {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 3),
+                  EmployeeContractBadge(
+                      contract: employee.employmentContract),
                   if (employee.position != null) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -1387,6 +1429,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
   late final TextEditingController _positionCtrl;
   late final TextEditingController _empCodeCtrl;
   String? _selectedOutletId;
+  late EmployeeContract _selectedContract;
   bool _isActive = true;
   bool _saving = false;
   String? _error;
@@ -1403,6 +1446,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
         emp?.homeOutletId ??
         widget.outlets.firstOrNull?.id;
     _isActive = emp?.isActive ?? true;
+    // New employees default to PARTTIME; existing keep their stored value
+    _selectedContract = emp?.employmentContract ?? EmployeeContract.parttime;
   }
 
   @override
@@ -1430,6 +1475,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
             _empCodeCtrl.text.trim().isEmpty ? null : _empCodeCtrl.text.trim(),
         'home_outlet_id': _selectedOutletId,
         'is_active': _isActive,
+        'employment_contract': _selectedContract.dbValue,
       };
 
       if (widget.employee == null) {
@@ -1632,6 +1678,71 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                           onChanged: widget.forcedOutletId != null
                               ? null
                               : (v) => setState(() => _selectedOutletId = v),
+                        ),
+                        const SizedBox(height: 14),
+                        // Contract segmented control
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Tipe Kontrak',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                for (final c
+                                    in EmployeeContract.values) ...[
+                                  if (c.index > 0)
+                                    const SizedBox(width: 8),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () => setState(
+                                          () => _selectedContract = c),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                            milliseconds: 200),
+                                        padding:
+                                            const EdgeInsets.symmetric(
+                                                vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _selectedContract == c
+                                                  ? AppColors.primary
+                                                  : AppColors.surface,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color:
+                                                _selectedContract == c
+                                                    ? AppColors.primary
+                                                    : AppColors.border,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          c.label,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color:
+                                                _selectedContract == c
+                                                    ? Colors.white
+                                                    : AppColors
+                                                        .textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 14),
                         Container(
