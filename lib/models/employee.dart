@@ -1,3 +1,5 @@
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+
 class Employee {
   final String id;
   final String name;
@@ -12,6 +14,7 @@ class Employee {
   final String updatedAt;
   final DateTime? archivedAt;
   final String? activeBadgeId;
+  final EmployeeContract employmentContract;
 
   const Employee({
     required this.id,
@@ -26,6 +29,7 @@ class Employee {
     required this.updatedAt,
     this.archivedAt,
     this.activeBadgeId,
+    this.employmentContract = EmployeeContract.fulltime,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
@@ -43,6 +47,8 @@ class Employee {
             ? null
             : DateTime.tryParse(json['archived_at'] as String),
         activeBadgeId: json['active_badge_id'] as String?,
+        employmentContract:
+            EmployeeContract.parse(json['employment_contract'] as String?),
       );
 
   Map<String, dynamic> toJson() => {
@@ -58,6 +64,7 @@ class Employee {
         'updated_at': updatedAt,
         'archived_at': archivedAt?.toIso8601String(),
         'active_badge_id': activeBadgeId,
+        'employment_contract': employmentContract.dbValue,
       };
 
   Employee copyWith({
@@ -67,6 +74,7 @@ class Employee {
     String? homeOutletId,
     String? activeBadgeId,
     DateTime? archivedAt,
+    EmployeeContract? employmentContract,
   }) =>
       Employee(
         id: id,
@@ -81,6 +89,7 @@ class Employee {
         updatedAt: updatedAt,
         archivedAt: archivedAt ?? this.archivedAt,
         activeBadgeId: activeBadgeId ?? this.activeBadgeId,
+        employmentContract: employmentContract ?? this.employmentContract,
       );
 
   /// Returns the first letter of the name, uppercased — used for avatar placeholders

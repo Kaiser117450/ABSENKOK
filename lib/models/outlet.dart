@@ -1,3 +1,5 @@
+import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
+
 class Outlet {
   final String id;
   final String name;
@@ -14,6 +16,7 @@ class Outlet {
   final bool? isCharging;
   final int? pendingSyncCount;
   final String? appVersion;
+  final OutletOperatingMode operatingMode;
 
   const Outlet({
     required this.id,
@@ -29,6 +32,7 @@ class Outlet {
     this.isCharging,
     this.pendingSyncCount,
     this.appVersion,
+    this.operatingMode = OutletOperatingMode.normal,
   });
 
   factory Outlet.fromJson(Map<String, dynamic> json) => Outlet(
@@ -47,6 +51,8 @@ class Outlet {
         isCharging: json['is_charging'] as bool?,
         pendingSyncCount: json['pending_sync_count'] as int?,
         appVersion: json['app_version'] as String?,
+        operatingMode:
+            OutletOperatingMode.parse(json['operating_mode'] as String?),
       );
 
   Map<String, dynamic> toJson() => {
@@ -63,5 +69,6 @@ class Outlet {
         'is_charging': isCharging,
         'pending_sync_count': pendingSyncCount,
         'app_version': appVersion,
+        'operating_mode': operatingMode.dbValue,
       };
 }
