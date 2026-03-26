@@ -1,54 +1,59 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.1
-milestone_name: Security Hardening
-status: executing
-stopped_at: Completed 53-02-PLAN.md
-last_updated: "2026-03-25T09:49:33.132Z"
-last_activity: 2026-03-25 — created rollout, acceptance, and closeout plans for Phase 53
+milestone: v8.0
+milestone_name: Strict Attendance & Payroll Reporting
+status: ready_to_plan
+stopped_at: Milestone initialized; Phase 54 not planned yet
+last_updated: "2026-03-26T00:00:00+08:00"
+last_activity: 2026-03-26 — initialized milestone v8.0 Strict Attendance & Payroll Reporting
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 53
-Plan: 3 plans defined (53-01 to 53-03)
-Status: Planned — ready to execute Phase 53 — Security Rollout & Acceptance
-Last activity: 2026-03-25 — created rollout, acceptance, and closeout plans for Phase 53
+Phase: 54
+Plan: —
+Status: Roadmap initialized — ready to plan Phase 54 — Workforce Contract & Outlet Mode Foundation
+Last activity: 2026-03-26 — initialized milestone v8.0 Strict Attendance & Payroll Reporting
 
 ## Current Status
-- **Active milestone:** v7.1 Security Hardening
-- **Last shipped milestone:** v7.0 Android Release Hardening
-- **Next phase:** Phase 53 — Security Rollout & Acceptance
-- **Current focus:** Execute the Phase 53 rollout, acceptance, and closeout work while preserving the accepted passwordless portal boundary
-- **Phase 50 rollout note:** Production still needs the additive SQL in `sql/phase_50_kiosk_boundary_hardening_20260325.sql` applied manually in Supabase.
-- **Phase 51 rollout note:** Production still needs the additive SQL in `sql/phase_51_admin_session_trust_20260325.sql` reviewed and applied manually in Supabase after approval.
-- **Phase 52 rollout note:** Production still needs the additive SQL in `sql/phase_52_portal_search_minimization_20260325.sql` reviewed and applied manually in Supabase. The recovery-only script `sql/repair_employee_portal_accounts_20260325.sql` should be run only in an approved portal-account repair scenario.
-- **Scope guard:** Passwordless employee portal sign-in and local-only portal logout remain accepted product decisions for this milestone
+- **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
+- **Last shipped milestone:** v7.1 Security Hardening
+- **Next phase:** Phase 54 — Workforce Contract & Outlet Mode Foundation
+- **Current focus:** Establish employment contracts and outlet operating modes as the new attendance rules foundation without breaking live attendance history
+- **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
+- **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Security hardening underway
-[████████--] 3 of 4 phases complete (7/10 plans completed, 3 ready to execute)
+Milestone initialized
+[----------] 0 of 7 phases complete (0 plans defined)
 ```
 
-- **Next action:** Run `$gsd-execute-phase 53`
+- **Next action:** Run `$gsd-plan-phase 54`
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-25)
+See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 53 execution for security rollout and acceptance while keeping the accepted passwordless portal UX intact.
+**Current focus:** Phase 54 planning for workforce contract and outlet operating mode foundation.
 
 ## What Was Shipped
+
+### v7.1 (Released, 2026-03-25)
+- Phase 50: Kiosk device boundary hardening
+- Phase 51: Admin session trust hardening
+- Phase 52: Portal surface minimization
+- Phase 53: Security rollout and acceptance
+- Notes: milestone archived after locking the accepted passwordless portal risk boundary and additive rollout checklist
 
 ### v7.0 (Released, 2026-03-25)
 - Phase 46: Release baseline recovery
@@ -182,7 +187,7 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 - Android only — no iOS target
 
 ### Open Blockers
-- Focused `flutter test test/phase52/portal_recovery_contract_test.dart` timed out repeatedly in this sandbox; rerun it during Phase 53 acceptance if a green execution record is required.
+- None currently. Any future v8.0 production migration still needs explicit user approval before execution.
 
 ## Accumulated Context
 - Phase 50 completed on 2026-03-25: kiosk activation now binds the persistent device UUID through `activate_kiosk_device`, and heartbeat writes only refresh an existing active binding.
@@ -246,8 +251,8 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Session Continuity
 
-**Last session:** 2026-03-25T07:31:48.119Z
-**Stopped at:** Completed 53-02-PLAN.md
+**Last session:** 2026-03-26T00:00:00+08:00
+**Stopped at:** Milestone v8.0 initialized; ready for `$gsd-plan-phase 54`
 **Resume file:** None
 
 ## Database Safety Rules

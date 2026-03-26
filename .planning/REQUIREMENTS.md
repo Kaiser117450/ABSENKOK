@@ -1,0 +1,96 @@
+# Requirements: Absensi Enakko
+
+**Defined:** 2026-03-26
+**Core Value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
+
+## Milestone v8.0 Requirements
+
+### Workforce Contracts
+
+- [ ] **CONTRACT-01**: Admin or kepala gerai can assign every active employee exactly one employment contract value, `FULLTIME` or `PARTTIME`, and attendance calculations use that stored value instead of inferring hours from scan history.
+- [ ] **CONTRACT-02**: Each outlet can be classified as `NORMAL` or `TWENTY_FOUR_HOUR`, and logical-day attendance grouping uses that outlet mode when deciding whether a shift legitimately crosses midnight.
+- [ ] **CONTRACT-03**: Kepala toko / kepala gerai attendance records stay exempt from lateness, short-work, and excess-break red flags even when they still appear in recap outputs.
+
+### Schedule Policy
+
+- [ ] **SCHED-01**: Work schedules stay mandatory for scheduled workdays, but the schedule stores shift bands and required hours instead of misleading fixed clock labels in admin and portal surfaces.
+- [ ] **SCHED-02**: Lateness is evaluated from scheduled shift rules in WITA, including the flexible morning rule (latest allowed arrival 07:00) plus contract-aware siang and sore windows.
+- [ ] **SCHED-03**: A scheduled employee with no attendance logs for the logical workday is marked `tidak_hadir`, while scheduled sakit, izin, libur, and cuti states remain distinct from absence.
+- [ ] **SCHED-04**: Portal and schedule-facing UI show contract-aware required hours and remaining/already-worked time without displaying stale exact shift clock ranges.
+
+### Scan Authority & Break Flow
+
+- [ ] **SCAN-01**: Kiosk attendance timestamps are stamped from a server-authoritative WITA time source so device local-clock drift or manipulation cannot change lateness and payroll outcomes.
+- [ ] **SCAN-02**: When an employee appears to start with a break-first pattern, the kiosk flow can confirm that initial break intent and the recap engine still evaluates the same shift window correctly instead of treating it as a normal on-time arrival.
+
+### Strict Attendance Evaluation
+
+- [ ] **RECAP-01**: Rekap Harian groups afternoon-to-morning sessions into one logical workday at 24-hour outlets so masuk, break, kembali, and pulang stay attached after midnight.
+- [ ] **RECAP-02**: Full-time employees turn red when net work is below 10 hours or total break exceeds 2 hours by even 1 minute, and overtime above the required work duration turns yellow instead of red.
+- [ ] **RECAP-03**: Part-time employees turn red when net work is below 9 hours or total break exceeds the allowed contract window, and part-time overtime days can use the 2-hour break allowance when the day is classified as overtime.
+- [ ] **RECAP-04**: Recap outcomes distinguish late arrival, short work, excess break, overtime, absence, and exempt-manager cases as separate evaluation signals instead of one generic status.
+
+### Reporting & Export
+
+- [ ] **REPORT-01**: Rekap Harian admin view can render a payroll-ready matrix with employees on the left, selected dates across the page, and each day cell showing compact masuk/pulang information plus the correct evaluation color for that day.
+- [ ] **REPORT-02**: Spreadsheet export replaces payroll recap CSV export and preserves color-coded day cells plus per-employee summary counts for late arrival, short work, excess break, overtime, and absence across the selected range.
+- [ ] **REPORT-03**: PDF export uses the same contract-aware and overnight-safe evaluation rules as the spreadsheet and excludes GPS or other technical scan details from payroll-facing recap pages.
+
+### Rollout & Validation
+
+- [ ] **OPS-01**: Operators have one live-safe rollout and acceptance checklist that verifies contract defaults, WITA server-time, 24-hour outlet overnight cases, break-first scenarios, and export parity before the strict rules are used for payroll decisions.
+
+## Deferred Product Requirements
+
+### Payroll Follow-Ups
+
+- **PAY-01**: System calculates salary, lembur pay, or deduction totals automatically from recap outcomes
+- **PAY-02**: System generates payslips or downloadable payroll settlement documents
+- **PAY-03**: Manager can approve, reject, or adjust overtime classification before payroll lock
+
+### Workforce Workflow Follow-Ups
+
+- **CORR-01**: Employee can submit attendance correction requests for late, break, or missing scan disputes
+- **CORR-02**: Manager can resolve disputed break-first or overnight cases from a dedicated approval surface
+- **SCHED-D1**: Admin can configure custom shift windows per outlet instead of using the standard pagi, siang, and sore rule set
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Automatic payroll amount calculation or payslip generation | This milestone is limited to strict attendance evidence and salary-ready reports |
+| Free-form per-employee shift clock editing | The requested product direction is fixed business rules with shift bands, not arbitrary daily time authoring |
+| Overtime approval workflow | Strict evaluation and reporting come first; approval workflow can layer on later |
+| GPS, latitude/longitude, or raw technical scan columns in payroll recap exports | User explicitly wants compact salary-facing reports |
+| Multi-timezone support outside server WITA | All live outlets in scope are evaluated with one business timezone this milestone |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CONTRACT-01 | Phase 54 | Pending |
+| CONTRACT-02 | Phase 54 | Pending |
+| SCHED-01 | Phase 55 | Pending |
+| SCHED-02 | Phase 55 | Pending |
+| SCHED-03 | Phase 55 | Pending |
+| SCAN-01 | Phase 56 | Pending |
+| SCAN-02 | Phase 56 | Pending |
+| CONTRACT-03 | Phase 57 | Pending |
+| RECAP-01 | Phase 57 | Pending |
+| RECAP-02 | Phase 57 | Pending |
+| RECAP-03 | Phase 57 | Pending |
+| RECAP-04 | Phase 57 | Pending |
+| REPORT-01 | Phase 58 | Pending |
+| REPORT-02 | Phase 58 | Pending |
+| SCHED-04 | Phase 59 | Pending |
+| REPORT-03 | Phase 59 | Pending |
+| OPS-01 | Phase 60 | Pending |
+
+**Coverage:**
+- v8.0 requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0
+
+---
+*Requirements defined: 2026-03-26*
+*Last updated: 2026-03-26 after milestone v8.0 initialization*
