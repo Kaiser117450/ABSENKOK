@@ -21,7 +21,7 @@ class ScheduleTableView extends StatelessWidget {
 
   // Callbacks
   final void Function(Employee emp, DateTime date) onCellTap;
-  final void Function(String entryId) onEntryRemove;
+  final void Function(ScheduleEntry entry) onEntryTap;
   final void Function(Employee emp) onTimeOffTap;
   final VoidCallback onToggleSelectAll;
   final void Function(String empId) onToggleEmployee;
@@ -41,7 +41,7 @@ class ScheduleTableView extends StatelessWidget {
     required this.isBulkMode,
     required this.selectedEmployeeIds,
     required this.onCellTap,
-    required this.onEntryRemove,
+    required this.onEntryTap,
     required this.onTimeOffTap,
     required this.onToggleSelectAll,
     required this.onToggleEmployee,
@@ -105,7 +105,7 @@ class ScheduleTableView extends StatelessWidget {
           sakitIzin: getSakitIzin(emp.id, date),
           hasTimeOff: getHasTimeOff(emp.id, date),
           onTapEmpty: () => onCellTap(emp, date),
-          onTapAssigned: (entryId) => onEntryRemove(entryId),
+          onTapAssigned: onEntryTap,
         );
       },
       columnBuilder: (int index) {
@@ -119,12 +119,11 @@ class ScheduleTableView extends StatelessWidget {
         final isToday = _isToday(date);
         return TableSpan(
           extent: const MaxTableSpanExtent(
-            FixedTableSpanExtent(75),
+            FixedTableSpanExtent(92),
             FractionalTableSpanExtent(1 / 7),
           ),
           backgroundDecoration: isToday
-              ? TableSpanDecoration(
-                  color: Colors.amber.withValues(alpha: 0.08))
+              ? TableSpanDecoration(color: Colors.amber.withValues(alpha: 0.08))
               : null,
           foregroundDecoration: const TableSpanDecoration(
             border: TableSpanBorder(
@@ -138,9 +137,9 @@ class ScheduleTableView extends StatelessWidget {
           // Header row — fixed 44px
           return const TableSpan(extent: FixedTableSpanExtent(44));
         }
-        // Data rows — fixed 56px (slightly taller for better touch targets)
+        // Data rows — taller to allow the policy hint to wrap.
         return const TableSpan(
-          extent: FixedTableSpanExtent(56),
+          extent: FixedTableSpanExtent(72),
           foregroundDecoration: TableSpanDecoration(
             border: TableSpanBorder(
               trailing: BorderSide(color: Color(0xFFE5E7EB), width: 0.5),

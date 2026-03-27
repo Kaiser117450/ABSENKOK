@@ -9,21 +9,26 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
+import '../../models/employee_contract.dart';
+import '../../models/shift_band.dart';
 import '../../models/shift_schedule.dart';
 import '../../providers/app_provider.dart';
 import '../../services/pdf_service.dart';
+import '../../services/schedule_policy_service.dart';
 import '../../services/schedule_sqlite_service.dart';
+import 'widgets/schedule_policy_summary_card.dart';
 import 'widgets/schedule_table_view.dart';
 import 'widgets/schedule_legend.dart';
 
 class ShiftSchedulerScreen extends ConsumerStatefulWidget {
   final String? outletId;
   final String? outletName;
-  
+
   const ShiftSchedulerScreen({super.key, this.outletId, this.outletName});
 
   @override
-  ConsumerState<ShiftSchedulerScreen> createState() => _ShiftSchedulerScreenState();
+  ConsumerState<ShiftSchedulerScreen> createState() =>
+      _ShiftSchedulerScreenState();
 }
 
 class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
@@ -35,12 +40,12 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   // Bulk assign state
   Set<String> _selectedEmployeeIds = {};
   bool _isBulkMode = false;
-  
+
   // Data
   Map<String, Map<String, AttendanceType>> _sakitIzinMap = {};
   Map<String, List<DateTime>> _timeOffMap = {};
   Map<String, int> _leaveBalance = {};
-  
+
   // Settings
   DateTime _startDate = _getStartOfWeek(DateTime.now());
   ShiftTemplate? _template;
@@ -61,45 +66,58 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     setState(() => _isLoading = true);
     try {
       final outletId = widget.outletId ?? ref.read(appProvider).managedOutletId;
-      if (outletId == null) { setState(() => _isLoading = false); return; }
+      if (outletId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
       final empData = await SupabaseClientFactory.admin
-          .from('employees').select('*').eq('home_outlet_id', outletId).eq('is_active', true).order('name');
-      
-      final loadedEmployees = (empData as List).map((e) => Employee.fromJson(e as Map<String, dynamic>)).toList();
-      
+          .from('employees')
+          .select('*')
+          .eq('home_outlet_id', outletId)
+          .eq('is_active', true)
+          .order('name');
+
+      final loadedEmployees = (empData as List)
+          .map((e) => Employee.fromJson(e as Map<String, dynamic>))
+          .toList();
+
       await _loadSakitIzinData(outletId, loadedEmployees);
       await _loadTimeOffRequests(outletId, loadedEmployees);
       await _loadCarryOverBalance(outletId, loadedEmployees);
-      
+
       final endDate = _startDate.add(const Duration(days: 6));
-      
+
       // SUPABASE-FIRST: try cloud, cache to SQLite, fallback to SQLite on error
       OutletSchedule? existingSchedule;
       try {
-        existingSchedule = await _loadScheduleFromSupabase(outletId, _startDate, endDate, loadedEmployees);
+        existingSchedule = await _loadScheduleFromSupabase(
+            outletId, _startDate, endDate, loadedEmployees);
         if (existingSchedule != null) {
           // Write-through: cache to SQLite for offline use
           await ScheduleSQLiteService.saveSchedule(existingSchedule);
-          debugPrint('Loaded schedule from Supabase, cached to SQLite: ${existingSchedule.entries.length} entries');
+          debugPrint(
+              'Loaded schedule from Supabase, cached to SQLite: ${existingSchedule.entries.length} entries');
         }
       } catch (e) {
         debugPrint('Supabase fetch failed, falling back to SQLite: $e');
       }
       // Fallback to SQLite only if Supabase returned nothing or failed
-      existingSchedule ??= await ScheduleSQLiteService.getSchedule(outletId, _startDate, endDate);
+      existingSchedule ??= await ScheduleSQLiteService.getSchedule(
+          outletId, _startDate, endDate);
 
       setState(() {
         _employees = loadedEmployees;
-        _currentSchedule = existingSchedule ?? OutletSchedule(
-          id: '${outletId}_${_startDate.millisecondsSinceEpoch}',
-          outletId: outletId,
-          startDate: _startDate,
-          endDate: endDate,
-          template: ShiftTemplate.standard(outletId),
-          entries: [],
-          createdAt: DateTime.now(),
-        );
+        _currentSchedule = existingSchedule ??
+            OutletSchedule(
+              id: '${outletId}_${_startDate.millisecondsSinceEpoch}',
+              outletId: outletId,
+              startDate: _startDate,
+              endDate: endDate,
+              template: ShiftTemplate.standard(outletId),
+              entries: [],
+              createdAt: DateTime.now(),
+            );
         _template = _currentSchedule!.template;
         _isLoading = false;
       });
@@ -109,7 +127,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     }
   }
 
-  Future<OutletSchedule?> _loadScheduleFromSupabase(String outletId, DateTime startDate, DateTime endDate, List<Employee> employees) async {
+  Future<OutletSchedule?> _loadScheduleFromSupabase(String outletId,
+      DateTime startDate, DateTime endDate, List<Employee> employees) async {
     try {
       // Load schedule header
       final scheduleData = await SupabaseClientFactory.admin
@@ -122,20 +141,21 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           .order('created_at', ascending: false)
           .limit(1)
           .maybeSingle();
-      
+
       if (scheduleData == null) {
         debugPrint('No schedule found in Supabase');
         return null;
       }
-      
+
       // Load entries
       final entriesData = await SupabaseClientFactory.admin
           .from('schedule_entries')
           .select('*')
           .eq('schedule_id', scheduleData['id']);
-      
-      debugPrint('Loaded ${(entriesData as List).length} entries from Supabase');
-      
+
+      debugPrint(
+          'Loaded ${(entriesData as List).length} entries from Supabase');
+
       // Build entries list
       final entries = (entriesData as List).map((e) {
         final shiftJson = e['shift_slot'] as Map<String, dynamic>;
@@ -151,7 +171,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           notes: e['notes'],
         );
       }).toList();
-      
+
       return OutletSchedule(
         id: scheduleData['id'],
         outletId: outletId,
@@ -167,43 +187,55 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     }
   }
 
-  Future<void> _loadSakitIzinData(String outletId, List<Employee> employees) async {
+  Future<void> _loadSakitIzinData(
+      String outletId, List<Employee> employees) async {
     try {
       final endDate = _startDate.add(const Duration(days: 6));
       final logsData = await SupabaseClientFactory.admin
-          .from('attendance_logs').select('employee_id, type, scanned_at')
+          .from('attendance_logs')
+          .select('employee_id, type, scanned_at')
           .inFilter('employee_id', employees.map((e) => e.id).toList())
           .inFilter('type', ['sakit', 'izin'])
           .gte('scanned_at', _startDate.toIso8601String())
           .lte('scanned_at', endDate.toIso8601String());
-      
+
       final Map<String, Map<String, AttendanceType>> tempMap = {};
       for (final log in logsData as List) {
         final empId = log['employee_id'] as String;
         final type = AttendanceTypeExt.fromString(log['type'] as String);
-        final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.parse(log['scanned_at'] as String));
-        tempMap[empId] ??= {}; tempMap[empId]![dateKey] = type;
+        final dateKey = DateFormat('yyyy-MM-dd')
+            .format(DateTime.parse(log['scanned_at'] as String));
+        tempMap[empId] ??= {};
+        tempMap[empId]![dateKey] = type;
       }
       setState(() => _sakitIzinMap = tempMap);
-    } catch (e) { debugPrint('Error: $e'); }
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
   }
 
-  Future<void> _loadTimeOffRequests(String outletId, List<Employee> employees) async {
+  Future<void> _loadTimeOffRequests(
+      String outletId, List<Employee> employees) async {
     try {
       final endDate = _startDate.add(const Duration(days: 6));
       final requestsData = await SupabaseClientFactory.admin
-          .from('time_off_requests').select('*')
-          .eq('outlet_id', outletId).eq('status', 'approved')
+          .from('time_off_requests')
+          .select('*')
+          .eq('outlet_id', outletId)
+          .eq('status', 'approved')
           .gte('request_date', _startDate.toIso8601String())
           .lte('request_date', endDate.toIso8601String());
-      
+
       final Map<String, List<DateTime>> tempMap = {};
       for (final req in requestsData as List) {
         final empId = req['employee_id'] as String;
-        tempMap[empId] ??= []; tempMap[empId]!.add(DateTime.parse(req['request_date'] as String));
+        tempMap[empId] ??= [];
+        tempMap[empId]!.add(DateTime.parse(req['request_date'] as String));
       }
       setState(() => _timeOffMap = tempMap);
-    } catch (e) { debugPrint('Error: $e'); }
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
   }
 
   AttendanceType? _getSakitIzin(String empId, DateTime date) {
@@ -211,36 +243,38 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   }
 
   bool _hasTimeOff(String empId, DateTime date) {
-    return (_timeOffMap[empId] ?? []).any((d) => d.year == date.year && d.month == date.month && d.day == date.day);
+    return (_timeOffMap[empId] ?? []).any((d) =>
+        d.year == date.year && d.month == date.month && d.day == date.day);
   }
 
   /// Load carry over balance dari minggu lalu
-  Future<void> _loadCarryOverBalance(String outletId, List<Employee> employees) async {
+  Future<void> _loadCarryOverBalance(
+      String outletId, List<Employee> employees) async {
     try {
       final prevWeekEnd = _startDate.subtract(const Duration(days: 1));
       final prevWeekStart = prevWeekEnd.subtract(const Duration(days: 6));
-      
+
       // Load schedule minggu lalu
-      final prevSchedule = await ScheduleSQLiteService.getSchedule(outletId, prevWeekStart, prevWeekEnd);
-      
+      final prevSchedule = await ScheduleSQLiteService.getSchedule(
+          outletId, prevWeekStart, prevWeekEnd);
+
       final Map<String, int> tempBalance = {};
-      
+
       for (final emp in employees) {
         if (prevSchedule != null) {
           // Hitung berapa hari libur yang diambil minggu lalu
           int leaveCount = 0;
           for (int i = 0; i < 7; i++) {
             final date = prevWeekStart.add(Duration(days: i));
-            final hasLibur = prevSchedule.entries.any((e) => 
-              e.employeeId == emp.id && 
-              e.date.year == date.year && 
-              e.date.month == date.month && 
-              e.date.day == date.day &&
-              (e.shift.name.toLowerCase().contains('libur') || e.isDayOff)
-            );
+            final hasLibur = prevSchedule.entries.any((e) =>
+                e.employeeId == emp.id &&
+                e.date.year == date.year &&
+                e.date.month == date.month &&
+                e.date.day == date.day &&
+                (e.shift.name.toLowerCase().contains('libur') || e.isDayOff));
             if (hasLibur) leaveCount++;
           }
-          
+
           // Carry over = 1 (wajib) - leaveCount (yang diambil)
           // Jika 0 libur minggu lalu, carry over = 1
           // Jika 1 libur minggu lalu, carry over = 0
@@ -250,22 +284,84 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           tempBalance[emp.id] = 0;
         }
       }
-      
+
       setState(() => _leaveBalance = tempBalance);
     } catch (e) {
       debugPrint('Error loading carry over: $e');
     }
   }
 
-  void _addShift(Employee emp, DateTime date, ShiftSlot shift) {
+  ShiftSlot _buildShiftForEmployee(
+    Employee emp,
+    ShiftBand band, {
+    int? requiredWorkMinutes,
+  }) {
+    if (band == ShiftBand.libur) {
+      return ShiftSlot.libur();
+    }
+
+    return ShiftSlot.fromBand(
+      band: band,
+      contract: emp.employmentContract,
+      requiredWorkMinutes: requiredWorkMinutes,
+    );
+  }
+
+  String _formatRequiredHours(int minutes) => '${minutes ~/ 60}j';
+
+  String _formatClock(int hour, int minute) {
+    final hh = hour.toString().padLeft(2, '0');
+    final mm = minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
+  }
+
+  String _formatLateCutoff(ShiftSlot shift) {
+    if (shift.band == ShiftBand.libur) {
+      return '-';
+    }
+    return _formatClock(shift.lateCutoffHour, shift.lateCutoffMinute);
+  }
+
+  String _formatBreakFirst(ShiftSlot shift) {
+    if (shift.band == ShiftBand.libur) {
+      return 'Tidak berlaku';
+    }
+    return 'sampai ${_formatClock(shift.breakFirstDeadlineHour, shift.breakFirstDeadlineMinute)} (${shift.requiredWorkMinutes == SchedulePolicyService.parttimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
+  }
+
+  void _replaceEntryForDay(Employee emp, DateTime date, ShiftSlot shift) {
+    _currentSchedule!.entries.removeWhere((e) =>
+        e.employeeId == emp.id &&
+        e.date.year == date.year &&
+        e.date.month == date.month &&
+        e.date.day == date.day);
+
+    _currentSchedule!.entries.add(
+      ScheduleEntry.fromEmployee(
+        id: '${DateTime.now().millisecondsSinceEpoch}_${emp.id}_${date.day}',
+        date: date,
+        employee: emp,
+        shift: shift,
+        isDayOff: shift.band == ShiftBand.libur,
+      ),
+    );
+  }
+
+  void _addShift(Employee emp, DateTime date, ShiftBand band,
+      {int? requiredWorkMinutes}) {
     final sakitIzin = _getSakitIzin(emp.id, date);
-    if (sakitIzin != null) { _showError('${emp.name} sedang ${sakitIzin.label}'); return; }
+    if (sakitIzin != null) {
+      _showError('${emp.name} sedang ${sakitIzin.label}');
+      return;
+    }
+    final shift = _buildShiftForEmployee(
+      emp,
+      band,
+      requiredWorkMinutes: requiredWorkMinutes,
+    );
 
     setState(() {
-      _currentSchedule!.entries.removeWhere((e) => e.employeeId == emp.id && e.date.year == date.year && e.date.month == date.month && e.date.day == date.day);
-      _currentSchedule!.entries.add(ScheduleEntry.fromEmployee(
-        id: '${DateTime.now().millisecondsSinceEpoch}_${emp.id}', date: date, employee: emp, shift: shift,
-      ));
+      _replaceEntryForDay(emp, date, shift);
       _hasUnsavedChanges = true;
     });
   }
@@ -298,10 +394,11 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     });
   }
 
-  void _bulkAssign(ShiftSlot shift) {
+  void _bulkAssignBand(ShiftBand band) {
     if (_selectedEmployeeIds.isEmpty || _currentSchedule == null) return;
     final days = List.generate(7, (i) => _startDate.add(Duration(days: i)));
-    final selectedEmps = _employees.where((e) => _selectedEmployeeIds.contains(e.id)).toList();
+    final selectedEmps =
+        _employees.where((e) => _selectedEmployeeIds.contains(e.id)).toList();
 
     setState(() {
       for (final emp in selectedEmps) {
@@ -313,24 +410,186 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
           // Remove existing entry for this employee+day
           _currentSchedule!.entries.removeWhere((e) =>
-            e.employeeId == emp.id &&
-            e.date.year == day.year && e.date.month == day.month && e.date.day == day.day);
+              e.employeeId == emp.id &&
+              e.date.year == day.year &&
+              e.date.month == day.month &&
+              e.date.day == day.day);
 
-          // Add new entry
-          final isDayOff = shift.name == 'Libur';
-          _currentSchedule!.entries.add(ScheduleEntry.fromEmployee(
-            id: '${DateTime.now().millisecondsSinceEpoch}_${emp.id}_${day.day}',
-            date: day,
-            employee: emp,
-            shift: shift,
-            isDayOff: isDayOff,
-          ));
+          _replaceEntryForDay(emp, day, _buildShiftForEmployee(emp, band));
         }
       }
       _hasUnsavedChanges = true;
     });
 
-    _showSuccess('${shift.name} assigned to ${selectedEmps.length} karyawan');
+    _showSuccess('${band.label} assigned to ${selectedEmps.length} karyawan');
+  }
+
+  String _buildBulkRequiredHoursSummary(
+      ShiftBand band, List<Employee> employees) {
+    if (band == ShiftBand.libur) {
+      return 'Libur';
+    }
+
+    final hasFulltime =
+        employees.any((emp) => emp.employmentContract.dbValue == 'FULLTIME');
+    final hasParttime =
+        employees.any((emp) => emp.employmentContract.dbValue == 'PARTTIME');
+
+    if (hasFulltime && hasParttime) {
+      return 'FULLTIME 10j • PARTTIME 9j';
+    }
+    if (hasParttime) {
+      return 'PARTTIME 9j';
+    }
+    return 'FULLTIME 10j';
+  }
+
+  String _buildBulkBreakFirstSummary(ShiftBand band, List<Employee> employees) {
+    if (band == ShiftBand.libur) {
+      return 'Tidak berlaku';
+    }
+
+    final fulltimeShift = ShiftSlot.fromBand(
+      band: band,
+      contract: EmployeeContract.fulltime,
+    );
+    final parttimeShift = ShiftSlot.fromBand(
+      band: band,
+      contract: EmployeeContract.parttime,
+    );
+
+    final hasFulltime =
+        employees.any((emp) => emp.employmentContract.dbValue == 'FULLTIME');
+    final hasParttime =
+        employees.any((emp) => emp.employmentContract.dbValue == 'PARTTIME');
+
+    if (hasFulltime && hasParttime) {
+      return 'FULLTIME sampai ${_formatClock(fulltimeShift.breakFirstDeadlineHour, fulltimeShift.breakFirstDeadlineMinute)} • PARTTIME sampai ${_formatClock(parttimeShift.breakFirstDeadlineHour, parttimeShift.breakFirstDeadlineMinute)}';
+    }
+    if (hasParttime) {
+      return 'PARTTIME sampai ${_formatClock(parttimeShift.breakFirstDeadlineHour, parttimeShift.breakFirstDeadlineMinute)}';
+    }
+    return 'FULLTIME sampai ${_formatClock(fulltimeShift.breakFirstDeadlineHour, fulltimeShift.breakFirstDeadlineMinute)}';
+  }
+
+  Widget _buildReviewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 88,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade700,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBulkReviewSheet(ShiftBand band) {
+    final selectedEmployees =
+        _employees.where((e) => _selectedEmployeeIds.contains(e.id)).toList();
+    if (selectedEmployees.isEmpty) {
+      return;
+    }
+
+    final policyShift = band == ShiftBand.libur
+        ? ShiftSlot.libur()
+        : ShiftSlot.fromBand(band: band);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tinjau Penugasan',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Periksa band, jam wajib, dan batas telat sebelum konfirmasi.',
+                style: TextStyle(
+                    fontSize: 13, color: Color(0xFF475569), height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Text(
+                  '${selectedEmployees.length} karyawan • ${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_startDate.add(const Duration(days: 6)))}',
+                  style: const TextStyle(
+                      fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildReviewRow('Band', policyShift.band.label),
+              _buildReviewRow(
+                'Jam wajib',
+                _buildBulkRequiredHoursSummary(band, selectedEmployees),
+              ),
+              _buildReviewRow(
+                'Batas telat',
+                band == ShiftBand.libur
+                    ? 'Tidak berlaku'
+                    : _formatLateCutoff(policyShift),
+              ),
+              _buildReviewRow(
+                'Break-first',
+                _buildBulkBreakFirstSummary(band, selectedEmployees),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _bulkAssignBand(band);
+                  },
+                  child: const Text('Konfirmasi Penugasan'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Batal'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showBulkAssignSheet() {
@@ -348,28 +607,52 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 'Assign shift untuk ${_selectedEmployeeIds.length} karyawan',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
             ),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFF3B82F6), radius: 16),
-              title: const Text('Pagi (09:00-17:00)'),
-              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.pagi()); },
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFF3B82F6), radius: 16),
+              title: const Text('Pagi'),
+              subtitle:
+                  const Text('07:00 batas telat • jam wajib ikut kontrak'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showBulkReviewSheet(ShiftBand.pagi);
+              },
             ),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFF59E0B), radius: 16),
-              title: const Text('Siang (12:00-20:00)'),
-              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.siang()); },
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFF59E0B), radius: 16),
+              title: const Text('Siang'),
+              subtitle:
+                  const Text('10:00 batas telat • jam wajib ikut kontrak'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showBulkReviewSheet(ShiftBand.siang);
+              },
             ),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFF97316), radius: 16),
-              title: const Text('Sore (14:00-22:00)'),
-              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.sore()); },
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFF97316), radius: 16),
+              title: const Text('Sore'),
+              subtitle:
+                  const Text('15:00 batas telat • jam wajib ikut kontrak'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showBulkReviewSheet(ShiftBand.sore);
+              },
             ),
             ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDC2626), radius: 16),
+              leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFDC2626), radius: 16),
               title: const Text('Libur'),
-              onTap: () { Navigator.pop(ctx); _bulkAssign(ShiftSlot.libur()); },
+              subtitle: const Text('Hari libur'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showBulkReviewSheet(ShiftBand.libur);
+              },
             ),
             const SizedBox(height: 8),
           ],
@@ -380,7 +663,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
   Future<void> _generateAutoSchedule() async {
     if (_employees.isEmpty) return;
-    
+
     // Tampilkan dialog pilihan template - SEDERHANA
     String? selectedTemplate = await showDialog<String>(
       context: context,
@@ -393,39 +676,44 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             // 2 Shift
             ListTile(
               leading: const Icon(Icons.store, color: Color(0xFF3B82F6)),
-              title: const Text('2 Shift', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Pagi & Siang', style: TextStyle(fontSize: 12)),
+              title: const Text('2 Shift',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle:
+                  const Text('Pagi & Siang', style: TextStyle(fontSize: 12)),
               onTap: () => Navigator.pop(dialogCtx, '2shift'),
             ),
             const Divider(),
             // 3 Shift
             ListTile(
               leading: const Icon(Icons.access_time, color: Color(0xFFDC2626)),
-              title: const Text('3 Shift (24 Jam)', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Pagi - Siang - Sore', style: TextStyle(fontSize: 12)),
+              title: const Text('3 Shift (24 Jam)',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Pagi - Siang - Sore',
+                  style: TextStyle(fontSize: 12)),
               onTap: () => Navigator.pop(dialogCtx, '3shift'),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogCtx, null), 
+            onPressed: () => Navigator.pop(dialogCtx, null),
             child: const Text('Batal'),
           ),
         ],
       ),
     );
-    
+
     if (selectedTemplate == null) return;
-    
+
     // Set template
-    final outletId = widget.outletId ?? ref.read(appProvider).managedOutletId ?? '';
+    final outletId =
+        widget.outletId ?? ref.read(appProvider).managedOutletId ?? '';
     if (selectedTemplate == '2shift') {
       _template = ShiftTemplate.pagiSiang(outletId);
     } else {
       _template = ShiftTemplate.standard(outletId);
     }
-    
+
     setState(() => _isLoading = true);
 
     try {
@@ -436,48 +724,60 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         // Count existing libur + sakit + izin + timeoff minggu ini
         int existingLeave = 0;
         final leaveDays = <DateTime>[];
-        
+
         for (final day in days) {
           if (_getSakitIzin(emp.id, day) != null || _hasTimeOff(emp.id, day)) {
             existingLeave++;
             leaveDays.add(day);
           }
         }
-        
+
         // Ambil carry over dari minggu lalu
         final carryOver = _leaveBalance[emp.id] ?? 0;
-        
+
         // Total libur yang harus diassign = 1 wajib + carry over - yang sudah ada
         int needLeave = (1 + carryOver) - existingLeave;
-        
+
         if (needLeave > 0) {
           // Assign libur ke hari yang masih kosong
-          final availableDays = days.where((d) => !leaveDays.contains(d)).toList()..shuffle();
+          final availableDays =
+              days.where((d) => !leaveDays.contains(d)).toList()..shuffle();
           for (int i = 0; i < needLeave && i < availableDays.length; i++) {
             leaveDays.add(availableDays[i]);
           }
         }
-        
+
         // Update carry over untuk minggu depan:
         // Jika tidak cukup hari untuk assign semua libur, sisa carry over ke depan
         final assignedLeave = leaveDays.length;
         final totalRequired = 1 + carryOver;
-        final remainingLeave = totalRequired > assignedLeave ? totalRequired - assignedLeave : 0;
+        final remainingLeave =
+            totalRequired > assignedLeave ? totalRequired - assignedLeave : 0;
         _leaveBalance[emp.id] = remainingLeave;
 
         // Generate entries
         for (final day in days) {
           if (leaveDays.contains(day)) {
             newEntries.add(ScheduleEntry.fromEmployee(
-              id: 'libur_${emp.id}_${day.day}', date: day, employee: emp, shift: ShiftSlot.libur(),
+              id: 'libur_${emp.id}_${day.day}',
+              date: day,
+              employee: emp,
+              shift: ShiftSlot.libur(),
             ));
-          } else if (_getSakitIzin(emp.id, day) == null && !_hasTimeOff(emp.id, day)) {
+          } else if (_getSakitIzin(emp.id, day) == null &&
+              !_hasTimeOff(emp.id, day)) {
             // Rotate shift berdasarkan template (2 atau 3 shift)
-            final shiftSlots = _template?.slots ?? [ShiftSlot.pagi(), ShiftSlot.siang(), ShiftSlot.sore()];
-            final shiftIndex = (_employees.indexOf(emp) + days.indexOf(day)) % shiftSlots.length;
-            final shift = shiftSlots[shiftIndex];
+            final shiftSlots = _template?.slots ??
+                [ShiftSlot.pagi(), ShiftSlot.siang(), ShiftSlot.sore()];
+            final shiftIndex = (_employees.indexOf(emp) + days.indexOf(day)) %
+                shiftSlots.length;
+            final shift =
+                _buildShiftForEmployee(emp, shiftSlots[shiftIndex].band);
             newEntries.add(ScheduleEntry.fromEmployee(
-              id: 'shift_${emp.id}_${day.day}', date: day, employee: emp, shift: shift,
+              id: 'shift_${emp.id}_${day.day}',
+              date: day,
+              employee: emp,
+              shift: shift,
             ));
           }
         }
@@ -500,90 +800,116 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       _hasUnsavedChanges = true;
 
       setState(() => _isLoading = false);
-      _showSuccess('Jadwal ${_template!.name} generated! Tap Simpan untuk sync ke cloud.');
+      _showSuccess(
+          'Jadwal ${_template!.name} generated! Tap Simpan untuk sync ke cloud.');
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Error: $e');
     }
   }
 
-
-
   void _showTimeOffDialog(Employee emp) {
     DateTime? selectedDate;
     showDialog(
       context: context,
-      useRootNavigator: false,  // PENTING
+      useRootNavigator: false, // PENTING
       builder: (dialogContext) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text('Request Libur - ${emp.name}'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Pilih hari libur:', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Pilih hari libur:',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: List.generate(7, (i) {
                   final date = _startDate.add(Duration(days: i));
-                  final dayName = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][date.weekday % 7];
+                  final dayName = [
+                    'Sen',
+                    'Sel',
+                    'Rab',
+                    'Kam',
+                    'Jum',
+                    'Sab',
+                    'Min'
+                  ][date.weekday % 7];
                   final isSelected = selectedDate == date;
                   return ChoiceChip(
                     label: Text(
                       '$dayName ${date.day}',
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     backgroundColor: Colors.grey.shade200,
-                    onSelected: (_) => setDialogState(() => selectedDate = date),
+                    onSelected: (_) =>
+                        setDialogState(() => selectedDate = date),
                   );
                 }),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Batal')),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Batal')),
             ElevatedButton(
-              onPressed: selectedDate == null ? null : () async {
-                try {
-                  final outletId = widget.outletId ?? ref.read(appProvider).managedOutletId;
-                  if (outletId == null) throw Exception('No outlet');
-                  
-                  // Format date untuk PostgreSQL (YYYY-MM-DD)
-                  final dateStr = selectedDate!.toIso8601String().split('T')[0];
-                  
-                  debugPrint('Saving time_off: emp=${emp.id}, outlet=$outletId, date=$dateStr');
-                  
-                  // Insert tanpa ID (Supabase akan generate UUID otomatis)
-                  await SupabaseClientFactory.admin.from('time_off_requests').insert({
-                    'employee_id': emp.id,
-                    'outlet_id': outletId,
-                    'request_date': dateStr,
-                    'reason': 'Request libur',
-                    'status': 'approved',
-                  });
-                  
-                  Navigator.pop(dialogContext);
-                  _showSuccess('Request libur disimpan');
-                  _loadData();
-                } catch (e) { 
-                  debugPrint('Time off error: $e');
-                  Navigator.pop(dialogContext);
-                  _showError('Gagal menyimpan: $e'); 
-                }
-              },
+              onPressed: selectedDate == null
+                  ? null
+                  : () async {
+                      try {
+                        final outletId = widget.outletId ??
+                            ref.read(appProvider).managedOutletId;
+                        if (outletId == null) throw Exception('No outlet');
+
+                        // Format date untuk PostgreSQL (YYYY-MM-DD)
+                        final dateStr =
+                            selectedDate!.toIso8601String().split('T')[0];
+
+                        debugPrint(
+                            'Saving time_off: emp=${emp.id}, outlet=$outletId, date=$dateStr');
+
+                        // Insert tanpa ID (Supabase akan generate UUID otomatis)
+                        await SupabaseClientFactory.admin
+                            .from('time_off_requests')
+                            .insert({
+                          'employee_id': emp.id,
+                          'outlet_id': outletId,
+                          'request_date': dateStr,
+                          'reason': 'Request libur',
+                          'status': 'approved',
+                        });
+
+                        if (!dialogContext.mounted) {
+                          return;
+                        }
+
+                        Navigator.pop(dialogContext);
+                        _showSuccess('Request libur disimpan');
+                        _loadData();
+                      } catch (e) {
+                        debugPrint('Time off error: $e');
+                        if (!dialogContext.mounted) {
+                          return;
+                        }
+                        Navigator.pop(dialogContext);
+                        _showError('Gagal menyimpan: $e');
+                      }
+                    },
               child: const Text('Simpan'),
             ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _saveSchedule() async {
     if (_currentSchedule == null) return;
@@ -591,8 +917,10 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     try {
       // 1. Save ke Supabase FIRST (source of truth)
       try {
-        final startDateStr = _currentSchedule!.startDate.toIso8601String().split('T')[0];
-        final endDateStr = _currentSchedule!.endDate.toIso8601String().split('T')[0];
+        final startDateStr =
+            _currentSchedule!.startDate.toIso8601String().split('T')[0];
+        final endDateStr =
+            _currentSchedule!.endDate.toIso8601String().split('T')[0];
 
         // 1a. Cek apakah ada active schedule di periode ini
         final existing = await SupabaseClientFactory.admin
@@ -607,32 +935,41 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         final existingId = existing?['id'] as String?;
 
         // 1b. Selalu buat schedule row BARU
-        final result = await SupabaseClientFactory.admin.from('schedules').insert({
-          'outlet_id': _currentSchedule!.outletId,
-          'start_date': startDateStr,
-          'end_date': endDateStr,
-          'is_active': true,
-        }).select('id').single();
+        final result = await SupabaseClientFactory.admin
+            .from('schedules')
+            .insert({
+              'outlet_id': _currentSchedule!.outletId,
+              'start_date': startDateStr,
+              'end_date': endDateStr,
+              'is_active': true,
+            })
+            .select('id')
+            .single();
 
         final newScheduleId = result['id'];
         debugPrint('Created new schedule: $newScheduleId');
 
         // 1c. Bulk Insert data ke schedule_entries dengan scheduleId baru
-        final entriesData = _currentSchedule!.entries.map((entry) => {
-          'schedule_id': newScheduleId,
-          'date': entry.date.toIso8601String().split('T')[0],
-          'employee_id': entry.employeeId,
-          'custom_name': entry.customName,
-          'display_name': entry.displayName,
-          'is_custom_name': entry.isCustomName,
-          'shift_slot': entry.shift.toJson(),
-          'is_day_off': entry.isDayOff,
-          'notes': entry.notes,
-        }).toList();
+        final entriesData = _currentSchedule!.entries
+            .map((entry) => {
+                  'schedule_id': newScheduleId,
+                  'date': entry.date.toIso8601String().split('T')[0],
+                  'employee_id': entry.employeeId,
+                  'custom_name': entry.customName,
+                  'display_name': entry.displayName,
+                  'is_custom_name': entry.isCustomName,
+                  'shift_slot': entry.shift.toJson(),
+                  'is_day_off': entry.isDayOff,
+                  'notes': entry.notes,
+                })
+            .toList();
 
         if (entriesData.isNotEmpty) {
-          await SupabaseClientFactory.admin.from('schedule_entries').insert(entriesData);
-          debugPrint('Bulk inserted ${entriesData.length} entries for $newScheduleId');
+          await SupabaseClientFactory.admin
+              .from('schedule_entries')
+              .insert(entriesData);
+          debugPrint(
+              'Bulk inserted ${entriesData.length} entries for $newScheduleId');
         }
 
         // 1d. Jika inserts sukses, soft-delete schedule lama
@@ -682,7 +1019,10 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       // Buat salinan entries yang memasukkan status sakit/izin secara eksplisit
       // supaya PDF bisa merendernya.
       final days = List.generate(
-        _currentSchedule!.endDate.difference(_currentSchedule!.startDate).inDays + 1,
+        _currentSchedule!.endDate
+                .difference(_currentSchedule!.startDate)
+                .inDays +
+            1,
         (i) => _currentSchedule!.startDate.add(Duration(days: i)),
       );
 
@@ -759,9 +1099,9 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   }
 
   void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), backgroundColor: Colors.green));
-  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(msg), backgroundColor: Colors.red));
+      SnackBar(content: Text(msg), backgroundColor: Colors.green));
+  void _showError(String msg) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
 
   // ===========================================================================
   // BUILD METHODS
@@ -772,24 +1112,29 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: _isBulkMode ? Colors.orange.shade700 : AppColors.primary,
+        backgroundColor:
+            _isBulkMode ? Colors.orange.shade700 : AppColors.primary,
         leading: _isBulkMode
-          ? IconButton(icon: const Icon(Icons.close), onPressed: _toggleBulkMode)
-          : null,
+            ? IconButton(
+                icon: const Icon(Icons.close), onPressed: _toggleBulkMode)
+            : null,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_isBulkMode ? 'Bulk Assign' : 'Jadwal Shift', style: const TextStyle(fontSize: 18)),
+          Text(_isBulkMode ? 'Bulk Assign' : 'Jadwal Shift',
+              style: const TextStyle(fontSize: 18)),
           Text(
             _isBulkMode
-              ? '${_selectedEmployeeIds.length} karyawan dipilih'
-              : (widget.outletName ?? 'Unknown'),
+                ? '${_selectedEmployeeIds.length} karyawan dipilih'
+                : (widget.outletName ?? 'Unknown'),
             style: const TextStyle(fontSize: 12),
           ),
         ]),
         actions: [
-          IconButton(icon: const Icon(Icons.picture_as_pdf), onPressed: _exportToPdf),
+          IconButton(
+              icon: const Icon(Icons.picture_as_pdf), onPressed: _exportToPdf),
           Stack(
             children: [
-              IconButton(icon: const Icon(Icons.save), onPressed: _saveSchedule),
+              IconButton(
+                  icon: const Icon(Icons.save), onPressed: _saveSchedule),
               if (_hasUnsavedChanges)
                 Positioned(
                   right: 8,
@@ -807,7 +1152,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           ),
         ],
       ),
-      body: _isLoading ? const Center(child: CircularProgressIndicator()) 
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
           : Column(children: [
               _buildHeader(),
               const ScheduleLegend(),
@@ -822,7 +1168,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                   isBulkMode: _isBulkMode,
                   selectedEmployeeIds: _selectedEmployeeIds,
                   onCellTap: (emp, date) => _showShiftPicker(emp, date),
-                  onEntryRemove: (entryId) => _removeEntry(entryId),
+                  onEntryTap: _showAssignedEntryEditor,
                   onTimeOffTap: (emp) => _showTimeOffDialog(emp),
                   onToggleSelectAll: _toggleSelectAll,
                   onToggleEmployee: (empId) {
@@ -849,7 +1195,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             backgroundColor: _isBulkMode ? Colors.orange : Colors.blueGrey,
             child: Icon(
               _isBulkMode ? Icons.assignment : Icons.checklist,
-              color: Colors.white, size: 20,
+              color: Colors.white,
+              size: 20,
             ),
           ),
           const SizedBox(height: 8),
@@ -858,7 +1205,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             heroTag: 'auto',
             onPressed: _generateAutoSchedule,
             backgroundColor: AppColors.primary,
-            child: const Icon(Icons.auto_fix_high, color: Colors.white, size: 20),
+            child:
+                const Icon(Icons.auto_fix_high, color: Colors.white, size: 20),
           ),
         ],
       ),
@@ -869,74 +1217,233 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       color: Colors.white,
-      child: Row(children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left, size: 28), 
-          onPressed: () { 
-            setState(() {
-              _startDate = _startDate.subtract(const Duration(days: 7)); 
-            });
-            _loadData(); 
-          },
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              Text(
-                '${DateFormat('dd MMM').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_startDate.add(const Duration(days: 6)))}',
-                textAlign: TextAlign.center, 
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+      child: Column(
+        children: [
+          Row(children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, size: 28),
+              onPressed: () {
+                setState(() {
+                  _startDate = _startDate.subtract(const Duration(days: 7));
+                });
+                _loadData();
+              },
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  Text(
+                    '${DateFormat('dd MMM').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_startDate.add(const Duration(days: 6)))}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Band utama, jam wajib, dan batas telat minggu ini',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Buka: 09:00 - 22:00',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, size: 28),
+              onPressed: () {
+                setState(() {
+                  _startDate = _startDate.add(const Duration(days: 7));
+                });
+                _loadData();
+              },
+            ),
+          ]),
+          const SchedulePolicySummaryCard(),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignedEntryEditor(ScheduleEntry entry) {
+    final emp = _employees.firstWhere(
+      (employee) => employee.id == entry.employeeId,
+      orElse: () => Employee(
+        id: entry.employeeId ?? '',
+        name: entry.displayName,
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      ),
+    );
+    const workMinuteOptions = [480, 540, 600, 660, 720];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        var selectedBand = entry.shift.band;
+        var selectedMinutes = entry.shift.requiredWorkMinutes == 0
+            ? SchedulePolicyService.defaultRequiredWorkMinutes(
+                emp.employmentContract)
+            : entry.shift.requiredWorkMinutes;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final previewShift = _buildShiftForEmployee(
+              emp,
+              selectedBand,
+              requiredWorkMinutes:
+                  selectedBand == ShiftBand.libur ? null : selectedMinutes,
+            );
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Atur ${emp.name}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 18),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: ShiftBand.values.map((band) {
+                        return ChoiceChip(
+                          label: Text(band.label),
+                          selected: selectedBand == band,
+                          onSelected: (_) =>
+                              setSheetState(() => selectedBand = band),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Jam wajib',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: workMinuteOptions.map((minutes) {
+                        return ChoiceChip(
+                          label: Text(_formatRequiredHours(minutes)),
+                          selected: selectedMinutes == minutes,
+                          onSelected: selectedBand == ShiftBand.libur
+                              ? null
+                              : (_) => setSheetState(
+                                  () => selectedMinutes = minutes),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildReviewRow('Band', previewShift.band.label),
+                    _buildReviewRow(
+                      'Jam wajib',
+                      previewShift.band == ShiftBand.libur
+                          ? 'Libur'
+                          : _formatRequiredHours(
+                              previewShift.requiredWorkMinutes),
+                    ),
+                    _buildReviewRow(
+                        'Batas telat', _formatLateCutoff(previewShift)),
+                    _buildReviewRow(
+                        'Break-first', _formatBreakFirst(previewShift)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              _removeEntry(entry.id);
+                              Navigator.pop(sheetContext);
+                            },
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Hapus'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _addShift(
+                                emp,
+                                entry.date,
+                                selectedBand,
+                                requiredWorkMinutes:
+                                    selectedBand == ShiftBand.libur
+                                        ? null
+                                        : selectedMinutes,
+                              );
+                              Navigator.pop(sheetContext);
+                            },
+                            child: const Text('Simpan'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right, size: 28),
-          onPressed: () { 
-            setState(() {
-              _startDate = _startDate.add(const Duration(days: 7)); 
-            });
-            _loadData(); 
+            );
           },
-        ),
-      ]),
+        );
+      },
     );
   }
 
   void _showShiftPicker(Employee emp, DateTime date) {
-    if (_getSakitIzin(emp.id, date) != null || _hasTimeOff(emp.id, date)) return;
-    
+    if (_getSakitIzin(emp.id, date) != null || _hasTimeOff(emp.id, date)) {
+      return;
+    }
+
     showDialog(
-      context: context, 
-      useRootNavigator: false,  // PENTING: Jangan pop ke root
+      context: context,
+      useRootNavigator: false, // PENTING: Jangan pop ke root
       builder: (dialogContext) => AlertDialog(
         title: Text('Pilih Shift - ${emp.name}'),
-        content: Column(mainAxisSize: MainAxisSize.min,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _shiftOption(emp, date, dialogContext, ShiftSlot.pagi(), Icons.wb_sunny, 'Pagi', '09:00 - 17:00'),
-            _shiftOption(emp, date, dialogContext, ShiftSlot.siang(), Icons.wb_twilight, 'Siang', '12:00 - 20:00'),
-            _shiftOption(emp, date, dialogContext, ShiftSlot.sore(), Icons.nights_stay, 'Sore', '14:00 - 22:00'),
-            _shiftOption(emp, date, dialogContext, ShiftSlot.libur(), Icons.beach_access, 'Libur', 'Hari libur'),
+            _shiftOption(
+                emp, date, dialogContext, ShiftBand.pagi, Icons.wb_sunny),
+            _shiftOption(
+                emp, date, dialogContext, ShiftBand.siang, Icons.wb_twilight),
+            _shiftOption(
+                emp, date, dialogContext, ShiftBand.sore, Icons.nights_stay),
+            _shiftOption(
+                emp, date, dialogContext, ShiftBand.libur, Icons.beach_access),
           ],
         ),
       ),
     );
   }
 
-  Widget _shiftOption(Employee emp, DateTime date, BuildContext dialogContext, ShiftSlot shift, IconData icon, String name, String time) {
+  Widget _shiftOption(
+    Employee emp,
+    DateTime date,
+    BuildContext dialogContext,
+    ShiftBand band,
+    IconData icon,
+  ) {
+    final shift = _buildShiftForEmployee(emp, band);
+    final subtitle = band == ShiftBand.libur
+        ? 'Hari libur'
+        : 'Jam wajib ${_formatRequiredHours(shift.requiredWorkMinutes)} • Batas telat ${_formatLateCutoff(shift)}';
+
     return ListTile(
-      leading: CircleAvatar(backgroundColor: shift.color.withValues(alpha: 0.2),
-        child: Icon(icon, color: shift.color, size: 18)),
-      title: Text(name),
-      subtitle: Text(time, style: TextStyle(fontSize: 12)),
-      onTap: () { 
-        _addShift(emp, date, shift); 
-        Navigator.pop(dialogContext);  // PENTING: Gunakan dialogContext, bukan context
+      leading: CircleAvatar(
+          backgroundColor: shift.color.withValues(alpha: 0.2),
+          child: Icon(icon, color: shift.color, size: 18)),
+      title: Text(band.label),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      onTap: () {
+        _addShift(emp, date, band);
+        Navigator.pop(
+            dialogContext); // PENTING: Gunakan dialogContext, bukan context
       },
     );
   }

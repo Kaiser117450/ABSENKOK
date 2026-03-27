@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 import '../../../models/employee.dart';
+import '../../../models/shift_band.dart';
 import '../../../models/shift_schedule.dart';
 import '../../../models/attendance_log.dart';
 import '../../../core/theme.dart';
@@ -181,7 +182,7 @@ TableViewCell buildShiftCell({
   required AttendanceType? sakitIzin,
   required bool hasTimeOff,
   required VoidCallback onTapEmpty,
-  required void Function(String entryId) onTapAssigned,
+  required void Function(ScheduleEntry entry) onTapAssigned,
 }) {
   // Sakit/Izin overlay — NOT tappable
   if (sakitIzin != null) {
@@ -235,38 +236,37 @@ TableViewCell buildShiftCell({
 
   // Assigned shift — tappable chip
   final entry = entries.first;
-  final shiftName = entry.shift.name.toLowerCase();
-  final (bg, fg, icon) = switch (shiftName) {
-    'pagi' => (
-      const Color(0xFFDBEAFE),
-      const Color(0xFF1E40AF),
-      Icons.wb_sunny
-    ),
-    'siang' => (
-      const Color(0xFFFEF3C7),
-      const Color(0xFF92400E),
-      Icons.wb_twilight
-    ),
-    'sore' => (
-      const Color(0xFFFFEDD5),
-      const Color(0xFFC2410C),
-      Icons.nights_stay
-    ),
-    'libur' => (
-      const Color(0xFFFEE2E2),
-      const Color(0xFF991B1B),
-      Icons.beach_access
-    ),
-    _ => (Colors.grey.shade200, Colors.grey.shade800, Icons.work),
+  final shiftBand = entry.shift.band;
+  final (bg, fg, icon) = switch (shiftBand) {
+    ShiftBand.pagi => (
+        const Color(0xFFDBEAFE),
+        const Color(0xFF1E40AF),
+        Icons.wb_sunny,
+      ),
+    ShiftBand.siang => (
+        const Color(0xFFFEF3C7),
+        const Color(0xFF92400E),
+        Icons.wb_twilight,
+      ),
+    ShiftBand.sore => (
+        const Color(0xFFFFEDD5),
+        const Color(0xFFC2410C),
+        Icons.nights_stay,
+      ),
+    ShiftBand.libur => (
+        const Color(0xFFFEE2E2),
+        const Color(0xFF991B1B),
+        Icons.beach_access,
+      ),
   };
 
   return TableViewCell(
     child: GestureDetector(
-      onTap: () => onTapAssigned(entry.id),
+      onTap: () => onTapAssigned(entry),
       child: Container(
         padding: const EdgeInsets.all(4),
         alignment: Alignment.center,
-        child: _chip(entry.shift.name, fg, icon, bg: bg),
+        child: _policyChip(entry.shift, fg, icon, bg: bg),
       ),
     ),
   );
@@ -300,4 +300,73 @@ Widget _chip(String label, Color color, IconData icon, {Color? bg}) {
       ],
     ),
   );
+}
+
+Widget _policyChip(ShiftSlot shift, Color color, IconData icon, {Color? bg}) {
+  final primaryLabel = shift.band == ShiftBand.libur
+      ? 'Libur'
+      : '${shift.band.label} - ${_formatRequiredHours(shift.requiredWorkMinutes)}';
+  final secondaryLabel = shift.band == ShiftBand.libur
+      ? 'Hari libur'
+      : '${_formatClock(shift.lateCutoffHour, shift.lateCutoffMinute)} batas telat';
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+    decoration: BoxDecoration(
+      color: bg ?? color.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withValues(alpha: 0.3)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icon, size: 11, color: color),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                primaryLabel,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                secondaryLabel,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String _formatRequiredHours(int requiredWorkMinutes) {
+  final hours = requiredWorkMinutes ~/ 60;
+  return '${hours}j';
+}
+
+String _formatClock(int hour, int minute) {
+  final hh = hour.toString().padLeft(2, '0');
+  final mm = minute.toString().padLeft(2, '0');
+  return '$hh:$mm';
 }
