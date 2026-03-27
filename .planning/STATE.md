@@ -3,49 +3,49 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Strict Attendance & Payroll Reporting
 status: executing
-stopped_at: Phase 55 planned
-last_updated: "2026-03-26T14:19:09.2865548Z"
-last_activity: 2026-03-26 — planned Phase 55 Schedule Policy & Absence Rules
+stopped_at: Phase 57 context gathered
+last_updated: "2026-03-27T06:43:39.283Z"
+last_activity: 2026-03-27 -- Phase 56 execution started
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 8
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 54
-Plan: 1 of 4 complete
-Status: Executing Phase 54 — Plan 01 (workforce metadata foundation) complete, Plans 02-04 remain
-Last activity: 2026-03-26 — completed Phase 54 Plan 01 workforce metadata foundation
+Phase: 56 (server-time-scan-authority) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 56
+Last activity: 2026-03-27 -- Phase 56 execution started
 
 ## Current Status
 
 - **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
 - **Last shipped milestone:** v7.1 Security Hardening
-- **Next phase:** Phase 54 — Workforce Contract & Outlet Mode Foundation
-- **Current focus:** Execute the additive Phase 54 foundation and admin-surface work now that Phase 55 is planned and ready behind the dependency gate
+- **Next phase:** Phase 56 — Server Time & Scan Authority
+- **Current focus:** Phase 56 — server-time-scan-authority
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Phase 54-55 planned
-[----------] 0 of 7 phases complete (8 plans defined)
+Phase 55 complete; verification and approved SQL rollout handoff pending
+[##--------] 2 of 7 phases complete (8 plans defined)
 ```
 
-- **Next action:** Execute Phase 54 Plan 02 (Wave 2) — admin employee contract surfaces. SQL migration `sql/phase_54_workforce_contract_outlet_mode_20260326.sql` still needs manual application before production use.
+- **Next action:** Verify Phase 55 end-to-end and hold both Phase 55 SQL patches for explicit user-approved production application before rollout. After verification, Phase 56 can begin from `.planning/phases/56-server-time-scan-authority/56-CONTEXT.md`.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-26)
+See: .planning/PROJECT.md (updated 2026-03-27)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 54 execution is now the milestone dependency, while Phase 55-56 context remains captured for schedule policy, break-first capture, offline authority, and scan feedback behavior.
+**Current focus:** Phase 54 is complete, and Phase 55-56 context remains captured for schedule policy, break-first capture, offline authority, and scan feedback behavior.
 
 ## What Was Shipped
 
@@ -209,12 +209,16 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
 - Phase 54 context captured on 2026-03-26: employee contract must surface as a badge plus filter in the employee list, remain editable by kepala gerai within their outlet scope, and stay visible in archived employee history.
 - Phase 54 context captured on 2026-03-26: batch CSV import must require a contract column, normalize aliases into canonical `FULLTIME` / `PARTTIME`, reject legacy templates without the field, and update the downloadable template accordingly.
+- Phase 54 completed on 2026-03-27: employee contract now persists across active employee forms, archived history, and CSV onboarding, while outlet operating mode now persists through the admin outlet surfaces.
+- Phase 54 completed on 2026-03-27: SQL migration `sql/phase_54_workforce_contract_outlet_mode_20260326.sql` is ready but still awaits explicit user approval before production application.
 - Phase 55 context captured on 2026-03-26: scheduled workdays must show `band + required hours`, required hours default from employee contract but stay editable, quick chips remain the primary assignment interaction, and exact clock ranges survive only as small hints.
 - Phase 55 context captured on 2026-03-26: lateness cutoffs are `07:00` for pagi, `10:00` for siang, and `15:00` for sore; early scans stay valid; late arrivals remain present with a late tag; and admin needs separate audit filters for normal late vs break-first late.
 - Phase 55 context captured on 2026-03-26: break-first rules apply to any shift only when there are no `break` / `kembali` logs; `PARTTIME` gets a 1-hour break-first window after the cutoff and `FULLTIME` gets a 2-hour window; saying "no" to break-first falls back to normal late.
 - Phase 55 context captured on 2026-03-26: same-day zero-log scheduled rows stay `belum_masuk`, `tidak_hadir` is finalized only after the logical workday ends, leave states always override absence, and late-arriving valid logs or retroactive leave corrections automatically replace `tidak_hadir`.
 - Phase 55 context captured on 2026-03-26: kepala gerai keeps the weekly grid, bulk assign stays with a short review step, the familiar 2-shift / 3-shift templates stay in place, and policy info should live in header/detail summaries instead of every schedule cell.
 - Phase 55 deferred idea noted on 2026-03-26: per-schedule role labels (`Housekeeping`, `Kasir`, `Assambler`, `Kitchen`) plus PDF export visibility belong to a future phase, not the Phase 55 policy rewrite.
+- Phase 55 Plan 01 completed on 2026-03-27: `ShiftBand`, `SchedulePolicyService`, and `ShiftSlot` now carry band-first policy metadata while preserving legacy clock hints for backward compatibility.
+- Phase 55 Plan 01 completed on 2026-03-27: additive SQL patch `sql/phase_55_schedule_policy_foundation_20260326.sql` backfills active `schedule_entries.shift_slot` JSON with band, required-hours, lateness, and break-first keys but still awaits explicit user-approved production application.
 - Phase 56 context captured on 2026-03-26: eligible first scans should expose an extra `Istirahat Dulu` path, still require a short confirmation, ask every eligible time, and confirm success with a hint that the next expected tap is `Selesai Istirahat`.
 - Phase 56 context captured on 2026-03-26: if server time is unavailable, scans stay operational for cached employees by queueing pending events locally, syncing automatically later, and flagging suspicious reconciliations for admin review instead of silently rewriting history.
 - Phase 56 context captured on 2026-03-26: live server-confirmed scans should show the authoritative WITA time, queued scans should use a visibly distinct success state, wording should stay human-first, and the current fast auto-close plus idle pending badge/banner remains the persistent follow-up signal.
@@ -280,9 +284,9 @@ See: .planning/PROJECT.md (updated 2026-03-26)
 
 ## Session Continuity
 
-**Last session:** 2026-03-26T15:00:00Z
-**Stopped at:** Completed 54-01-PLAN.md
-**Resume file:** .planning/phases/54-workforce-contract-outlet-mode-foundation/54-02-PLAN.md
+**Last session:** 2026-03-27T06:43:39.260Z
+**Stopped at:** Phase 57 context gathered
+**Resume file:** .planning/phases/57-strict-recap-evaluation-engine/57-CONTEXT.md
 
 ## Database Safety Rules
 
