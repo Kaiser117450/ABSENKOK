@@ -58,6 +58,11 @@ class AttendancePolicyRecapService {
       if (nestedList is List) {
         return nestedList.map(_asMap).toList(growable: false);
       }
+      if (map.containsKey('employee_id') &&
+          (map.containsKey('primary_status') ||
+              map.containsKey('attendance_status'))) {
+        return [map];
+      }
     }
 
     throw StateError(
