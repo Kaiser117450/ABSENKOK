@@ -1,3 +1,4 @@
+import 'attendance_policy_signal.dart';
 import 'shift_band.dart';
 
 enum AttendancePolicyStatus {
@@ -36,9 +37,9 @@ enum AttendancePolicyStatus {
       case AttendancePolicyStatus.hadir:
         return 'Hadir';
       case AttendancePolicyStatus.belumMasuk:
-        return 'Belum Masuk';
+        return 'Belum masuk';
       case AttendancePolicyStatus.tidakHadir:
-        return 'Tidak Hadir';
+        return 'Tidak hadir';
       case AttendancePolicyStatus.sakit:
         return 'Sakit';
       case AttendancePolicyStatus.izin:
@@ -48,7 +49,7 @@ enum AttendancePolicyStatus {
       case AttendancePolicyStatus.libur:
         return 'Libur';
       case AttendancePolicyStatus.hadirTanpaJadwal:
-        return 'Hadir Tanpa Jadwal';
+        return 'Hadir tanpa jadwal';
     }
   }
 
@@ -57,11 +58,8 @@ enum AttendancePolicyStatus {
   }
 
   static AttendancePolicyStatus? tryParse(String? raw) {
-    if (raw == null) return null;
     final normalized =
-        raw.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '');
-    if (normalized.isEmpty) return null;
-
+        raw?.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '') ?? '';
     switch (normalized) {
       case 'hadir':
         return AttendancePolicyStatus.hadir;
@@ -122,11 +120,8 @@ enum LateKind {
   }
 
   static LateKind? tryParse(String? raw) {
-    if (raw == null) return null;
     final normalized =
-        raw.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '');
-    if (normalized.isEmpty) return null;
-
+        raw?.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '') ?? '';
     switch (normalized) {
       case 'none':
         return LateKind.none;
@@ -161,6 +156,20 @@ class AttendancePolicyRecapDay {
   final DateTime? firstBreakLocal;
   final DateTime? lastPulangLocal;
   final String? notes;
+  final AttendancePolicyPrimaryStatus? primaryStatus;
+  final AttendancePolicySeverity? primarySeverity;
+  final List<AttendancePolicySignal> detailSignals;
+  final List<String> detailNotes;
+  final bool isManagerExempt;
+  final String? managerPosition;
+  final bool logicalDayComplete;
+  final String? incompleteReason;
+  final int? netWorkMinutes;
+  final int? totalBreakMinutes;
+  final int? overtimeMinutes;
+  final int? shortWorkMinutes;
+  final int? excessBreakMinutes;
+  final int? pairedBreakCount;
 
   const AttendancePolicyRecapDay({
     required this.logicalDate,
@@ -181,9 +190,53 @@ class AttendancePolicyRecapDay {
     required this.firstBreakLocal,
     required this.lastPulangLocal,
     required this.notes,
+    this.primaryStatus,
+    this.primarySeverity,
+    this.detailSignals = const [],
+    this.detailNotes = const [],
+    this.isManagerExempt = false,
+    this.managerPosition,
+    this.logicalDayComplete = true,
+    this.incompleteReason,
+    this.netWorkMinutes,
+    this.totalBreakMinutes,
+    this.overtimeMinutes,
+    this.shortWorkMinutes,
+    this.excessBreakMinutes,
+    this.pairedBreakCount,
   });
 
   factory AttendancePolicyRecapDay.fromJson(Map<String, dynamic> json) {
+    final detailSignals = _readSignalList(json['detail_signals']);
+    final detailNotes = _readStringList(json['detail_notes']);
+    final primaryStatus = AttendancePolicyPrimaryStatus.tryParse(
+            json['primary_status']?.toString()) ??
+        _derivePrimaryStatus(json, detailSignals);
+    final primarySeverity = AttendancePolicySeverity.tryParse(
+            json['primary_severity']?.toString()) ??
+        _derivePrimarySeverity(primaryStatus);
+    final breakFirstConfirmed =
+        _readOptionalBool(json['break_first_confirmed']) ??
+            detailSignals.contains(AttendancePolicySignal.breakFirstConfirmed);
+    final breakFirstEligible =
+        _readOptionalBool(json['break_first_eligible']) ?? false;
+    final isLate = _readOptionalBool(json['is_late']) ??
+        detailSignals.contains(AttendancePolicySignal.late) ||
+            primaryStatus == AttendancePolicyPrimaryStatus.late;
+    final attendanceStatus = AttendancePolicyStatus.tryParse(
+            json['attendance_status']?.toString()) ??
+        _deriveAttendanceStatus(primaryStatus, detailSignals);
+    final lateKind = LateKind.tryParse(json['late_kind']?.toString()) ??
+        _deriveLateKind(
+          detailSignals: detailSignals,
+          primaryStatus: primaryStatus,
+          breakFirstEligible: breakFirstEligible,
+          breakFirstConfirmed: breakFirstConfirmed,
+        );
+    final fallbackNotes = detailNotes.isEmpty && json['notes'] != null
+        ? <String>[json['notes'].toString()]
+        : detailNotes;
+
     return AttendancePolicyRecapDay(
       logicalDate: _readDate(json['logical_date']),
       employeeId: _readRequiredString(json['employee_id'], 'employee_id'),
@@ -194,16 +247,32 @@ class AttendancePolicyRecapDay {
       requiredWorkMinutes: _readInt(json['required_work_minutes']),
       lateCutoffLocal: json['late_cutoff_local']?.toString(),
       breakFirstDeadlineLocal: json['break_first_deadline_local']?.toString(),
-      attendanceStatus:
-          AttendancePolicyStatus.parse(json['attendance_status']?.toString()),
-      lateKind: LateKind.parse(json['late_kind']?.toString()),
-      isLate: _readBool(json['is_late']),
-      breakFirstEligible: _readBool(json['break_first_eligible']),
-      breakFirstConfirmed: _readBool(json['break_first_confirmed']),
+      attendanceStatus: attendanceStatus,
+      lateKind: lateKind,
+      isLate: isLate,
+      breakFirstEligible: breakFirstEligible,
+      breakFirstConfirmed: breakFirstConfirmed,
       firstScanLocal: _readDateTime(json['first_scan_local']),
       firstBreakLocal: _readDateTime(json['first_break_local']),
       lastPulangLocal: _readDateTime(json['last_pulang_local']),
       notes: json['notes']?.toString(),
+      primaryStatus: primaryStatus,
+      primarySeverity: primarySeverity,
+      detailSignals: detailSignals,
+      detailNotes: fallbackNotes,
+      isManagerExempt: _readOptionalBool(json['is_manager_exempt']) ??
+          detailSignals.contains(AttendancePolicySignal.exemptManager) ||
+              primaryStatus == AttendancePolicyPrimaryStatus.exemptManager,
+      managerPosition: json['manager_position']?.toString(),
+      logicalDayComplete: _readOptionalBool(json['logical_day_complete']) ??
+          primaryStatus != AttendancePolicyPrimaryStatus.activeIncomplete,
+      incompleteReason: json['incomplete_reason']?.toString(),
+      netWorkMinutes: _readInt(json['net_work_minutes']),
+      totalBreakMinutes: _readInt(json['total_break_minutes']),
+      overtimeMinutes: _readInt(json['overtime_minutes']),
+      shortWorkMinutes: _readInt(json['short_work_minutes']),
+      excessBreakMinutes: _readInt(json['excess_break_minutes']),
+      pairedBreakCount: _readInt(json['paired_break_count']),
     );
   }
 
@@ -227,7 +296,166 @@ class AttendancePolicyRecapDay {
       'first_break_local': firstBreakLocal?.toIso8601String(),
       'last_pulang_local': lastPulangLocal?.toIso8601String(),
       'notes': notes,
+      'primary_status': primaryStatus?.storageValue,
+      'primary_severity': primarySeverity?.storageValue,
+      'detail_signals':
+          detailSignals.map((signal) => signal.storageValue).toList(),
+      'detail_notes': detailNotes,
+      'is_manager_exempt': isManagerExempt,
+      'manager_position': managerPosition,
+      'logical_day_complete': logicalDayComplete,
+      'incomplete_reason': incompleteReason,
+      'net_work_minutes': netWorkMinutes,
+      'total_break_minutes': totalBreakMinutes,
+      'overtime_minutes': overtimeMinutes,
+      'short_work_minutes': shortWorkMinutes,
+      'excess_break_minutes': excessBreakMinutes,
+      'paired_break_count': pairedBreakCount,
     };
+  }
+
+  bool hasSignal(AttendancePolicySignal signal) {
+    return detailSignals.contains(signal);
+  }
+
+  bool get isRedPrimary => primarySeverity == AttendancePolicySeverity.red;
+
+  bool get isYellowPrimary =>
+      primarySeverity == AttendancePolicySeverity.yellow;
+
+  bool get hasAnyPenaltySignals {
+    const penaltySignals = {
+      AttendancePolicySignal.late,
+      AttendancePolicySignal.shortWork,
+      AttendancePolicySignal.excessBreak,
+      AttendancePolicySignal.absence,
+      AttendancePolicySignal.belumAbsenPulang,
+    };
+    return detailSignals.any(penaltySignals.contains);
+  }
+
+  static AttendancePolicyPrimaryStatus? _derivePrimaryStatus(
+    Map<String, dynamic> json,
+    List<AttendancePolicySignal> detailSignals,
+  ) {
+    final attendanceStatus =
+        AttendancePolicyStatus.tryParse(json['attendance_status']?.toString());
+    if (attendanceStatus != null) {
+      switch (attendanceStatus) {
+        case AttendancePolicyStatus.belumMasuk:
+          return AttendancePolicyPrimaryStatus.belumMasuk;
+        case AttendancePolicyStatus.tidakHadir:
+          return AttendancePolicyPrimaryStatus.absence;
+        case AttendancePolicyStatus.sakit:
+          return AttendancePolicyPrimaryStatus.sakit;
+        case AttendancePolicyStatus.izin:
+          return AttendancePolicyPrimaryStatus.izin;
+        case AttendancePolicyStatus.cuti:
+          return AttendancePolicyPrimaryStatus.cuti;
+        case AttendancePolicyStatus.libur:
+          return AttendancePolicyPrimaryStatus.libur;
+        case AttendancePolicyStatus.hadirTanpaJadwal:
+          return AttendancePolicyPrimaryStatus.hadirTanpaJadwal;
+        case AttendancePolicyStatus.hadir:
+          break;
+      }
+    }
+
+    final lateKind = LateKind.tryParse(json['late_kind']?.toString());
+    if (lateKind == LateKind.normal ||
+        lateKind == LateKind.breakFirstConfirmed) {
+      return AttendancePolicyPrimaryStatus.late;
+    }
+
+    if (detailSignals.contains(AttendancePolicySignal.overtime)) {
+      return AttendancePolicyPrimaryStatus.overtime;
+    }
+    if (detailSignals.contains(AttendancePolicySignal.exemptManager)) {
+      return AttendancePolicyPrimaryStatus.exemptManager;
+    }
+    if (detailSignals.contains(AttendancePolicySignal.hadirTanpaJadwal)) {
+      return AttendancePolicyPrimaryStatus.hadirTanpaJadwal;
+    }
+    if (detailSignals.contains(AttendancePolicySignal.absence)) {
+      return AttendancePolicyPrimaryStatus.absence;
+    }
+
+    return AttendancePolicyPrimaryStatus.hadir;
+  }
+
+  static AttendancePolicySeverity? _derivePrimarySeverity(
+    AttendancePolicyPrimaryStatus? primaryStatus,
+  ) {
+    switch (primaryStatus) {
+      case AttendancePolicyPrimaryStatus.late:
+      case AttendancePolicyPrimaryStatus.shortWork:
+      case AttendancePolicyPrimaryStatus.excessBreak:
+      case AttendancePolicyPrimaryStatus.absence:
+      case AttendancePolicyPrimaryStatus.belumAbsenPulang:
+        return AttendancePolicySeverity.red;
+      case AttendancePolicyPrimaryStatus.overtime:
+        return AttendancePolicySeverity.yellow;
+      case null:
+        return null;
+      default:
+        return AttendancePolicySeverity.info;
+    }
+  }
+
+  static AttendancePolicyStatus _deriveAttendanceStatus(
+    AttendancePolicyPrimaryStatus? primaryStatus,
+    List<AttendancePolicySignal> detailSignals,
+  ) {
+    if (detailSignals.contains(AttendancePolicySignal.hadirTanpaJadwal)) {
+      return AttendancePolicyStatus.hadirTanpaJadwal;
+    }
+
+    switch (primaryStatus) {
+      case AttendancePolicyPrimaryStatus.belumMasuk:
+        return AttendancePolicyStatus.belumMasuk;
+      case AttendancePolicyPrimaryStatus.absence:
+        return AttendancePolicyStatus.tidakHadir;
+      case AttendancePolicyPrimaryStatus.sakit:
+        return AttendancePolicyStatus.sakit;
+      case AttendancePolicyPrimaryStatus.izin:
+        return AttendancePolicyStatus.izin;
+      case AttendancePolicyPrimaryStatus.cuti:
+        return AttendancePolicyStatus.cuti;
+      case AttendancePolicyPrimaryStatus.libur:
+        return AttendancePolicyStatus.libur;
+      case AttendancePolicyPrimaryStatus.hadirTanpaJadwal:
+        return AttendancePolicyStatus.hadirTanpaJadwal;
+      case null:
+      case AttendancePolicyPrimaryStatus.hadir:
+      case AttendancePolicyPrimaryStatus.late:
+      case AttendancePolicyPrimaryStatus.shortWork:
+      case AttendancePolicyPrimaryStatus.excessBreak:
+      case AttendancePolicyPrimaryStatus.overtime:
+      case AttendancePolicyPrimaryStatus.exemptManager:
+      case AttendancePolicyPrimaryStatus.belumAbsenPulang:
+      case AttendancePolicyPrimaryStatus.activeIncomplete:
+        return AttendancePolicyStatus.hadir;
+    }
+  }
+
+  static LateKind _deriveLateKind({
+    required List<AttendancePolicySignal> detailSignals,
+    required AttendancePolicyPrimaryStatus? primaryStatus,
+    required bool breakFirstEligible,
+    required bool breakFirstConfirmed,
+  }) {
+    if (breakFirstConfirmed ||
+        detailSignals.contains(AttendancePolicySignal.breakFirstConfirmed)) {
+      return LateKind.breakFirstConfirmed;
+    }
+    if (breakFirstEligible) {
+      return LateKind.breakFirstEligible;
+    }
+    if (detailSignals.contains(AttendancePolicySignal.late) ||
+        primaryStatus == AttendancePolicyPrimaryStatus.late) {
+      return LateKind.normal;
+    }
+    return LateKind.none;
   }
 
   static DateTime _readDate(Object? raw) {
@@ -241,8 +469,9 @@ class AttendancePolicyRecapDay {
   static DateTime? _readDateTime(Object? raw) {
     if (raw == null) return null;
     if (raw is DateTime) return raw;
-    if (raw is String && raw.trim().isEmpty) return null;
-    return DateTime.tryParse(raw.toString());
+    final stringValue = raw.toString().trim();
+    if (stringValue.isEmpty) return null;
+    return DateTime.tryParse(stringValue);
   }
 
   static int? _readInt(Object? raw) {
@@ -252,14 +481,36 @@ class AttendancePolicyRecapDay {
     return int.tryParse(raw.toString());
   }
 
-  static bool _readBool(Object? raw) {
+  static bool? _readOptionalBool(Object? raw) {
+    if (raw == null) return null;
     if (raw is bool) return raw;
     if (raw is num) return raw != 0;
     if (raw is String) {
       final normalized = raw.trim().toLowerCase();
-      return normalized == 'true' || normalized == 't' || normalized == '1';
+      if (normalized.isEmpty) return null;
+      return normalized == 'true' ||
+          normalized == 't' ||
+          normalized == '1' ||
+          normalized == 'yes';
     }
-    return false;
+    return null;
+  }
+
+  static List<AttendancePolicySignal> _readSignalList(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((value) => AttendancePolicySignal.tryParse(value?.toString()))
+        .whereType<AttendancePolicySignal>()
+        .toList(growable: false);
+  }
+
+  static List<String> _readStringList(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .map((value) => value?.toString().trim())
+        .whereType<String>()
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
   }
 
   static String _readRequiredString(Object? raw, String fieldName) {
