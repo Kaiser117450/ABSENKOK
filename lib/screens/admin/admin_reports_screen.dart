@@ -7,23 +7,59 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/supabase_client.dart';
+import '../../models/attendance_policy_recap_day.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/daily_summary.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
 import '../../providers/app_provider.dart';
+import '../../services/attendance_policy_recap_service.dart';
 import '../../services/badge_service.dart';
 import '../../services/pdf_service.dart';
+import '../../widgets/attendance_policy_badge.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
-import '../../widgets/badge_avatar.dart';
 import '../../widgets/shimmer_skeleton.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Reports Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+enum _PolicyRecapFilter {
+  semua,
+  terlambat,
+  terlambatNormal,
+  breakFirst,
+  kandidatBreakFirst,
+  belumMasuk,
+  tidakHadir,
+  hadirTanpaJadwal,
+}
+
+extension _PolicyRecapFilterLabel on _PolicyRecapFilter {
+  String get label {
+    switch (this) {
+      case _PolicyRecapFilter.semua:
+        return 'Semua';
+      case _PolicyRecapFilter.terlambat:
+        return 'Terlambat';
+      case _PolicyRecapFilter.terlambatNormal:
+        return 'Terlambat Normal';
+      case _PolicyRecapFilter.breakFirst:
+        return 'Break-first';
+      case _PolicyRecapFilter.kandidatBreakFirst:
+        return 'Kandidat Break-first';
+      case _PolicyRecapFilter.belumMasuk:
+        return 'Belum Masuk';
+      case _PolicyRecapFilter.tidakHadir:
+        return 'Tidak Hadir';
+      case _PolicyRecapFilter.hadirTanpaJadwal:
+        return 'Hadir Tanpa Jadwal';
+    }
+  }
+}
 
 class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
@@ -53,7 +89,12 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   // Rekap Harian — independent full-dataset fetch (no pagination)
   List<_ReportRow> _dailyRows = [];
+  List<AttendancePolicyRecapDay> _policyRecapRows = [];
   bool _loadingDaily = false;
+  String? _policyRecapError;
+  _PolicyRecapFilter _selectedRecapFilter = _PolicyRecapFilter.semua;
+  final AttendancePolicyRecapService _attendancePolicyRecapService =
+      const AttendancePolicyRecapService();
 
   // Tab: 0 = Per Scan, 1 = Rekap Harian
   late final TabController _tabCtrl;
@@ -106,11 +147,14 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     _hasLoaded = false;
     _rows = [];
     _dailyRows = [];
+    _policyRecapRows = [];
     _currentOffset = 0;
     _hasMore = true;
     _isLoadingMore = false;
     _loading = false;
     _loadingDaily = false;
+    _policyRecapError = null;
+    _selectedRecapFilter = _PolicyRecapFilter.semua;
   }
 
   dynamic _buildAttendanceBaseQuery() {
@@ -205,17 +249,107 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Future<void> _loadDailySummaryData() async {
-    setState(() => _loadingDaily = true);
+    final outletId = _selectedOutletId?.trim();
+    final shouldLoadPolicyRecap = outletId != null && outletId.isNotEmpty;
+
+    setState(() {
+      _loadingDaily = true;
+      _policyRecapError = null;
+      _selectedRecapFilter = _PolicyRecapFilter.semua;
+    });
+
     try {
-      final allRows = await _fetchAllRowsForExport(ascending: true);
+      final allRowsFuture = _fetchAllRowsForExport(ascending: true);
+      final recapFuture = () async {
+        if (!shouldLoadPolicyRecap) {
+          return (
+            rows: const <AttendancePolicyRecapDay>[],
+            error: null as String?,
+          );
+        }
+
+        try {
+          final rows =
+              await _attendancePolicyRecapService.fetchAdminSchedulePolicyRecap(
+            outletId: outletId,
+            startDate: _startDate,
+            endDate: _endDate,
+          );
+          return (rows: rows, error: null as String?);
+        } catch (e) {
+          return (
+            rows: const <AttendancePolicyRecapDay>[],
+            error: e.toString(),
+          );
+        }
+      }();
+
+      final allRows = await allRowsFuture;
+      final recapResult = await recapFuture;
       if (!mounted) return;
+
       setState(() {
         _dailyRows = allRows;
+        _policyRecapRows = recapResult.rows;
+        _policyRecapError = recapResult.error;
         _loadingDaily = false;
       });
     } catch (e) {
       if (mounted) setState(() => _loadingDaily = false);
     }
+  }
+
+  bool _isLateRecap(AttendancePolicyRecapDay row) {
+    return row.isLate || row.lateKind != LateKind.none;
+  }
+
+  List<AttendancePolicyRecapDay> _filteredPolicyRecapRows() {
+    return _policyRecapRows.where((row) {
+      switch (_selectedRecapFilter) {
+        case _PolicyRecapFilter.semua:
+          return true;
+        case _PolicyRecapFilter.terlambat:
+          return _isLateRecap(row);
+        case _PolicyRecapFilter.terlambatNormal:
+          return row.lateKind == LateKind.normal;
+        case _PolicyRecapFilter.breakFirst:
+          return row.lateKind == LateKind.breakFirstConfirmed;
+        case _PolicyRecapFilter.kandidatBreakFirst:
+          return row.lateKind == LateKind.breakFirstEligible;
+        case _PolicyRecapFilter.belumMasuk:
+          return row.attendanceStatus == AttendancePolicyStatus.belumMasuk;
+        case _PolicyRecapFilter.tidakHadir:
+          return row.attendanceStatus == AttendancePolicyStatus.tidakHadir;
+        case _PolicyRecapFilter.hadirTanpaJadwal:
+          return row.attendanceStatus ==
+              AttendancePolicyStatus.hadirTanpaJadwal;
+      }
+    }).toList(growable: false);
+  }
+
+  Widget _buildRecapFilterChip(_PolicyRecapFilter filter) {
+    return ChoiceChip(
+      label: Text(filter.label),
+      selected: _selectedRecapFilter == filter,
+      onSelected: (_) {
+        setState(() => _selectedRecapFilter = filter);
+      },
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: _selectedRecapFilter == filter
+            ? Colors.white
+            : AppColors.textSecondary,
+      ),
+      selectedColor: AppColors.primary,
+      backgroundColor: const Color(0xFFF8FAFC),
+      side: BorderSide(
+        color: _selectedRecapFilter == filter
+            ? AppColors.primary
+            : const Color(0xFFE2E8F0),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    );
   }
 
   // ── CSV export ───────────────────────────────────────────────────────────────
@@ -531,8 +665,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final rows = entry.value;
 
       final hasMasuk = rows.any((r) => r.log.type == AttendanceType.masuk);
-      if (hasMasuk)
+      if (hasMasuk) {
         continue; // Group already has masuk — no re-attachment needed
+      }
 
       final employeeId = key.split('|')[0];
       final dateStr = key.split('|')[1];
@@ -862,7 +997,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                               )
                             // Dropdown biasa untuk admin
                             : DropdownButtonFormField<String?>(
-                                value: _selectedOutletId,
+                                initialValue: _selectedOutletId,
                                 isDense: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Outlet',
@@ -923,7 +1058,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         ),
 
         // ── TAB BAR ───────────────────────────────────────────────────
-        if (_hasLoaded && (_rows.isNotEmpty || _dailyRows.isNotEmpty)) ...[
+        if (_hasLoaded) ...[
           Container(
             color: Colors.white,
             child: TabBar(
@@ -951,7 +1086,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                 Flexible(
                   child: Text(
                     _tabCtrl.index == 1
-                        ? '${_computeDailySummaries().length} data rekap'
+                        ? '${_filteredPolicyRecapRows().length} data rekap'
                         : '${_rows.length} data scan',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
@@ -1018,58 +1153,55 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                   heading: 'Pilih Rentang Tanggal',
                   subtext: 'Pilih rentang tanggal lalu klik Tampilkan',
                 )
-              : _loading
-                  ? _buildReportShimmer()
-                  : _rows.isEmpty
-                      ? const AppEmptyState(
-                          icon: Icons.bar_chart_outlined,
-                          heading: 'Belum Ada Data',
-                          subtext:
-                              'Tidak ada data absensi pada rentang waktu ini',
-                        )
-                      : TabBarView(
-                          controller: _tabCtrl,
-                          children: [
-                            // Tab 0: Per Scan
-                            ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _rows.length + (_hasMore ? 1 : 0),
-                              itemBuilder: (context, i) {
-                                if (i == _rows.length) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 24),
-                                    child: Center(
-                                      child: _isLoadingMore
-                                          ? const CircularProgressIndicator(
-                                              color: AppColors.primary)
-                                          : ElevatedButton(
-                                              onPressed: () =>
-                                                  _loadReport(reset: false),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppColors.surface,
-                                                foregroundColor:
-                                                    AppColors.primary,
-                                                side: const BorderSide(
-                                                    color: AppColors.border),
-                                              ),
-                                              child: const Text(
-                                                  'Muat Lebih Banyak'),
-                                            ),
-                                    ),
-                                  );
-                                }
-                                return _ReportTile(row: _rows[i]);
-                              },
-                            ),
-
-                            // Tab 1: Rekap Harian
-                            _buildRekapHarian(),
-                          ],
-                        ),
+              : TabBarView(
+                  controller: _tabCtrl,
+                  children: [
+                    _buildPerScanTab(),
+                    _buildRekapHarian(),
+                  ],
+                ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPerScanTab() {
+    if (_loading) {
+      return _buildReportShimmer();
+    }
+
+    if (_rows.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.bar_chart_outlined,
+        heading: 'Belum Ada Data',
+        subtext: 'Tidak ada data absensi pada rentang waktu ini',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _rows.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, i) {
+        if (i == _rows.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: _isLoadingMore
+                  ? const CircularProgressIndicator(color: AppColors.primary)
+                  : ElevatedButton(
+                      onPressed: () => _loadReport(reset: false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.surface,
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      child: const Text('Muat Lebih Banyak'),
+                    ),
+            ),
+          );
+        }
+        return _ReportTile(row: _rows[i]);
+      },
     );
   }
 
@@ -1077,9 +1209,26 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     if (_loadingDaily) {
       return _buildReportShimmer();
     }
-    final summaries = _computeDailySummaries();
 
-    if (summaries.isEmpty) {
+    if (_selectedOutletId == null || _selectedOutletId!.trim().isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.storefront_outlined,
+        heading: 'Pilih Outlet',
+        subtext:
+            'Rekap Harian membutuhkan satu outlet agar aturan jadwal bisa dihitung.',
+      );
+    }
+
+    if (_policyRecapError != null && _policyRecapRows.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.rule_folder_outlined,
+        heading: 'Rekap Policy Belum Tersedia',
+        subtext:
+            'Patch Phase 55 untuk rekap policy belum aktif di outlet ini. Coba lagi setelah SQL rollout disetujui.',
+      );
+    }
+
+    if (_policyRecapRows.isEmpty) {
       return const AppEmptyState(
         icon: Icons.bar_chart_outlined,
         heading: 'Belum Ada Data',
@@ -1087,10 +1236,39 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: summaries.length,
-      itemBuilder: (context, i) => _DailySummaryTile(summary: summaries[i]),
+    final filteredRows = _filteredPolicyRecapRows();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _PolicyRecapFilter.values
+                  .map(_buildRecapFilterChip)
+                  .toList(growable: false),
+            ),
+          ),
+        ),
+        Expanded(
+          child: filteredRows.isEmpty
+              ? AppEmptyState(
+                  icon: Icons.filter_alt_off_outlined,
+                  heading: 'Filter ${_selectedRecapFilter.label} kosong',
+                  subtext:
+                      'Tidak ada baris yang cocok untuk filter ${_selectedRecapFilter.label.toLowerCase()} pada rentang waktu ini.',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  itemCount: filteredRows.length,
+                  itemBuilder: (context, i) =>
+                      _PolicyRecapTile(recap: filteredRows[i]),
+                ),
+        ),
+      ],
     );
   }
 
@@ -1217,7 +1395,7 @@ class _ReportTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _typeColor.withOpacity(0.12),
+              color: _typeColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -1271,364 +1449,207 @@ class _ReportTile extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Daily Summary Tile — Rekap Harian
+// Policy Recap Tile — Rekap Harian Phase 55
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DailySummaryTile extends StatelessWidget {
-  final DailySummary summary;
+class _PolicyRecapTile extends StatelessWidget {
+  final AttendancePolicyRecapDay recap;
 
-  const _DailySummaryTile({required this.summary});
+  const _PolicyRecapTile({required this.recap});
 
   String _hm(DateTime? dt) {
     if (dt == null) return '--:--';
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateLabel(String raw) {
-    // "YYYY-MM-DD" → "Sen, 20 Feb 2026"
-    try {
-      final dt = DateTime.parse(raw);
-      const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-      const months = [
-        '',
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'Mei',
-        'Jun',
-        'Jul',
-        'Agu',
-        'Sep',
-        'Okt',
-        'Nov',
-        'Des'
-      ];
-      return '${days[dt.weekday % 7]}, ${dt.day} ${months[dt.month]} ${dt.year}';
-    } catch (_) {
-      return raw;
-    }
+  String _formatDate(DateTime dt) {
+    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
+    return '${days[dt.weekday % 7]}, ${dt.day} ${months[dt.month]} ${dt.year}';
   }
 
-  String _durationStr(Duration? d) {
-    if (d == null || d.inMinutes <= 0) return '-';
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    if (h == 0) return '${m}m';
-    if (m == 0) return '${h}j';
-    return '${h}j ${m}m';
+  String _requiredHours() {
+    final minutes = recap.requiredWorkMinutes;
+    if (minutes == null || minutes <= 0) return '-';
+    return '${minutes ~/ 60}j';
   }
 
-  Widget _buildStatusBadge() {
-    final Color color;
-    final String emoji;
-    final String label;
-
-    if (summary.status == DailySummaryStatus.sakit) {
-      color = const Color(0xFFDC2626);
-      emoji = '🤒';
-      label = 'Sakit';
-    } else if (summary.status == DailySummaryStatus.izin) {
-      color = const Color(0xFF2563EB);
-      emoji = '📋';
-      label = 'Izin';
-    } else {
-      // belumPulang — amber/orange indicator
-      assert(summary.status == DailySummaryStatus.belumPulang);
-      color = const Color(0xFFD97706);
-      emoji = '⚠️';
-      label = 'Belum Pulang';
+  String _policyContext() {
+    if (recap.shiftBand == null) {
+      return 'Tanpa jadwal';
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withOpacity(0.30)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (summary.statusNotes != null && summary.statusNotes!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                summary.statusNotes!,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    return '${recap.shiftBand!.label} · ${_requiredHours()}';
+  }
+
+  String _cutoffContext() {
+    if (recap.shiftBand == null) {
+      return 'Hadir tanpa jadwal';
+    }
+
+    final cutoff = recap.lateCutoffLocal ?? '--:--';
+    final breakFirst = recap.breakFirstDeadlineLocal;
+    if (breakFirst == null || breakFirst.isEmpty) {
+      return 'Batas telat $cutoff';
+    }
+
+    return 'Batas $cutoff · Break-first $breakFirst';
+  }
+
+  String _reasonCopy() {
+    if (recap.lateKind == LateKind.breakFirstEligible) {
+      return 'Masih dalam jendela break-first, menunggu konfirmasi.';
+    }
+
+    if (recap.attendanceStatus == AttendancePolicyStatus.belumMasuk) {
+      return 'Hari kerja masih berjalan dan belum ada scan masuk.';
+    }
+
+    if (recap.attendanceStatus == AttendancePolicyStatus.tidakHadir) {
+      return 'Tidak ada scan pada hari kerja yang sudah selesai.';
+    }
+
+    if (recap.attendanceStatus == AttendancePolicyStatus.hadirTanpaJadwal) {
+      return 'Hadir tanpa jadwal';
+    }
+
+    if (recap.lateKind == LateKind.normal) {
+      return 'Terlambat: scan pertama ${_hm(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
+    }
+
+    if (recap.lateKind == LateKind.breakFirstConfirmed) {
+      return 'Break-first: scan pertama ${_hm(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
+    }
+
+    final notes = recap.notes?.trim();
+    if (notes != null && notes.isNotEmpty) {
+      return notes;
+    }
+
+    if (recap.attendanceStatus == AttendancePolicyStatus.hadir) {
+      return 'Masuk ${_hm(recap.firstScanLocal)} · Pulang ${_hm(recap.lastPulangLocal)}';
+    }
+
+    return recap.attendanceStatus.label;
   }
 
   @override
   Widget build(BuildContext context) {
-    final empName = summary.employee?.name ?? '-';
-    final outletName = summary.outlet?.name ?? '-';
-    final hasWork = summary.firstMasuk != null;
-    final hasPulang = summary.lastPulang != null;
-    final badge =
-        BadgeService.instance.getBadgeByIdSync(summary.employee?.activeBadgeId);
-
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(14),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Row(
-              children: [
-                // Avatar
-                BadgeAvatar(
-                  photoUrl: summary.employee?.photoUrl,
-                  name: empName,
-                  size: 40,
-                  badge: badge,
-                ),
-                const SizedBox(width: 12),
-
-                // Name + outlet + date
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        empName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                          color: AppColors.textPrimary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      recap.employeeName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        '$outletName · ${_formatDateLabel(summary.dateLabel)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Scan count badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${summary.scanCount} scan',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${recap.outletName} · ${_formatDate(recap.logicalDate)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              AttendancePolicyBadge(
+                status: recap.attendanceStatus,
+                lateKind: recap.lateKind,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _PolicyMetaChip(
+                icon: Icons.schedule_outlined,
+                label: _policyContext(),
+              ),
+              _PolicyMetaChip(
+                icon: Icons.timer_outlined,
+                label: _cutoffContext(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _reasonCopy(),
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: AppColors.textSecondary,
             ),
           ),
-
-          // Divider
-          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-
-          // Conditional: badge for sakit/izin, 4-cell row for normal days
-          if (summary.status == DailySummaryStatus.sakit ||
-              summary.status == DailySummaryStatus.izin)
-            _buildStatusBadge()
-          else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Row(
-                children: [
-                  // Masuk
-                  _InfoCell(
-                    icon: Icons.login_rounded,
-                    label: 'Masuk',
-                    value: _hm(summary.firstMasuk),
-                    color: AppColors.success,
-                    flex: 2,
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Pulang
-                  if (summary.status == DailySummaryStatus.belumPulang)
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.logout_rounded,
-                                  size: 12, color: Color(0xFFD97706)),
-                              const SizedBox(width: 4),
-                              Text('Pulang',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.textSecondary)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD97706).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: const Color(0xFFD97706)
-                                      .withOpacity(0.35)),
-                            ),
-                            child: const Text('Belum\nPulang',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFD97706),
-                                  height: 1.3,
-                                )),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    _InfoCell(
-                      icon: Icons.logout_rounded,
-                      label: 'Pulang',
-                      value: _hm(summary.lastPulang),
-                      color: hasPulang ? AppColors.danger : AppColors.textMuted,
-                      flex: 2,
-                    ),
-                  const SizedBox(width: 8),
-
-                  // Durasi kerja
-                  _InfoCell(
-                    icon: Icons.timelapse_rounded,
-                    label: 'Kerja',
-                    value: hasWork && hasPulang
-                        ? _durationStr(summary.workDuration)
-                        : '-',
-                    color: AppColors.primary,
-                    flex: 2,
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Durasi istirahat
-                  _InfoCell(
-                    icon: Icons.coffee_rounded,
-                    label: 'Istirahat',
-                    value: summary.totalBreak.inMinutes > 0
-                        ? _durationStr(summary.totalBreak)
-                        : '-',
-                    color: const Color(0xFFF59E0B),
-                    flex: 2,
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
   }
 }
 
-class _InfoCell extends StatelessWidget {
+class _PolicyMetaChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String value;
-  final Color color;
-  final int flex;
 
-  const _InfoCell({
+  const _PolicyMetaChip({
     required this.icon,
     required this.label,
-    required this.value,
-    required this.color,
-    required this.flex,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      flex: flex,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.15)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 10, color: color),
-                const SizedBox(width: 3),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
