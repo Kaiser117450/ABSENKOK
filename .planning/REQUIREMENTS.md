@@ -7,28 +7,28 @@
 
 ### Workforce Contracts
 
-- [ ] **CONTRACT-01**: Admin or kepala gerai can assign every active employee exactly one employment contract value, `FULLTIME` or `PARTTIME`, and attendance calculations use that stored value instead of inferring hours from scan history.
-- [ ] **CONTRACT-02**: Each outlet can be classified as `NORMAL` or `TWENTY_FOUR_HOUR`, and logical-day attendance grouping uses that outlet mode when deciding whether a shift legitimately crosses midnight.
-- [ ] **CONTRACT-03**: Kepala toko / kepala gerai attendance records stay exempt from lateness, short-work, and excess-break red flags even when they still appear in recap outputs.
+- [x] **CONTRACT-01**: Admin or kepala gerai can assign every active employee exactly one employment contract value, `FULLTIME` or `PARTTIME`, and attendance calculations use that stored value instead of inferring hours from scan history.
+- [x] **CONTRACT-02**: Each outlet can be classified as `NORMAL` or `TWENTY_FOUR_HOUR`, and logical-day attendance grouping uses that outlet mode when deciding whether a shift legitimately crosses midnight.
+- [x] **CONTRACT-03**: Kepala toko / kepala gerai attendance records stay exempt from lateness, short-work, and excess-break red flags even when they still appear in recap outputs.
 
 ### Schedule Policy
 
-- [ ] **SCHED-01**: Work schedules stay mandatory for scheduled workdays, but the schedule stores shift bands and required hours instead of misleading fixed clock labels in admin and portal surfaces.
-- [ ] **SCHED-02**: Lateness is evaluated from scheduled shift rules in WITA, including the flexible morning rule (latest allowed arrival 07:00) plus contract-aware siang and sore windows.
-- [ ] **SCHED-03**: A scheduled employee with no attendance logs for the logical workday is marked `tidak_hadir`, while scheduled sakit, izin, libur, and cuti states remain distinct from absence.
+- [x] **SCHED-01**: Work schedules stay mandatory for scheduled workdays, but the schedule stores shift bands and required hours instead of misleading fixed clock labels in admin and portal surfaces.
+- [x] **SCHED-02**: Lateness is evaluated from scheduled shift rules in WITA, including the flexible morning rule (latest allowed arrival 07:00) plus contract-aware siang and sore windows.
+- [x] **SCHED-03**: A scheduled employee with no attendance logs for the logical workday is marked `tidak_hadir`, while scheduled sakit, izin, libur, and cuti states remain distinct from absence.
 - [ ] **SCHED-04**: Portal and schedule-facing UI show contract-aware required hours and remaining/already-worked time without displaying stale exact shift clock ranges.
 
 ### Scan Authority & Break Flow
 
-- [ ] **SCAN-01**: Kiosk attendance timestamps are stamped from a server-authoritative WITA time source so device local-clock drift or manipulation cannot change lateness and payroll outcomes.
-- [ ] **SCAN-02**: When an employee appears to start with a break-first pattern, the kiosk flow can confirm that initial break intent and the recap engine still evaluates the same shift window correctly instead of treating it as a normal on-time arrival.
+- [x] **SCAN-01**: Kiosk attendance timestamps are stamped from a server-authoritative WITA time source so device local-clock drift or manipulation cannot change lateness and payroll outcomes.
+- [x] **SCAN-02**: When an employee appears to start with a break-first pattern, the kiosk flow can confirm that initial break intent and the recap engine still evaluates the same shift window correctly instead of treating it as a normal on-time arrival.
 
 ### Strict Attendance Evaluation
 
-- [ ] **RECAP-01**: Rekap Harian groups afternoon-to-morning sessions into one logical workday at 24-hour outlets so masuk, break, kembali, and pulang stay attached after midnight.
-- [ ] **RECAP-02**: Full-time employees turn red when net work is below 10 hours or total break exceeds 2 hours by even 1 minute, and overtime above the required work duration turns yellow instead of red.
-- [ ] **RECAP-03**: Part-time employees turn red when net work is below 9 hours or total break exceeds the allowed contract window, and part-time overtime days can use the 2-hour break allowance when the day is classified as overtime.
-- [ ] **RECAP-04**: Recap outcomes distinguish late arrival, short work, excess break, overtime, absence, and exempt-manager cases as separate evaluation signals instead of one generic status.
+- [x] **RECAP-01**: Rekap Harian groups afternoon-to-morning sessions into one logical workday at 24-hour outlets so masuk, break, kembali, and pulang stay attached after midnight.
+- [x] **RECAP-02**: Full-time employees turn red when net work is below 10 hours or total break exceeds 2 hours by even 1 minute, and overtime above the required work duration turns yellow instead of red.
+- [x] **RECAP-03**: Part-time employees turn red when net work is below 9 hours or total break exceeds the allowed contract window, and part-time overtime days can use the 2-hour break allowance when the day is classified as overtime.
+- [x] **RECAP-04**: Recap outcomes distinguish late arrival, short work, excess break, overtime, absence, and exempt-manager cases as separate evaluation signals instead of one generic status.
 
 ### Reporting & Export
 
@@ -68,18 +68,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONTRACT-01 | Phase 54 | Pending |
-| CONTRACT-02 | Phase 54 | Pending |
-| SCHED-01 | Phase 55 | Pending |
-| SCHED-02 | Phase 55 | Pending |
-| SCHED-03 | Phase 55 | Pending |
-| SCAN-01 | Phase 56 | Pending |
-| SCAN-02 | Phase 56 | Pending |
-| CONTRACT-03 | Phase 57 | Pending |
-| RECAP-01 | Phase 57 | Pending |
-| RECAP-02 | Phase 57 | Pending |
-| RECAP-03 | Phase 57 | Pending |
-| RECAP-04 | Phase 57 | Pending |
+| CONTRACT-01 | Phase 54 | Complete |
+| CONTRACT-02 | Phase 54 | Complete |
+| SCHED-01 | Phase 55 | Complete |
+| SCHED-02 | Phase 55 | Complete |
+| SCHED-03 | Phase 55 | Complete |
+| SCAN-01 | Phase 56 | Complete |
+| SCAN-02 | Phase 56 | Complete |
+| CONTRACT-03 | Phase 57 | Complete |
+| RECAP-01 | Phase 57 | Complete |
+| RECAP-02 | Phase 57 | Complete |
+| RECAP-03 | Phase 57 | Complete |
+| RECAP-04 | Phase 57 | Complete |
 | REPORT-01 | Phase 58 | Pending |
 | REPORT-02 | Phase 58 | Pending |
 | SCHED-04 | Phase 59 | Pending |
@@ -93,4 +93,4 @@
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after milestone v8.0 initialization*
+*Last updated: 2026-03-27 after Phase 57 completion*

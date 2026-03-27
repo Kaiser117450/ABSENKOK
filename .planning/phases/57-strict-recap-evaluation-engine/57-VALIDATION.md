@@ -1,9 +1,9 @@
 ---
 phase: 57
 slug: strict-recap-evaluation-engine
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-27
 ---
 
@@ -19,7 +19,7 @@ created: 2026-03-27
 |----------|-------|
 | **Framework** | `flutter_test` plus static SQL contract file assertions |
 | **Config file** | `analysis_options.yaml` |
-| **Quick run command** | `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart test/models/attendance_policy_recap_day_test.dart test/services/attendance_policy_recap_service_test.dart test/widgets/attendance_policy_badge_test.dart` |
+| **Quick run command** | `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart test/models/attendance_policy_recap_day_test.dart test/services/attendance_policy_recap_service_test.dart test/widgets/attendance_policy_badge_test.dart test/screens/admin/admin_reports_policy_recap_test.dart` |
 | **Full suite command** | `C:\flutter\bin\flutter.bat test` |
 | **Estimated runtime** | ~120 seconds |
 
@@ -27,7 +27,7 @@ created: 2026-03-27
 
 ## Sampling Rate
 
-- **After every task commit:** Run the task-local automated command; when both SQL and Dart recap contracts changed, also run `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart test/models/attendance_policy_recap_day_test.dart test/services/attendance_policy_recap_service_test.dart test/widgets/attendance_policy_badge_test.dart`
+- **After every task commit:** Run the task-local automated command; when both SQL and Dart recap contracts changed, also run `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart test/models/attendance_policy_recap_day_test.dart test/services/attendance_policy_recap_service_test.dart test/widgets/attendance_policy_badge_test.dart test/screens/admin/admin_reports_policy_recap_test.dart`
 - **After every plan wave:** Run `C:\flutter\bin\flutter.bat test`
 - **Before `$gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 120 seconds
@@ -38,12 +38,12 @@ created: 2026-03-27
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 57-01-01 | 01 | 1 | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | static | `powershell -Command "Select-String -Path 'sql/phase_57_strict_recap_evaluation_engine_20260327.sql' -Pattern 'operating_mode','position','primary_status','detail_signals','net_work_minutes','belum_absen_pulang' | Measure-Object | Select-Object -ExpandProperty Count"` | ❌ W0 | ⬜ pending |
-| 57-01-02 | 01 | 1 | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | contract | `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart` | ❌ W0 | ⬜ pending |
-| 57-02-01 | 02 | 2 | `CONTRACT-03`, `RECAP-04` | unit | `C:\flutter\bin\flutter.bat test test/models/attendance_policy_recap_day_test.dart` | ❌ W0 | ⬜ pending |
-| 57-02-02 | 02 | 2 | `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | unit | `C:\flutter\bin\flutter.bat test test/services/attendance_policy_recap_service_test.dart` | ✅ | ⬜ pending |
-| 57-03-01 | 03 | 3 | `RECAP-04` | widget | `C:\flutter\bin\flutter.bat test test/widgets/attendance_policy_badge_test.dart` | ✅ | ⬜ pending |
-| 57-03-02 | 03 | 3 | `CONTRACT-03`, `RECAP-04` | widget | `C:\flutter\bin\flutter.bat test test/screens/admin/admin_reports_policy_recap_test.dart` | ❌ W0 | ⬜ pending |
+| 57-01-01 | 01 | 1 | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | static | `powershell -Command "Select-String -Path 'sql/phase_57_strict_recap_evaluation_engine_20260327.sql' -Pattern 'operating_mode','position','primary_status','detail_signals','net_work_minutes','belum_absen_pulang' | Measure-Object | Select-Object -ExpandProperty Count"` | ✅ | ✅ green |
+| 57-01-02 | 01 | 1 | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | contract | `C:\flutter\bin\flutter.bat test test/phase57/strict_recap_sql_contract_test.dart` | ✅ | ✅ green |
+| 57-02-01 | 02 | 2 | `CONTRACT-03`, `RECAP-04` | unit | `C:\flutter\bin\flutter.bat test test/models/attendance_policy_recap_day_test.dart` | ✅ | ✅ green |
+| 57-02-02 | 02 | 2 | `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | unit | `C:\flutter\bin\flutter.bat test test/services/attendance_policy_recap_service_test.dart` | ✅ | ✅ green |
+| 57-03-01 | 03 | 3 | `RECAP-04` | widget | `C:\flutter\bin\flutter.bat test test/widgets/attendance_policy_badge_test.dart` | ✅ | ✅ green |
+| 57-03-02 | 03 | 3 | `CONTRACT-03`, `RECAP-04` | widget | `C:\flutter\bin\flutter.bat test test/screens/admin/admin_reports_policy_recap_test.dart` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,9 +51,9 @@ created: 2026-03-27
 
 ## Wave 0 Requirements
 
-- [ ] `test/phase57/strict_recap_sql_contract_test.dart` - SQL helper names, strict RPC fields, and logical-day keyword coverage
-- [ ] `test/models/attendance_policy_recap_day_test.dart` - typed primary/detail signal parsing and legacy compatibility coverage
-- [ ] `test/screens/admin/admin_reports_policy_recap_test.dart` - admin filter, detail-chip, and manager-exemption rendering coverage
+- [x] `test/phase57/strict_recap_sql_contract_test.dart` - SQL helper names, strict RPC fields, and logical-day keyword coverage
+- [x] `test/models/attendance_policy_recap_day_test.dart` - typed primary/detail signal parsing and legacy compatibility coverage
+- [x] `test/screens/admin/admin_reports_policy_recap_test.dart` - admin filter, detail-chip, and manager-exemption rendering coverage
 
 *Existing infrastructure already covers the baseline service parse path and badge widget path, but both need Phase 57 expansion.*
 
@@ -71,11 +71,11 @@ created: 2026-03-27
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all missing references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all missing references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** 2026-03-27 - targeted Phase 57 test set green

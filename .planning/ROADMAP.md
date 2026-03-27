@@ -18,28 +18,34 @@
 - Active milestone is now **v8.0 Strict Attendance & Payroll Reporting**.
 - This milestone replaces the current generic overtime and device-local recap assumptions with explicit `FULLTIME` / `PARTTIME` employee contracts and `NORMAL` / `TWENTY_FOUR_HOUR` outlet modes.
 - Payroll-facing recap exports will move from flat CSV to spreadsheet/PDF parity with employee-by-date summaries and aggregate violation counts.
+- Phase 57 completed on 2026-03-27, so Phase 58 is now the next dependency-cleared planning target.
 
 ## Proposed Roadmap
 
 **7 phases** | **17 requirements mapped** | All covered
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 54 | Workforce Contract & Outlet Mode Foundation | Add the new employee and outlet rule metadata without breaking the live attendance baseline | `CONTRACT-01`, `CONTRACT-02` | 4 |
-| 55 | Schedule Policy & Absence Rules | Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection | `SCHED-01`, `SCHED-02`, `SCHED-03` | 4 |
-| 56 | Server-Time Scan Authority | Move scan timing to WITA server authority and capture break-first intent safely | `SCAN-01`, `SCAN-02` | 4 |
-| 57 | Strict Recap Evaluation Engine | Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | 4 |
-| 58 | Payroll Matrix & Spreadsheet Export | Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output | `REPORT-01`, `REPORT-02` | 4 |
-| 59 | PDF & Portal Parity | Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks | `SCHED-04`, `REPORT-03` | 4 |
-| 60 | Rollout & Payroll Acceptance | Validate live-safe rollout, overnight edge cases, and export parity before salary use | `OPS-01` | 4 |
+| # | Phase | Goal | Requirements | Status |
+|---|-------|------|--------------|--------|
+| 54 | Workforce Contract & Outlet Mode Foundation | Add the new employee and outlet rule metadata without breaking the live attendance baseline | `CONTRACT-01`, `CONTRACT-02` | Complete (2026-03-27) |
+| 55 | Schedule Policy & Absence Rules | Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection | `SCHED-01`, `SCHED-02`, `SCHED-03` | Complete (2026-03-27) |
+| 56 | Server-Time Scan Authority | Move scan timing to WITA server authority and capture break-first intent safely | `SCAN-01`, `SCAN-02` | Complete (2026-03-27) |
+| 57 | Strict Recap Evaluation Engine | Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | Complete (2026-03-27) |
+| 58 | Payroll Matrix & Spreadsheet Export | Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output | `REPORT-01`, `REPORT-02` | Pending planning |
+| 59 | PDF & Portal Parity | Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks | `SCHED-04`, `REPORT-03` | Pending planning |
+| 60 | Rollout & Payroll Acceptance | Validate live-safe rollout, overnight edge cases, and export parity before salary use | `OPS-01` | Pending planning |
 
 ### Phase 54: Workforce Contract & Outlet Mode Foundation
 
-**Status:** Pending
+**Status:** Complete (2026-03-27)
 **Goal:** Add the new employee and outlet rule metadata without breaking the live attendance baseline.
 **Depends on:** v7.1 closeout baseline
 **Requirements:** `CONTRACT-01`, `CONTRACT-02`
-**Plans:** Pending phase planning
+**Plans:** 4/4 execution plans complete
+
+- [x] `54-01-PLAN.md` — Shared workforce metadata contract and additive SQL foundation
+- [x] `54-02-PLAN.md` — Employee contract admin surfaces and archived history visibility
+- [x] `54-03-PLAN.md` — CSV import contract enforcement and operator guidance
+- [x] `54-04-PLAN.md` — Outlet operating-mode admin surfaces
 
 Success criteria:
 1. Employee data can persist and read one explicit contract value, `FULLTIME` or `PARTTIME`, through additive migrations and typed models.
@@ -49,11 +55,16 @@ Success criteria:
 
 ### Phase 55: Schedule Policy & Absence Rules
 
-**Status:** Pending
+**Status:** Complete (2026-03-27)
 **Goal:** Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection.
 **Depends on:** Phase 54
 **Requirements:** `SCHED-01`, `SCHED-02`, `SCHED-03`
-**Plans:** Pending phase planning
+**Plans:** 4/4 execution plans complete
+
+- [x] `55-01-PLAN.md` — Shared schedule-policy foundation, typed shift bands, and additive SQL backfill
+- [x] `55-02-PLAN.md` — Band-first scheduler UI, policy summary card, bulk review, and required-hours overrides
+- [x] `55-03-PLAN.md` — Admin policy recap RPC and typed recap service for late/no-show evaluation
+- [x] `55-04-PLAN.md` — Rekap Harian filters, policy badges, and operational reason copy
 
 Success criteria:
 1. Schedule storage and admin UI stop depending on stale exact clock labels and instead represent the intended pagi, siang, or sore work band plus required hours.
@@ -63,11 +74,15 @@ Success criteria:
 
 ### Phase 56: Server-Time Scan Authority
 
-**Status:** Pending
+**Status:** Complete (2026-03-27)
 **Goal:** Move scan timing to WITA server authority and capture break-first intent safely.
 **Depends on:** Phase 55
 **Requirements:** `SCAN-01`, `SCAN-02`
-**Plans:** Pending phase planning
+**Plans:** 3/3 execution plans complete
+
+- [x] `56-01-PLAN.md` — authoritative WITA scan timestamp contract, kiosk authority service, and additive SQL guard
+- [x] `56-02-PLAN.md` — offline queue ordering and pending-log metadata alignment for authoritative replay
+- [x] `56-03-PLAN.md` — break-first kiosk UX, authoritative success copy, and pending-state scan behavior
 
 Success criteria:
 1. Kiosk scan creation and sync paths use one server-authoritative WITA timestamp source instead of trusting the tablet clock.
@@ -77,11 +92,15 @@ Success criteria:
 
 ### Phase 57: Strict Recap Evaluation Engine
 
-**Status:** Pending
+**Status:** Complete (2026-03-27)
 **Goal:** Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions.
 **Depends on:** Phase 56
 **Requirements:** `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04`
-**Plans:** Pending phase planning
+**Plans:** 3/3 execution plans complete
+
+- [x] `57-01-PLAN.md` — overnight-safe strict recap SQL, manager exemption helpers, and contract test coverage
+- [x] `57-02-PLAN.md` — typed strict recap signals, metrics, compatibility fallbacks, and service parsing
+- [x] `57-03-PLAN.md` — strict primary badges, detail chips, admin filters, and manager-exemption reason copy
 
 Success criteria:
 1. Afternoon-to-morning sessions at 24-hour outlets stay attached to one logical workday instead of becoming false overtime or zero-work records after midnight.

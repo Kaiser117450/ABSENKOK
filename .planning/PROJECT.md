@@ -27,6 +27,10 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Web surfaces:** marketing site + protected employee portal with schedules plus attendance recap on the Astro website
 **Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
+**Workforce metadata:** Phase 54 completed on 2026-03-27, so employee contracts, contract-aware CSV onboarding, and outlet operating modes are now first-class admin inputs
+**Scheduling policy:** Phase 55 completed on 2026-03-27, so shift bands, required hours, lateness windows, and no-show handling now flow through the shared schedule-policy layer
+**Scan authority:** Phase 56 completed on 2026-03-27, so kiosk scan timing now comes from authoritative WITA server timestamps with offline replay metadata and break-first intent capture
+**Strict recap:** Phase 57 completed on 2026-03-27, so admin recap rows now consume primary status, detail signals, work metrics, and manager exemption semantics from one typed strict engine
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Rekap Harian PDF now keeps summary content on large exports and shows count-based attendance metrics
 **Release lane:** `tool/release_env.ps1` -> `tool/release_preflight.ps1` -> `tool/release_build.ps1` now produces the canonical signed APK, optional bundle, manifest, smoke evidence, and retained debug artifacts from one tracked PowerShell lane
@@ -35,9 +39,9 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, portal-specific Supabase RPCs, and the tracked Android release helper chain
 
 ### Known Tech Debt
-- Attendance recap still uses device-local timestamps and day grouping without workforce contract or outlet operating-mode metadata, so strict payroll evaluation is not implemented yet
-- Rekap Harian export is still a flat CSV/PDF detail flow, not a payroll matrix spreadsheet with red/yellow exception signals
-- Schedule templates still embed fixed shift clock labels, which conflicts with the real flexible morning/siang/sore arrival windows now required
+- Rekap Harian export is still a flat CSV/PDF detail flow, not a payroll matrix spreadsheet with red/yellow exception signals and per-employee summary counts
+- PDF and portal recap surfaces do not yet consume the Phase 57 strict evaluation engine, so cross-surface payroll parity is not finished
+- The additive SQL patches for Phases 54-57 still require explicit user approval before any production Supabase rollout
 - GitHub release publication still needs `gh release upload` fallback in this environment because the app automation could not read the local staged artifact path directly
 - Real signing files (`android/key.properties` and the upload keystore) remain intentionally machine-local, so release bootstrap is still an operator task
 - Shell `java` may still drift to Temurin 25; operators must enter the release lane through `tool/release_env.ps1` or set `ABSENKOK_JAVA_HOME`
@@ -186,11 +190,16 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Portal public search and repair flows expose only the minimum data needed while keeping passwordless employee entry — v7.1
 - ✓ Security rollout stays additive and production-safe for the live Supabase project — v7.1
 
+### Validated (v8.0)
+- ✓ Employment contracts and outlet operating modes are now explicit attendance inputs in admin, archive, CSV onboarding, and outlet-management flows — Phase 54
+- ✓ Schedule policy now stores shift bands and required hours, and no-show / lateness rules evaluate from that shared policy layer — Phase 55
+- ✓ Kiosk attendance timestamps now use authoritative WITA server time, with offline replay metadata and break-first confirmation support — Phase 56
+- ✓ Strict recap evaluation now emits primary status, detail signals, work metrics, overtime, incomplete, and manager-exemption semantics for admin recap — Phase 57
+
 ### Active
-- [ ] Employment contracts and outlet operating modes become explicit attendance inputs (`FULLTIME` / `PARTTIME`, `NORMAL` / `TWENTY_FOUR_HOUR`)
-- [ ] Schedule-required lateness, break-first handling, and kepala toko exemption produce consistent red/yellow payroll evaluation
-- [ ] Overnight-safe recap logic and no-show detection stay correct across midnight, especially for 24-hour outlets
 - [ ] Rekap Harian moves to payroll-grade spreadsheet/PDF outputs with compact per-day in/out times and aggregate violation counts
+- [ ] Portal and PDF recap surfaces consume the same strict evaluation engine and stay consistent with the admin recap
+- [ ] Rollout validation proves additive SQL rollout safety plus cross-surface parity before payroll depends on the new outputs
 
 ### Out of Scope
 - Automatic payroll amount calculation, payslip generation, or THR formulas — this milestone stops at strict attendance evidence and salary-ready reports
@@ -304,9 +313,10 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 36 | Historical recap copy is row-aware via `getRecapDayPresentationForDay(day, referenceDate)` | ✓ Past rows use date-accurate wording instead of generic "hari ini" copy |
 | 37 | Canonical Windows release lane uses `C:\flutter\bin\flutter.bat` while AGP/Gradle/Kotlin stay pinned through Phase 46 | ✓ Release packaging baseline recovered without a toolchain upgrade |
 | 38 | `pubspec.yaml` remains the single version source of truth and APK naming stays derived from `variant.versionName` | ✓ v7.0 metadata now aligns from source version through packaged artifact name |
-| 39 | v8.0 attendance rules will read explicit employee contracts (`FULLTIME` / `PARTTIME`) plus outlet operating mode (`NORMAL` / `TWENTY_FOUR_HOUR`) instead of today’s generic overtime heuristic | — Pending |
-| 40 | Payroll recap exports will move from flat CSV to spreadsheet/PDF parity with compact employee-by-date summaries and red/yellow exception colors | — Pending |
-| 41 | WITA server time, not tablet local time, becomes the authoritative scan clock for strict lateness and payroll reporting | — Pending |
+| 39 | v8.0 attendance rules will read explicit employee contracts (`FULLTIME` / `PARTTIME`) plus outlet operating mode (`NORMAL` / `TWENTY_FOUR_HOUR`) instead of today’s generic overtime heuristic | ✓ Phase 54 foundation complete |
+| 40 | Schedule-required lateness, no-show handling, and required-hours metadata live in the shared shift-band policy layer instead of fixed clock heuristics | ✓ Phase 55 foundation complete |
+| 41 | WITA server time, not tablet local time, becomes the authoritative scan clock for strict lateness and payroll reporting | ✓ Phase 56 foundation complete |
+| 42 | Strict recap primary status, detail signals, and manager exemption stay canonical in SQL and typed model output instead of being re-derived in widgets | ✓ Phase 57 foundation complete |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -324,4 +334,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-26 after starting v8.0 Strict Attendance & Payroll Reporting milestone*
+*Last updated: 2026-03-27 after Phase 57 completion*
