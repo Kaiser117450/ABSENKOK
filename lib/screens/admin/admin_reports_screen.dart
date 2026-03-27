@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/supabase_client.dart';
 import '../../models/attendance_policy_recap_day.dart';
+import '../../models/attendance_policy_signal.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/daily_summary.dart';
@@ -18,6 +19,7 @@ import '../../services/attendance_policy_recap_service.dart';
 import '../../services/badge_service.dart';
 import '../../services/pdf_service.dart';
 import '../../widgets/attendance_policy_badge.dart';
+import '../../widgets/attendance_policy_signal_chip.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
@@ -27,38 +29,174 @@ import '../../widgets/shimmer_skeleton.dart';
 // Admin Reports Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum _PolicyRecapFilter {
+enum PolicyRecapFilter {
   semua,
   terlambat,
-  terlambatNormal,
-  breakFirst,
-  kandidatBreakFirst,
-  belumMasuk,
+  kurangJamKerja,
+  istirahatBerlebih,
+  lembur,
   tidakHadir,
+  managerExempt,
   hadirTanpaJadwal,
+  belumAbsenPulang,
 }
 
-extension _PolicyRecapFilterLabel on _PolicyRecapFilter {
+extension PolicyRecapFilterLabel on PolicyRecapFilter {
   String get label {
     switch (this) {
-      case _PolicyRecapFilter.semua:
+      case PolicyRecapFilter.semua:
         return 'Semua';
-      case _PolicyRecapFilter.terlambat:
+      case PolicyRecapFilter.terlambat:
         return 'Terlambat';
-      case _PolicyRecapFilter.terlambatNormal:
-        return 'Terlambat Normal';
-      case _PolicyRecapFilter.breakFirst:
-        return 'Break-first';
-      case _PolicyRecapFilter.kandidatBreakFirst:
-        return 'Kandidat Break-first';
-      case _PolicyRecapFilter.belumMasuk:
-        return 'Belum Masuk';
-      case _PolicyRecapFilter.tidakHadir:
+      case PolicyRecapFilter.kurangJamKerja:
+        return 'Kurang jam kerja';
+      case PolicyRecapFilter.istirahatBerlebih:
+        return 'Istirahat berlebih';
+      case PolicyRecapFilter.lembur:
+        return 'Lembur';
+      case PolicyRecapFilter.tidakHadir:
         return 'Tidak Hadir';
-      case _PolicyRecapFilter.hadirTanpaJadwal:
+      case PolicyRecapFilter.managerExempt:
+        return 'Manager exempt';
+      case PolicyRecapFilter.hadirTanpaJadwal:
         return 'Hadir Tanpa Jadwal';
+      case PolicyRecapFilter.belumAbsenPulang:
+        return 'Belum absen pulang';
     }
   }
+}
+
+bool matchesPolicyRecapFilter(
+  AttendancePolicyRecapDay row,
+  PolicyRecapFilter filter,
+) {
+  switch (filter) {
+    case PolicyRecapFilter.semua:
+      return true;
+    case PolicyRecapFilter.terlambat:
+      return row.hasSignal(AttendancePolicySignal.late) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.late ||
+          row.isLate ||
+          row.lateKind != LateKind.none;
+    case PolicyRecapFilter.kurangJamKerja:
+      return row.hasSignal(AttendancePolicySignal.shortWork) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.shortWork;
+    case PolicyRecapFilter.istirahatBerlebih:
+      return row.hasSignal(AttendancePolicySignal.excessBreak) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.excessBreak;
+    case PolicyRecapFilter.lembur:
+      return row.hasSignal(AttendancePolicySignal.overtime) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.overtime;
+    case PolicyRecapFilter.tidakHadir:
+      return row.hasSignal(AttendancePolicySignal.absence) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.absence ||
+          row.attendanceStatus == AttendancePolicyStatus.tidakHadir;
+    case PolicyRecapFilter.managerExempt:
+      return row.isManagerExempt ||
+          row.hasSignal(AttendancePolicySignal.exemptManager) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.exemptManager;
+    case PolicyRecapFilter.hadirTanpaJadwal:
+      return row.hasSignal(AttendancePolicySignal.hadirTanpaJadwal) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.hadirTanpaJadwal ||
+          row.attendanceStatus == AttendancePolicyStatus.hadirTanpaJadwal;
+    case PolicyRecapFilter.belumAbsenPulang:
+      return row.hasSignal(AttendancePolicySignal.belumAbsenPulang) ||
+          row.primaryStatus == AttendancePolicyPrimaryStatus.belumAbsenPulang;
+  }
+}
+
+List<AttendancePolicyRecapDay> filterPolicyRecapRows(
+  Iterable<AttendancePolicyRecapDay> rows,
+  PolicyRecapFilter filter,
+) {
+  return rows
+      .where((row) => matchesPolicyRecapFilter(row, filter))
+      .toList(growable: false);
+}
+
+String buildPolicyRecapReasonCopy(AttendancePolicyRecapDay recap) {
+  final hasStrictContract =
+      recap.primaryStatus != null || recap.detailSignals.isNotEmpty;
+
+  if (hasStrictContract) {
+    if (recap.isManagerExempt ||
+        recap.hasSignal(AttendancePolicySignal.exemptManager) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.exemptManager) {
+      return '${recap.managerPosition ?? 'Kepala toko / kepala gerai'} tetap terlihat di recap, tetapi tidak kena penalti merah untuk telat, kurang jam, atau istirahat berlebih.';
+    }
+
+    if (recap.hasSignal(AttendancePolicySignal.activeIncomplete) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.activeIncomplete) {
+      return 'Hari masih berjalan; hasil final akan dikunci setelah chain selesai.';
+    }
+
+    if (recap.hasSignal(AttendancePolicySignal.belumAbsenPulang) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.belumAbsenPulang) {
+      return 'Chain selesai tanpa kembali atau clock-out yang cocok, jadi hari ini ditandai belum absen pulang.';
+    }
+
+    if (recap.hasSignal(AttendancePolicySignal.hadirTanpaJadwal) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.hadirTanpaJadwal) {
+      return 'Hadir tanpa jadwal; aturan kontrak tetap dipakai untuk menghitung jam kerja, istirahat, dan lembur.';
+    }
+
+    final strictNotes = recap.detailNotes
+        .map((note) => note.trim())
+        .where((note) => note.isNotEmpty)
+        .toList(growable: false);
+    if (strictNotes.isNotEmpty) {
+      return strictNotes.first;
+    }
+  }
+
+  if (recap.lateKind == LateKind.breakFirstEligible) {
+    return 'Masih dalam jendela break-first, menunggu konfirmasi.';
+  }
+
+  if (recap.attendanceStatus == AttendancePolicyStatus.belumMasuk) {
+    return 'Hari kerja masih berjalan dan belum ada scan masuk.';
+  }
+
+  if (recap.attendanceStatus == AttendancePolicyStatus.tidakHadir) {
+    return 'Tidak ada scan pada hari kerja yang sudah selesai.';
+  }
+
+  if (recap.attendanceStatus == AttendancePolicyStatus.hadirTanpaJadwal) {
+    return 'Hadir tanpa jadwal';
+  }
+
+  if (recap.lateKind == LateKind.normal) {
+    return 'Terlambat: scan pertama ${_formatPolicyTime(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
+  }
+
+  if (recap.lateKind == LateKind.breakFirstConfirmed) {
+    return 'Break-first: scan pertama ${_formatPolicyTime(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
+  }
+
+  final notes = recap.notes?.trim();
+  if (notes != null && notes.isNotEmpty) {
+    return notes;
+  }
+
+  if (recap.attendanceStatus == AttendancePolicyStatus.hadir) {
+    return 'Masuk ${_formatPolicyTime(recap.firstScanLocal)} · Pulang ${_formatPolicyTime(recap.lastPulangLocal)}';
+  }
+
+  return recap.attendanceStatus.label;
+}
+
+String _formatPolicyTime(DateTime? dt) {
+  if (dt == null) return '--:--';
+  return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+}
+
+String _formatPolicyMinutes(int? minutes) {
+  if (minutes == null || minutes <= 0) return '0m';
+  final hours = minutes ~/ 60;
+  final remainder = minutes % 60;
+  if (hours == 0) return '${remainder}m';
+  if (remainder == 0) return '${hours}j';
+  return '${hours}j ${remainder}m';
 }
 
 class AdminReportsScreen extends ConsumerStatefulWidget {
@@ -92,7 +230,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   List<AttendancePolicyRecapDay> _policyRecapRows = [];
   bool _loadingDaily = false;
   String? _policyRecapError;
-  _PolicyRecapFilter _selectedRecapFilter = _PolicyRecapFilter.semua;
+  PolicyRecapFilter _selectedRecapFilter = PolicyRecapFilter.semua;
   final AttendancePolicyRecapService _attendancePolicyRecapService =
       const AttendancePolicyRecapService();
 
@@ -154,7 +292,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     _loading = false;
     _loadingDaily = false;
     _policyRecapError = null;
-    _selectedRecapFilter = _PolicyRecapFilter.semua;
+    _selectedRecapFilter = PolicyRecapFilter.semua;
   }
 
   dynamic _buildAttendanceBaseQuery() {
@@ -255,7 +393,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     setState(() {
       _loadingDaily = true;
       _policyRecapError = null;
-      _selectedRecapFilter = _PolicyRecapFilter.semua;
+      _selectedRecapFilter = PolicyRecapFilter.semua;
     });
 
     try {
@@ -299,35 +437,11 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
   }
 
-  bool _isLateRecap(AttendancePolicyRecapDay row) {
-    return row.isLate || row.lateKind != LateKind.none;
-  }
-
   List<AttendancePolicyRecapDay> _filteredPolicyRecapRows() {
-    return _policyRecapRows.where((row) {
-      switch (_selectedRecapFilter) {
-        case _PolicyRecapFilter.semua:
-          return true;
-        case _PolicyRecapFilter.terlambat:
-          return _isLateRecap(row);
-        case _PolicyRecapFilter.terlambatNormal:
-          return row.lateKind == LateKind.normal;
-        case _PolicyRecapFilter.breakFirst:
-          return row.lateKind == LateKind.breakFirstConfirmed;
-        case _PolicyRecapFilter.kandidatBreakFirst:
-          return row.lateKind == LateKind.breakFirstEligible;
-        case _PolicyRecapFilter.belumMasuk:
-          return row.attendanceStatus == AttendancePolicyStatus.belumMasuk;
-        case _PolicyRecapFilter.tidakHadir:
-          return row.attendanceStatus == AttendancePolicyStatus.tidakHadir;
-        case _PolicyRecapFilter.hadirTanpaJadwal:
-          return row.attendanceStatus ==
-              AttendancePolicyStatus.hadirTanpaJadwal;
-      }
-    }).toList(growable: false);
+    return filterPolicyRecapRows(_policyRecapRows, _selectedRecapFilter);
   }
 
-  Widget _buildRecapFilterChip(_PolicyRecapFilter filter) {
+  Widget _buildRecapFilterChip(PolicyRecapFilter filter) {
     return ChoiceChip(
       label: Text(filter.label),
       selected: _selectedRecapFilter == filter,
@@ -1247,7 +1361,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _PolicyRecapFilter.values
+              children: PolicyRecapFilter.values
                   .map(_buildRecapFilterChip)
                   .toList(growable: false),
             ),
@@ -1265,7 +1379,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                   itemCount: filteredRows.length,
                   itemBuilder: (context, i) =>
-                      _PolicyRecapTile(recap: filteredRows[i]),
+                      PolicyRecapTile(recap: filteredRows[i]),
                 ),
         ),
       ],
@@ -1452,15 +1566,10 @@ class _ReportTile extends StatelessWidget {
 // Policy Recap Tile — Rekap Harian Phase 55
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PolicyRecapTile extends StatelessWidget {
+class PolicyRecapTile extends StatelessWidget {
   final AttendancePolicyRecapDay recap;
 
-  const _PolicyRecapTile({required this.recap});
-
-  String _hm(DateTime? dt) {
-    if (dt == null) return '--:--';
-    return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
+  const PolicyRecapTile({super.key, required this.recap});
 
   String _formatDate(DateTime dt) {
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -1510,45 +1619,48 @@ class _PolicyRecapTile extends StatelessWidget {
     return 'Batas $cutoff · Break-first $breakFirst';
   }
 
-  String _reasonCopy() {
-    if (recap.lateKind == LateKind.breakFirstEligible) {
-      return 'Masih dalam jendela break-first, menunggu konfirmasi.';
-    }
-
-    if (recap.attendanceStatus == AttendancePolicyStatus.belumMasuk) {
-      return 'Hari kerja masih berjalan dan belum ada scan masuk.';
-    }
-
-    if (recap.attendanceStatus == AttendancePolicyStatus.tidakHadir) {
-      return 'Tidak ada scan pada hari kerja yang sudah selesai.';
-    }
-
-    if (recap.attendanceStatus == AttendancePolicyStatus.hadirTanpaJadwal) {
-      return 'Hadir tanpa jadwal';
-    }
-
-    if (recap.lateKind == LateKind.normal) {
-      return 'Terlambat: scan pertama ${_hm(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
-    }
-
-    if (recap.lateKind == LateKind.breakFirstConfirmed) {
-      return 'Break-first: scan pertama ${_hm(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
-    }
-
-    final notes = recap.notes?.trim();
-    if (notes != null && notes.isNotEmpty) {
-      return notes;
-    }
-
-    if (recap.attendanceStatus == AttendancePolicyStatus.hadir) {
-      return 'Masuk ${_hm(recap.firstScanLocal)} · Pulang ${_hm(recap.lastPulangLocal)}';
-    }
-
-    return recap.attendanceStatus.label;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final detailChips = recap.detailSignals
+        .map((signal) => AttendancePolicySignalChip(signal: signal))
+        .toList(growable: false);
+    final metricChips = [
+      _PolicyMetaChip(
+        icon: Icons.schedule_outlined,
+        label: _policyContext(),
+      ),
+      _PolicyMetaChip(
+        icon: Icons.timer_outlined,
+        label: _cutoffContext(),
+      ),
+      if (recap.netWorkMinutes != null)
+        _PolicyMetaChip(
+          icon: Icons.work_outline,
+          label: 'Kerja ${_formatPolicyMinutes(recap.netWorkMinutes)}',
+        ),
+      if (recap.totalBreakMinutes != null)
+        _PolicyMetaChip(
+          icon: Icons.free_breakfast_outlined,
+          label: 'Break ${_formatPolicyMinutes(recap.totalBreakMinutes)}',
+        ),
+      if ((recap.overtimeMinutes ?? 0) > 0)
+        _PolicyMetaChip(
+          icon: Icons.trending_up_outlined,
+          label: 'Lembur ${_formatPolicyMinutes(recap.overtimeMinutes)}',
+        ),
+      if ((recap.shortWorkMinutes ?? 0) > 0)
+        _PolicyMetaChip(
+          icon: Icons.timer_off_outlined,
+          label: 'Kurang ${_formatPolicyMinutes(recap.shortWorkMinutes)}',
+        ),
+      if ((recap.excessBreakMinutes ?? 0) > 0)
+        _PolicyMetaChip(
+          icon: Icons.hourglass_bottom_outlined,
+          label:
+              'Lebih break ${_formatPolicyMinutes(recap.excessBreakMinutes)}',
+        ),
+    ];
+
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -1583,6 +1695,8 @@ class _PolicyRecapTile extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               AttendancePolicyBadge(
+                primaryStatus: recap.primaryStatus,
+                primarySeverity: recap.primarySeverity,
                 status: recap.attendanceStatus,
                 lateKind: recap.lateKind,
               ),
@@ -1592,20 +1706,19 @@ class _PolicyRecapTile extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              _PolicyMetaChip(
-                icon: Icons.schedule_outlined,
-                label: _policyContext(),
-              ),
-              _PolicyMetaChip(
-                icon: Icons.timer_outlined,
-                label: _cutoffContext(),
-              ),
-            ],
+            children: metricChips,
           ),
+          if (detailChips.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: detailChips,
+            ),
+          ],
           const SizedBox(height: 12),
           Text(
-            _reasonCopy(),
+            buildPolicyRecapReasonCopy(recap),
             style: const TextStyle(
               fontSize: 12,
               height: 1.45,
