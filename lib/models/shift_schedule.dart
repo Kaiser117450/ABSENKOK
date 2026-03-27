@@ -1,52 +1,113 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+
+import '../services/schedule_policy_service.dart';
 import 'employee.dart';
+import 'employee_contract.dart';
+import 'shift_band.dart';
 import 'time_off_request.dart';
+
 /// Model untuk slot shift (Pagi, Siang, Sore, Libur)
 class ShiftSlot {
   final String name;
+  final ShiftBand band;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final Color color;
+  final int requiredWorkMinutes;
+  final int lateCutoffHour;
+  final int lateCutoffMinute;
+  final int breakFirstDeadlineHour;
+  final int breakFirstDeadlineMinute;
 
   const ShiftSlot({
     required this.name,
+    required this.band,
     required this.startTime,
     required this.endTime,
     required this.color,
+    required this.requiredWorkMinutes,
+    required this.lateCutoffHour,
+    required this.lateCutoffMinute,
+    required this.breakFirstDeadlineHour,
+    required this.breakFirstDeadlineMinute,
   });
 
+  factory ShiftSlot.fromBand({
+    required ShiftBand band,
+    EmployeeContract contract = EmployeeContract.fulltime,
+    int? requiredWorkMinutes,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    Color? color,
+    String? name,
+  }) {
+    final lateCutoff = SchedulePolicyService.lateCutoff(band);
+    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
+      band: band,
+      contract: contract,
+    );
+
+    return ShiftSlot(
+      name: name ?? band.label,
+      band: band,
+      startTime: startTime ?? _defaultStartTimeForBand(band),
+      endTime: endTime ?? _defaultEndTimeForBand(band),
+      color: color ?? _defaultColorForBand(band),
+      requiredWorkMinutes: requiredWorkMinutes ??
+          (band.isDayOff
+              ? 0
+              : SchedulePolicyService.defaultRequiredWorkMinutes(contract)),
+      lateCutoffHour: lateCutoff?.hour ?? 0,
+      lateCutoffMinute: lateCutoff?.minute ?? 0,
+      breakFirstDeadlineHour: breakFirstDeadline?.hour ?? 0,
+      breakFirstDeadlineMinute: breakFirstDeadline?.minute ?? 0,
+    );
+  }
+
   // Shift untuk gerai buka 09:00 - 22:00
-  factory ShiftSlot.pagi() => ShiftSlot(
-        name: 'Pagi',
-        startTime: const TimeOfDay(hour: 9, minute: 0),
-        endTime: const TimeOfDay(hour: 17, minute: 0), // 09:00-17:00 (8 jam)
-        color: const Color(0xFF3B82F6), // Blue
+  factory ShiftSlot.pagi({
+    EmployeeContract contract = EmployeeContract.fulltime,
+    int? requiredWorkMinutes,
+  }) =>
+      ShiftSlot.fromBand(
+        band: ShiftBand.pagi,
+        contract: contract,
+        requiredWorkMinutes: requiredWorkMinutes,
       );
 
-  factory ShiftSlot.siang() => ShiftSlot(
-        name: 'Siang',
-        startTime: const TimeOfDay(hour: 12, minute: 0),
-        endTime: const TimeOfDay(hour: 20, minute: 0), // 12:00-20:00 (8 jam)
-        color: const Color(0xFFF59E0B), // Amber
+  factory ShiftSlot.siang({
+    EmployeeContract contract = EmployeeContract.fulltime,
+    int? requiredWorkMinutes,
+  }) =>
+      ShiftSlot.fromBand(
+        band: ShiftBand.siang,
+        contract: contract,
+        requiredWorkMinutes: requiredWorkMinutes,
       );
 
-  factory ShiftSlot.sore() => ShiftSlot(
-        name: 'Sore',
-        startTime: const TimeOfDay(hour: 14, minute: 0),
-        endTime: const TimeOfDay(hour: 22, minute: 0), // 14:00-22:00 (8 jam)
-        color: const Color(0xFFF97316), // Orange
+  factory ShiftSlot.sore({
+    EmployeeContract contract = EmployeeContract.fulltime,
+    int? requiredWorkMinutes,
+  }) =>
+      ShiftSlot.fromBand(
+        band: ShiftBand.sore,
+        contract: contract,
+        requiredWorkMinutes: requiredWorkMinutes,
       );
 
-  factory ShiftSlot.libur() => ShiftSlot(
-        name: 'Libur',
-        startTime: const TimeOfDay(hour: 0, minute: 0),
-        endTime: const TimeOfDay(hour: 0, minute: 0),
-        color: const Color(0xFFDC2626), // Red
+  factory ShiftSlot.libur() => ShiftSlot.fromBand(
+        band: ShiftBand.libur,
+        contract: EmployeeContract.fulltime,
       );
 
   Map<String, dynamic> toJson() => {
         'name': name,
+        'band': band.storageValue,
+        'required_work_minutes': requiredWorkMinutes,
+        'late_cutoff_hour': lateCutoffHour,
+        'late_cutoff_minute': lateCutoffMinute,
+        'break_first_deadline_hour': breakFirstDeadlineHour,
+        'break_first_deadline_minute': breakFirstDeadlineMinute,
         'start_hour': startTime.hour,
         'start_minute': startTime.minute,
         'end_hour': endTime.hour,
@@ -54,18 +115,145 @@ class ShiftSlot {
         'color': color.value,
       };
 
-  factory ShiftSlot.fromJson(Map<String, dynamic> json) => ShiftSlot(
-        name: json['name'] as String,
-        startTime: TimeOfDay(
-          hour: json['start_hour'] as int,
-          minute: json['start_minute'] as int,
-        ),
-        endTime: TimeOfDay(
-          hour: json['end_hour'] as int,
-          minute: json['end_minute'] as int,
-        ),
-        color: Color(json['color'] as int),
-      );
+  factory ShiftSlot.fromJson(Map<String, dynamic> json) {
+    final band = ShiftBand.tryParse(json['band']?.toString()) ??
+        ShiftBand.tryParse(json['name']?.toString()) ??
+        _inferBandFromLegacyTimes(json) ??
+        ShiftBand.pagi;
+    final lateCutoff = SchedulePolicyService.lateCutoff(band);
+    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
+      band: band,
+      contract: EmployeeContract.fulltime,
+    );
+
+    return ShiftSlot(
+      name: (json['name'] as String?) ?? band.label,
+      band: band,
+      startTime: _readTimeOfDay(
+        json,
+        hourKey: 'start_hour',
+        minuteKey: 'start_minute',
+        fallback: _defaultStartTimeForBand(band),
+      ),
+      endTime: _readTimeOfDay(
+        json,
+        hourKey: 'end_hour',
+        minuteKey: 'end_minute',
+        fallback: _defaultEndTimeForBand(band),
+      ),
+      color: Color(_readInt(json['color'], _defaultColorForBand(band).value)),
+      requiredWorkMinutes: _readInt(
+        json['required_work_minutes'],
+        band.isDayOff
+            ? 0
+            : SchedulePolicyService.defaultRequiredWorkMinutes(
+                EmployeeContract.fulltime,
+              ),
+      ),
+      lateCutoffHour: _readInt(
+        json['late_cutoff_hour'],
+        lateCutoff?.hour ?? 0,
+      ),
+      lateCutoffMinute: _readInt(
+        json['late_cutoff_minute'],
+        lateCutoff?.minute ?? 0,
+      ),
+      breakFirstDeadlineHour: _readInt(
+        json['break_first_deadline_hour'],
+        breakFirstDeadline?.hour ?? 0,
+      ),
+      breakFirstDeadlineMinute: _readInt(
+        json['break_first_deadline_minute'],
+        breakFirstDeadline?.minute ?? 0,
+      ),
+    );
+  }
+
+  static ShiftBand? _inferBandFromLegacyTimes(Map<String, dynamic> json) {
+    final startHour = _tryReadInt(json['start_hour']);
+    if (startHour == null) {
+      return null;
+    }
+
+    if (startHour >= 14) {
+      return ShiftBand.sore;
+    }
+    if (startHour >= 12) {
+      return ShiftBand.siang;
+    }
+    if (startHour == 0 && _tryReadInt(json['end_hour']) == 0) {
+      return ShiftBand.libur;
+    }
+    return ShiftBand.pagi;
+  }
+
+  static TimeOfDay _readTimeOfDay(
+    Map<String, dynamic> json, {
+    required String hourKey,
+    required String minuteKey,
+    required TimeOfDay fallback,
+  }) {
+    return TimeOfDay(
+      hour: _readInt(json[hourKey], fallback.hour),
+      minute: _readInt(json[minuteKey], fallback.minute),
+    );
+  }
+
+  static int _readInt(Object? raw, int fallback) {
+    return _tryReadInt(raw) ?? fallback;
+  }
+
+  static int? _tryReadInt(Object? raw) {
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is num) {
+      return raw.toInt();
+    }
+    if (raw is String) {
+      return int.tryParse(raw);
+    }
+    return null;
+  }
+
+  static TimeOfDay _defaultStartTimeForBand(ShiftBand band) {
+    switch (band) {
+      case ShiftBand.pagi:
+        return const TimeOfDay(hour: 9, minute: 0);
+      case ShiftBand.siang:
+        return const TimeOfDay(hour: 12, minute: 0);
+      case ShiftBand.sore:
+        return const TimeOfDay(hour: 14, minute: 0);
+      case ShiftBand.libur:
+        return const TimeOfDay(hour: 0, minute: 0);
+    }
+  }
+
+  static TimeOfDay _defaultEndTimeForBand(ShiftBand band) {
+    switch (band) {
+      case ShiftBand.pagi:
+        return const TimeOfDay(hour: 17, minute: 0);
+      case ShiftBand.siang:
+        return const TimeOfDay(hour: 20, minute: 0);
+      case ShiftBand.sore:
+        return const TimeOfDay(hour: 22, minute: 0);
+      case ShiftBand.libur:
+        return const TimeOfDay(hour: 0, minute: 0);
+    }
+  }
+
+  static Color _defaultColorForBand(ShiftBand band) {
+    switch (band) {
+      case ShiftBand.pagi:
+        return const Color(0xFF3B82F6);
+      case ShiftBand.siang:
+        return const Color(0xFFF59E0B);
+      case ShiftBand.sore:
+        return const Color(0xFFF97316);
+      case ShiftBand.libur:
+        return const Color(0xFFDC2626);
+    }
+  }
 }
 
 /// Template shift per gerai
@@ -374,10 +562,12 @@ class OutletSchedule {
 
   /// Get entries for specific date
   List<ScheduleEntry> getEntriesForDate(DateTime date) {
-    return entries.where((e) =>
-        e.date.year == date.year &&
-        e.date.month == date.month &&
-        e.date.day == date.day).toList();
+    return entries
+        .where((e) =>
+            e.date.year == date.year &&
+            e.date.month == date.month &&
+            e.date.day == date.day)
+        .toList();
   }
 
   /// Check if schedule is for weekly or monthly
@@ -403,7 +593,8 @@ class OutletSchedule {
         outletId: json['outlet_id'] as String,
         startDate: DateTime.parse(json['start_date'] as String),
         endDate: DateTime.parse(json['end_date'] as String),
-        template: ShiftTemplate.fromJson(json['template'] as Map<String, dynamic>),
+        template:
+            ShiftTemplate.fromJson(json['template'] as Map<String, dynamic>),
         entries: (json['entries'] as List)
             .map((e) => ScheduleEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -414,4 +605,3 @@ class OutletSchedule {
         isActive: json['is_active'] as bool? ?? true,
       );
 }
-
