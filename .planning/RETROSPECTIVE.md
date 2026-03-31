@@ -394,6 +394,45 @@
 
 ---
 
+## Milestone: v8.0 — Strict Attendance & Payroll Reporting
+
+**Shipped:** 2026-03-31
+**Phases:** 8 (54-60 plus 58.1) | **Plans:** 28 | **Timeline:** 6 days
+
+### What Was Built
+- Explicit employee contracts and outlet operating modes as first-class attendance inputs
+- Band-first schedule policy, authoritative WITA scan time, and break-first-safe kiosk flow
+- Strict recap evaluation with manager exemption, overnight-safe grouping, and payroll-facing detail signals
+- Payroll matrix plus spreadsheet export, legacy no-schedule fallback, and parity-aligned portal/PDF surfaces
+- Rollout acceptance shell with a typed readiness service, fixture pack, and validation bundle export
+
+### What Worked
+- The phase chain was coherent: metadata -> schedule policy -> scan authority -> strict recap -> reporting parity -> rollout acceptance
+- Shared typed contracts paid off; once recap semantics lived in SQL and typed models, downstream UI/export work stayed additive instead of duplicating logic
+- A late verification backfill pass was still tractable because plan summaries had enough detail to reconstruct missing phase verification artifacts cleanly
+
+### What Was Inefficient
+- Several phases shipped without `VERIFICATION.md`, so milestone closeout needed a dedicated re-verification pass before the audit could pass cleanly
+- `*-VALIDATION.md` discipline still lags implementation velocity across most of the milestone, leaving Nyquist coverage partial at archive time
+- `flutter analyze` surfaced small lint debt in older Phase 55 files during milestone audit, which meant closeout still included cleanup work instead of pure archival
+
+### Patterns Established
+- Payroll-facing surfaces should share one dataset contract across Admin, Spreadsheet, PDF, and Portal, with compatibility layers filling only missing keys
+- Manual rollout readiness is better expressed as a typed UI/workflow inside the recap shell than as freeform operator notes
+- Summary frontmatter matters: `requirements-completed` metadata turned milestone audit from guesswork into a reliable cross-reference step
+
+### Key Lessons
+1. If phases ship quickly, verification backfill should happen before the milestone endgame, not during archival.
+2. Contract-driven payroll work scales better than surface-by-surface patches; once the strict recap core was right, parity features were mostly integration work.
+3. Operational rollout steps should stay explicit and manual when database safety matters, but they still need first-class product surfaces and evidence bundles.
+
+### Cost Observations
+- Model mix: balanced local execution with targeted manual verification
+- Sessions: milestone work spanned multiple short execution bursts plus one closeout/audit session
+- Notable: closeout cost came more from evidence hygiene and validation debt than from unresolved product bugs
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

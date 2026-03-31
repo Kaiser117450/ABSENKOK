@@ -34,6 +34,8 @@ class ShiftSchedulerScreen extends ConsumerStatefulWidget {
 class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   bool _isLoading = true;
   bool _hasUnsavedChanges = false;
+  bool _showPolicySummary = true;
+  bool _isPolicySummaryExpanded = true;
   List<Employee> _employees = [];
   OutletSchedule? _currentSchedule;
 
@@ -320,13 +322,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       return '-';
     }
     return _formatClock(shift.lateCutoffHour, shift.lateCutoffMinute);
-  }
-
-  String _formatBreakFirst(ShiftSlot shift) {
-    if (shift.band == ShiftBand.libur) {
-      return 'Tidak berlaku';
-    }
-    return 'sampai ${_formatClock(shift.breakFirstDeadlineHour, shift.breakFirstDeadlineMinute)} (${shift.requiredWorkMinutes == SchedulePolicyService.parttimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
   }
 
   void _replaceEntryForDay(Employee emp, DateTime date, ShiftSlot shift) {
@@ -1256,7 +1251,20 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               },
             ),
           ]),
-          const SchedulePolicySummaryCard(),
+          if (_showPolicySummary)
+            SchedulePolicySummaryCard(
+              isExpanded: _isPolicySummaryExpanded,
+              onToggleExpanded: () {
+                setState(() {
+                  _isPolicySummaryExpanded = !_isPolicySummaryExpanded;
+                });
+              },
+              onDismiss: () {
+                setState(() {
+                  _showPolicySummary = false;
+                });
+              },
+            ),
         ],
       ),
     );
@@ -1273,125 +1281,26 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         updatedAt: '',
       ),
     );
-    const workMinuteOptions = [480, 540, 600, 660, 720];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) {
-        var selectedBand = entry.shift.band;
-        var selectedMinutes = entry.shift.requiredWorkMinutes == 0
-            ? SchedulePolicyService.defaultRequiredWorkMinutes(
-                emp.employmentContract)
-            : entry.shift.requiredWorkMinutes;
-
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final previewShift = _buildShiftForEmployee(
-              emp,
-              selectedBand,
-              requiredWorkMinutes:
-                  selectedBand == ShiftBand.libur ? null : selectedMinutes,
-            );
-
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Atur ${emp.name}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 18),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: ShiftBand.values.map((band) {
-                        return ChoiceChip(
-                          label: Text(band.label),
-                          selected: selectedBand == band,
-                          onSelected: (_) =>
-                              setSheetState(() => selectedBand = band),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Jam wajib',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: workMinuteOptions.map((minutes) {
-                        return ChoiceChip(
-                          label: Text(_formatRequiredHours(minutes)),
-                          selected: selectedMinutes == minutes,
-                          onSelected: selectedBand == ShiftBand.libur
-                              ? null
-                              : (_) => setSheetState(
-                                  () => selectedMinutes = minutes),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildReviewRow('Band', previewShift.band.label),
-                    _buildReviewRow(
-                      'Jam wajib',
-                      previewShift.band == ShiftBand.libur
-                          ? 'Libur'
-                          : _formatRequiredHours(
-                              previewShift.requiredWorkMinutes),
-                    ),
-                    _buildReviewRow(
-                        'Batas telat', _formatLateCutoff(previewShift)),
-                    _buildReviewRow(
-                        'Break-first', _formatBreakFirst(previewShift)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              _removeEntry(entry.id);
-                              Navigator.pop(sheetContext);
-                            },
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Hapus'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _addShift(
-                                emp,
-                                entry.date,
-                                selectedBand,
-                                requiredWorkMinutes:
-                                    selectedBand == ShiftBand.libur
-                                        ? null
-                                        : selectedMinutes,
-                              );
-                              Navigator.pop(sheetContext);
-                            },
-                            child: const Text('Simpan'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (sheetContext) => ScheduleAssignedEntryEditorSheet(
+        employee: emp,
+        entry: entry,
+        onDelete: () {
+          _removeEntry(entry.id);
+          Navigator.pop(sheetContext);
+        },
+        onSave: (selection) {
+          _addShift(
+            emp,
+            entry.date,
+            selection.band,
+            requiredWorkMinutes: selection.requiredWorkMinutes,
+          );
+          Navigator.pop(sheetContext);
+        },
+      ),
     );
   }
 
@@ -1445,6 +1354,260 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         Navigator.pop(
             dialogContext); // PENTING: Gunakan dialogContext, bukan context
       },
+    );
+  }
+}
+
+const Color _scheduleChipLabelColor = Color(0xFF111827);
+const Color _scheduleChipSelectedColor = Color(0xFFE2E8F0);
+const Color _scheduleChipBackgroundColor = Color(0xFFF8FAFC);
+const Color _scheduleChipDisabledColor = Color(0xFFE5E7EB);
+const BorderSide _scheduleChipBorderSide = BorderSide(color: Color(0xFFCBD5E1));
+
+ShiftSlot _buildPreviewShiftForEmployee(
+  Employee employee,
+  ShiftBand band, {
+  int? requiredWorkMinutes,
+}) {
+  if (band == ShiftBand.libur) {
+    return ShiftSlot.libur();
+  }
+
+  return ShiftSlot.fromBand(
+    band: band,
+    contract: employee.employmentContract,
+    requiredWorkMinutes: requiredWorkMinutes,
+  );
+}
+
+String _formatRequiredHoursLabel(int minutes) => '${minutes ~/ 60}j';
+
+String _formatScheduleClock(int hour, int minute) {
+  final hh = hour.toString().padLeft(2, '0');
+  final mm = minute.toString().padLeft(2, '0');
+  return '$hh:$mm';
+}
+
+String _formatPreviewLateCutoff(ShiftSlot shift) {
+  if (shift.band == ShiftBand.libur) {
+    return '-';
+  }
+  return _formatScheduleClock(shift.lateCutoffHour, shift.lateCutoffMinute);
+}
+
+String _formatPreviewBreakFirst(ShiftSlot shift) {
+  if (shift.band == ShiftBand.libur) {
+    return 'Tidak berlaku';
+  }
+  return 'sampai ${_formatScheduleClock(shift.breakFirstDeadlineHour, shift.breakFirstDeadlineMinute)} (${shift.requiredWorkMinutes == SchedulePolicyService.parttimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
+}
+
+class ScheduleEntryEditorSelection {
+  const ScheduleEntryEditorSelection({
+    required this.band,
+    required this.requiredWorkMinutes,
+  });
+
+  final ShiftBand band;
+  final int? requiredWorkMinutes;
+}
+
+class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
+  const ScheduleAssignedEntryEditorSheet({
+    super.key,
+    required this.employee,
+    required this.entry,
+    required this.onDelete,
+    required this.onSave,
+  });
+
+  final Employee employee;
+  final ScheduleEntry entry;
+  final VoidCallback onDelete;
+  final ValueChanged<ScheduleEntryEditorSelection> onSave;
+
+  @override
+  State<ScheduleAssignedEntryEditorSheet> createState() =>
+      _ScheduleAssignedEntryEditorSheetState();
+}
+
+class _ScheduleAssignedEntryEditorSheetState
+    extends State<ScheduleAssignedEntryEditorSheet> {
+  static const List<int> _workMinuteOptions = <int>[480, 540, 600, 660, 720];
+
+  late ShiftBand _selectedBand;
+  late int _selectedMinutes;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedBand = widget.entry.shift.band;
+    _selectedMinutes = widget.entry.shift.requiredWorkMinutes == 0
+        ? SchedulePolicyService.defaultRequiredWorkMinutes(
+            widget.employee.employmentContract,
+          )
+        : widget.entry.shift.requiredWorkMinutes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final previewShift = _buildPreviewShiftForEmployee(
+      widget.employee,
+      _selectedBand,
+      requiredWorkMinutes:
+          _selectedBand == ShiftBand.libur ? null : _selectedMinutes,
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Atur ${widget.employee.name}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ShiftBand.values.map((band) {
+                return _buildStyledChoiceChip(
+                  key: ValueKey<String>('schedule-band-${band.storageValue}'),
+                  label: band.label,
+                  selected: _selectedBand == band,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedBand = band;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Jam wajib',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _workMinuteOptions.map((minutes) {
+                return _buildStyledChoiceChip(
+                  key: ValueKey<String>('schedule-hours-$minutes'),
+                  label: _formatRequiredHoursLabel(minutes),
+                  selected: _selectedMinutes == minutes,
+                  enabled: _selectedBand != ShiftBand.libur,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedMinutes = minutes;
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            _buildReviewRow('Band', previewShift.band.label),
+            _buildReviewRow(
+              'Jam wajib',
+              previewShift.band == ShiftBand.libur
+                  ? 'Libur'
+                  : _formatRequiredHoursLabel(previewShift.requiredWorkMinutes),
+            ),
+            _buildReviewRow(
+                'Batas telat', _formatPreviewLateCutoff(previewShift)),
+            _buildReviewRow(
+                'Break-first', _formatPreviewBreakFirst(previewShift)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Hapus'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onSave(
+                        ScheduleEntryEditorSelection(
+                          band: _selectedBand,
+                          requiredWorkMinutes: _selectedBand == ShiftBand.libur
+                              ? null
+                              : _selectedMinutes,
+                        ),
+                      );
+                    },
+                    child: const Text('Simpan'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ChoiceChip _buildStyledChoiceChip({
+    required Key key,
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+    bool enabled = true,
+  }) {
+    return ChoiceChip(
+      key: key,
+      label: Text(label),
+      labelStyle: const TextStyle(
+        color: _scheduleChipLabelColor,
+        fontWeight: FontWeight.w700,
+      ),
+      selected: selected,
+      onSelected: enabled ? onSelected : null,
+      backgroundColor: _scheduleChipBackgroundColor,
+      selectedColor: _scheduleChipSelectedColor,
+      disabledColor: _scheduleChipDisabledColor,
+      side: _scheduleChipBorderSide,
+      showCheckmark: false,
+    );
+  }
+
+  Widget _buildReviewRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF475569),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Strict Attendance & Payroll Reporting
-status: complete
-stopped_at: Completed Phase 60 rollout-payroll-acceptance
-last_updated: "2026-03-31T12:45:00+08:00"
+status: milestone_complete
+stopped_at: Archived milestone v8.0 Strict Attendance & Payroll Reporting
+last_updated: "2026-03-31T13:13:24+08:00"
 last_activity: 2026-03-31
 progress:
   total_phases: 8
@@ -17,37 +17,50 @@ progress:
 
 ## Current Position
 
-Phase: 60 (rollout-payroll-acceptance) — COMPLETE
-Plan: 3 of 3
-Status: Ready for milestone closeout
+Milestone: v8.0 — ARCHIVED
+Phase: None
+Plan: None
+Status: Awaiting manual rollout review and next milestone definition
 Last activity: 2026-03-31
 
 ## Current Status
 
-- **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
-- **Last shipped milestone:** v7.1 Security Hardening
-- **Next phase:** None — v8.0 implementation scope is complete
-- **Current focus:** Phase 60 complete — awaiting milestone closeout and manual operator rollout review
+- **Active milestone:** None currently
+- **Last shipped milestone:** v8.0 Strict Attendance & Payroll Reporting
+- **Next phase:** None — milestone implementation scope is archived
+- **Current focus:** Run the intentional manual Phase 60 rollout review, then define the next milestone when ready
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Phase 60 complete; v8.0 implementation scope is finished
+v8.0 archived; implementation scope is complete
 [##################] 8 of 8 phases complete (28 currently defined plans, 28 completed)
 ```
 
-- **Next action:** Close milestone v8.0 and run the manual Phase 60 operator rollout review before payroll depends on the new outputs.
+- **Next action:** Run the manual Phase 60 operator rollout review before payroll depends on the new outputs, then start the next milestone with `$gsd-new-milestone` when planning resumes.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 60 is complete; the remaining operational work is the intentional manual rollout checklist and milestone closeout.
+**Current focus:** v8.0 is archived; the remaining operational work is the intentional manual rollout checklist and future milestone definition.
 
 ## What Was Shipped
+
+### v8.0 (Released, 2026-03-31)
+
+- Phase 54: Workforce contract and outlet mode foundation
+- Phase 55: Schedule policy and absence rules
+- Phase 56: Server-time scan authority
+- Phase 57: Strict recap evaluation engine
+- Phase 58: Payroll matrix and spreadsheet export
+- Phase 58.1: Schedule UX polish and legacy payroll fallback
+- Phase 59: PDF and portal parity
+- Phase 60: Rollout and payroll acceptance
+- Notes: audit passed at `v8.0-MILESTONE-AUDIT.md`; remaining work is the manual operator rollout review before payroll use
 
 ### v7.1 (Released, 2026-03-25)
 
@@ -291,9 +304,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Session Continuity
 
-**Last session:** 2026-03-31T03:40:13.173Z
-**Stopped at:** Completed Phase 60 rollout-payroll-acceptance
-**Resume file:** .planning/phases/60-rollout-payroll-acceptance/60-VERIFICATION.md
+**Last session:** 2026-03-31T13:13:24+08:00
+**Stopped at:** Archived milestone v8.0 Strict Attendance & Payroll Reporting
+**Resume file:** .planning/milestones/v8.0-MILESTONE-AUDIT.md
 
 ## Database Safety Rules
 
@@ -315,4 +328,3 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Codebase map: `.planning/codebase/`
 - Milestones archive: `.planning/milestones/`
 - SQL scripts: `sql/`
-

@@ -2,204 +2,33 @@
 
 ## Shipped Milestones
 
+- ✅ **v8.0 Strict Attendance & Payroll Reporting** — Phases 54-60 plus 58.1, shipped 2026-03-31 ([roadmap archive](.planning/milestones/v8.0-ROADMAP.md), [requirements archive](.planning/milestones/v8.0-REQUIREMENTS.md), [audit](.planning/milestones/v8.0-MILESTONE-AUDIT.md))
 - ✅ **v7.1 Security Hardening** — Phases 50-53, shipped 2026-03-25 ([roadmap archive](.planning/milestones/v7.1-ROADMAP.md), [requirements archive](.planning/milestones/v7.1-REQUIREMENTS.md))
 - ✅ **v7.0 Android Release Hardening** — Phases 46-49 plus 48.1, shipped 2026-03-25 ([roadmap archive](.planning/milestones/v7.0-ROADMAP.md), [requirements archive](.planning/milestones/v7.0-REQUIREMENTS.md))
 
 ## Active Milestone
 
-### v8.0 Strict Attendance & Payroll Reporting
+No new milestone is defined yet.
 
-**Goal:** Convert attendance into a contract-aware, server-time, overnight-safe payroll reporting system with strict red/yellow enforcement for lateness, short work, excess break, overtime, and absence.
-**Phases:** 54-60 plus inserted Phase 58.1
-**Requirements:** 17 mapped / 17 total
+The remaining non-milestone operational work is the intentional manual Phase 60 rollout review before payroll depends on the new outputs.
 
 ## Current Position
 
-- Active milestone is now **v8.0 Strict Attendance & Payroll Reporting**.
-- This milestone replaces the current generic overtime and device-local recap assumptions with explicit `FULLTIME` / `PARTTIME` employee contracts and `NORMAL` / `TWENTY_FOUR_HOUR` outlet modes.
-- Phase 58 completed on 2026-03-27, so the admin recap now has the payroll matrix and spreadsheet export baseline.
-- Phase 58.1 completed on 2026-03-28, so scheduler friction is reduced and admin payroll recap now stays useful for legacy outlets without `schedule_entries`.
-- Phase 59 planning completed on 2026-03-28 with 4 execution plans across 3 waves for portal parity, payroll PDF export, and recap wiring.
-- Phase 60 completed on 2026-03-31 with rollout docs, typed acceptance services, validation-bundle export, and recap-shell readiness gating verified in one closeout pass.
+- Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
+- Product state: payroll reporting is now contract-aware, server-time authoritative, overnight-safe, and parity-aligned across Admin, Spreadsheet, PDF, and Portal
+- Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
+- Next planning step: run `$gsd-new-milestone` when ready to define the next product scope
 
-## Proposed Roadmap
+## Latest Shipment Summary
 
-**8 phases** | **17 requirements mapped** | All covered
+v8.0 delivered:
 
-| # | Phase | Goal | Requirements | Status |
-|---|-------|------|--------------|--------|
-| 54 | Workforce Contract & Outlet Mode Foundation | Add the new employee and outlet rule metadata without breaking the live attendance baseline | `CONTRACT-01`, `CONTRACT-02` | Complete (2026-03-27) |
-| 55 | Schedule Policy & Absence Rules | Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection | `SCHED-01`, `SCHED-02`, `SCHED-03` | Complete (2026-03-27) |
-| 56 | Server-Time Scan Authority | Move scan timing to WITA server authority and capture break-first intent safely | `SCAN-01`, `SCAN-02` | Complete (2026-03-27) |
-| 57 | Strict Recap Evaluation Engine | Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | Complete (2026-03-27) |
-| 58 | Payroll Matrix & Spreadsheet Export | Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output | `REPORT-01`, `REPORT-02` | Complete (2026-03-27) |
-| 58.1 | Schedule UX polish and legacy payroll fallback | Fix urgent schedule UI friction and keep legacy recap data visible when `schedule_entries` are still missing | `58.1-UX-01`, `58.1-UX-02`, `REPORT-01`, `REPORT-02` | Complete (2026-03-28) |
-| 59 | PDF & Portal Parity | Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks | `SCHED-04`, `REPORT-03` | Complete (2026-03-28) |
-| 60 | Rollout & Payroll Acceptance | 3/3 | Complete   | 2026-03-31 |
-
-### Phase 54: Workforce Contract & Outlet Mode Foundation
-
-**Status:** Complete (2026-03-27)
-**Goal:** Add the new employee and outlet rule metadata without breaking the live attendance baseline.
-**Depends on:** v7.1 closeout baseline
-**Requirements:** `CONTRACT-01`, `CONTRACT-02`
-**Plans:** 4/4 execution plans complete
-
-- [x] `54-01-PLAN.md` — Shared workforce metadata contract and additive SQL foundation
-- [x] `54-02-PLAN.md` — Employee contract admin surfaces and archived history visibility
-- [x] `54-03-PLAN.md` — CSV import contract enforcement and operator guidance
-- [x] `54-04-PLAN.md` — Outlet operating-mode admin surfaces
-
-Success criteria:
-1. Employee data can persist and read one explicit contract value, `FULLTIME` or `PARTTIME`, through additive migrations and typed models.
-2. Outlet data can persist and read one operating-mode value, `NORMAL` or `TWENTY_FOUR_HOUR`, without regressing current admin functionality.
-3. Admin and kepala gerai surfaces expose those fields with safe defaults for existing live records.
-4. Attendance and reporting services have one shared model layer for contract and outlet-mode metadata instead of ad-hoc heuristics.
-
-### Phase 55: Schedule Policy & Absence Rules
-
-**Status:** Complete (2026-03-27)
-**Goal:** Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection.
-**Depends on:** Phase 54
-**Requirements:** `SCHED-01`, `SCHED-02`, `SCHED-03`
-**Plans:** 4/4 execution plans complete
-
-- [x] `55-01-PLAN.md` — Shared schedule-policy foundation, typed shift bands, and additive SQL backfill
-- [x] `55-02-PLAN.md` — Band-first scheduler UI, policy summary card, bulk review, and required-hours overrides
-- [x] `55-03-PLAN.md` — Admin policy recap RPC and typed recap service for late/no-show evaluation
-- [x] `55-04-PLAN.md` — Rekap Harian filters, policy badges, and operational reason copy
-
-Success criteria:
-1. Schedule storage and admin UI stop depending on stale exact clock labels and instead represent the intended pagi, siang, or sore work band plus required hours.
-2. Morning, siang, and sore lateness rules evaluate from WITA business rules, including the morning hard cutoff at 07:00.
-3. Scheduled employees with no logs for the logical workday resolve to `tidak_hadir` while sakit, izin, libur, and cuti remain distinct states.
-4. Existing scheduling workflows for kepala gerai remain additive and backwards-compatible for live outlets.
-
-### Phase 56: Server-Time Scan Authority
-
-**Status:** Complete (2026-03-27)
-**Goal:** Move scan timing to WITA server authority and capture break-first intent safely.
-**Depends on:** Phase 55
-**Requirements:** `SCAN-01`, `SCAN-02`
-**Plans:** 3/3 execution plans complete
-
-- [x] `56-01-PLAN.md` — authoritative WITA scan timestamp contract, kiosk authority service, and additive SQL guard
-- [x] `56-02-PLAN.md` — offline queue ordering and pending-log metadata alignment for authoritative replay
-- [x] `56-03-PLAN.md` — break-first kiosk UX, authoritative success copy, and pending-state scan behavior
-
-Success criteria:
-1. Kiosk scan creation and sync paths use one server-authoritative WITA timestamp source instead of trusting the tablet clock.
-2. Break-first cases can be confirmed and recorded without slowing the normal tap workflow.
-3. A missing initial break can no longer silently turn into a false on-time or false late result in recap calculations.
-4. Offline-safe behavior remains defined so later sync still preserves the authoritative event order.
-
-### Phase 57: Strict Recap Evaluation Engine
-
-**Status:** Complete (2026-03-27)
-**Goal:** Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions.
-**Depends on:** Phase 56
-**Requirements:** `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04`
-**Plans:** 3/3 execution plans complete
-
-- [x] `57-01-PLAN.md` — overnight-safe strict recap SQL, manager exemption helpers, and contract test coverage
-- [x] `57-02-PLAN.md` — typed strict recap signals, metrics, compatibility fallbacks, and service parsing
-- [x] `57-03-PLAN.md` — strict primary badges, detail chips, admin filters, and manager-exemption reason copy
-
-Success criteria:
-1. Afternoon-to-morning sessions at 24-hour outlets stay attached to one logical workday instead of becoming false overtime or zero-work records after midnight.
-2. Full-time and part-time employees receive the specified red/yellow evaluation rules for short work, excess break, and overtime.
-3. Kepala toko / kepala gerai recap rows never turn red for lateness, short work, or excess break while still remaining visible in reporting.
-4. Recap outputs distinguish late, short work, excess break, overtime, absence, and exempt cases as separate payroll signals.
-
-### Phase 58: Payroll Matrix & Spreadsheet Export
-
-**Status:** Complete (2026-03-27)
-**Goal:** Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output.
-**Depends on:** Phase 57
-**Requirements:** `REPORT-01`, `REPORT-02`
-**Plans:** 4/4 execution plans complete
-
-- [x] `58-01-PLAN.md` — shared payroll matrix contract, semantics, and roster-first builder
-- [x] `58-02-PLAN.md` — payroll matrix UI shell, pinned rails, and recap tab surface
-- [x] `58-03-PLAN.md` — dedicated XLSX workbook generator and export contract coverage
-- [x] `58-04-PLAN.md` — final recap-tab export wiring and spreadsheet CTA regression coverage
-
-Success criteria:
-1. Rekap Harian admin view renders employees on the left and selected dates across the page with compact masuk/pulang content in each cell.
-2. Spreadsheet export replaces recap CSV export and preserves the same per-day red/yellow outcome colors.
-3. Per-employee summary columns count how many times each violation or overtime state occurred across the selected range.
-4. Payroll-facing exports exclude GPS and other low-signal scan details that are irrelevant for salary review.
-
-### Phase 58.1: Schedule UX polish and legacy payroll fallback (INSERTED)
-
-**Goal:** Fix urgent schedule UX friction and add a no-schedule fallback so legacy outlets without `schedule_entries` still show useful payroll recap data.
-**Requirements**: `58.1-UX-01`, `58.1-UX-02`, `REPORT-01`, `REPORT-02`
-**Depends on:** Phase 58
-**Status:** Complete (2026-03-28)
-**Plans:** 3/3 execution plans complete
-
-Plans:
-- [x] `58.1-01-PLAN.md` — scheduler notice dismiss/minimize controls, readable assignment chips, and widget coverage
-- [x] `58.1-02-PLAN.md` — overnight-safe legacy payroll fallback synthesis service and contract-aware matrix tests
-- [x] `58.1-03-PLAN.md` — admin reports fallback integration plus mixed strict+fallback recap/export regression coverage
-
-### Phase 59: PDF & Portal Parity
-
-**Status:** Complete (2026-03-28)
-**Goal:** Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks.
-**Depends on:** Phase 58.1
-**Requirements:** `SCHED-04`, `REPORT-03`
-**Plans:** 4/4 execution plans complete
-
-- [x] `59-01-PLAN.md` — additive portal parity RPCs, typed portal loaders, and shared overnight/fallback parity fixtures
-- [x] `59-02-PLAN.md` — band-first portal today/week/history UI wired to required-hours and strict outcome parity
-- [x] `59-03-PLAN.md` — dedicated payroll matrix PDF export service with summary-page and legend contract coverage
-- [x] `59-04-PLAN.md` — admin recap PDF wiring, compatibility messaging, and final payroll export regression coverage
-
-Success criteria:
-1. Portal schedule and attendance surfaces show contract-required hours plus remaining or already-worked time without stale exact shift ranges.
-2. PDF recap uses the same contract-aware, overnight-safe, red/yellow evaluation engine as the spreadsheet export.
-3. PDF recap stays compact and payroll-facing, with no GPS or technical scan fields on the recap surface.
-4. Portal, admin recap, spreadsheet, and PDF agree on the same outcome for the same logical workday.
-
-### Phase 60: Rollout & Payroll Acceptance
-
-**Status:** Complete (2026-03-31)
-**Goal:** Validate live-safe rollout, overnight edge cases, and export parity before salary use.
-**Depends on:** Phase 59
-**Requirements:** `OPS-01`
-**Plans:** 3/3 execution plans complete
-
-- [x] `60-01-PLAN.md` — payroll rollout checklist, phase-local setup note, and locked seven-scenario fixtures
-- [x] `60-02-PLAN.md` — typed rollout acceptance domain plus validation bundle export services
-- [x] `60-03-PLAN.md` — admin recap rollout panel, CTA gating, and regression coverage
-
-Success criteria:
-1. Production rollout is documented as additive-only and explicitly gates any database change behind user confirmation.
-2. Acceptance covers full-time, part-time, overtime, 24-hour outlet, normal outlet, break-first, and no-show scenarios.
-3. Validation confirms parity across admin matrix, spreadsheet export, PDF export, and portal presentation.
-4. The milestone closes with a clear operational checklist before payroll decisions rely on the new recap outputs.
-
-<details>
-<summary>✅ v7.1 Security Hardening (Phases 50-53) — SHIPPED 2026-03-25</summary>
-
-- [x] Phase 50: Kiosk Device Boundary Hardening (2/2 plans) — completed 2026-03-25
-- [x] Phase 51: Admin Session Trust Hardening (2/2 plans) — completed 2026-03-25
-- [x] Phase 52: Portal Surface Minimization (3/3 plans) — completed 2026-03-25
-- [x] Phase 53: Security Rollout & Acceptance (3/3 plans) — completed 2026-03-25
-
-</details>
-
-<details>
-<summary>✅ v7.0 Android Release Hardening (Phases 46-49, 48.1) — SHIPPED 2026-03-25</summary>
-
-- [x] Phase 46: Release Baseline Recovery (2/2 plans)
-- [x] Phase 47: Toolchain Contract & Preflight Gates (3/3 plans)
-- [x] Phase 48: Secure Signing & Artifact Discipline (3/3 plans)
-- [x] Phase 48.1: APK-First Release Artifact Alignment (2/2 plans)
-- [x] Phase 49: Release Runbook & Acceptance (2/2 plans)
-
-</details>
+- explicit employee contracts and outlet operating modes as first-class attendance inputs
+- band-first schedule policy with required-hours, lateness, break-first, and no-show handling
+- authoritative WITA scan time with offline-safe replay
+- strict recap evaluation with manager exemption and payroll-facing detail signals
+- payroll matrix plus spreadsheet export, portal/PDF parity, and legacy no-schedule compatibility
+- rollout acceptance tooling with a readiness panel, fixture pack, and validation bundle export
 
 ---
 _For current project status, see `.planning/PROJECT.md`_

@@ -2,28 +2,31 @@
 
 ## What This Is
 NFC attendance kiosk app for **Ayam Guling Enakko** restaurant chain — Android tablet deployed
-at each outlet. Replaces paper attendance. Features: real-time reports with PDF/CSV export,
-persistent floating pill overlay (Dynamic Island-style), employee badge system, Supabase-synced
-schedule grid (week-view TableView), employee archive/restore, batch CSV import, and premium
-kiosk UI. Marketing website at absenkok.vercel.app now also hosts a protected employee portal
-for self-service schedule visibility. Admin can manage employees, attendance, schedules, and
-badges. Kiosk runs unattended 24/7; NFC tap takes < 2 seconds.
+at each outlet. Replaces paper attendance. Features: real-time reports with payroll-facing PDF
+and spreadsheet export, persistent floating pill overlay (Dynamic Island-style), employee badge
+system, Supabase-synced schedule grid (week-view TableView), employee archive/restore, batch CSV
+import, and premium kiosk UI. Marketing website at absenkok.vercel.app now also hosts a protected
+employee portal for self-service schedule visibility. Admin can manage employees, attendance,
+schedules, badges, and payroll recap outputs. Kiosk runs unattended 24/7; NFC tap takes < 2
+seconds.
 
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone: v8.0 Strict Attendance & Payroll Reporting
+## Current Milestone
 
-**Goal:** Turn attendance into a contract-aware, server-time, overnight-safe payroll reporting system with strict red/yellow enforcement for lateness, short work, excess break, overtime, and absence.
+No active milestone is currently defined.
 
-**Target features:**
-- `FULLTIME` / `PARTTIME` employee contracts plus `NORMAL` / `TWENTY_FOUR_HOUR` outlet classification that drive attendance rules end-to-end
-- Mandatory schedule bands, WITA server-time authority, break-first handling, and kepala toko exemption from red lateness/break flags
-- Payroll-grade Rekap Harian outputs in spreadsheet and PDF with compact employee-by-date summaries, overnight-safe calculations, and aggregate violation counts
+**Latest shipped milestone:** v8.0 Strict Attendance & Payroll Reporting (2026-03-31)
+
+**Current operational focus:**
+- complete the intentional manual Phase 60 rollout review before payroll depends on the new recap outputs
+- keep all production SQL apply steps explicitly user-approved and additive-only
+- start the next product scope through `$gsd-new-milestone` when planning resumes
 
 ## Current State
 
-**Shipped:** v7.1 Security Hardening (2026-03-25)
+**Shipped:** v8.0 Strict Attendance & Payroll Reporting (2026-03-31)
 **Running at:** 4 Ayam Guling Enakko outlets, 14 employees
 **Web surfaces:** marketing site + protected employee portal with schedules plus attendance recap on the Astro website
 **Admin surfaces:** classic admin dashboard restored as the default full-admin landing surface; chain-wide network visibility stays on its own full-admin screen
@@ -35,6 +38,7 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Phase 59 completed on 2026-03-28, so admin recap, spreadsheet export, PDF export, and portal recap now share the strict payroll parity contract without stale clock-first framing
 **Rollout acceptance:** Phase 60 completed on 2026-03-31, so operators now have a canonical rollout checklist, locked seven-scenario fixtures, recap-shell readiness gating, and validation-bundle export before payroll is marked ready
+**Milestone audit:** v8.0 audit passed on 2026-03-31, so all 17 mapped requirements now have archive-backed summary plus verification coverage
 **Release lane:** `tool/release_env.ps1` -> `tool/release_preflight.ps1` -> `tool/release_build.ps1` now produces the canonical signed APK, optional bundle, manifest, smoke evidence, and retained debug artifacts from one tracked PowerShell lane
 **Distribution:** GitHub Release `v7.0.0` includes the obfuscated smoke-verified asset `ABSENKOK-v7.0.0+8013.apk`
 **Security:** v7.1 hardened kiosk device boundaries, admin session trust, and portal surface exposure; passwordless portal entry is an accepted product decision documented in the risk register
@@ -203,7 +207,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Rollout validation now ships as one additive-only checklist, seven-scenario fixture pack, recap-shell acceptance surface, and validation-bundle export before payroll use — Phase 60
 
 ### Active
-- [ ] No additional v8.0 implementation scope is open; the remaining payroll go-live work is the intentional manual operator review defined by Phase 60
+- [ ] No active milestone scope is open. The remaining follow-up is the manual Phase 60 rollout review and then next-milestone definition.
 
 ### Out of Scope
 - Automatic payroll amount calculation, payslip generation, or THR formulas — this milestone stops at strict attendance evidence and salary-ready reports
@@ -321,6 +325,9 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 | 40 | Schedule-required lateness, no-show handling, and required-hours metadata live in the shared shift-band policy layer instead of fixed clock heuristics | ✓ Phase 55 foundation complete |
 | 41 | WITA server time, not tablet local time, becomes the authoritative scan clock for strict lateness and payroll reporting | ✓ Phase 56 foundation complete |
 | 42 | Strict recap primary status, detail signals, and manager exemption stay canonical in SQL and typed model output instead of being re-derived in widgets | ✓ Phase 57 foundation complete |
+| 43 | Shared payroll matrix data is the canonical contract for admin recap, spreadsheet export, payroll PDF, and parity wiring | ✓ v8.0 reporting surfaces stay aligned on one dataset |
+| 44 | Legacy payroll fallback only fills missing strict recap keys and never overwrites strict recap rows | ✓ Phase 58.1 compatibility remains additive and honest |
+| 45 | Payroll rollout readiness stays as a typed manual acceptance workflow inside the admin recap shell before salary use | ✓ Phase 60 makes go-live review explicit instead of implicit |
 
 ## Brand & Design Direction
 - **Brand:** Ayam Guling Enakko (Indonesian restaurant chain)
@@ -338,4 +345,4 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - Additive migrations only (production DB live)
 
 ---
-*Last updated: 2026-03-31 after Phase 60 completion*
+*Last updated: 2026-03-31 after v8.0 milestone closeout*

@@ -4,7 +4,6 @@ import '../services/schedule_policy_service.dart';
 import 'employee.dart';
 import 'employee_contract.dart';
 import 'shift_band.dart';
-import 'time_off_request.dart';
 
 /// Model untuk slot shift (Pagi, Siang, Sore, Libur)
 class ShiftSlot {
@@ -112,7 +111,7 @@ class ShiftSlot {
         'start_minute': startTime.minute,
         'end_hour': endTime.hour,
         'end_minute': endTime.minute,
-        'color': color.value,
+        'color': color.toARGB32(),
       };
 
   factory ShiftSlot.fromJson(Map<String, dynamic> json) {
@@ -141,7 +140,9 @@ class ShiftSlot {
         minuteKey: 'end_minute',
         fallback: _defaultEndTimeForBand(band),
       ),
-      color: Color(_readInt(json['color'], _defaultColorForBand(band).value)),
+      color: Color(
+        _readInt(json['color'], _defaultColorForBand(band).toARGB32()),
+      ),
       requiredWorkMinutes: _readInt(
         json['required_work_minutes'],
         band.isDayOff
