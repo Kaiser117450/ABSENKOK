@@ -5,6 +5,7 @@ Checklist ini khusus untuk Phase 60 rollout dan acceptance. Phase ini tidak menu
 Lihat juga:
 - `docs/android-release-runbook.md` untuk pola runbook operator yang sudah dipakai di repo ini
 - `.planning/phases/60-rollout-payroll-acceptance/60-ACCEPTANCE-FIXTURES.md` untuk pack skenario wajib yang harus direview
+- `docs/payroll-rollout-review-worksheet.md` untuk lembar kerja review operator yang bisa diisi tanpa mengubah checklist canonical
 
 ---
 
@@ -124,6 +125,7 @@ Gunakan wording ini hanya setelah operator selesai mereview bukti.
 - Isi kolom **Admin**, **Spreadsheet**, **PDF**, dan **Portal**
 - Tandai `Status` sebagai `Passed`, `Pending`, atau `Blocked`
 - Catat mismatch sebelum lanjut ke skenario berikutnya
+- Jika perlu lembar kerja terpisah, isi `docs/payroll-rollout-review-worksheet.md` lalu simpan referensi bundle atau artefak yang dipakai
 
 ### Langkah 4. Review gate manual
 

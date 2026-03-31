@@ -7,6 +7,7 @@
 Phase 60 hanya menutup rollout dan acceptance untuk payroll recap yang sudah dikirim pada Phase 54-59. Live Supabase project tetap additive-only dan setiap langkah yang bisa memengaruhi database wajib melewati approval operator secara manual.
 
 Checklist operator utama ada di `docs/payroll-rollout-acceptance.md`. Gunakan file ini sebagai handoff phase-local untuk memastikan bukti parity terkumpul sebelum payroll baru dipakai.
+Worksheet pengisian bukti ada di `docs/payroll-rollout-review-worksheet.md`.
 
 ---
 
@@ -29,14 +30,15 @@ Aturan Phase 60:
 
 1. Buka `docs/payroll-rollout-acceptance.md` dan review seluruh guardrail rollout.
 2. Buka `.planning/phases/60-rollout-payroll-acceptance/60-ACCEPTANCE-FIXTURES.md` untuk memilih tujuh skenario wajib.
-3. Untuk setiap skenario:
+3. Buka `docs/payroll-rollout-review-worksheet.md` untuk mencatat bukti per skenario tanpa mengubah checklist canonical.
+4. Untuk setiap skenario:
    - ambil bukti dari Admin
    - ambil bukti dari Spreadsheet
    - ambil bukti dari PDF
    - buka Portal sebagai pembanding read-only
-4. Isi tabel parity dengan vocabulary tetap: `Admin`, `Spreadsheet`, `PDF`, `Portal`, `Status`.
-5. Catat baris yang masih blocked atau pending sebelum mencoba menandai payroll siap.
-6. Jika ada langkah yang memengaruhi database, berhenti dan minta approval operator manual sebelum lanjut.
+5. Isi tabel parity dengan vocabulary tetap: `Admin`, `Spreadsheet`, `PDF`, `Portal`, `Status`.
+6. Catat baris yang masih blocked atau pending sebelum mencoba menandai payroll siap.
+7. Jika ada langkah yang memengaruhi database, berhenti dan minta approval operator manual sebelum lanjut.
 
 ---
 
