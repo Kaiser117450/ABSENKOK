@@ -7,11 +7,29 @@ class PayrollValidationBundle {
     required this.filename,
     required this.content,
     required this.generatedAt,
+    required this.readinessHeadline,
+    required this.scenarioStatuses,
+    required this.blockedFollowUps,
   });
 
   final String filename;
   final String content;
   final DateTime generatedAt;
+  final String readinessHeadline;
+  final List<PayrollRolloutScenarioState> scenarioStatuses;
+  final List<PayrollParityEvidenceRow> blockedFollowUps;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'filename': filename,
+      'content': content,
+      'generatedAt': generatedAt.toIso8601String(),
+      'readinessHeadline': readinessHeadline,
+      'scenarioStatuses':
+          scenarioStatuses.map((scenario) => scenario.toJson()).toList(),
+      'blockedFollowUps': blockedFollowUps.map((row) => row.toJson()).toList(),
+    };
+  }
 }
 
 class PayrollValidationBundleService {
@@ -19,12 +37,11 @@ class PayrollValidationBundleService {
     PayrollValidationBundleNowProvider? nowProvider,
   }) : _nowProvider = nowProvider ?? DateTime.now;
 
-  static const List<String> forbiddenFields = <String>[
-    'latitude',
-    'longitude',
-    'capture_mode',
-    'queue_order',
-    'detail_note',
+  static const List<String> evidenceLabels = <String>[
+    'Admin',
+    'Spreadsheet',
+    'PDF',
+    'Portal',
   ];
 
   final PayrollValidationBundleNowProvider _nowProvider;
@@ -52,6 +69,12 @@ class PayrollValidationBundleService {
       ),
       content: content,
       generatedAt: generatedAt,
+      readinessHeadline: summary.readinessHeadline,
+      scenarioStatuses:
+          List<PayrollRolloutScenarioState>.from(summary.scenarios),
+      blockedFollowUps: List<PayrollParityEvidenceRow>.from(
+        summary.blockedParityRows,
+      ),
     );
   }
 
@@ -68,18 +91,17 @@ class PayrollValidationBundleService {
       'Generated: ${_formatTimestamp(generatedAt)}',
       'Outlet: $outletName',
       'Periode: ${_formatDate(startDate)} - ${_formatDate(endDate)}',
-      'Headline: ${summary.readinessHeadline}',
-      'Mode rollout additive',
-      'Perubahan produksi harus additive-only dan setiap langkah database tetap membutuhkan konfirmasi manual.',
       '',
-      '## Ringkasan',
-      '- Status akhir: ${summary.readinessState.name}',
+      '## Status Rollout',
+      summary.readinessHeadline,
+      summary.additiveOnlyReminderTitle,
+      summary.additiveOnlyReminderBody,
       '- Passed: ${summary.passedCount}',
       '- Pending: ${summary.pendingCount}',
       '- Blocked: ${summary.blockedCount}',
       '- Review database dikonfirmasi: ${summary.databaseReviewConfirmed ? 'ya' : 'belum'}',
       '',
-      '## Status skenario wajib',
+      '## Skenario wajib',
     ];
 
     for (final scenario in summary.scenarios) {
@@ -88,13 +110,16 @@ class PayrollValidationBundleService {
 
     lines.add('');
     lines.add('## Bukti parity');
-    lines.add('Kolom evidence: Admin | Spreadsheet | PDF | Portal');
-    for (final scenario in summary.scenarios) {
-      for (final row in scenario.parityRows) {
-        lines.add(
-          '- ${row.title} (${_formatDate(row.logicalWorkday)}): '
-          'Admin, Spreadsheet, PDF, Portal -> ${row.status.label}',
-        );
+    lines.add('Kolom evidence: ${evidenceLabels.join(' | ')}');
+    for (final row in summary.parityRows) {
+      final evidenceSources =
+          row.evidenceBySource.keys.map((source) => source.label).join(', ');
+      lines.add(
+        '- ${row.scenarioLabel} (${row.logicalWorkdayLabel}): '
+        '${row.status.label} | $evidenceSources',
+      );
+      if (row.reason.isNotEmpty) {
+        lines.add('  Alasan: ${row.reason}');
       }
     }
 
@@ -102,7 +127,9 @@ class PayrollValidationBundleService {
       lines.add('');
       lines.add('## Blocked follow-up');
       for (final row in summary.blockedParityRows) {
-        lines.add('- ${row.title}: ${row.nextActionNote}');
+        lines.add(
+          '- ${row.scenarioLabel}: ${row.status.label} | ${row.nextActionNote}',
+        );
       }
     }
 
@@ -111,12 +138,6 @@ class PayrollValidationBundleService {
       lines.add('## Alasan CTA Dinonaktifkan');
       lines.add(summary.disabledReason);
     }
-
-    lines.add('');
-    lines.add('## Catatan');
-    lines.add(
-      'Bundle ini merangkum hasil Admin, Spreadsheet, PDF, dan Portal tanpa membawa field teknis rendah-sinyal.',
-    );
 
     return '${lines.join('\n')}\n';
   }
