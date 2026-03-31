@@ -2,50 +2,50 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Strict Attendance & Payroll Reporting
-status: planning
-stopped_at: Phase 58 context gathered
-last_updated: "2026-03-27T09:15:32.209Z"
-last_activity: 2026-03-27 -- Phase 57 completed
+status: complete
+stopped_at: Completed Phase 60 rollout-payroll-acceptance
+last_updated: "2026-03-31T12:45:00+08:00"
+last_activity: 2026-03-31
 progress:
-  total_phases: 7
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 28
+  completed_plans: 28
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Phase: 58
-Plan: Not started
-Status: Ready for planning
-Last activity: 2026-03-27 -- Phase 57 completed
+Phase: 60 (rollout-payroll-acceptance) — COMPLETE
+Plan: 3 of 3
+Status: Ready for milestone closeout
+Last activity: 2026-03-31
 
 ## Current Status
 
 - **Active milestone:** v8.0 Strict Attendance & Payroll Reporting
 - **Last shipped milestone:** v7.1 Security Hardening
-- **Next phase:** Phase 58 — Payroll Matrix & Spreadsheet Export
-- **Current focus:** Phase 58 planning — salary-facing matrix layout, spreadsheet export, and per-employee summary counts on top of the strict recap engine
+- **Next phase:** None — v8.0 implementation scope is complete
+- **Current focus:** Phase 60 complete — awaiting milestone closeout and manual operator rollout review
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
 
 ## Progress
 
 ```text
-Phase 57 completed; Phase 58 planning is the next milestone step
-[████████████] 4 of 7 phases complete (14 currently defined plans, 14 completed)
+Phase 60 complete; v8.0 implementation scope is finished
+[##################] 8 of 8 phases complete (28 currently defined plans, 28 completed)
 ```
 
-- **Next action:** Plan Phase 58 so the payroll matrix UI and spreadsheet export can consume the strict recap signals without re-deriving business rules in Flutter.
+- **Next action:** Close milestone v8.0 and run the manual Phase 60 operator rollout review before payroll depends on the new outputs.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-27)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 57 is complete; the next work is Phase 58 planning for payroll matrix rendering and spreadsheet export on top of the strict recap engine.
+**Current focus:** Phase 60 is complete; the remaining operational work is the intentional manual rollout checklist and milestone closeout.
 
 ## What Was Shipped
 
@@ -205,6 +205,13 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 58.1 inserted after Phase 58: urgent fixes for a dismissible/minimizable schedule-rule notice, readable shift-picker button text, and a legacy payroll fallback that derives required hours from employee contract when `schedule_entries` are missing so historical reports do not render empty (URGENT)
+- Phase 58.1 planned on 2026-03-28: the fallback path now explicitly requires overnight-safe logical-day grouping for `TWENTY_FOUR_HOUR` legacy logs, plus mixed strict+fallback recap/export parity coverage before execution.
+- Phase 58.1 completed on 2026-03-28: `ShiftSchedulerScreen` now lets admins minimize or dismiss the schedule-rule notice, and the assigned-entry bottom sheet uses explicit dark chip labels so shift and required-hours options stay readable in light and disabled states.
+- Phase 58.1 completed on 2026-03-28: `LegacyPayrollRecapFallbackService` now synthesizes contract-aware no-schedule recap rows from raw attendance without fabricating late or absence states, and `AdminReportsScreen` merges those fallback rows into the same payroll matrix/spreadsheet dataset with a visible compatibility note.
+
 - Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
 - Phase 54 context captured on 2026-03-26: employee contract must surface as a badge plus filter in the employee list, remain editable by kepala gerai within their outlet scope, and stay visible in archived employee history.
@@ -284,9 +291,9 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 
 ## Session Continuity
 
-**Last session:** 2026-03-27T09:15:32.204Z
-**Stopped at:** Phase 58 context gathered
-**Resume file:** .planning/phases/58-payroll-matrix-spreadsheet-export/58-CONTEXT.md
+**Last session:** 2026-03-31T03:40:13.173Z
+**Stopped at:** Completed Phase 60 rollout-payroll-acceptance
+**Resume file:** .planning/phases/60-rollout-payroll-acceptance/60-VERIFICATION.md
 
 ## Database Safety Rules
 
@@ -308,3 +315,4 @@ See: .planning/PROJECT.md (updated 2026-03-27)
 - Codebase map: `.planning/codebase/`
 - Milestones archive: `.planning/milestones/`
 - SQL scripts: `sql/`
+

@@ -10,19 +10,21 @@
 ### v8.0 Strict Attendance & Payroll Reporting
 
 **Goal:** Convert attendance into a contract-aware, server-time, overnight-safe payroll reporting system with strict red/yellow enforcement for lateness, short work, excess break, overtime, and absence.
-**Phases:** 54-60
+**Phases:** 54-60 plus inserted Phase 58.1
 **Requirements:** 17 mapped / 17 total
 
 ## Current Position
 
 - Active milestone is now **v8.0 Strict Attendance & Payroll Reporting**.
 - This milestone replaces the current generic overtime and device-local recap assumptions with explicit `FULLTIME` / `PARTTIME` employee contracts and `NORMAL` / `TWENTY_FOUR_HOUR` outlet modes.
-- Payroll-facing recap exports will move from flat CSV to spreadsheet/PDF parity with employee-by-date summaries and aggregate violation counts.
-- Phase 57 completed on 2026-03-27, so Phase 58 is now the next dependency-cleared planning target.
+- Phase 58 completed on 2026-03-27, so the admin recap now has the payroll matrix and spreadsheet export baseline.
+- Phase 58.1 completed on 2026-03-28, so scheduler friction is reduced and admin payroll recap now stays useful for legacy outlets without `schedule_entries`.
+- Phase 59 planning completed on 2026-03-28 with 4 execution plans across 3 waves for portal parity, payroll PDF export, and recap wiring.
+- Phase 60 completed on 2026-03-31 with rollout docs, typed acceptance services, validation-bundle export, and recap-shell readiness gating verified in one closeout pass.
 
 ## Proposed Roadmap
 
-**7 phases** | **17 requirements mapped** | All covered
+**8 phases** | **17 requirements mapped** | All covered
 
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
@@ -30,9 +32,10 @@
 | 55 | Schedule Policy & Absence Rules | Rebuild mandatory schedule logic around shift bands, lateness windows, and no-show detection | `SCHED-01`, `SCHED-02`, `SCHED-03` | Complete (2026-03-27) |
 | 56 | Server-Time Scan Authority | Move scan timing to WITA server authority and capture break-first intent safely | `SCAN-01`, `SCAN-02` | Complete (2026-03-27) |
 | 57 | Strict Recap Evaluation Engine | Compute overnight-safe, contract-aware red/yellow attendance outcomes including manager exemptions | `CONTRACT-03`, `RECAP-01`, `RECAP-02`, `RECAP-03`, `RECAP-04` | Complete (2026-03-27) |
-| 58 | Payroll Matrix & Spreadsheet Export | Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output | `REPORT-01`, `REPORT-02` | Pending planning |
-| 59 | PDF & Portal Parity | Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks | `SCHED-04`, `REPORT-03` | Pending planning |
-| 60 | Rollout & Payroll Acceptance | Validate live-safe rollout, overnight edge cases, and export parity before salary use | `OPS-01` | Pending planning |
+| 58 | Payroll Matrix & Spreadsheet Export | Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output | `REPORT-01`, `REPORT-02` | Complete (2026-03-27) |
+| 58.1 | Schedule UX polish and legacy payroll fallback | Fix urgent schedule UI friction and keep legacy recap data visible when `schedule_entries` are still missing | `58.1-UX-01`, `58.1-UX-02`, `REPORT-01`, `REPORT-02` | Complete (2026-03-28) |
+| 59 | PDF & Portal Parity | Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks | `SCHED-04`, `REPORT-03` | Complete (2026-03-28) |
+| 60 | Rollout & Payroll Acceptance | 3/3 | Complete   | 2026-03-31 |
 
 ### Phase 54: Workforce Contract & Outlet Mode Foundation
 
@@ -110,11 +113,16 @@ Success criteria:
 
 ### Phase 58: Payroll Matrix & Spreadsheet Export
 
-**Status:** Pending
+**Status:** Complete (2026-03-27)
 **Goal:** Rebuild Rekap Harian around salary-ready employee/date matrices and spreadsheet output.
 **Depends on:** Phase 57
 **Requirements:** `REPORT-01`, `REPORT-02`
-**Plans:** Pending phase planning
+**Plans:** 4/4 execution plans complete
+
+- [x] `58-01-PLAN.md` — shared payroll matrix contract, semantics, and roster-first builder
+- [x] `58-02-PLAN.md` — payroll matrix UI shell, pinned rails, and recap tab surface
+- [x] `58-03-PLAN.md` — dedicated XLSX workbook generator and export contract coverage
+- [x] `58-04-PLAN.md` — final recap-tab export wiring and spreadsheet CTA regression coverage
 
 Success criteria:
 1. Rekap Harian admin view renders employees on the left and selected dates across the page with compact masuk/pulang content in each cell.
@@ -122,13 +130,31 @@ Success criteria:
 3. Per-employee summary columns count how many times each violation or overtime state occurred across the selected range.
 4. Payroll-facing exports exclude GPS and other low-signal scan details that are irrelevant for salary review.
 
+### Phase 58.1: Schedule UX polish and legacy payroll fallback (INSERTED)
+
+**Goal:** Fix urgent schedule UX friction and add a no-schedule fallback so legacy outlets without `schedule_entries` still show useful payroll recap data.
+**Requirements**: `58.1-UX-01`, `58.1-UX-02`, `REPORT-01`, `REPORT-02`
+**Depends on:** Phase 58
+**Status:** Complete (2026-03-28)
+**Plans:** 3/3 execution plans complete
+
+Plans:
+- [x] `58.1-01-PLAN.md` — scheduler notice dismiss/minimize controls, readable assignment chips, and widget coverage
+- [x] `58.1-02-PLAN.md` — overnight-safe legacy payroll fallback synthesis service and contract-aware matrix tests
+- [x] `58.1-03-PLAN.md` — admin reports fallback integration plus mixed strict+fallback recap/export regression coverage
+
 ### Phase 59: PDF & Portal Parity
 
-**Status:** Pending
+**Status:** Complete (2026-03-28)
 **Goal:** Align PDF and portal surfaces with the new contract-aware rules and remove stale fixed shift clocks.
-**Depends on:** Phase 58
+**Depends on:** Phase 58.1
 **Requirements:** `SCHED-04`, `REPORT-03`
-**Plans:** Pending phase planning
+**Plans:** 4/4 execution plans complete
+
+- [x] `59-01-PLAN.md` — additive portal parity RPCs, typed portal loaders, and shared overnight/fallback parity fixtures
+- [x] `59-02-PLAN.md` — band-first portal today/week/history UI wired to required-hours and strict outcome parity
+- [x] `59-03-PLAN.md` — dedicated payroll matrix PDF export service with summary-page and legend contract coverage
+- [x] `59-04-PLAN.md` — admin recap PDF wiring, compatibility messaging, and final payroll export regression coverage
 
 Success criteria:
 1. Portal schedule and attendance surfaces show contract-required hours plus remaining or already-worked time without stale exact shift ranges.
@@ -138,11 +164,15 @@ Success criteria:
 
 ### Phase 60: Rollout & Payroll Acceptance
 
-**Status:** Pending
+**Status:** Complete (2026-03-31)
 **Goal:** Validate live-safe rollout, overnight edge cases, and export parity before salary use.
 **Depends on:** Phase 59
 **Requirements:** `OPS-01`
-**Plans:** Pending phase planning
+**Plans:** 3/3 execution plans complete
+
+- [x] `60-01-PLAN.md` — payroll rollout checklist, phase-local setup note, and locked seven-scenario fixtures
+- [x] `60-02-PLAN.md` — typed rollout acceptance domain plus validation bundle export services
+- [x] `60-03-PLAN.md` — admin recap rollout panel, CTA gating, and regression coverage
 
 Success criteria:
 1. Production rollout is documented as additive-only and explicitly gates any database change behind user confirmation.

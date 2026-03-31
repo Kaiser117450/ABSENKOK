@@ -16,7 +16,7 @@
 - [x] **SCHED-01**: Work schedules stay mandatory for scheduled workdays, but the schedule stores shift bands and required hours instead of misleading fixed clock labels in admin and portal surfaces.
 - [x] **SCHED-02**: Lateness is evaluated from scheduled shift rules in WITA, including the flexible morning rule (latest allowed arrival 07:00) plus contract-aware siang and sore windows.
 - [x] **SCHED-03**: A scheduled employee with no attendance logs for the logical workday is marked `tidak_hadir`, while scheduled sakit, izin, libur, and cuti states remain distinct from absence.
-- [ ] **SCHED-04**: Portal and schedule-facing UI show contract-aware required hours and remaining/already-worked time without displaying stale exact shift clock ranges.
+- [x] **SCHED-04**: Portal and schedule-facing UI show contract-aware required hours and remaining/already-worked time without displaying stale exact shift clock ranges.
 
 ### Scan Authority & Break Flow
 
@@ -32,13 +32,13 @@
 
 ### Reporting & Export
 
-- [ ] **REPORT-01**: Rekap Harian admin view can render a payroll-ready matrix with employees on the left, selected dates across the page, and each day cell showing compact masuk/pulang information plus the correct evaluation color for that day.
-- [ ] **REPORT-02**: Spreadsheet export replaces payroll recap CSV export and preserves color-coded day cells plus per-employee summary counts for late arrival, short work, excess break, overtime, and absence across the selected range.
-- [ ] **REPORT-03**: PDF export uses the same contract-aware and overnight-safe evaluation rules as the spreadsheet and excludes GPS or other technical scan details from payroll-facing recap pages.
+- [x] **REPORT-01**: Rekap Harian admin view can render a payroll-ready matrix with employees on the left, selected dates across the page, and each day cell showing compact masuk/pulang information plus the correct evaluation color for that day.
+- [x] **REPORT-02**: Spreadsheet export replaces payroll recap CSV export and preserves color-coded day cells plus per-employee summary counts for late arrival, short work, excess break, overtime, and absence across the selected range.
+- [x] **REPORT-03**: PDF export uses the same contract-aware and overnight-safe evaluation rules as the spreadsheet and excludes GPS or other technical scan details from payroll-facing recap pages.
 
 ### Rollout & Validation
 
-- [ ] **OPS-01**: Operators have one live-safe rollout and acceptance checklist that verifies contract defaults, WITA server-time, 24-hour outlet overnight cases, break-first scenarios, and export parity before the strict rules are used for payroll decisions.
+- [x] **OPS-01**: Operators have one live-safe rollout and acceptance checklist that verifies contract defaults, WITA server-time, 24-hour outlet overnight cases, break-first scenarios, and export parity before the strict rules are used for payroll decisions.
 
 ## Deferred Product Requirements
 
@@ -80,11 +80,11 @@
 | RECAP-02 | Phase 57 | Complete |
 | RECAP-03 | Phase 57 | Complete |
 | RECAP-04 | Phase 57 | Complete |
-| REPORT-01 | Phase 58 | Pending |
-| REPORT-02 | Phase 58 | Pending |
-| SCHED-04 | Phase 59 | Pending |
-| REPORT-03 | Phase 59 | Pending |
-| OPS-01 | Phase 60 | Pending |
+| REPORT-01 | Phase 58 | Complete |
+| REPORT-02 | Phase 58 | Complete |
+| SCHED-04 | Phase 59 | Complete |
+| REPORT-03 | Phase 59 | Complete |
+| OPS-01 | Phase 60 | Complete |
 
 **Coverage:**
 - v8.0 requirements: 17 total
@@ -93,4 +93,4 @@
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-27 after Phase 57 completion*
+*Last updated: 2026-03-31 after Phase 60 completion*
