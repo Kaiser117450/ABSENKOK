@@ -13,16 +13,22 @@ seconds.
 ## Core Value
 Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
 
-## Current Milestone
+## Current Milestone: v8.1 Reporting Recovery & Schedule Gap Notifications
 
-No active milestone is currently defined.
+**Goal:** Restore the trusted Rekap Harian behavior for existing no-schedule data without removing strict contract-aware report rules that already matter for payroll review.
+
+**Target features:**
+- recover pre-v8.0-style daily recap continuity for historical days that do not yet have pagi/siang/sore/libur schedule entries
+- keep spreadsheet export and PDF export as the primary salary-facing outputs from the corrected recap dataset
+- retain strict contract-aware report evaluation for break-first and excessive break duration signals
+- move empty-schedule enforcement into outlet-scoped notifications for kepala gerai so schedule gaps are visible without corrupting pending or recap states
 
 **Latest shipped milestone:** v8.0 Strict Attendance & Payroll Reporting (2026-03-31)
 
 **Current operational focus:**
-- complete the intentional manual Phase 60 rollout review before payroll depends on the new recap outputs
-- keep all production SQL apply steps explicitly user-approved and additive-only
-- start the next product scope through `$gsd-new-milestone` when planning resumes
+- define the corrective v8.1 scope before payroll depends on the current rollout outputs
+- preserve additive-only, explicitly user-approved production SQL changes
+- recover trusted report behavior first; defer non-essential payroll workflow expansion
 
 ## Current State
 
@@ -119,7 +125,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Bulk assign mode (multi-karyawan, same shift) — v3.0
 - ✓ Auto-generate jadwal dari template shift — v3.0
 - ✓ ABSENKOK landing website (Astro 5 + Tailwind v4, zero JS, Bahasa Indonesia) — v3.0
-- ✓ Download APK button → GitHub Releases — v3.0
+- ✓ Download APK button -> GitHub Releases — v3.0
 - ✓ SEO meta tags + sitemap.xml + Vercel deploy — v3.0
 - ✓ Real app screenshots in Hero + HowItWorks — v3.0
 - ✓ About/Architecture section with tech stack story + 4 SVG icons — v3.0
@@ -207,7 +213,10 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Rollout validation now ships as one additive-only checklist, seven-scenario fixture pack, recap-shell acceptance surface, and validation-bundle export before payroll use — Phase 60
 
 ### Active
-- [ ] No active milestone scope is open. The remaining follow-up is the manual Phase 60 rollout review and then next-milestone definition.
+- [ ] Rekap Harian continues to work on current legacy data even when some dates still have no shift schedule filled in.
+- [ ] Strict contract-aware reporting remains active for break-first and excessive break duration cases instead of being rolled back with the legacy compatibility fix.
+- [ ] Spreadsheet export and payroll PDF stay aligned with the corrected daily recap semantics and remain the primary operator outputs.
+- [ ] Kepala gerai receives actionable notifications about empty schedule days for their outlet employees without those gaps distorting pending and recap behavior.
 
 ### Out of Scope
 - Automatic payroll amount calculation, payslip generation, or THR formulas — this milestone stops at strict attendance evidence and salary-ready reports
@@ -218,7 +227,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - Enforce a strict portal-account whitelist that blocks any active employee without pre-created mapping — conflicts with the chosen passwordless product behavior for now
 - Change portal logout from local scope to global token revocation — local-only logout is retained to avoid breaking concurrent admin/kiosk sessions
 - Employee portal request/approval features — deferred until Android release packaging is stable again
-- Reminder/notification workflows — depends on future request lifecycle design, not build hardening
+- Multi-channel reminder workflows or escalation ladders beyond the kepala gerai empty-schedule notice — defer until the reporting baseline is trusted again
 - Website/Astro deployment automation — this milestone is scoped to the Flutter Android release path
 - Build-speed-only work — reliability comes first; performance tuning is deferred until the release path is reproducible
 - APK size-only work — defer until signed release artifacts are consistently generated and verifiable
@@ -233,7 +242,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - **Users:** Kiosk guests (employees tap NFC cards) + Admin/Kepala Gerai (web-like admin panel in-app)
 - **Scale:** 4 outlets, 14 employees today — designed for up to 20 outlets, 200 employees
 - **Platform:** Android only (tablet kiosk) — no iOS target
-- **Connectivity:** Must work offline-first; syncs when internet returns (SQLite queue → Supabase)
+- **Connectivity:** Must work offline-first; syncs when internet returns (SQLite queue -> Supabase)
 - **Uptime:** 24/7 kiosk — never hangs, never blocks startup
 - **Website:** absenkok.vercel.app — Astro 5 static site, Vercel hosted
 
@@ -253,7 +262,7 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - **Website:** Astro 5 + Tailwind v4 + @astrojs/vercel + @astrojs/sitemap
 
 ## Database Schema (Supabase — `tmapxdftdhxovthgbhww`)
-```
+```text
 outlets (4 rows)          — id, name, address, lat/lng, device_id, kiosk_password_hash, is_active
 employees (14 rows)       — id, name, employee_code, nfc_uid, home_outlet_id, position, photo_url, is_active, active_badge_id, archived_at
 employee_streaks          — employee_id, current_streak, longest_streak, last_attendance_date, last_updated
@@ -344,5 +353,22 @@ time_off_requests (0 rows)— workflow schema exists but UI incomplete
 - minSdk 24, compileSdk 35, targetSdk 35
 - Additive migrations only (production DB live)
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `$gsd-transition`):
+1. Requirements invalidated? -> Move to Out of Scope with reason
+2. Requirements validated? -> Move to Validated with phase reference
+3. New requirements emerged? -> Add to Active
+4. Decisions to log? -> Add to Key Decisions
+5. "What This Is" still accurate? -> Update if drifted
+
+**After each milestone** (via `$gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check -> still the right priority?
+3. Audit Out of Scope -> reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-31 after v8.0 milestone closeout*
+*Last updated: 2026-03-31 after starting milestone v8.1*

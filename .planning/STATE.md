@@ -1,52 +1,53 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: Strict Attendance & Payroll Reporting
-status: milestone_complete
-stopped_at: Archived milestone v8.0 Strict Attendance & Payroll Reporting
-last_updated: "2026-03-31T13:13:24+08:00"
+milestone: v8.1
+milestone_name: Reporting Recovery & Schedule Gap Notifications
+status: roadmap_defined
+stopped_at: Roadmap approved for milestone v8.1
+last_updated: "2026-03-31T19:50:09+08:00"
 last_activity: 2026-03-31
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 28
-  completed_plans: 28
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # STATE.md — Project Memory
 
 ## Current Position
 
-Milestone: v8.0 — ARCHIVED
-Phase: None
-Plan: None
-Status: Awaiting manual rollout review and next milestone definition
-Last activity: 2026-03-31
+Milestone: v8.1 — ACTIVE
+Phase: 61 — Ready to start
+Plan: —
+Status: Roadmap approved; ready for phase discussion
+Last activity: 2026-03-31 — Roadmap v8.1 approved
 
 ## Current Status
 
-- **Active milestone:** None currently
+- **Active milestone:** v8.1 Reporting Recovery & Schedule Gap Notifications
 - **Last shipped milestone:** v8.0 Strict Attendance & Payroll Reporting
-- **Next phase:** None — milestone implementation scope is archived
-- **Current focus:** Run the intentional manual Phase 60 rollout review, then define the next milestone when ready
+- **Next phase:** Phase 61 Recap Semantics Recovery
+- **Current focus:** Restore trusted Rekap Harian behavior for no-schedule legacy data while preserving strict contract-aware break-first and excessive-break reporting
+- **Notification focus:** Empty schedule days should become kepala gerai follow-up notices, not recap-breaking logic
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
-- **Reporting guard:** Salary-facing red/yellow evaluation must stay consistent across admin recap, spreadsheet export, PDF export, and portal presentation
+- **Reporting guard:** Salary-facing spreadsheet/PDF output must stay aligned with the corrected recap semantics
 
 ## Progress
 
 ```text
-v8.0 archived; implementation scope is complete
-[##################] 8 of 8 phases complete (28 currently defined plans, 28 completed)
+v8.1 roadmap approved; implementation has not started
+[░░░░░░░░░░░░░░░░░░] 0 of 3 phases complete (0 plans defined)
 ```
 
-- **Next action:** Run the manual Phase 60 operator rollout review before payroll depends on the new outputs, then start the next milestone with `$gsd-new-milestone` when planning resumes.
+- **Next action:** Start Phase 61 with `$gsd-discuss-phase 61`.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** v8.0 is archived; the remaining operational work is the intentional manual rollout checklist and future milestone definition.
+**Current focus:** Phase 61 will recover recap semantics so legacy no-schedule days stay usable without losing strict contract-aware break evaluation or export fidelity.
 
 ## What Was Shipped
 

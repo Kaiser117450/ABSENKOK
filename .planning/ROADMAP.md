@@ -8,28 +8,63 @@
 
 ## Active Milestone
 
-No new milestone is defined yet.
+**v8.1 Reporting Recovery & Schedule Gap Notifications**
 
-The remaining non-milestone operational work is the intentional manual Phase 60 rollout review before payroll depends on the new outputs.
+**Goal:** Restore trusted Rekap Harian continuity for legacy no-schedule data while preserving strict contract-aware report rules and keeping spreadsheet/PDF as the canonical salary-facing outputs.
+
+## Proposed Roadmap
+
+**3 phases** | **6 requirements mapped** | All covered
+
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 61 | Recap Semantics Recovery | Recover legacy no-schedule recap continuity without weakening strict contract-aware evaluation | RECAP-05, RECAP-06, RECAP-07 | 4 |
+| 62 | Schedule Gap Notices | Surface missing schedule follow-up as non-blocking kepala gerai notifications | SCHED-05 | 3 |
+| 63 | Export Parity Re-lock | Keep spreadsheet and payroll PDF aligned with the corrected merged recap dataset | REPORT-04, REPORT-05 | 4 |
+
+### Phase 61: Recap Semantics Recovery
+
+**Goal:** Recover trusted Rekap Harian behavior for no-schedule legacy data while preserving break-first, excess-break, and contract-aware strict semantics where they legitimately apply.
+
+**Requirements:** `RECAP-05`, `RECAP-06`, `RECAP-07`
+
+**Success criteria:**
+1. Admin recap and pending flows show usable rows for legacy attendance days even when schedule entries are missing.
+2. Compatibility rows preserve logical day, contract-based required hours, and honest incomplete states without fabricating late or absence penalties.
+3. Days that already have valid strict evaluation keep their strict break-first, excess-break, and other contract-aware signals instead of degrading into generic no-schedule rows.
+4. Mixed strict + fallback datasets remain overnight-safe for `TWENTY_FOUR_HOUR` outlets.
+
+### Phase 62: Schedule Gap Notices
+
+**Goal:** Surface missing schedule follow-up as outlet-scoped kepala gerai notices instead of recap-breaking enforcement.
+
+**Requirements:** `SCHED-05`
+
+**Success criteria:**
+1. Kepala gerai can see which employee/date combinations still need schedule filling for their outlet scope.
+2. Schedule-gap notices are operational follow-up only and do not change recap penalties, export colors, or pending semantics.
+3. The notice surface is lightweight and non-blocking, matching the user's request for "notification saja".
+
+### Phase 63: Export Parity Re-lock
+
+**Goal:** Keep spreadsheet export and payroll PDF on the same corrected merged recap dataset used by admin recap.
+
+**Requirements:** `REPORT-04`, `REPORT-05`
+
+**Success criteria:**
+1. Spreadsheet export uses the corrected merged recap dataset and preserves compact payroll-facing output plus summary counts.
+2. Payroll PDF uses the same corrected merged recap dataset and preserves the same reporting meaning as admin recap and spreadsheet export.
+3. Forbidden technical fields remain absent from spreadsheet and PDF outputs.
+4. Mixed strict/fallback regression fixtures prove parity across admin recap, spreadsheet, and payroll PDF.
 
 ## Current Position
 
+- Active milestone: **v8.1 Reporting Recovery & Schedule Gap Notifications**
 - Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
-- Product state: payroll reporting is now contract-aware, server-time authoritative, overnight-safe, and parity-aligned across Admin, Spreadsheet, PDF, and Portal
+- Product state: strict reporting foundations remain valuable, but recap continuity for legacy no-schedule data must be corrected before payroll trust expands
 - Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
-- Next planning step: run `$gsd-new-milestone` when ready to define the next product scope
-
-## Latest Shipment Summary
-
-v8.0 delivered:
-
-- explicit employee contracts and outlet operating modes as first-class attendance inputs
-- band-first schedule policy with required-hours, lateness, break-first, and no-show handling
-- authoritative WITA scan time with offline-safe replay
-- strict recap evaluation with manager exemption and payroll-facing detail signals
-- payroll matrix plus spreadsheet export, portal/PDF parity, and legacy no-schedule compatibility
-- rollout acceptance tooling with a readiness panel, fixture pack, and validation bundle export
+- Next planning step: start with Phase 61 to recover recap semantics before adding schedule-gap notices and relocking export parity
 
 ---
-_For current project status, see `.planning/PROJECT.md`_
+_For current project status, see `.planning/PROJECT.md`_  
 _For full milestone history, see `.planning/MILESTONES.md`_
