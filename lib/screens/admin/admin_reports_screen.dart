@@ -14,9 +14,18 @@ import '../../models/attendance_log.dart';
 import '../../models/daily_summary.dart';
 import '../../models/employee.dart';
 import '../../models/outlet.dart';
+import '../../models/outlet_operating_mode.dart';
+import '../../models/payroll_matrix_row.dart';
+import '../../models/payroll_rollout_acceptance.dart';
 import '../../providers/app_provider.dart';
 import '../../services/attendance_policy_recap_service.dart';
 import '../../services/badge_service.dart';
+import '../../services/legacy_payroll_recap_fallback_service.dart';
+import '../../services/payroll_matrix_builder.dart';
+import '../../services/payroll_pdf_matrix_export_service.dart';
+import '../../services/payroll_rollout_acceptance_service.dart';
+import '../../services/payroll_spreadsheet_export_service.dart';
+import '../../services/payroll_validation_bundle_service.dart';
 import '../../services/pdf_service.dart';
 import '../../widgets/attendance_policy_badge.dart';
 import '../../widgets/attendance_policy_signal_chip.dart';
@@ -24,6 +33,8 @@ import '../../widgets/app_card.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_toast.dart';
 import '../../widgets/shimmer_skeleton.dart';
+import 'widgets/payroll_rollout_acceptance_panel.dart';
+import 'widgets/payroll_matrix_table.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Reports Screen
@@ -199,6 +210,118 @@ String _formatPolicyMinutes(int? minutes) {
   return '${hours}j ${remainder}m';
 }
 
+const String payrollCompatibilityModeTitle = 'Mode kompatibilitas aktif';
+const String payrollCompatibilityModeBody =
+    'Sebagian hari payroll dihitung dari log absensi dan kontrak karena jadwal belum tersedia.';
+
+class PayrollRecapDatasetResult {
+  const PayrollRecapDatasetResult({
+    required this.dataset,
+    required this.mergedRows,
+    required this.fallbackRows,
+  });
+
+  const PayrollRecapDatasetResult.empty()
+      : dataset = const PayrollMatrixDataset(
+            dates: <DateTime>[], rows: <PayrollMatrixRow>[]),
+        mergedRows = const <AttendancePolicyRecapDay>[],
+        fallbackRows = const <AttendancePolicyRecapDay>[];
+
+  final PayrollMatrixDataset dataset;
+  final List<AttendancePolicyRecapDay> mergedRows;
+  final List<AttendancePolicyRecapDay> fallbackRows;
+
+  bool get isCompatibilityMode => fallbackRows.isNotEmpty;
+}
+
+PayrollRecapDatasetResult buildPayrollRecapDatasetWithCompatibility({
+  required DateTime startDate,
+  required DateTime endDate,
+  required Iterable<Employee> employees,
+  required Iterable<AttendancePolicyRecapDay> strictRows,
+  required Iterable<AttendanceLog> attendanceLogs,
+  required String outletId,
+  required String outletName,
+  required OutletOperatingMode outletOperatingMode,
+  DateTime? now,
+  LegacyPayrollRecapFallbackService fallbackService =
+      const LegacyPayrollRecapFallbackService(),
+}) {
+  final employeeList = employees.toList(growable: false);
+  final strictRowList = strictRows.toList(growable: false);
+  final employeesById = <String, Employee>{
+    for (final employee in employeeList) employee.id: employee,
+  };
+  final filteredLogs = attendanceLogs
+      .where((log) => log.scanOutletId == outletId)
+      .toList(growable: false);
+  final sourceDays = fallbackService.buildSourceDays(
+    logs: filteredLogs,
+    employeesById: employeesById,
+    outletId: outletId,
+    outletName: outletName,
+    outletOperatingMode: outletOperatingMode,
+  );
+  final fallbackRows = fallbackService.synthesizeMissingRows(
+    sourceDays: sourceDays,
+    strictRows: strictRowList,
+    now: now,
+  );
+  final mergedByKey = <String, AttendancePolicyRecapDay>{
+    for (final row in strictRowList)
+      _buildPayrollRecapRowKey(row.employeeId, row.logicalDate): row,
+  };
+
+  for (final row in fallbackRows) {
+    mergedByKey.putIfAbsent(
+      _buildPayrollRecapRowKey(row.employeeId, row.logicalDate),
+      () => row,
+    );
+  }
+
+  final mergedRows = mergedByKey.values.toList(growable: false)
+    ..sort((left, right) {
+      final dateComparison = _dateOnly(left.logicalDate).compareTo(
+        _dateOnly(right.logicalDate),
+      );
+      if (dateComparison != 0) {
+        return dateComparison;
+      }
+
+      final nameComparison = left.employeeName
+          .toLowerCase()
+          .compareTo(right.employeeName.toLowerCase());
+      if (nameComparison != 0) {
+        return nameComparison;
+      }
+
+      return left.employeeId.compareTo(right.employeeId);
+    });
+
+  return PayrollRecapDatasetResult(
+    dataset: buildPayrollMatrix(
+      startDate: startDate,
+      endDate: endDate,
+      employees: employeeList,
+      recapRows: mergedRows,
+    ),
+    mergedRows: mergedRows,
+    fallbackRows: fallbackRows,
+  );
+}
+
+String _buildPayrollRecapRowKey(String employeeId, DateTime logicalDate) {
+  final date = _dateOnly(logicalDate);
+  return '$employeeId|'
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+}
+
+DateTime _dateOnly(DateTime value) {
+  return DateTime(value.year, value.month, value.day);
+}
+
 class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
 
@@ -217,6 +340,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   bool _loading = false;
   bool _exportingCsv = false;
   bool _exportingPdf = false;
+  bool _exportingPayrollPdf = false;
+  bool _exportingSpreadsheet = false;
   bool _hasLoaded = false;
 
   // Pagination
@@ -227,12 +352,22 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   // Rekap Harian — independent full-dataset fetch (no pagination)
   List<_ReportRow> _dailyRows = [];
-  List<AttendancePolicyRecapDay> _policyRecapRows = [];
+  PayrollMatrixDataset? _payrollMatrixDataset;
   bool _loadingDaily = false;
+  bool _isPayrollCompatibilityMode = false;
   String? _policyRecapError;
-  PolicyRecapFilter _selectedRecapFilter = PolicyRecapFilter.semua;
+  String? _payrollExportStatusMessage;
+  bool _payrollExportStatusIsError = false;
   final AttendancePolicyRecapService _attendancePolicyRecapService =
       const AttendancePolicyRecapService();
+  final LegacyPayrollRecapFallbackService _legacyPayrollRecapFallbackService =
+      const LegacyPayrollRecapFallbackService();
+  final PayrollPdfMatrixExportService _payrollPdfMatrixExportService =
+      PayrollPdfMatrixExportService();
+  final PayrollSpreadsheetExportService _payrollSpreadsheetExportService =
+      PayrollSpreadsheetExportService();
+  final PayrollValidationBundleService _payrollValidationBundleService =
+      PayrollValidationBundleService();
 
   // Tab: 0 = Per Scan, 1 = Rekap Harian
   late final TabController _tabCtrl;
@@ -285,14 +420,18 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     _hasLoaded = false;
     _rows = [];
     _dailyRows = [];
-    _policyRecapRows = [];
+    _payrollMatrixDataset = null;
     _currentOffset = 0;
     _hasMore = true;
     _isLoadingMore = false;
     _loading = false;
     _loadingDaily = false;
+    _isPayrollCompatibilityMode = false;
     _policyRecapError = null;
-    _selectedRecapFilter = PolicyRecapFilter.semua;
+    _exportingPayrollPdf = false;
+    _exportingSpreadsheet = false;
+    _payrollExportStatusMessage = null;
+    _payrollExportStatusIsError = false;
   }
 
   dynamic _buildAttendanceBaseQuery() {
@@ -393,11 +532,13 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     setState(() {
       _loadingDaily = true;
       _policyRecapError = null;
-      _selectedRecapFilter = PolicyRecapFilter.semua;
     });
 
     try {
       final allRowsFuture = _fetchAllRowsForExport(ascending: true);
+      final employeesFuture = shouldLoadPolicyRecap
+          ? _fetchPayrollRoster(outletId)
+          : Future<List<Employee>>.value(const <Employee>[]);
       final recapFuture = () async {
         if (!shouldLoadPolicyRecap) {
           return (
@@ -423,12 +564,30 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       }();
 
       final allRows = await allRowsFuture;
+      final employees = await employeesFuture;
       final recapResult = await recapFuture;
       if (!mounted) return;
 
+      final payrollOutletContext = _resolvePayrollOutletContext(allRows);
+      final payrollResult = shouldLoadPolicyRecap
+          ? buildPayrollRecapDatasetWithCompatibility(
+              startDate: _startDate,
+              endDate: _endDate,
+              employees: employees,
+              strictRows: recapResult.rows,
+              attendanceLogs: allRows.map((row) => row.log),
+              outletId: outletId,
+              outletName: payrollOutletContext.outletName,
+              outletOperatingMode: payrollOutletContext.operatingMode,
+              now: DateTime.now(),
+              fallbackService: _legacyPayrollRecapFallbackService,
+            )
+          : const PayrollRecapDatasetResult.empty();
+
       setState(() {
         _dailyRows = allRows;
-        _policyRecapRows = recapResult.rows;
+        _payrollMatrixDataset = payrollResult.dataset;
+        _isPayrollCompatibilityMode = payrollResult.isCompatibilityMode;
         _policyRecapError = recapResult.error;
         _loadingDaily = false;
       });
@@ -437,32 +596,46 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
   }
 
-  List<AttendancePolicyRecapDay> _filteredPolicyRecapRows() {
-    return filterPolicyRecapRows(_policyRecapRows, _selectedRecapFilter);
+  Future<List<Employee>> _fetchPayrollRoster(String outletId) async {
+    final data = await SupabaseClientFactory.admin
+        .from('employees')
+        .select('*')
+        .eq('is_active', true)
+        .eq('home_outlet_id', outletId)
+        .order('name');
+
+    return (data as List)
+        .map((item) => Employee.fromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
   }
 
-  Widget _buildRecapFilterChip(PolicyRecapFilter filter) {
-    return ChoiceChip(
-      label: Text(filter.label),
-      selected: _selectedRecapFilter == filter,
-      onSelected: (_) {
-        setState(() => _selectedRecapFilter = filter);
-      },
-      labelStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: _selectedRecapFilter == filter
-            ? Colors.white
-            : AppColors.textSecondary,
-      ),
-      selectedColor: AppColors.primary,
-      backgroundColor: const Color(0xFFF8FAFC),
-      side: BorderSide(
-        color: _selectedRecapFilter == filter
-            ? AppColors.primary
-            : const Color(0xFFE2E8F0),
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  ({String outletName, OutletOperatingMode operatingMode})
+      _resolvePayrollOutletContext(List<_ReportRow> sourceRows) {
+    final selectedOutletId = _selectedOutletId?.trim();
+    if (selectedOutletId != null && selectedOutletId.isNotEmpty) {
+      for (final outlet in _outlets) {
+        if (outlet.id == selectedOutletId) {
+          return (
+            outletName: outlet.name,
+            operatingMode: outlet.operatingMode,
+          );
+        }
+      }
+
+      for (final row in sourceRows) {
+        final outlet = row.outlet;
+        if (outlet != null && outlet.id == selectedOutletId) {
+          return (
+            outletName: outlet.name,
+            operatingMode: outlet.operatingMode,
+          );
+        }
+      }
+    }
+
+    return (
+      outletName: _resolvedOutletName(),
+      operatingMode: OutletOperatingMode.normal,
     );
   }
 
@@ -625,6 +798,193 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
   }
 
+  bool get _hasValidPayrollDateRange => !_endDate.isBefore(_startDate);
+
+  bool get _canExportPayrollSpreadsheet {
+    final dataset = _payrollMatrixDataset;
+    final hasSelectedOutlet =
+        _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty;
+    return hasSelectedOutlet &&
+        _hasValidPayrollDateRange &&
+        dataset != null &&
+        !dataset.isEmpty &&
+        !_exportingSpreadsheet &&
+        !_loadingDaily;
+  }
+
+  bool get _canExportPayrollPdf {
+    final dataset = _payrollMatrixDataset;
+    final hasSelectedOutlet =
+        _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty;
+    return hasSelectedOutlet &&
+        _hasValidPayrollDateRange &&
+        dataset != null &&
+        !dataset.isEmpty &&
+        !_exportingPayrollPdf &&
+        !_loadingDaily;
+  }
+
+  Future<void> _exportPayrollPdf() async {
+    if (!_canExportPayrollPdf) {
+      return;
+    }
+
+    final dataset = _payrollMatrixDataset;
+    if (dataset == null || dataset.isEmpty) {
+      return;
+    }
+
+    final outletName = _resolvedOutletName();
+    setState(() {
+      _exportingPayrollPdf = true;
+      _payrollExportStatusMessage = 'Menyiapkan PDF payroll...';
+      _payrollExportStatusIsError = false;
+    });
+
+    try {
+      final file = await _payrollPdfMatrixExportService.buildPayrollPdf(
+        dataset: dataset,
+        outletName: outletName,
+        startDate: _startDate,
+        endDate: _endDate,
+        isCompatibilityMode: _isPayrollCompatibilityMode,
+      );
+
+      await Share.shareXFiles(
+        [
+          XFile(
+            file.path,
+            mimeType: 'application/pdf',
+          ),
+        ],
+        subject: 'Rekap Payroll PDF Enakko - $outletName',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _payrollExportStatusMessage = 'PDF payroll siap dibagikan.';
+        _payrollExportStatusIsError = false;
+      });
+      AppToast.success(context, 'PDF payroll siap dibagikan.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _payrollExportStatusMessage =
+            'PDF payroll belum bisa dibuat. Coba lagi. Jika masih gagal, gunakan spreadsheet lalu laporkan ke admin.';
+        _payrollExportStatusIsError = true;
+      });
+      AppToast.error(
+        context,
+        'PDF payroll belum bisa dibuat. Coba lagi. Jika masih gagal, gunakan spreadsheet lalu laporkan ke admin.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _exportingPayrollPdf = false);
+      }
+    }
+  }
+
+  Future<void> _exportPayrollSpreadsheet() async {
+    if (!_canExportPayrollSpreadsheet) {
+      return;
+    }
+
+    final dataset = _payrollMatrixDataset;
+    if (dataset == null || dataset.isEmpty) {
+      return;
+    }
+
+    final outletName = _resolvedOutletName();
+    setState(() {
+      _exportingSpreadsheet = true;
+      _payrollExportStatusMessage = 'Menyiapkan spreadsheet payroll...';
+      _payrollExportStatusIsError = false;
+    });
+
+    try {
+      final file =
+          await _payrollSpreadsheetExportService.exportPayrollSpreadsheet(
+        outletName: outletName,
+        startDate: _startDate,
+        endDate: _endDate,
+        dataset: dataset,
+      );
+
+      await Share.shareXFiles(
+        [
+          XFile(
+            file.path,
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ],
+        subject: 'Rekap Payroll Enakko - $outletName',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _payrollExportStatusMessage = 'Spreadsheet siap dibagikan.';
+        _payrollExportStatusIsError = false;
+      });
+      AppToast.success(context, 'Spreadsheet siap dibagikan.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _payrollExportStatusMessage =
+            'Spreadsheet belum bisa dibuat. Periksa outlet, rentang tanggal, dan koneksi lalu coba lagi.';
+        _payrollExportStatusIsError = true;
+      });
+      AppToast.error(
+        context,
+        'Spreadsheet belum bisa dibuat. Periksa outlet, rentang tanggal, dan koneksi lalu coba lagi.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _exportingSpreadsheet = false);
+      }
+    }
+  }
+
+  Future<void> _downloadPayrollValidationBundle(
+    PayrollRolloutAcceptanceSummary summary,
+  ) async {
+    final outletName = _resolvedOutletName();
+
+    try {
+      final bundle =
+          _payrollValidationBundleService.buildPayrollValidationBundle(
+        outletName: outletName,
+        startDate: _startDate,
+        endDate: _endDate,
+        summary: summary,
+      );
+      final directory = await getTemporaryDirectory();
+      final file = File(
+        '${directory.path}${Platform.pathSeparator}${bundle.filename}',
+      );
+      await file.writeAsString(bundle.content, flush: true);
+
+      await Share.shareXFiles(
+        <XFile>[
+          XFile(
+            file.path,
+            mimeType: 'text/markdown',
+          ),
+        ],
+        subject: 'Bukti Validasi Payroll Enakko - $outletName',
+      );
+
+      if (!mounted) return;
+      AppToast.success(context, 'Bukti validasi siap dibagikan.');
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.error(
+        context,
+        'Bukti validasi belum bisa dibuat. Coba lagi setelah review parity.',
+      );
+    }
+  }
+
   String _escapeCsv(String val) {
     var sanitized = val;
     if (sanitized.isNotEmpty && '=+-@'.contains(sanitized[0])) {
@@ -701,6 +1061,21 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       if (outlet.id == _selectedOutletId) return outlet.name;
     }
     return 'Outlet Terpilih';
+  }
+
+  List<PayrollScenarioReview> _buildPayrollRolloutReviews() {
+    final logicalWorkdayLabel = _formatDate(_endDate);
+    return requiredPayrollRolloutScenarioIds
+        .map(
+          (scenarioId) => PayrollScenarioReview(
+            scenarioId: scenarioId,
+            logicalWorkdayLabel: logicalWorkdayLabel,
+            contextLabel: 'Menunggu bukti parity',
+            evidenceBySource: const <PayrollEvidenceSource,
+                PayrollEvidenceSnapshot>{},
+          ),
+        )
+        .toList(growable: false);
   }
 
   String _formatDate(DateTime dt) {
@@ -1190,73 +1565,74 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
               ],
             ),
           ),
-
-          // ── EXPORT BAR ────────────────────────────────────────────
-          Container(
-            color: AppColors.surface,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    _tabCtrl.index == 1
-                        ? '${_filteredPolicyRecapRows().length} data rekap'
-                        : '${_rows.length} data scan',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+          if (_tabCtrl.index == 0)
+            Container(
+              color: AppColors.surface,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      '${_rows.length} data scan',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: (_exportingCsv ||
-                          _exportingPdf ||
-                          _loading ||
-                          _loadingDaily)
-                      ? null
-                      : _exportCsv,
-                  icon: _exportingCsv
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary))
-                      : const Icon(Icons.download_outlined,
-                          size: 16, color: AppColors.primary),
-                  label: Text(
-                    _exportingCsv ? '...' : 'CSV',
-                    style:
-                        const TextStyle(color: AppColors.primary, fontSize: 13),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: (_exportingCsv ||
+                            _exportingPdf ||
+                            _loading ||
+                            _loadingDaily)
+                        ? null
+                        : _exportCsv,
+                    icon: _exportingCsv
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary))
+                        : const Icon(Icons.download_outlined,
+                            size: 16, color: AppColors.primary),
+                    label: Text(
+                      _exportingCsv ? '...' : 'CSV',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                TextButton.icon(
-                  onPressed: (_exportingPdf ||
-                          _exportingCsv ||
-                          _loading ||
-                          _loadingDaily)
-                      ? null
-                      : _exportPdf,
-                  icon: _exportingPdf
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary))
-                      : const Icon(Icons.picture_as_pdf_outlined,
-                          size: 16, color: AppColors.primary),
-                  label: Text(
-                    _exportingPdf ? '...' : 'PDF',
-                    style:
-                        const TextStyle(color: AppColors.primary, fontSize: 13),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: (_exportingPdf ||
+                            _exportingCsv ||
+                            _loading ||
+                            _loadingDaily)
+                        ? null
+                        : _exportPdf,
+                    icon: _exportingPdf
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.primary))
+                        : const Icon(Icons.picture_as_pdf_outlined,
+                            size: 16, color: AppColors.primary),
+                    label: Text(
+                      _exportingPdf ? '...' : 'PDF',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
 
         // ── LIST CONTENT ──────────────────────────────────────────────
@@ -1320,69 +1696,29 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Widget _buildRekapHarian() {
-    if (_loadingDaily) {
-      return _buildReportShimmer();
-    }
-
-    if (_selectedOutletId == null || _selectedOutletId!.trim().isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.storefront_outlined,
-        heading: 'Pilih Outlet',
-        subtext:
-            'Rekap Harian membutuhkan satu outlet agar aturan jadwal bisa dihitung.',
-      );
-    }
-
-    if (_policyRecapError != null && _policyRecapRows.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.rule_folder_outlined,
-        heading: 'Rekap Policy Belum Tersedia',
-        subtext:
-            'Patch Phase 55 untuk rekap policy belum aktif di outlet ini. Coba lagi setelah SQL rollout disetujui.',
-      );
-    }
-
-    if (_policyRecapRows.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.bar_chart_outlined,
-        heading: 'Belum Ada Data',
-        subtext: 'Tidak ada data rekap pada rentang waktu ini',
-      );
-    }
-
-    final filteredRows = _filteredPolicyRecapRows();
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: PolicyRecapFilter.values
-                  .map(_buildRecapFilterChip)
-                  .toList(growable: false),
-            ),
-          ),
-        ),
-        Expanded(
-          child: filteredRows.isEmpty
-              ? AppEmptyState(
-                  icon: Icons.filter_alt_off_outlined,
-                  heading: 'Filter ${_selectedRecapFilter.label} kosong',
-                  subtext:
-                      'Tidak ada baris yang cocok untuk filter ${_selectedRecapFilter.label.toLowerCase()} pada rentang waktu ini.',
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  itemCount: filteredRows.length,
-                  itemBuilder: (context, i) =>
-                      PolicyRecapTile(recap: filteredRows[i]),
-                ),
-        ),
-      ],
+    return PayrollRecapTab(
+      isLoading: _loadingDaily,
+      hasSelectedOutlet:
+          _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty,
+      policyError: _policyRecapError,
+      dataset: _payrollMatrixDataset,
+      isCompatibilityMode: _isPayrollCompatibilityMode,
+      isExportingPdf: _exportingPayrollPdf,
+      isExportingSpreadsheet: _exportingSpreadsheet,
+      exportStatusMessage: _payrollExportStatusMessage,
+      exportStatusIsError: _payrollExportStatusIsError,
+      canExportPdf: _canExportPayrollPdf,
+      canExportSpreadsheet: _canExportPayrollSpreadsheet,
+      onExportPdf: _canExportPayrollPdf ? _exportPayrollPdf : null,
+      onExportSpreadsheet:
+          _canExportPayrollSpreadsheet ? _exportPayrollSpreadsheet : null,
+      rolloutReviews: _buildPayrollRolloutReviews(),
+      rolloutOutletName: _resolvedOutletName(),
+      rolloutStartDate: _startDate,
+      rolloutEndDate: _endDate,
+      onDownloadValidationBundle: _downloadPayrollValidationBundle,
+      loadingBuilder: _buildReportShimmer,
+      emptyNoDataSubtext: 'Tidak ada data payroll pada rentang waktu ini.',
     );
   }
 
@@ -1420,6 +1756,253 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class PayrollRecapTab extends StatelessWidget {
+  const PayrollRecapTab({
+    super.key,
+    required this.isLoading,
+    required this.hasSelectedOutlet,
+    required this.policyError,
+    required this.dataset,
+    required this.isCompatibilityMode,
+    required this.isExportingPdf,
+    required this.isExportingSpreadsheet,
+    required this.exportStatusMessage,
+    required this.exportStatusIsError,
+    required this.canExportPdf,
+    required this.canExportSpreadsheet,
+    required this.onExportPdf,
+    required this.onExportSpreadsheet,
+    required this.rolloutReviews,
+    required this.rolloutOutletName,
+    required this.rolloutStartDate,
+    required this.rolloutEndDate,
+    required this.onDownloadValidationBundle,
+    required this.loadingBuilder,
+    required this.emptyNoDataSubtext,
+  });
+
+  final bool isLoading;
+  final bool hasSelectedOutlet;
+  final String? policyError;
+  final PayrollMatrixDataset? dataset;
+  final bool isCompatibilityMode;
+  final bool isExportingPdf;
+  final bool isExportingSpreadsheet;
+  final String? exportStatusMessage;
+  final bool exportStatusIsError;
+  final bool canExportPdf;
+  final bool canExportSpreadsheet;
+  final VoidCallback? onExportPdf;
+  final VoidCallback? onExportSpreadsheet;
+  final List<PayrollScenarioReview> rolloutReviews;
+  final String rolloutOutletName;
+  final DateTime rolloutStartDate;
+  final DateTime rolloutEndDate;
+  final Future<void> Function(PayrollRolloutAcceptanceSummary summary)
+      onDownloadValidationBundle;
+  final Widget Function() loadingBuilder;
+  final String emptyNoDataSubtext;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return loadingBuilder();
+    }
+
+    if (!hasSelectedOutlet) {
+      return const AppEmptyState(
+        icon: Icons.storefront_outlined,
+        heading: 'Belum Ada Data Payroll',
+        subtext: 'Pilih satu outlet untuk menghitung payroll matrix.',
+      );
+    }
+
+    final payrollDataset = dataset;
+    if (policyError != null &&
+        (payrollDataset == null || payrollDataset.rows.isEmpty)) {
+      return const AppEmptyState(
+        icon: Icons.rule_folder_outlined,
+        heading: 'Rekap Policy Belum Tersedia',
+        subtext:
+            'Patch Phase 55 untuk rekap policy belum aktif di outlet ini. Coba lagi setelah SQL rollout disetujui.',
+      );
+    }
+
+    if (payrollDataset == null || payrollDataset.rows.isEmpty) {
+      return AppEmptyState(
+        icon: Icons.bar_chart_outlined,
+        heading: 'Belum Ada Data Payroll',
+        subtext: emptyNoDataSubtext,
+      );
+    }
+
+    final statusColor =
+        exportStatusIsError ? AppColors.danger : AppColors.textSecondary;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final topSectionHeight = math.max(
+          260.0,
+          math.min(420.0, constraints.maxHeight * 0.54),
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: topSectionHeight,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    PayrollRolloutAcceptancePanel(
+                      reviews: rolloutReviews,
+                      outletName: rolloutOutletName,
+                      startDate: rolloutStartDate,
+                      endDate: rolloutEndDate,
+                      onDownloadValidationBundle: onDownloadValidationBundle,
+                      onMarkPayrollReady: () {},
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Rekap Payroll',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Pantau hasil harian per karyawan lalu buat PDF payroll atau spreadsheet untuk review gaji.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.45,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (isCompatibilityMode) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFCBD5E1)),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Icon(
+                                Icons.info_outline_rounded,
+                                size: 18,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    payrollCompatibilityModeTitle,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    payrollCompatibilityModeBody,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      height: 1.45,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: canExportPdf ? onExportPdf : null,
+                          icon: isExportingPdf
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.picture_as_pdf_outlined,
+                                  size: 18,
+                                ),
+                          label: const Text('Ekspor PDF Payroll'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed:
+                              canExportSpreadsheet ? onExportSpreadsheet : null,
+                          icon: isExportingSpreadsheet
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.grid_on_outlined, size: 18),
+                          label: const Text('Ekspor Spreadsheet'),
+                        ),
+                      ],
+                    ),
+                    if (exportStatusMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        exportStatusMessage!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: PayrollMatrixTable(
+                  dataset: payrollDataset,
+                  dateHeaders: payrollDataset.dates,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
