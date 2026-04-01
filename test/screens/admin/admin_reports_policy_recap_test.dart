@@ -11,12 +11,16 @@ void main() {
     required String employeeId,
     required AttendancePolicyPrimaryStatus primaryStatus,
     required AttendancePolicySeverity primarySeverity,
+    DateTime? logicalDate,
     List<AttendancePolicySignal> detailSignals = const [],
     List<String> detailNotes = const [],
     AttendancePolicyStatus attendanceStatus = AttendancePolicyStatus.hadir,
     LateKind lateKind = LateKind.none,
     bool isManagerExempt = false,
     String? managerPosition,
+    ShiftBand? shiftBand = ShiftBand.pagi,
+    bool logicalDayComplete = true,
+    String? incompleteReason,
     int? netWorkMinutes = 600,
     int? totalBreakMinutes = 30,
     int? overtimeMinutes = 0,
@@ -24,12 +28,12 @@ void main() {
     int? excessBreakMinutes = 0,
   }) {
     return AttendancePolicyRecapDay(
-      logicalDate: DateTime(2026, 3, 26),
+      logicalDate: logicalDate ?? DateTime(2026, 3, 26),
       employeeId: employeeId,
       employeeName: 'Employee $employeeId',
       outletId: 'outlet-1',
       outletName: 'Outlet Utama',
-      shiftBand: ShiftBand.pagi,
+      shiftBand: shiftBand,
       requiredWorkMinutes: 600,
       lateCutoffLocal: '07:00',
       breakFirstDeadlineLocal: '09:00',
@@ -48,7 +52,8 @@ void main() {
       detailNotes: detailNotes,
       isManagerExempt: isManagerExempt,
       managerPosition: managerPosition,
-      logicalDayComplete: true,
+      logicalDayComplete: logicalDayComplete,
+      incompleteReason: incompleteReason,
       netWorkMinutes: netWorkMinutes,
       totalBreakMinutes: totalBreakMinutes,
       overtimeMinutes: overtimeMinutes,
@@ -59,7 +64,9 @@ void main() {
   }
 
   group('admin strict recap helpers', () {
-    test('filter selection supports manager_exempt and belum_absen_pulang', () {
+    test(
+      'filter selection isolates manager_exempt, hadir_tanpa_jadwal, and pending recap rows',
+      () {
       final managerRecap = buildRecap(
         employeeId: 'emp-1',
         primaryStatus: AttendancePolicyPrimaryStatus.exemptManager,
@@ -77,23 +84,53 @@ void main() {
         primarySeverity: AttendancePolicySeverity.red,
         detailSignals: const [AttendancePolicySignal.belumAbsenPulang],
       );
-      final regularRecap = buildRecap(
+      final activeIncompleteRecap = buildRecap(
         employeeId: 'emp-3',
+        primaryStatus: AttendancePolicyPrimaryStatus.activeIncomplete,
+        primarySeverity: AttendancePolicySeverity.info,
+        detailSignals: const [AttendancePolicySignal.activeIncomplete],
+        logicalDayComplete: false,
+        incompleteReason: 'Menunggu clock-out',
+      );
+      final fallbackNoScheduleRecap = buildRecap(
+        employeeId: 'emp-4',
+        primaryStatus: AttendancePolicyPrimaryStatus.hadirTanpaJadwal,
+        primarySeverity: AttendancePolicySeverity.info,
+        attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
+        detailSignals: const [AttendancePolicySignal.hadirTanpaJadwal],
+        shiftBand: null,
+        netWorkMinutes: 480,
+        totalBreakMinutes: 45,
+        overtimeMinutes: 15,
+      );
+      final regularRecap = buildRecap(
+        employeeId: 'emp-5',
         primaryStatus: AttendancePolicyPrimaryStatus.hadir,
         primarySeverity: AttendancePolicySeverity.info,
       );
 
-      final rows = [managerRecap, missingClockOutRecap, regularRecap];
+      final rows = [
+        managerRecap,
+        missingClockOutRecap,
+        activeIncompleteRecap,
+        fallbackNoScheduleRecap,
+        regularRecap,
+      ];
 
       expect(
         filterPolicyRecapRows(rows, PolicyRecapFilter.managerExempt),
         [managerRecap],
       );
       expect(
-        filterPolicyRecapRows(rows, PolicyRecapFilter.belumAbsenPulang),
-        [missingClockOutRecap],
+        filterPolicyRecapRows(rows, PolicyRecapFilter.hadirTanpaJadwal),
+        [fallbackNoScheduleRecap],
       );
-    });
+      expect(
+        filterPolicyRecapRows(rows, PolicyRecapFilter.belumAbsenPulang),
+        [missingClockOutRecap, activeIncompleteRecap],
+      );
+      },
+    );
 
     testWidgets(
       'PolicyRecapTile shows one primary badge, detail chip, and manager exemption copy',
@@ -128,6 +165,64 @@ void main() {
         expect(find.byType(AttendancePolicySignalChip), findsWidgets);
         expect(find.textContaining('tidak kena penalti merah'), findsOneWidget);
         expect(find.textContaining('Kerja '), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'PolicyRecapTile keeps strict signals and fallback no-schedule copy visible together',
+      (tester) async {
+        final strictOvernightRecap = buildRecap(
+          employeeId: 'emp-6',
+          primaryStatus: AttendancePolicyPrimaryStatus.late,
+          primarySeverity: AttendancePolicySeverity.red,
+          logicalDate: DateTime(2026, 3, 27),
+          detailSignals: const [
+            AttendancePolicySignal.late,
+            AttendancePolicySignal.excessBreak,
+          ],
+          detailNotes: const ['Break malam melebihi kontrak.'],
+          lateKind: LateKind.normal,
+          netWorkMinutes: 510,
+          totalBreakMinutes: 90,
+          excessBreakMinutes: 45,
+        );
+        final fallbackNoScheduleRecap = buildRecap(
+          employeeId: 'emp-7',
+          primaryStatus: AttendancePolicyPrimaryStatus.hadirTanpaJadwal,
+          primarySeverity: AttendancePolicySeverity.info,
+          logicalDate: DateTime(2026, 3, 27),
+          attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
+          detailSignals: const [AttendancePolicySignal.hadirTanpaJadwal],
+          shiftBand: null,
+          netWorkMinutes: 480,
+          totalBreakMinutes: 45,
+          overtimeMinutes: 15,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ListView(
+                children: [
+                  PolicyRecapTile(recap: strictOvernightRecap),
+                  PolicyRecapTile(recap: fallbackNoScheduleRecap),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Employee emp-6'), findsOneWidget);
+        expect(find.text('Employee emp-7'), findsOneWidget);
+        expect(find.text('Tanpa jadwal'), findsOneWidget);
+        expect(
+          find.text(
+            'Hadir tanpa jadwal; aturan kontrak tetap dipakai untuk menghitung jam kerja, istirahat, dan lembur.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Istirahat berlebih'), findsOneWidget);
+        expect(find.textContaining('Break malam melebihi kontrak'), findsOneWidget);
       },
     );
   });
