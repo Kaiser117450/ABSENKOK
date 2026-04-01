@@ -26,6 +26,8 @@
 
 **Goal:** Recover trusted Rekap Harian behavior for no-schedule legacy data while preserving break-first, excess-break, and contract-aware strict semantics where they legitimately apply.
 
+**Plan progress:** 1 of 2 plans complete (`61-01-SUMMARY.md` created on 2026-04-01). Plan 02 wires the active recap screen to the canonical merged dataset service from Plan 01.
+
 **Requirements:** `RECAP-05`, `RECAP-06`, `RECAP-07`
 
 **Success criteria:**
@@ -63,7 +65,7 @@
 - Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
 - Product state: strict reporting foundations remain valuable, but recap continuity for legacy no-schedule data must be corrected before payroll trust expands
 - Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
-- Next planning step: start with Phase 61 to recover recap semantics before adding schedule-gap notices and relocking export parity
+- Next execution step: finish Phase 61 with Plan 02 before adding schedule-gap notices and relocking export parity
 
 ---
 _For current project status, see `.planning/PROJECT.md`_  

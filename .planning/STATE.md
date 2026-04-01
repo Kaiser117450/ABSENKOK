@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.1
 milestone_name: Reporting Recovery & Schedule Gap Notifications
-status: roadmap_defined
-stopped_at: Roadmap approved for milestone v8.1
-last_updated: "2026-03-31T19:50:09+08:00"
-last_activity: 2026-03-31
+status: executing
+stopped_at: Completed 61-01-PLAN.md
+last_updated: "2026-04-01T04:40:08.687Z"
+last_activity: 2026-04-01 -- Phase 61 Plan 01 completed
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # STATE.md — Project Memory
@@ -18,17 +18,17 @@ progress:
 ## Current Position
 
 Milestone: v8.1 — ACTIVE
-Phase: 61 — Ready to start
-Plan: —
-Status: Roadmap approved; ready for phase discussion
-Last activity: 2026-03-31 — Roadmap v8.1 approved
+Phase: 61 (recap-semantics-recovery) — EXECUTING
+Plan: 2 of 2
+Status: Plan 01 complete; Plan 02 ready to execute
+Last activity: 2026-04-01 -- Phase 61 Plan 01 completed
 
 ## Current Status
 
 - **Active milestone:** v8.1 Reporting Recovery & Schedule Gap Notifications
 - **Last shipped milestone:** v8.0 Strict Attendance & Payroll Reporting
 - **Next phase:** Phase 61 Recap Semantics Recovery
-- **Current focus:** Restore trusted Rekap Harian behavior for no-schedule legacy data while preserving strict contract-aware break-first and excessive-break reporting
+- **Current focus:** Phase 61 Plan 02 — wire the active recap screen to the canonical merged dataset service
 - **Notification focus:** Empty schedule days should become kepala gerai follow-up notices, not recap-breaking logic
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing spreadsheet/PDF output must stay aligned with the corrected recap semantics
@@ -36,11 +36,11 @@ Last activity: 2026-03-31 — Roadmap v8.1 approved
 ## Progress
 
 ```text
-v8.1 roadmap approved; implementation has not started
-[░░░░░░░░░░░░░░░░░░] 0 of 3 phases complete (0 plans defined)
+v8.1 implementation started
+[█████░░░░░] 1 of 2 plans complete in Phase 61 (0 of 3 phases complete)
 ```
 
-- **Next action:** Start Phase 61 with `$gsd-discuss-phase 61`.
+- **Next action:** Execute Phase 61 Plan 02 with `$gsd-execute-phase 61`.
 
 ## Project Reference
 
@@ -206,6 +206,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | 52-01 | Protected `/portal` requests now redirect before `next()` while still attaching refreshed Supabase SSR cookies | Keeps middleware as the single verified protected-route gate |
 | 52-02 | Public chooser search now requires 3 normalized characters, caps results at 5, rejects 64+ character input, and returns only the rendered chooser DTO | Reduces enumeration-friendly exposure without removing passwordless card selection |
 | 52-03 | Existing hidden portal auth users are reusable only when confirmed `employee_portal` metadata matches `employee_id`; recovery SQL skips conflicting ownership instead of repointing mappings | Recovery correctness now fails closed instead of trusting weak hidden-email inference |
+| 61-01 | `AdminPolicyRecapDatasetService` is the canonical row-first merge contract for admin recap data | Keeps merged recap semantics reusable before UI or export transforms |
+| 61-01 | `RECAP-05`, `RECAP-06`, and `RECAP-07` stay phase-scoped until Plan 02 rewires the active recap screen | Prevents user-facing recap recovery requirements from being marked complete on service extraction alone |
 
 ## Key Constraints
 
@@ -225,6 +227,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Phase 58.1 planned on 2026-03-28: the fallback path now explicitly requires overnight-safe logical-day grouping for `TWENTY_FOUR_HOUR` legacy logs, plus mixed strict+fallback recap/export parity coverage before execution.
 - Phase 58.1 completed on 2026-03-28: `ShiftSchedulerScreen` now lets admins minimize or dismiss the schedule-rule notice, and the assigned-entry bottom sheet uses explicit dark chip labels so shift and required-hours options stay readable in light and disabled states.
 - Phase 58.1 completed on 2026-03-28: `LegacyPayrollRecapFallbackService` now synthesizes contract-aware no-schedule recap rows from raw attendance without fabricating late or absence states, and `AdminReportsScreen` merges those fallback rows into the same payroll matrix/spreadsheet dataset with a visible compatibility note.
+- Phase 61 Plan 01 completed on 2026-04-01: `AdminPolicyRecapDatasetService` now builds canonical merged `AttendancePolicyRecapDay` rows by filtering logs to the selected outlet, synthesizing only missing fallback keys, and applying strict-wins merge semantics on `(employeeId, logicalDate)`.
+- Phase 61 Plan 01 completed on 2026-04-01: `test/services/admin_policy_recap_dataset_service_test.dart` now locks strict-wins merge behavior, compatibility mode toggling, overnight `TWENTY_FOUR_HOUR` logical dates, and null schedule-only cutoff fields on fallback rows.
 
 - Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
@@ -305,9 +309,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Session Continuity
 
-**Last session:** 2026-03-31T13:13:24+08:00
-**Stopped at:** Archived milestone v8.0 Strict Attendance & Payroll Reporting
-**Resume file:** .planning/milestones/v8.0-MILESTONE-AUDIT.md
+**Last session:** 2026-04-01T04:40:08.676Z
+**Stopped at:** Completed 61-01-PLAN.md
+**Resume file:** .planning/phases/61-recap-semantics-recovery/61-02-PLAN.md
 
 ## Database Safety Rules
 
