@@ -18,7 +18,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 61 | Recap Semantics Recovery | Recover legacy no-schedule recap continuity without weakening strict contract-aware evaluation | RECAP-05, RECAP-06, RECAP-07 | 4 |
+| 61 | Recap Semantics Recovery | 2/2 | Complete    | 2026-04-01 |
 | 62 | Schedule Gap Notices | Surface missing schedule follow-up as non-blocking kepala gerai notifications | SCHED-05 | 3 |
 | 63 | Export Parity Re-lock | Keep spreadsheet and payroll PDF aligned with the corrected merged recap dataset | REPORT-04, REPORT-05 | 4 |
 
@@ -26,7 +26,7 @@
 
 **Goal:** Recover trusted Rekap Harian behavior for no-schedule legacy data while preserving break-first, excess-break, and contract-aware strict semantics where they legitimately apply.
 
-**Plan progress:** 1 of 2 plans complete (`61-01-SUMMARY.md` created on 2026-04-01). Plan 02 wires the active recap screen to the canonical merged dataset service from Plan 01.
+**Plan progress:** 2 of 2 plans complete (`61-01-SUMMARY.md` and `61-02-SUMMARY.md` created on 2026-04-01). Phase 61 is complete; Phase 62 can now focus on schedule-gap notices without reopening recap recovery semantics.
 
 **Requirements:** `RECAP-05`, `RECAP-06`, `RECAP-07`
 
@@ -65,7 +65,7 @@
 - Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
 - Product state: strict reporting foundations remain valuable, but recap continuity for legacy no-schedule data must be corrected before payroll trust expands
 - Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
-- Next execution step: finish Phase 61 with Plan 02 before adding schedule-gap notices and relocking export parity
+- Next execution step: start Phase 62 schedule-gap notices, then relock export parity in Phase 63
 
 ---
 _For current project status, see `.planning/PROJECT.md`_  

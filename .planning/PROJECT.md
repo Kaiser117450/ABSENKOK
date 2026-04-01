@@ -26,9 +26,10 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Latest shipped milestone:** v8.0 Strict Attendance & Payroll Reporting (2026-03-31)
 
 **Current operational focus:**
-- define the corrective v8.1 scope before payroll depends on the current rollout outputs
+- Phase 61 is complete, so the recap baseline is trusted again on the canonical merged dataset
+- start Phase 62 schedule-gap notices without reopening recap semantics
 - preserve additive-only, explicitly user-approved production SQL changes
-- recover trusted report behavior first; defer non-essential payroll workflow expansion
+- relock spreadsheet/PDF export parity only after the notice surface is in place
 
 ## Current State
 
@@ -41,6 +42,7 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Scan authority:** Phase 56 completed on 2026-03-27, so kiosk scan timing now comes from authoritative WITA server timestamps with offline replay metadata and break-first intent capture
 **Strict recap:** Phase 57 completed on 2026-03-27, so admin recap rows now consume primary status, detail signals, work metrics, and manager exemption semantics from one typed strict engine
 **Payroll matrix:** Phase 58 completed on 2026-03-27, so Rekap Harian now renders a payroll-ready employee/date matrix with sticky summary counts and spreadsheet export from the same shared dataset
+**Recap recovery:** Phase 61 completed on 2026-04-01, so the active admin Rekap Harian tab is row-first again on the canonical merged recap dataset, legacy no-schedule rows stay honest and overnight-safe, and pending recap filters read from recap signals instead of raw-log heuristics
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Phase 59 completed on 2026-03-28, so admin recap, spreadsheet export, PDF export, and portal recap now share the strict payroll parity contract without stale clock-first framing
 **Rollout acceptance:** Phase 60 completed on 2026-03-31, so operators now have a canonical rollout checklist, locked seven-scenario fixtures, recap-shell readiness gating, and validation-bundle export before payroll is marked ready
@@ -212,9 +214,12 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Portal and payroll PDF recap surfaces now consume the strict parity contract and stay aligned with the admin payroll matrix — Phase 59
 - ✓ Rollout validation now ships as one additive-only checklist, seven-scenario fixture pack, recap-shell acceptance surface, and validation-bundle export before payroll use — Phase 60
 
+### Validated (v8.1 / Phase 61)
+- ✓ Rekap Harian and pending views stay usable on legacy no-schedule attendance data — Phase 61
+- ✓ Compatibility rows preserve logical-day grouping, contract-based required hours, and honest incomplete states without fabricating late or absence signals — Phase 61
+- ✓ Strict contract-aware break-first and excess-break recap semantics stay visible when strict evaluation data exists — Phase 61
+
 ### Active
-- [ ] Rekap Harian continues to work on current legacy data even when some dates still have no shift schedule filled in.
-- [ ] Strict contract-aware reporting remains active for break-first and excessive break duration cases instead of being rolled back with the legacy compatibility fix.
 - [ ] Spreadsheet export and payroll PDF stay aligned with the corrected daily recap semantics and remain the primary operator outputs.
 - [ ] Kepala gerai receives actionable notifications about empty schedule days for their outlet employees without those gaps distorting pending and recap behavior.
 
@@ -371,4 +376,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after starting milestone v8.1*
+*Last updated: 2026-04-01 after Phase 61 completion*

@@ -7,12 +7,12 @@
 
 ### Recap Recovery
 
-- [ ] **RECAP-05**: Admin Rekap Harian and pending views continue to show usable day rows for existing attendance data even when some dates still have no `schedule_entries`.
-- [ ] **RECAP-06**: Compatibility rows for no-schedule days preserve logical-day grouping, contract-based required hours, and honest incomplete states without fabricating late or absence signals.
+- [x] **RECAP-05**: Admin Rekap Harian and pending views continue to show usable day rows for existing attendance data even when some dates still have no `schedule_entries`.
+- [x] **RECAP-06**: Compatibility rows for no-schedule days preserve logical-day grouping, contract-based required hours, and honest incomplete states without fabricating late or absence signals.
 
 ### Strict Rule Retention
 
-- [ ] **RECAP-07**: Break-first, excess-break, and other strict contract-aware recap rules remain visible for days where strict evaluation data exists; compatibility handling must not downgrade those days into generic no-schedule rows.
+- [x] **RECAP-07**: Break-first, excess-break, and other strict contract-aware recap rules remain visible for days where strict evaluation data exists; compatibility handling must not downgrade those days into generic no-schedule rows.
 
 ### Export Parity
 
@@ -56,9 +56,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RECAP-05 | Phase 61 | Pending |
-| RECAP-06 | Phase 61 | Pending |
-| RECAP-07 | Phase 61 | Pending |
+| RECAP-05 | Phase 61 | Complete |
+| RECAP-06 | Phase 61 | Complete |
+| RECAP-07 | Phase 61 | Complete |
 | REPORT-04 | Phase 63 | Pending |
 | REPORT-05 | Phase 63 | Pending |
 | SCHED-05 | Phase 62 | Pending |
@@ -70,4 +70,4 @@
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after v8.1 roadmap draft*
+*Last updated: 2026-04-01 after Phase 61 completion*

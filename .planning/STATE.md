@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.1
 milestone_name: Reporting Recovery & Schedule Gap Notifications
-status: executing
-stopped_at: Completed 61-01-PLAN.md
-last_updated: "2026-04-01T04:40:08.687Z"
-last_activity: 2026-04-01 -- Phase 61 Plan 01 completed
+status: planning
+stopped_at: Completed Phase 61 recap-semantics-recovery
+last_updated: "2026-04-01T13:35:30.1645456+08:00"
+last_activity: 2026-04-01 -- Phase 61 completed
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # STATE.md — Project Memory
@@ -18,17 +18,17 @@ progress:
 ## Current Position
 
 Milestone: v8.1 — ACTIVE
-Phase: 61 (recap-semantics-recovery) — EXECUTING
-Plan: 2 of 2
-Status: Plan 01 complete; Plan 02 ready to execute
-Last activity: 2026-04-01 -- Phase 61 Plan 01 completed
+Phase: 62 — Ready to start
+Plan: —
+Status: Phase 61 complete; Phase 62 ready for discussion and planning
+Last activity: 2026-04-01 -- Phase 61 completed
 
 ## Current Status
 
 - **Active milestone:** v8.1 Reporting Recovery & Schedule Gap Notifications
 - **Last shipped milestone:** v8.0 Strict Attendance & Payroll Reporting
-- **Next phase:** Phase 61 Recap Semantics Recovery
-- **Current focus:** Phase 61 Plan 02 — wire the active recap screen to the canonical merged dataset service
+- **Next phase:** Phase 62 Schedule Gap Notices
+- **Current focus:** Phase 62 — surface non-blocking schedule-gap follow-up notices for kepala gerai
 - **Notification focus:** Empty schedule days should become kepala gerai follow-up notices, not recap-breaking logic
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing spreadsheet/PDF output must stay aligned with the corrected recap semantics
@@ -36,18 +36,18 @@ Last activity: 2026-04-01 -- Phase 61 Plan 01 completed
 ## Progress
 
 ```text
-v8.1 implementation started
-[█████░░░░░] 1 of 2 plans complete in Phase 61 (0 of 3 phases complete)
+v8.1 implementation advanced through recap recovery
+[██████░░░░░░░░░░░░] 1 of 3 phases complete (2 of 2 plans finished in Phase 61)
 ```
 
-- **Next action:** Execute Phase 61 Plan 02 with `$gsd-execute-phase 61`.
+- **Next action:** Start Phase 62 with `$gsd-discuss-phase 62` or `$gsd-plan-phase 62`.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 61 will recover recap semantics so legacy no-schedule days stay usable without losing strict contract-aware break evaluation or export fidelity.
+**Current focus:** Phase 62 will add non-blocking schedule-gap notices now that recap semantics are recovered.
 
 ## What Was Shipped
 
@@ -208,6 +208,7 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | 52-03 | Existing hidden portal auth users are reusable only when confirmed `employee_portal` metadata matches `employee_id`; recovery SQL skips conflicting ownership instead of repointing mappings | Recovery correctness now fails closed instead of trusting weak hidden-email inference |
 | 61-01 | `AdminPolicyRecapDatasetService` is the canonical row-first merge contract for admin recap data | Keeps merged recap semantics reusable before UI or export transforms |
 | 61-01 | `RECAP-05`, `RECAP-06`, and `RECAP-07` stay phase-scoped until Plan 02 rewires the active recap screen | Prevents user-facing recap recovery requirements from being marked complete on service extraction alone |
+| 61-02 | Active Rekap Harian is row-first on `AdminPolicyRecapDatasetService`, and pending recap filters derive from recap signals instead of raw-log heuristics | Restores trusted recap continuity without weakening strict semantics |
 
 ## Key Constraints
 
@@ -229,6 +230,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Phase 58.1 completed on 2026-03-28: `LegacyPayrollRecapFallbackService` now synthesizes contract-aware no-schedule recap rows from raw attendance without fabricating late or absence states, and `AdminReportsScreen` merges those fallback rows into the same payroll matrix/spreadsheet dataset with a visible compatibility note.
 - Phase 61 Plan 01 completed on 2026-04-01: `AdminPolicyRecapDatasetService` now builds canonical merged `AttendancePolicyRecapDay` rows by filtering logs to the selected outlet, synthesizing only missing fallback keys, and applying strict-wins merge semantics on `(employeeId, logicalDate)`.
 - Phase 61 Plan 01 completed on 2026-04-01: `test/services/admin_policy_recap_dataset_service_test.dart` now locks strict-wins merge behavior, compatibility mode toggling, overnight `TWENTY_FOUR_HOUR` logical dates, and null schedule-only cutoff fields on fallback rows.
+- Phase 61 Plan 02 completed on 2026-04-01: `AdminReportsScreen` now renders the active Rekap Harian tab from canonical merged recap rows, shows the locked compatibility banner only when fallback rows are injected, and keeps pending recap buckets tied to `belumAbsenPulang` plus `activeIncomplete`.
+- Phase 61 Plan 02 completed on 2026-04-01: `test/screens/admin/admin_reports_policy_recap_test.dart` and `test/screens/admin/rekap_harian_test.dart` now cover mixed strict-plus-fallback recap behavior, locked filter chips, pending filtering, and honest no-schedule copy.
 
 - Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
@@ -309,9 +312,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Session Continuity
 
-**Last session:** 2026-04-01T04:40:08.676Z
-**Stopped at:** Completed 61-01-PLAN.md
-**Resume file:** .planning/phases/61-recap-semantics-recovery/61-02-PLAN.md
+**Last session:** 2026-04-01T13:35:30.1645456+08:00
+**Stopped at:** Completed Phase 61 recap-semantics-recovery
+**Resume file:** .planning/phases/62-schedule-gap-notices/
 
 ## Database Safety Rules
 
