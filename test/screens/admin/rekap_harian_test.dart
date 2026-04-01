@@ -110,7 +110,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Ayu Strict'), findsOneWidget);
-        expect(find.text('Bimo Fallback'), findsOneWidget);
+        expect(find.text('Bimo Fallback', skipOffstage: false), findsOneWidget);
 
         await tester.pumpWidget(buildHarness(rows: [strictRow]));
         await tester.pumpAndSettle();
@@ -151,11 +151,18 @@ void main() {
           ),
         );
 
-        await tester.tap(find.text('Belum absen pulang'));
+        final pendingFilter = find.byWidgetPredicate(
+          (widget) =>
+              widget is ChoiceChip &&
+              widget.label is Text &&
+              (widget.label as Text).data == 'Belum absen pulang',
+        );
+
+        await tester.tap(pendingFilter);
         await tester.pumpAndSettle();
 
-        expect(find.text('Citra Pending'), findsOneWidget);
-        expect(find.text('Deni Aktif'), findsOneWidget);
+        expect(find.text('Citra Pending', skipOffstage: false), findsOneWidget);
+        expect(find.text('Deni Aktif', skipOffstage: false), findsOneWidget);
         expect(find.text('Eka Manager'), findsNothing);
       },
     );
@@ -194,6 +201,7 @@ void main() {
         expect(
           find.text(
             'Hadir tanpa jadwal; aturan kontrak tetap dipakai untuk menghitung jam kerja, istirahat, dan lembur.',
+            skipOffstage: false,
           ),
           findsOneWidget,
         );

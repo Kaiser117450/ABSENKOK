@@ -67,68 +67,68 @@ void main() {
     test(
       'filter selection isolates manager_exempt, hadir_tanpa_jadwal, and pending recap rows',
       () {
-      final managerRecap = buildRecap(
-        employeeId: 'emp-1',
-        primaryStatus: AttendancePolicyPrimaryStatus.exemptManager,
-        primarySeverity: AttendancePolicySeverity.info,
-        detailSignals: const [
-          AttendancePolicySignal.late,
-          AttendancePolicySignal.exemptManager,
-        ],
-        isManagerExempt: true,
-        managerPosition: 'Kepala Gerai',
-      );
-      final missingClockOutRecap = buildRecap(
-        employeeId: 'emp-2',
-        primaryStatus: AttendancePolicyPrimaryStatus.belumAbsenPulang,
-        primarySeverity: AttendancePolicySeverity.red,
-        detailSignals: const [AttendancePolicySignal.belumAbsenPulang],
-      );
-      final activeIncompleteRecap = buildRecap(
-        employeeId: 'emp-3',
-        primaryStatus: AttendancePolicyPrimaryStatus.activeIncomplete,
-        primarySeverity: AttendancePolicySeverity.info,
-        detailSignals: const [AttendancePolicySignal.activeIncomplete],
-        logicalDayComplete: false,
-        incompleteReason: 'Menunggu clock-out',
-      );
-      final fallbackNoScheduleRecap = buildRecap(
-        employeeId: 'emp-4',
-        primaryStatus: AttendancePolicyPrimaryStatus.hadirTanpaJadwal,
-        primarySeverity: AttendancePolicySeverity.info,
-        attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
-        detailSignals: const [AttendancePolicySignal.hadirTanpaJadwal],
-        shiftBand: null,
-        netWorkMinutes: 480,
-        totalBreakMinutes: 45,
-        overtimeMinutes: 15,
-      );
-      final regularRecap = buildRecap(
-        employeeId: 'emp-5',
-        primaryStatus: AttendancePolicyPrimaryStatus.hadir,
-        primarySeverity: AttendancePolicySeverity.info,
-      );
+        final managerRecap = buildRecap(
+          employeeId: 'emp-1',
+          primaryStatus: AttendancePolicyPrimaryStatus.exemptManager,
+          primarySeverity: AttendancePolicySeverity.info,
+          detailSignals: const [
+            AttendancePolicySignal.late,
+            AttendancePolicySignal.exemptManager,
+          ],
+          isManagerExempt: true,
+          managerPosition: 'Kepala Gerai',
+        );
+        final missingClockOutRecap = buildRecap(
+          employeeId: 'emp-2',
+          primaryStatus: AttendancePolicyPrimaryStatus.belumAbsenPulang,
+          primarySeverity: AttendancePolicySeverity.red,
+          detailSignals: const [AttendancePolicySignal.belumAbsenPulang],
+        );
+        final activeIncompleteRecap = buildRecap(
+          employeeId: 'emp-3',
+          primaryStatus: AttendancePolicyPrimaryStatus.activeIncomplete,
+          primarySeverity: AttendancePolicySeverity.info,
+          detailSignals: const [AttendancePolicySignal.activeIncomplete],
+          logicalDayComplete: false,
+          incompleteReason: 'Menunggu clock-out',
+        );
+        final fallbackNoScheduleRecap = buildRecap(
+          employeeId: 'emp-4',
+          primaryStatus: AttendancePolicyPrimaryStatus.hadirTanpaJadwal,
+          primarySeverity: AttendancePolicySeverity.info,
+          attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
+          detailSignals: const [AttendancePolicySignal.hadirTanpaJadwal],
+          shiftBand: null,
+          netWorkMinutes: 480,
+          totalBreakMinutes: 45,
+          overtimeMinutes: 15,
+        );
+        final regularRecap = buildRecap(
+          employeeId: 'emp-5',
+          primaryStatus: AttendancePolicyPrimaryStatus.hadir,
+          primarySeverity: AttendancePolicySeverity.info,
+        );
 
-      final rows = [
-        managerRecap,
-        missingClockOutRecap,
-        activeIncompleteRecap,
-        fallbackNoScheduleRecap,
-        regularRecap,
-      ];
+        final rows = [
+          managerRecap,
+          missingClockOutRecap,
+          activeIncompleteRecap,
+          fallbackNoScheduleRecap,
+          regularRecap,
+        ];
 
-      expect(
-        filterPolicyRecapRows(rows, PolicyRecapFilter.managerExempt),
-        [managerRecap],
-      );
-      expect(
-        filterPolicyRecapRows(rows, PolicyRecapFilter.hadirTanpaJadwal),
-        [fallbackNoScheduleRecap],
-      );
-      expect(
-        filterPolicyRecapRows(rows, PolicyRecapFilter.belumAbsenPulang),
-        [missingClockOutRecap, activeIncompleteRecap],
-      );
+        expect(
+          filterPolicyRecapRows(rows, PolicyRecapFilter.managerExempt),
+          [managerRecap],
+        );
+        expect(
+          filterPolicyRecapRows(rows, PolicyRecapFilter.hadirTanpaJadwal),
+          [fallbackNoScheduleRecap],
+        );
+        expect(
+          filterPolicyRecapRows(rows, PolicyRecapFilter.belumAbsenPulang),
+          [missingClockOutRecap, activeIncompleteRecap],
+        );
       },
     );
 
@@ -222,7 +222,8 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Istirahat berlebih'), findsOneWidget);
-        expect(find.textContaining('Break malam melebihi kontrak'), findsOneWidget);
+        expect(find.textContaining('Break malam melebihi kontrak'),
+            findsOneWidget);
       },
     );
   });
