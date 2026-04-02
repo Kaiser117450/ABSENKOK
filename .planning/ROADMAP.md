@@ -20,7 +20,7 @@
 |---|-------|------|--------------|------------------|
 | 61 | Recap Semantics Recovery | 2/2 | Complete    | 2026-04-01 |
 | 62 | Schedule Gap Notices | 2/2 | Complete    | 2026-04-01 |
-| 63 | Export Parity Re-lock | 2/2 | Complete   | 2026-04-02 |
+| 63 | Export Parity Re-lock | 2/2 | Complete    | 2026-04-02 |
 
 ### Phase 61: Recap Semantics Recovery
 
