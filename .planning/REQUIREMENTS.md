@@ -16,12 +16,12 @@
 
 ### Export Parity
 
-- [ ] **REPORT-04**: Spreadsheet export uses the same corrected merged recap dataset as admin Rekap Harian while preserving compact payroll-facing fields, current color semantics, and per-employee summary counts.
-- [ ] **REPORT-05**: Payroll PDF uses the same corrected merged recap dataset as admin Rekap Harian and spreadsheet export without reintroducing technical scan fields or a second reporting interpretation.
+- [x] **REPORT-04**: Spreadsheet export uses the same corrected merged recap dataset as admin Rekap Harian while preserving compact payroll-facing fields, current color semantics, and per-employee summary counts.
+- [x] **REPORT-05**: Payroll PDF uses the same corrected merged recap dataset as admin Rekap Harian and spreadsheet export without reintroducing technical scan fields or a second reporting interpretation.
 
 ### Schedule Gap Notifications
 
-- [ ] **SCHED-05**: Kepala gerai can see outlet-scoped notifications for employee/date schedule gaps that still need to be filled, and those notices do not block report generation or mutate payroll penalty semantics.
+- [x] **SCHED-05**: Kepala gerai can see outlet-scoped notifications for employee/date schedule gaps that still need to be filled, and those notices do not block report generation or mutate payroll penalty semantics.
 
 ## Deferred Product Requirements
 
@@ -59,9 +59,9 @@
 | RECAP-05 | Phase 61 | Complete |
 | RECAP-06 | Phase 61 | Complete |
 | RECAP-07 | Phase 61 | Complete |
-| REPORT-04 | Phase 63 | Pending |
-| REPORT-05 | Phase 63 | Pending |
-| SCHED-05 | Phase 62 | Pending |
+| REPORT-04 | Phase 63 | Complete |
+| REPORT-05 | Phase 63 | Complete |
+| SCHED-05 | Phase 62 | Complete |
 
 **Coverage:**
 - v8.1 requirements: 6 total
@@ -70,4 +70,4 @@
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-04-01 after Phase 61 completion*
+*Last updated: 2026-04-02 after Phase 63 completion*

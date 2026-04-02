@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.1
 milestone_name: Reporting Recovery & Schedule Gap Notifications
-status: planning
-stopped_at: Completed Phase 61 recap-semantics-recovery
-last_updated: "2026-04-01T13:35:30.1645456+08:00"
-last_activity: 2026-04-01 -- Phase 61 completed
+status: verifying
+stopped_at: Completed 63-02-PLAN.md
+last_updated: "2026-04-02T06:33:19.750Z"
+last_activity: 2026-04-02 -- Phase 63 completed
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # STATE.md — Project Memory
@@ -18,36 +18,51 @@ progress:
 ## Current Position
 
 Milestone: v8.1 — ACTIVE
-Phase: 62 — Ready to start
-Plan: —
-Status: Phase 61 complete; Phase 62 ready for discussion and planning
-Last activity: 2026-04-01 -- Phase 61 completed
+Phase: 63 (export-parity-re-lock) — COMPLETE
+Plan: 2 of 2
+Status: Phase 63 complete — ready for milestone verification and closeout
+Last activity: 2026-04-02 -- Phase 63 Plan 02 completed
 
 ## Current Status
 
 - **Active milestone:** v8.1 Reporting Recovery & Schedule Gap Notifications
 - **Last shipped milestone:** v8.0 Strict Attendance & Payroll Reporting
-- **Next phase:** Phase 62 Schedule Gap Notices
-- **Current focus:** Phase 62 — surface non-blocking schedule-gap follow-up notices for kepala gerai
-- **Notification focus:** Empty schedule days should become kepala gerai follow-up notices, not recap-breaking logic
+- **Next phase:** None - active milestone scope is fully implemented
+- **Current focus:** Phase 63 completion - export parity is now locked across admin recap, spreadsheet export, and payroll PDF
+- **Notification focus:** Dashboard-based `Jadwal Kosong` follow-up is now live for outlet-scoped kepala gerai workflows
+- **Verification focus:** Manual operator scanability review of the generated spreadsheet/PDF artifacts remains the only non-automated follow-up from `63-VALIDATION.md`
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing spreadsheet/PDF output must stay aligned with the corrected recap semantics
 
 ## Progress
 
 ```text
-v8.1 implementation advanced through recap recovery
-[██████░░░░░░░░░░░░] 1 of 3 phases complete (2 of 2 plans finished in Phase 61)
+v8.1 implementation completed through export parity re-lock
+[████████████████████] 3 of 3 phases complete (6 of 6 plans finished through Phase 63)
 ```
 
-- **Next action:** Start Phase 62 with `$gsd-discuss-phase 62` or `$gsd-plan-phase 62`.
+- **Next action:** Run milestone verification/closeout (`$gsd-verify-work 63` or milestone archive flow) now that all v8.1 plans are complete.
+
+## Decisions
+
+- Phase 63 Plan 01 keeps the shipped `AdminPolicyRecapDatasetService -> buildPayrollMatrix` export seam and removes the dead screen-local recap helper.
+- Phase 63 Plan 01 extracts the payroll output card into `PolicyRecapPayrollSupportSection` while leaving rollout acceptance wiring in `AdminReportsScreen`.
+- [Phase 63]: Spreadsheet and PDF export tests now build datasets via AdminPolicyRecapDatasetService and buildPayrollMatrix from buildReportExportParityFixtureBundle().
+- [Phase 63]: Plain hadirTanpaJadwal compatibility rows now render as 'Hadir tanpa jadwal' in payroll-facing matrix outputs, while penalty-bearing compatibility rows stay time-first.
+
+## Performance Metrics
+
+| Phase-Plan | Duration | Tasks | Files | Completed |
+|------------|----------|-------|-------|-----------|
+| 63-01 | 8 min | 2 | 5 | 2026-04-02 |
+| Phase 63 P02 | 8 min | 2 tasks | 5 files | 2026-04-02 |
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-31)
+See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 62 will add non-blocking schedule-gap notices now that recap semantics are recovered.
+**Current focus:** Phase 63 will relock spreadsheet and payroll PDF parity now that recap recovery and schedule-gap notices are both shipped.
 
 ## What Was Shipped
 
@@ -209,6 +224,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 | 61-01 | `AdminPolicyRecapDatasetService` is the canonical row-first merge contract for admin recap data | Keeps merged recap semantics reusable before UI or export transforms |
 | 61-01 | `RECAP-05`, `RECAP-06`, and `RECAP-07` stay phase-scoped until Plan 02 rewires the active recap screen | Prevents user-facing recap recovery requirements from being marked complete on service extraction alone |
 | 61-02 | Active Rekap Harian is row-first on `AdminPolicyRecapDatasetService`, and pending recap filters derive from recap signals instead of raw-log heuristics | Restores trusted recap continuity without weakening strict semantics |
+| 63-01 | Keep the shipped `AdminPolicyRecapDatasetService -> buildPayrollMatrix` export seam | Prevents a second reporting chain while relocking parity on the real runtime path |
+| 63-01b | Extract only the payroll output card into `PolicyRecapPayrollSupportSection` and keep rollout acceptance wiring in `AdminReportsScreen` | Preserves the summary-based validation bundle flow while giving recap widget tests a reusable production support surface |
 
 ## Key Constraints
 
@@ -232,6 +249,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 - Phase 61 Plan 01 completed on 2026-04-01: `test/services/admin_policy_recap_dataset_service_test.dart` now locks strict-wins merge behavior, compatibility mode toggling, overnight `TWENTY_FOUR_HOUR` logical dates, and null schedule-only cutoff fields on fallback rows.
 - Phase 61 Plan 02 completed on 2026-04-01: `AdminReportsScreen` now renders the active Rekap Harian tab from canonical merged recap rows, shows the locked compatibility banner only when fallback rows are injected, and keeps pending recap buckets tied to `belumAbsenPulang` plus `activeIncomplete`.
 - Phase 61 Plan 02 completed on 2026-04-01: `test/screens/admin/admin_reports_policy_recap_test.dart` and `test/screens/admin/rekap_harian_test.dart` now cover mixed strict-plus-fallback recap behavior, locked filter chips, pending filtering, and honest no-schedule copy.
+- Phase 63 Plan 01 completed on 2026-04-02: `test/fixtures/report_export_parity_fixture.dart` and `test/services/report_export_parity_test.dart` now lock the active recap-to-payroll-matrix seam with shared strict and fallback parity fixtures.
+- Phase 63 Plan 01 completed on 2026-04-02: `PolicyRecapPayrollSupportSection` now owns the live recap payroll output card, and `test/screens/admin/admin_reports_payroll_matrix_test.dart` now targets `PolicyRecapTab` instead of the removed `PayrollRecapTab`.
 
 - Phase 54 context captured on 2026-03-26: existing active employees default to `FULLTIME`, while new employee forms must require a contract but open with `PARTTIME` preselected.
 - Phase 54 context captured on 2026-03-26: outlets default to `NORMAL`, outlet mode is admin-only, and the value must be visible in both the outlet sheet and outlet list.
@@ -312,9 +331,9 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Session Continuity
 
-**Last session:** 2026-04-01T13:35:30.1645456+08:00
-**Stopped at:** Completed Phase 61 recap-semantics-recovery
-**Resume file:** .planning/phases/62-schedule-gap-notices/
+**Last session:** 2026-04-02T06:33:19.746Z
+**Stopped at:** Completed 63-02-PLAN.md
+**Resume file:** None
 
 ## Database Safety Rules
 

@@ -20,7 +20,7 @@
 |---|-------|------|--------------|------------------|
 | 61 | Recap Semantics Recovery | 2/2 | Complete    | 2026-04-01 |
 | 62 | Schedule Gap Notices | 2/2 | Complete    | 2026-04-01 |
-| 63 | Export Parity Re-lock | Keep spreadsheet and payroll PDF aligned with the corrected merged recap dataset | REPORT-04, REPORT-05 | 4 |
+| 63 | Export Parity Re-lock | 2/2 | Complete   | 2026-04-02 |
 
 ### Phase 61: Recap Semantics Recovery
 
@@ -55,11 +55,11 @@
 
 **Requirements:** `REPORT-04`, `REPORT-05`
 
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] `63-01-PLAN.md` - Restore the shared export parity fixtures and replace the stale `PayrollRecapTab` test seam.
-- [ ] `63-02-PLAN.md` - Re-lock spreadsheet and payroll PDF service tests onto the shared merged recap parity fixtures.
+- [x] `63-01-PLAN.md` - Restore the shared export parity fixtures and replace the stale `PayrollRecapTab` test seam.
+- [x] `63-02-PLAN.md` - Re-lock spreadsheet and payroll PDF service tests onto the shared merged recap parity fixtures.
 
 **Success criteria:**
 1. Spreadsheet export uses the corrected merged recap dataset and preserves compact payroll-facing output plus summary counts.
@@ -71,9 +71,9 @@ Plans:
 
 - Active milestone: **v8.1 Reporting Recovery & Schedule Gap Notifications**
 - Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
-- Product state: recap continuity is restored and kepala gerai now receives non-blocking `Jadwal Kosong` follow-up notices; remaining milestone work is export parity re-lock before payroll trust expands
+- Product state: recap continuity is restored, kepala gerai now receives non-blocking `Jadwal Kosong` follow-up notices, and export parity is re-locked across admin recap, spreadsheet, and payroll PDF
 - Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
-- Next execution step: plan and execute Phase 63 export-parity re-lock
+- Next execution step: run milestone verification/closeout now that all Phase 61-63 work is complete
 
 ---
 _For current project status, see `.planning/PROJECT.md`_  
