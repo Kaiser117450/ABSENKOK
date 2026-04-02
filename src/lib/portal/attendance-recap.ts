@@ -121,6 +121,19 @@ export interface AttendanceSummaryCounts {
 }
 
 /**
+ * Employee attendance streak data from the `employee_streaks` cache table.
+ * Fetched as a separate lightweight SELECT — never null, defaults to zeros.
+ */
+export interface PortalStreakInfo {
+  /** Consecutive hadir days ending at today (or last workday). */
+  currentStreak: number;
+  /** All-time longest consecutive hadir streak. */
+  longestStreak: number;
+  /** Date of the most recent masuk scan, or null if never scanned. */
+  lastMasukDate: string | null;
+}
+
+/**
  * The fully-typed portal attendance recap model returned to pages and Phase 43 components.
  */
 export interface PortalAttendanceRecapModel {
@@ -139,6 +152,8 @@ export interface PortalAttendanceRecapModel {
    * Derived from the same `days` dataset — no second query.
    */
   recentDays: PortalRecapDay[];
+  /** Attendance streak info — defaults to zeros if no streak row exists. */
+  streak: PortalStreakInfo;
 }
 
 /** Typed result union — never throws; callers decide how to handle each failure. */
@@ -308,6 +323,28 @@ export async function loadPortalAttendanceRecap(
   const recentCutoff = shiftIsoDate(referenceDate, -13); // referenceDate - 13 days
   const recentDays = days.filter((d) => d.logicalDate >= recentCutoff);
 
+  // 7. Fetch attendance streak — lightweight SELECT on employee_streaks.
+  //    Uses the portal_employee_read_own_streak RLS policy (phase 46).
+  //    Graceful fallback to zeros if no row exists or query fails.
+  let streak: PortalStreakInfo = { currentStreak: 0, longestStreak: 0, lastMasukDate: null };
+  try {
+    const { data: streakRow } = await supabase
+      .from('employee_streaks')
+      .select('current_streak, longest_streak, last_masuk_date')
+      .eq('employee_id', employee.employee_id)
+      .maybeSingle();
+
+    if (streakRow) {
+      streak = {
+        currentStreak: streakRow.current_streak ?? 0,
+        longestStreak: streakRow.longest_streak ?? 0,
+        lastMasukDate: streakRow.last_masuk_date ?? null,
+      };
+    }
+  } catch {
+    // Silently fall back to zeros — streak is non-critical data.
+  }
+
   return {
     ok: true,
     recap: {
@@ -317,6 +354,7 @@ export async function loadPortalAttendanceRecap(
       summaryCounts,
       days,
       recentDays,
+      streak,
     },
   };
 }

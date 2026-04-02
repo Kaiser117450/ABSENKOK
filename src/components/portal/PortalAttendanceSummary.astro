@@ -16,15 +16,18 @@
  */
 
 import type { AttendanceSummaryCounts } from '../../lib/portal/attendance-recap';
+import type { PortalStreakInfo } from '../../lib/portal/attendance-recap';
 
 interface Props {
   summaryCounts: AttendanceSummaryCounts;
   monthStart: string;
   /** Number of prior-day follow-up gaps (belum_pulang + tidak_hadir) from the recap dataset. */
   followUpCount?: number;
+  /** Attendance streak info — show motivational banner when currentStreak > 0. */
+  streak?: PortalStreakInfo;
 }
 
-const { summaryCounts, monthStart, followUpCount = 0 } = Astro.props;
+const { summaryCounts, monthStart, followUpCount = 0, streak } = Astro.props;
 
 /** Format "YYYY-MM-DD" into a localized month name, e.g. "Maret 2026". */
 function formatMonthLabel(isoDate: string): string {
@@ -90,6 +93,37 @@ const chips: SummaryChip[] = [
   <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
     Ringkasan {formatMonthLabel(monthStart)}
   </h2>
+
+  {/* ── Streak motivational banner ── */}
+  {streak && streak.currentStreak > 0 && (
+    <div
+      class="mb-3 flex items-center justify-between rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 px-4 py-3"
+      role="status"
+      aria-label={`Streak kehadiran ${streak.currentStreak} hari berturut-turut`}
+    >
+      <div class="flex items-center gap-2.5">
+        <span class="text-2xl leading-none" aria-hidden="true">🔥</span>
+        <div>
+          <p class="text-sm font-bold text-amber-900">
+            {streak.currentStreak} hari berturut-turut!
+          </p>
+          {streak.longestStreak > streak.currentStreak && (
+            <p class="text-xs text-amber-600 mt-0.5">
+              Rekor terbaik: {streak.longestStreak} hari
+            </p>
+          )}
+          {streak.longestStreak === streak.currentStreak && streak.currentStreak >= 3 && (
+            <p class="text-xs text-amber-600 mt-0.5">
+              Ini rekor terbaikmu! 🎉
+            </p>
+          )}
+        </div>
+      </div>
+      <span class="text-3xl font-black text-amber-500 tabular-nums leading-none">
+        {streak.currentStreak}
+      </span>
+    </div>
+  )}
 
   <div class="grid grid-cols-3 gap-2" role="list">
     {chips.map((chip) => (
