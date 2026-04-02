@@ -30,7 +30,7 @@ Last activity: 2026-04-02
 - **Next phase:** None - active milestone scope is fully implemented
 - **Current focus:** Phase 63 completion - export parity is now locked across admin recap, spreadsheet export, and payroll PDF
 - **Notification focus:** Dashboard-based `Jadwal Kosong` follow-up is now live for outlet-scoped kepala gerai workflows
-- **Verification focus:** Manual operator scanability review of the generated spreadsheet/PDF artifacts remains the only non-automated follow-up from `63-VALIDATION.md`
+- **Verification focus:** Manual operator scanability review for Phase 63 was explicitly waived by the user; no `$gsd-verify-work` follow-up is planned
 - **Rollout guard:** Database changes remain additive only and still require explicit user confirmation before any production migration is applied
 - **Reporting guard:** Salary-facing spreadsheet/PDF output must stay aligned with the corrected recap semantics
 
@@ -41,7 +41,7 @@ v8.1 implementation completed through export parity re-lock
 [████████████████████] 3 of 3 phases complete (6 of 6 plans finished through Phase 63)
 ```
 
-- **Next action:** Run milestone verification/closeout (`$gsd-verify-work 63` or milestone archive flow) now that all v8.1 plans are complete.
+- **Next action:** Run milestone closeout when ready now that all v8.1 plans are complete.
 
 ## Decisions
 
