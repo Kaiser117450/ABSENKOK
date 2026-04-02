@@ -27,9 +27,10 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 
 **Current operational focus:**
 - Phase 61 is complete, so the recap baseline is trusted again on the canonical merged dataset
-- start Phase 62 schedule-gap notices without reopening recap semantics
+- Phase 62 is complete, so outlet-scoped `Jadwal Kosong` follow-up now lives on the admin dashboard without reopening recap semantics
+- Phase 63 is complete, so admin recap, spreadsheet export, and payroll PDF are re-locked to the same merged recap dataset and shared parity fixtures
+- v8.1 mapped implementation work is complete; remaining follow-up is manual operator UAT for exported artifact scanability and PDF glyph rendering before milestone closeout
 - preserve additive-only, explicitly user-approved production SQL changes
-- relock spreadsheet/PDF export parity only after the notice surface is in place
 
 ## Current State
 
@@ -43,6 +44,8 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Strict recap:** Phase 57 completed on 2026-03-27, so admin recap rows now consume primary status, detail signals, work metrics, and manager exemption semantics from one typed strict engine
 **Payroll matrix:** Phase 58 completed on 2026-03-27, so Rekap Harian now renders a payroll-ready employee/date matrix with sticky summary counts and spreadsheet export from the same shared dataset
 **Recap recovery:** Phase 61 completed on 2026-04-01, so the active admin Rekap Harian tab is row-first again on the canonical merged recap dataset, legacy no-schedule rows stay honest and overnight-safe, and pending recap filters read from recap signals instead of raw-log heuristics
+**Schedule-gap follow-up:** Phase 62 completed on 2026-04-01, so kepala gerai now gets outlet-scoped `Jadwal Kosong` notices on the admin dashboard with a direct path back to the shift scheduler
+**Export parity re-lock:** Phase 63 completed on 2026-04-02, so spreadsheet export and payroll PDF now prove parity against the same merged strict/fallback recap fixture bundle used by admin recap, including locked summary order, color semantics, and forbidden-field boundaries
 **Employee visibility:** portal now shows month-to-date attendance summary counts, recent logical-day history, and explicit follow-up labels for problem days
 **Reporting:** Phase 59 completed on 2026-03-28, so admin recap, spreadsheet export, PDF export, and portal recap now share the strict payroll parity contract without stale clock-first framing
 **Rollout acceptance:** Phase 60 completed on 2026-03-31, so operators now have a canonical rollout checklist, locked seven-scenario fixtures, recap-shell readiness gating, and validation-bundle export before payroll is marked ready
@@ -53,7 +56,7 @@ Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling 
 **Codebase:** ~28,619 tracked LOC Dart across 102 tracked files plus the separate Astro website repo, portal recap components/routes/helpers, portal-specific Supabase RPCs, and the tracked Android release helper chain
 
 ### Known Tech Debt
-- Spreadsheet export still needs manual viewer verification for frozen panes and operator ergonomics in a real spreadsheet app
+- Spreadsheet and payroll PDF exports still need manual operator UAT for real-world scanability, frozen-pane ergonomics, and PDF glyph rendering with production names
 - The additive SQL patches for Phases 54-57 still require explicit user approval before any production Supabase rollout
 - GitHub release publication still needs `gh release upload` fallback in this environment because the app automation could not read the local staged artifact path directly
 - Real signing files (`android/key.properties` and the upload keystore) remain intentionally machine-local, so release bootstrap is still an operator task
@@ -219,9 +222,15 @@ admin UI consistency, schedule Supabase sync, sakit/izin management, employee ba
 - ✓ Compatibility rows preserve logical-day grouping, contract-based required hours, and honest incomplete states without fabricating late or absence signals — Phase 61
 - ✓ Strict contract-aware break-first and excess-break recap semantics stay visible when strict evaluation data exists — Phase 61
 
+### Validated (v8.1 / Phase 62)
+- ✓ Kepala gerai now sees outlet-scoped `Jadwal Kosong` dashboard notices with a lightweight scheduler follow-up path — Phase 62
+
+### Validated (v8.1 / Phase 63)
+- ✓ Spreadsheet export now stays on the corrected merged recap dataset while preserving compact payroll-facing fields, current color semantics, and per-employee summary counts — Phase 63
+- ✓ Payroll PDF now stays on the same corrected merged recap dataset as admin recap and spreadsheet export without reintroducing technical scan fields or a second reporting interpretation — Phase 63
+
 ### Active
-- [ ] Spreadsheet export and payroll PDF stay aligned with the corrected daily recap semantics and remain the primary operator outputs.
-- [ ] Kepala gerai receives actionable notifications about empty schedule days for their outlet employees without those gaps distorting pending and recap behavior.
+- [ ] No unmapped product requirements remain in v8.1; only manual operator UAT and milestone closeout are still outstanding.
 
 ### Out of Scope
 - Automatic payroll amount calculation, payslip generation, or THR formulas — this milestone stops at strict attendance evidence and salary-ready reports
@@ -376,4 +385,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 61 completion*
+*Last updated: 2026-04-02 after Phase 63 completion*
