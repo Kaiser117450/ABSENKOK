@@ -8,7 +8,6 @@
  * Props:
  *   summaryCounts — the `AttendanceSummaryCounts` from the recap model.
  *   monthStart    — ISO date "YYYY-MM-DD" for the first day of the current month.
- *   currentStreak — consecutive days present (from employee_streaks table).
  *
  * Scope guard:
  *   - does not fetch data or derive counts
@@ -23,11 +22,9 @@ interface Props {
   monthStart: string;
   /** Number of prior-day follow-up gaps (belum_pulang + tidak_hadir) from the recap dataset. */
   followUpCount?: number;
-  /** Current consecutive attendance streak (days). */
-  currentStreak?: number;
 }
 
-const { summaryCounts, monthStart, followUpCount = 0, currentStreak = 0 } = Astro.props;
+const { summaryCounts, monthStart, followUpCount = 0 } = Astro.props;
 
 /** Format "YYYY-MM-DD" into a localized month name, e.g. "Maret 2026". */
 function formatMonthLabel(isoDate: string): string {
@@ -109,59 +106,6 @@ const chips: SummaryChip[] = [
       </div>
     ))}
   </div>
-
-  {currentStreak > 0 && (
-    <div
-      class="mt-3 flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5"
-      role="note"
-      aria-label={`${currentStreak} hari berturut-turut hadir`}
-    >
-      <svg
-        class="w-5 h-5 shrink-0 streak-fire"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-      >
-        <path
-          d="M12 23C16.5 23 20 19.5 20 15.5C20 11.5 17 8 15 6C14.5 8 13 9.5 12 10C11.5 7.5 10 4 7 2C7 4.5 5 8 4 11C3.5 12.5 4 15 4 15.5C4 19.5 7.5 23 12 23Z"
-          fill="url(#fire-gradient)"
-          stroke="#D97706"
-          stroke-width="0.5"
-        >
-          <animate attributeName="d" dur="1.5s" repeatCount="indefinite" values="
-            M12 23C16.5 23 20 19.5 20 15.5C20 11.5 17 8 15 6C14.5 8 13 9.5 12 10C11.5 7.5 10 4 7 2C7 4.5 5 8 4 11C3.5 12.5 4 15 4 15.5C4 19.5 7.5 23 12 23Z;
-            M12 23C16.5 23 20 19.5 20 15.5C20 11.5 17 7.5 15 5.5C14.5 7.5 13 9 12 9.5C11.5 7 10 3.5 7 1.5C7 4 5 7.5 4 10.5C3.5 12 4 14.5 4 15.5C4 19.5 7.5 23 12 23Z;
-            M12 23C16.5 23 20 19.5 20 15.5C20 11.5 17 8 15 6C14.5 8 13 9.5 12 10C11.5 7.5 10 4 7 2C7 4.5 5 8 4 11C3.5 12.5 4 15 4 15.5C4 19.5 7.5 23 12 23Z
-          "/>
-        </path>
-        <path
-          d="M12 23C14.5 23 16.5 21 16.5 18.5C16.5 16 15 14.5 14 13.5C13.5 14.5 13 15.5 12 16C11.5 14.5 11 13 10 12C9.5 13 9 14.5 8.5 16C8 17.5 7.5 18.5 7.5 18.5C7.5 21 9.5 23 12 23Z"
-          fill="url(#fire-inner-gradient)"
-        >
-          <animate attributeName="d" dur="1.2s" repeatCount="indefinite" values="
-            M12 23C14.5 23 16.5 21 16.5 18.5C16.5 16 15 14.5 14 13.5C13.5 14.5 13 15.5 12 16C11.5 14.5 11 13 10 12C9.5 13 9 14.5 8.5 16C8 17.5 7.5 18.5 7.5 18.5C7.5 21 9.5 23 12 23Z;
-            M12 23C14.5 23 16.5 21 16.5 18.5C16.5 16 15 14 14 13C13.5 14 13 15 12 15.5C11.5 14 11 12.5 10 11.5C9.5 12.5 9 14 8.5 15.5C8 17 7.5 18.5 7.5 18.5C7.5 21 9.5 23 12 23Z;
-            M12 23C14.5 23 16.5 21 16.5 18.5C16.5 16 15 14.5 14 13.5C13.5 14.5 13 15.5 12 16C11.5 14.5 11 13 10 12C9.5 13 9 14.5 8.5 16C8 17.5 7.5 18.5 7.5 18.5C7.5 21 9.5 23 12 23Z
-          "/>
-        </path>
-        <defs>
-          <linearGradient id="fire-gradient" x1="12" y1="2" x2="12" y2="23" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#F59E0B"/>
-            <stop offset="0.5" stop-color="#F97316"/>
-            <stop offset="1" stop-color="#DC2626"/>
-          </linearGradient>
-          <linearGradient id="fire-inner-gradient" x1="12" y1="12" x2="12" y2="23" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#FDE68A"/>
-            <stop offset="1" stop-color="#F59E0B"/>
-          </linearGradient>
-        </defs>
-      </svg>
-      <p class="text-xs text-amber-700 font-medium">
-        <span class="font-bold text-sm">{currentStreak}</span> hari berturut-turut hadir
-      </p>
-    </div>
-  )}
 
   {followUpCount > 0 && (
     <div

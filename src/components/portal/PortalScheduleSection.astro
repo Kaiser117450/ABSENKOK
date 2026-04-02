@@ -1,5 +1,24 @@
 ---
-import type { PortalScheduleEntry, PortalScheduleModel } from '../../lib/portal/schedule';
+/**
+ * PortalScheduleSection — mobile-first today + week schedule surface.
+ *
+ * Renders the ready-state schedule as a phone-first stacked layout.
+ * Phone-first: single column, no table/grid treatment, row cards.
+ *
+ * Props:
+ *   schedule — the `PortalScheduleModel` from `loadPortalHome` ready state.
+ *
+ * Scope guard:
+ *   - no client framework
+ *   - does not duplicate the portal shell (header/nav/footer)
+ *   - does not include the identity/greeting card (that belongs in the page)
+ */
+
+import type {
+  PortalScheduleModel,
+  PortalScheduleEntry,
+  PortalScheduleStatus,
+} from '../../lib/portal/schedule';
 
 interface Props {
   schedule: PortalScheduleModel;
@@ -12,9 +31,8 @@ const weekSections = [
     title: 'Minggu ini',
     ariaLabel: 'Jadwal minggu ini',
     entries: schedule.weekAssignments,
-    emptyTitle: 'Belum ada jadwal',
-    emptyMessage:
-      'Jadwal minggu ini belum diterbitkan. Cek kembali setelah admin menerbitkan jadwal.',
+    emptyTitle: 'Belum ada jadwal minggu ini',
+    emptyMessage: 'Jadwal akan muncul setelah admin menerbitkan jadwal mingguan.',
     showEmptyState: true,
   },
   ...(schedule.nextWeekAssignments.length > 0
@@ -32,245 +50,361 @@ const weekSections = [
 ];
 
 const todayEntry = schedule.todayAssignment;
+const todayStatus = todayEntry ? getEntryStatus(todayEntry) : null;
 
-type EntryTone = 'default' | 'warning' | 'danger' | 'accent' | 'neutral';
+/** Format two-part HH:MM from numeric hours + minutes. */
+function fmt(hour: number, minute: number): string {
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
 
-function getEntryTone(entry: PortalScheduleEntry): EntryTone {
-  switch (entry.strictPrimaryStatus) {
-    case 'late':
-    case 'overtime':
-      return 'warning';
-    case 'short_work':
-    case 'excess_break':
-    case 'absence':
-    case 'belum_absen_pulang':
-      return 'danger';
-    case 'active_incomplete':
-      return 'accent';
+/** True when this entry is today's assignment. */
+function isToday(entry: PortalScheduleEntry, referenceDate: string): boolean {
+  return entry.logicalDate === referenceDate;
+}
+
+function getEntryStatus(entry: PortalScheduleEntry): PortalScheduleStatus {
+  return entry.status;
+}
+
+function getStatusLabel(status: PortalScheduleStatus): string {
+  switch (status) {
+    case 'sakit':
+      return 'Sakit';
+    case 'izin':
+      return 'Izin';
+    case 'libur':
+      return 'Libur';
     default:
-      break;
+      return 'Shift';
+  }
+}
+
+function getStatusIconPath(status: PortalScheduleStatus): string {
+  switch (status) {
+    case 'sakit':
+      return 'M12 7v10M7 12h10';
+    case 'izin':
+      return 'M9 12.75 11.25 15 15 9.75';
+    default:
+      return '';
+  }
+}
+
+function hasIconOnlyBadge(entry: PortalScheduleEntry): boolean {
+  const status = getEntryStatus(entry);
+  return status === 'sakit' || status === 'izin';
+}
+
+function hasRenderableTime(entry: PortalScheduleEntry): boolean {
+  return !(
+    entry.startHour === 0 &&
+    entry.startMinute === 0 &&
+    entry.endHour === 0 &&
+    entry.endMinute === 0
+  );
+}
+
+function getEntryTitle(entry: PortalScheduleEntry): string {
+  const status = getEntryStatus(entry);
+  if ((entry.isDayOff || !entry.shiftName) && status !== 'normal') {
+    return getStatusLabel(status);
+  }
+  return entry.shiftName ?? 'Shift';
+}
+
+function getTitleClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+      return 'text-red-700';
+    case 'sakit':
+      return 'text-red-700';
+    case 'izin':
+      return 'text-sky-700';
+    default:
+      return 'text-gray-900';
+  }
+}
+
+function getMetaClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+      return 'text-red-500';
+    case 'sakit':
+      return 'text-red-500';
+    case 'izin':
+      return 'text-sky-500';
+    default:
+      return 'text-gray-500';
+  }
+}
+
+function getTodayCardClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'sakit':
+      return 'bg-red-100 border-red-200';
+    case 'izin':
+      return 'bg-sky-100 border-sky-200';
+    default:
+      return 'bg-white border-[#E91E8C]/30';
+  }
+}
+
+function getTodayPillClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'sakit':
+      return 'bg-red-100 text-red-700';
+    case 'izin':
+      return 'bg-sky-100 text-sky-700';
+    default:
+      return 'bg-[#E91E8C]/10 text-[#E91E8C]';
+  }
+}
+
+function getStatusBadgeClasses(status: PortalScheduleStatus): string {
+  switch (status) {
+    case 'sakit':
+      return 'bg-red-100 text-red-700';
+    case 'izin':
+      return 'bg-sky-100 text-sky-700';
+    default:
+      return 'bg-gray-100 text-gray-500';
+  }
+}
+
+function getWeekEntryCardClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'bg-red-100 border-red-200';
+    case 'izin':
+      return 'bg-sky-100 border-sky-200';
+    default:
+      return today ? 'bg-[#E91E8C]/5 border-[#E91E8C]/20' : 'bg-white border-gray-200';
+  }
+}
+
+function getDayLabelClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-600';
+    case 'izin':
+      return 'text-sky-600';
+    default:
+      return today ? 'text-[#E91E8C]' : 'text-gray-400';
+  }
+}
+
+function getDayNumberClasses(entry: PortalScheduleEntry, today: boolean): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-700';
+    case 'izin':
+      return 'text-sky-700';
+    default:
+      return today ? 'text-[#E91E8C]' : 'text-gray-700';
+  }
+}
+
+function getTodayMarkerClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-600';
+    case 'izin':
+      return 'text-sky-600';
+    default:
+      return 'text-[#E91E8C]';
+  }
+}
+
+function getOutletMetaDotClasses(entry: PortalScheduleEntry): string {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+    case 'sakit':
+      return 'text-red-400';
+    case 'izin':
+      return 'text-sky-400';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+function getFallbackMeta(entry: PortalScheduleEntry): string | null {
+  if (entry.outletName) {
+    return entry.outletName;
   }
 
-  switch (entry.attendanceStatus) {
+  switch (getEntryStatus(entry)) {
+    case 'libur':
+      return 'Hari libur';
     case 'sakit':
     case 'izin':
-    case 'cuti':
-    case 'libur':
-    case 'hadir_tanpa_jadwal':
-      return 'neutral';
+      return `${getStatusLabel(getEntryStatus(entry))} sudah dicatat`;
     default:
-      return 'default';
+      return null;
   }
-}
-
-function getToneClasses(entry: PortalScheduleEntry) {
-  switch (getEntryTone(entry)) {
-    case 'warning':
-      return {
-        card: 'bg-amber-50 border-amber-200',
-        title: 'text-amber-900',
-        meta: 'text-amber-700',
-        pill: 'bg-amber-100 text-amber-700',
-      };
-    case 'danger':
-      return {
-        card: 'bg-red-50 border-red-200',
-        title: 'text-red-900',
-        meta: 'text-red-700',
-        pill: 'bg-red-100 text-red-700',
-      };
-    case 'accent':
-      return {
-        card: 'bg-[#E91E8C]/5 border-[#E91E8C]/25',
-        title: 'text-gray-900',
-        meta: 'text-gray-600',
-        pill: 'bg-[#E91E8C]/10 text-[#E91E8C]',
-      };
-    case 'neutral':
-      return {
-        card: 'bg-gray-50 border-gray-200',
-        title: 'text-gray-900',
-        meta: 'text-gray-500',
-        pill: 'bg-gray-100 text-gray-600',
-      };
-    default:
-      return {
-        card: 'bg-white border-[#E91E8C]/25',
-        title: 'text-gray-900',
-        meta: 'text-gray-500',
-        pill: 'bg-[#E91E8C]/10 text-[#E91E8C]',
-      };
-  }
-}
-
-function getPrimaryTitle(entry: PortalScheduleEntry): string {
-  if (entry.attendanceStatus === 'sakit') return 'Sakit';
-  if (entry.attendanceStatus === 'izin') return 'Izin';
-  if (entry.attendanceStatus === 'cuti') return 'Cuti';
-  if (entry.attendanceStatus === 'libur' || entry.isDayOff) return 'Libur';
-  if (entry.shiftBandLabel) return entry.shiftBandLabel;
-  if (entry.strictOutcomeLabel) return entry.strictOutcomeLabel;
-  return 'Tanpa jadwal';
-}
-
-function formatLogicalDate(logicalDate: string, format: 'weekday' | 'month'): string {
-  const date = new Date(`${logicalDate}T00:00:00`);
-  if (format === 'weekday') {
-    return date.toLocaleDateString('id-ID', { weekday: 'short' });
-  }
-
-  return date.toLocaleDateString('id-ID', { month: 'short' });
 }
 ---
 
+<!-- Today's shift section -->
 <section class="mb-6">
-  <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-    Jadwal hari ini
-  </h2>
+  <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Jadwal hari ini</h2>
 
   {todayEntry ? (
-    <div
-      class={`${getToneClasses(todayEntry).card} rounded-2xl border p-5 shadow-sm`}
-      role="region"
-      aria-label="Jadwal hari ini"
-    >
-      <div class="mb-4 flex items-start justify-between gap-3">
-        <div class="min-w-0">
-          <p class={`text-lg font-bold ${getToneClasses(todayEntry).title}`}>
-            {getPrimaryTitle(todayEntry)}
-          </p>
-          {todayEntry.outletName && (
-            <p class={`mt-1 text-sm ${getToneClasses(todayEntry).meta}`}>
-              {todayEntry.outletName}
-            </p>
+    todayStatus === 'libur' ? (
+      <!-- Day off -->
+      <div class="bg-red-100 rounded-2xl border border-red-200 p-5 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center shrink-0" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707m12.728 12.728.707.707M3 12h1m16 0h1M4.22 19.78l.707-.707M18.364 5.636l.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-red-700">Libur</p>
+          {todayEntry.notes && (
+            <p class="text-sm text-red-500">{todayEntry.notes}</p>
           )}
         </div>
-        <span
-          class={`${getToneClasses(todayEntry).pill} shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold`}
-        >
-          Hari ini
-        </span>
       </div>
-
-      <div class="space-y-2">
-        {todayEntry.requiredHoursLabel && (
-          <p class="text-sm font-semibold text-gray-900">{todayEntry.requiredHoursLabel}</p>
-        )}
-        {todayEntry.workedDisplayLabel && (
-          <p class="text-sm text-gray-700">{todayEntry.workedDisplayLabel}</p>
-        )}
-        {todayEntry.comparisonDisplayLabel && (
-          <p class="text-sm text-gray-700">{todayEntry.comparisonDisplayLabel}</p>
-        )}
-      </div>
-
-      {todayEntry.strictOutcomeLabel && (
-        <div class="mt-4">
-          <span
-            class={`${getToneClasses(todayEntry).pill} inline-flex rounded-full px-2.5 py-1 text-xs font-semibold`}
-          >
-            {todayEntry.strictOutcomeLabel}
+    ) : (
+      <!-- Active shift today -->
+      <div class={`${getTodayCardClasses(todayEntry)} rounded-2xl border shadow-sm p-5`} role="region" aria-label="Shift hari ini">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <p class={`font-semibold truncate ${getTitleClasses(todayEntry)}`}>
+                {getEntryTitle(todayEntry)}
+              </p>
+              {hasIconOnlyBadge(todayEntry) && (
+                <span
+                  class={`${getStatusBadgeClasses(todayStatus!)} inline-flex h-6 w-6 items-center justify-center rounded-full shrink-0`}
+                  aria-label={getStatusLabel(todayStatus!)}
+                  title={getStatusLabel(todayStatus!)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d={getStatusIconPath(todayStatus!)} />
+                  </svg>
+                </span>
+              )}
+            </div>
+            {todayEntry.outletName && (
+              <p class={`text-sm ${getMetaClasses(todayEntry)}`}>{todayEntry.outletName}</p>
+            )}
+          </div>
+          <span class={`${getTodayPillClasses(todayEntry)} shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full`}>
+            Hari ini
           </span>
         </div>
-      )}
-
-      {todayEntry.helperCopy && (
-        <p class="mt-3 text-sm leading-relaxed text-gray-600">{todayEntry.helperCopy}</p>
-      )}
-
-      {todayEntry.notes && (
-        <p class="mt-2 text-xs italic text-gray-500">{todayEntry.notes}</p>
-      )}
-
-      {todayEntry.isCompatibilityMode && (
-        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-          <p class="text-xs font-semibold text-amber-700">Mode kompatibilitas aktif</p>
-          <p class="mt-1 text-xs leading-relaxed text-amber-700">
-            Sebagian hari payroll dihitung dari log absensi dan kontrak karena jadwal belum tersedia.
-          </p>
-        </div>
-      )}
-    </div>
+        {hasRenderableTime(todayEntry) && (
+          <div class={`flex items-center gap-2 text-sm ${getMetaClasses(todayEntry)}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" /><path stroke-linecap="round" d="M12 6v6l4 2" />
+            </svg>
+            <span>
+              {fmt(todayEntry.startHour, todayEntry.startMinute)}
+              &ndash;
+              {fmt(todayEntry.endHour, todayEntry.endMinute)}
+              {todayEntry.endsNextDay && (
+                <span class="ml-1 text-xs text-amber-600 font-medium">(Selesai besok)</span>
+              )}
+            </span>
+          </div>
+        )}
+        {todayEntry.notes && (
+          <p class={`mt-2 text-xs ${getMetaClasses(todayEntry)}`}>{todayEntry.notes}</p>
+        )}
+      </div>
+    )
   ) : (
-    <div
-      class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-400"
-      role="status"
-    >
-      <p class="text-sm font-semibold text-gray-700">Belum ada jadwal</p>
-      <p class="mt-1 text-sm text-gray-500">
-        Jadwal minggu ini belum diterbitkan. Cek kembali setelah admin menerbitkan jadwal.
-      </p>
+    <!-- No assignment today -->
+    <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400" role="status">
+      <p class="text-sm font-medium">Tidak ada jadwal hari ini</p>
     </div>
   )}
 </section>
 
+<!-- Current + next-week assignment lists -->
 {weekSections.map((section) => (
   <section class={section.title === 'Minggu ini' ? '' : 'mt-8'}>
-    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-      {section.title}
-    </h2>
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{section.title}</h2>
 
     {section.entries.length > 0 ? (
+      <!-- One-column stacked list — no table/grid -->
       <div class="space-y-3" role="list" aria-label={section.ariaLabel}>
-        {section.entries.map((entry) => (
+        {section.entries.map((entry) => {
+        const today = isToday(entry, schedule.referenceDate);
+        const status = getEntryStatus(entry);
+        return (
           <div
-            class={`${getToneClasses(entry).card} flex items-start gap-3 rounded-2xl border p-4 shadow-sm`}
+            class={`${getWeekEntryCardClasses(entry, today)} rounded-2xl border p-4 flex items-center gap-3 shadow-sm`}
             role="listitem"
           >
-            <div class="w-12 shrink-0 text-center pt-0.5">
-              <p class={`text-xs font-semibold uppercase ${getToneClasses(entry).meta}`}>
-                {formatLogicalDate(entry.logicalDate, 'weekday')}
+            <!-- Day indicator column -->
+            <div class="w-12 shrink-0 text-center">
+              <p class={`text-xs font-semibold uppercase ${getDayLabelClasses(entry, today)}`}>
+                {new Date(entry.logicalDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'short' })}
               </p>
-              <p class={`text-lg font-bold leading-none ${getToneClasses(entry).title}`}>
-                {new Date(`${entry.logicalDate}T00:00:00`).getDate()}
-              </p>
-              <p class={`text-xs ${getToneClasses(entry).meta}`}>
-                {formatLogicalDate(entry.logicalDate, 'month')}
+              <p class={`text-lg font-bold leading-none ${getDayNumberClasses(entry, today)}`}>
+                {new Date(entry.logicalDate + 'T00:00:00').getDate()}
               </p>
             </div>
 
+            <!-- Assignment content -->
             <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <p class={`text-sm font-semibold ${getToneClasses(entry).title}`}>
-                  {getPrimaryTitle(entry)}
+              <div class="flex items-center gap-2">
+                <p class={`text-sm font-semibold truncate ${getTitleClasses(entry)}`}>
+                  {getEntryTitle(entry)}
                 </p>
-                {entry.logicalDate === schedule.referenceDate && (
-                  <span class="text-xs font-medium text-[#E91E8C]">Hari ini</span>
+                {today && (
+                  <span class={`text-xs font-normal ${getTodayMarkerClasses(entry)}`}>Hari ini</span>
                 )}
-                {entry.strictOutcomeLabel && entry.attendanceStatus !== 'libur' && (
+                {hasIconOnlyBadge(entry) && (
                   <span
-                    class={`${getToneClasses(entry).pill} inline-flex rounded-full px-2 py-0.5 text-xs font-semibold`}
+                    class={`${getStatusBadgeClasses(status)} inline-flex h-5 w-5 items-center justify-center rounded-full shrink-0`}
+                    aria-label={getStatusLabel(status)}
+                    title={getStatusLabel(status)}
                   >
-                    {entry.strictOutcomeLabel}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d={getStatusIconPath(status)} />
+                    </svg>
                   </span>
                 )}
               </div>
-
-              {entry.requiredHoursLabel && (
-                <p class="mt-1 text-sm text-gray-700">{entry.requiredHoursLabel}</p>
+              {(hasRenderableTime(entry) || getFallbackMeta(entry)) && (
+                <p class={`text-xs mt-0.5 ${getMetaClasses(entry)}`}>
+                  {hasRenderableTime(entry) ? (
+                    <>
+                      {fmt(entry.startHour, entry.startMinute)}&ndash;{fmt(entry.endHour, entry.endMinute)}
+                      {entry.endsNextDay && (
+                        <span class="ml-1 text-amber-600 font-medium">(Selesai besok)</span>
+                      )}
+                      {entry.outletName && (
+                        <span class={`ml-1 ${getOutletMetaDotClasses(entry)}`}>&middot; {entry.outletName}</span>
+                      )}
+                    </>
+                  ) : (
+                    getFallbackMeta(entry)
+                  )}
+                </p>
               )}
-
-              {entry.outletName && (
-                <p class={`mt-1 text-xs ${getToneClasses(entry).meta}`}>{entry.outletName}</p>
-              )}
-
-              {entry.helperCopy && entry.logicalDate === schedule.referenceDate && (
-                <p class="mt-2 text-xs leading-relaxed text-gray-600">{entry.helperCopy}</p>
+              {entry.notes && (
+                <p class={`text-xs mt-0.5 ${getMetaClasses(entry)}`}>{entry.notes}</p>
               )}
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     ) : (
       section.showEmptyState && (
-        <div
-          class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-400"
-          role="status"
-        >
-          <p class="text-sm font-semibold text-gray-700">{section.emptyTitle}</p>
-          <p class="mt-1 text-sm text-gray-500">{section.emptyMessage}</p>
+        <!-- No assignments this week -->
+        <div class="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-400" role="status">
+          <p class="text-sm font-medium">{section.emptyTitle}</p>
+          <p class="text-xs mt-1">{section.emptyMessage}</p>
         </div>
       )
     )}
   </section>
-))
+))}
