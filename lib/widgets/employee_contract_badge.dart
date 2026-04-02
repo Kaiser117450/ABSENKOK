@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
 
 /// Compact neutral badge displaying the employee contract type.
 class EmployeeContractBadge extends StatelessWidget {

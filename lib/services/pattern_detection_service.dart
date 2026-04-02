@@ -9,9 +9,10 @@ import '../main.dart' show supabaseReady;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Top-level function for compute() isolate.
-/// Input: List<Map<String, dynamic>> from get_arrival_patterns RPC result.
-/// Output: Map<String, Map<int, double>> — employeeId -> {dayOfWeek: medianSeconds}
-Map<String, Map<int, double>> analyzePatterns(List<Map<String, dynamic>> rpcData) {
+/// Input: RPC rows from `get_arrival_patterns`.
+/// Output: day-of-week median values keyed by employee ID.
+Map<String, Map<int, double>> analyzePatterns(
+    List<Map<String, dynamic>> rpcData) {
   final result = <String, Map<int, double>>{};
   for (final row in rpcData) {
     final empId = row['employee_id'] as String;
@@ -86,7 +87,7 @@ class PatternDetectionService {
       FlutterLocalNotificationsPlugin();
   bool _notifInitialized = false;
 
-  /// Cached patterns: employeeId -> {dayOfWeek(0-6): medianSeconds}
+  /// Cached patterns keyed by employeeId and day-of-week.
   Map<String, Map<int, double>>? _patterns;
   DateTime? _lastFetch;
 
@@ -119,8 +120,7 @@ class PatternDetectionService {
         'get_arrival_patterns',
         params: {'p_outlet_id': outletId, 'p_days': 30},
       );
-      final data =
-          (result as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final data = (result as List?)?.cast<Map<String, dynamic>>() ?? [];
 
       // Cache employee names for notification text
       for (final row in data) {
@@ -145,7 +145,7 @@ class PatternDetectionService {
   /// and only sends a notification if a late pattern is detected.
   ///
   /// Does nothing if supabaseReady is false, no pattern exists for the employee,
-  /// or the employee has < 5 historical data points for that day-of-week
+  /// or the employee has fewer than 5 historical data points for that day-of-week
   /// (enforced at DB level via HAVING COUNT(*) >= 5 in the RPC).
   Future<void> checkAndNotifyIfLate({
     required String employeeId,
@@ -161,7 +161,7 @@ class PatternDetectionService {
     // Dart DateTime.weekday: 1=Mon..7=Sun → convert to PostgreSQL DOW: 0=Sun..6=Sat
     final dow = scanTime.weekday % 7;
     final medianSeconds = empPatterns[dow];
-    if (medianSeconds == null) return; // < 5 data points for this day
+    if (medianSeconds == null) return; // fewer than 5 data points for this day
 
     final arrivalSeconds =
         scanTime.hour * 3600.0 + scanTime.minute * 60.0 + scanTime.second;

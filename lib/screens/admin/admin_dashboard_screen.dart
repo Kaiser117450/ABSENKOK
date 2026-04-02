@@ -5,18 +5,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/supabase_client.dart';
-import '../../core/theme.dart';
-import '../../models/attendance_log.dart';
-import '../../models/employee.dart';
-import '../../models/outlet.dart';
-import '../../providers/app_provider.dart';
-import '../../services/badge_service.dart';
-import '../../models/kiosk_device.dart';
-import '../../widgets/badge_avatar.dart';
-import '../../widgets/kiosk_device_card.dart';
-import 'shift_scheduler_screen.dart';
-import '../../main.dart' show supabaseReady;
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/main.dart' show supabaseReady;
+import 'package:absensi_enakko_flutter/models/attendance_log.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/kiosk_device.dart';
+import 'package:absensi_enakko_flutter/models/outlet.dart';
+import 'package:absensi_enakko_flutter/models/schedule_gap_notice.dart';
+import 'package:absensi_enakko_flutter/providers/app_provider.dart';
+import 'package:absensi_enakko_flutter/screens/admin/shift_scheduler_screen.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/admin_schedule_gap_notice_sheet.dart';
+import 'package:absensi_enakko_flutter/services/attendance_policy_recap_service.dart';
+import 'package:absensi_enakko_flutter/services/badge_service.dart';
+import 'package:absensi_enakko_flutter/services/schedule_gap_notice_service.dart';
+import 'package:absensi_enakko_flutter/widgets/badge_avatar.dart';
+import 'package:absensi_enakko_flutter/widgets/kiosk_device_card.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin Dashboard Screen
@@ -36,6 +41,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
+  static const int _scheduleGapLookbackDays = 13;
+
   List<Outlet> _outlets = [];
   String? _selectedOutletId;
   List<_LogWithJoins> _logs = [];
@@ -50,6 +57,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   RealtimeChannel? _employeeChannel;
 
   List<_OpenShift> _openShifts = [];
+  final AttendancePolicyRecapService _attendancePolicyRecapService =
+      const AttendancePolicyRecapService();
+  final ScheduleGapNoticeService _scheduleGapNoticeService =
+      const ScheduleGapNoticeService();
+  ScheduleGapNoticeResult _scheduleGapNotices =
+      const ScheduleGapNoticeResult(entries: <ScheduleGapNoticeEntry>[]);
+  bool _loadingScheduleGapNotices = false;
 
   List<KioskDevice> _kioskDevices = [];
   RealtimeChannel? _kioskDevicesChannel;
@@ -96,7 +110,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
       if (mounted) {
         setState(() => _outlets = outlets);
-        await _loadLogs();
+        await Future.wait([
+          _loadLogs(),
+          _loadScheduleGapNotices(),
+        ]);
         _subscribeRealtime();
         _subscribeEmployeeRealtime();
         _subscribeKioskDevicesRealtime();
@@ -387,11 +404,116 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _loadScheduleGapNotices() async {
+    final outletContext = _resolveActiveDashboardOutletContext();
+    if (mounted) {
+      setState(() => _loadingScheduleGapNotices = true);
+    }
+
+    if (outletContext == null) {
+      if (mounted) {
+        setState(() {
+          _scheduleGapNotices = const ScheduleGapNoticeResult(
+              entries: <ScheduleGapNoticeEntry>[]);
+          _loadingScheduleGapNotices = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final now = DateTime.now();
+      final endDate = DateTime(now.year, now.month, now.day);
+      final startDate =
+          endDate.subtract(const Duration(days: _scheduleGapLookbackDays));
+      final startIso = startDate.toUtc().toIso8601String();
+      final endIso = DateTime(
+        endDate.year,
+        endDate.month,
+        endDate.day,
+        23,
+        59,
+        59,
+      ).toUtc().toIso8601String();
+
+      final employeeData = await SupabaseClientFactory.admin
+          .from('employees')
+          .select('*')
+          .eq('home_outlet_id', outletContext.outletId)
+          .eq('is_active', true)
+          .order('name');
+      final employees = (employeeData as List)
+          .map((row) => Employee.fromJson(row as Map<String, dynamic>))
+          .toList(growable: false);
+
+      final strictRows = await _loadStrictPolicyRecapRows(
+        outletId: outletContext.outletId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      final attendanceData = await SupabaseClientFactory.admin
+          .from('attendance_logs')
+          .select('*')
+          .eq('scan_outlet_id', outletContext.outletId)
+          .gte('scanned_at', startIso)
+          .lte('scanned_at', endIso)
+          .order('scanned_at', ascending: true);
+      final attendanceLogs = (attendanceData as List)
+          .map((row) => AttendanceLog.fromJson(row as Map<String, dynamic>))
+          .toList(growable: false);
+
+      final notices = _scheduleGapNoticeService.build(
+        employees: employees,
+        strictRows: strictRows,
+        attendanceLogs: attendanceLogs,
+        outletId: outletContext.outletId,
+        outletName: outletContext.outlet.name,
+        outletOperatingMode: outletContext.outlet.operatingMode,
+        now: now,
+      );
+
+      if (mounted) {
+        setState(() {
+          _scheduleGapNotices = notices;
+          _loadingScheduleGapNotices = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] Failed to load schedule-gap notices: $e');
+      if (mounted) {
+        setState(() {
+          _scheduleGapNotices = const ScheduleGapNoticeResult(
+              entries: <ScheduleGapNoticeEntry>[]);
+          _loadingScheduleGapNotices = false;
+        });
+      }
+    }
+  }
+
+  Future<List<AttendancePolicyRecapDay>> _loadStrictPolicyRecapRows({
+    required String outletId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      return await _attendancePolicyRecapService.fetchAdminSchedulePolicyRecap(
+        outletId: outletId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+    } catch (e) {
+      debugPrint('[Dashboard] Failed to load strict recap rows: $e');
+      return const <AttendancePolicyRecapDay>[];
+    }
+  }
+
   Future<void> _refreshDashboardData(
       {bool includeEmployeeCount = false}) async {
     await Future.wait([
       _loadLogs(),
       _loadOpenShifts(),
+      _loadScheduleGapNotices(),
       if (includeEmployeeCount) _loadEmployeeCount(),
     ]);
   }
@@ -1037,6 +1159,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Widget _buildQuickActions() {
     final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final hasResolvedScheduleGapOutlet =
+        _resolveActiveDashboardOutletContext() != null;
+    final showScheduleGapAction =
+        hasResolvedScheduleGapOutlet && _scheduleGapNotices.hasNotices;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       child: SingleChildScrollView(
@@ -1078,6 +1204,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               textColor: Colors.white,
               onTap: _refreshDashboardData,
             ),
+            if (showScheduleGapAction) ...[
+              const SizedBox(width: 10),
+              AdminDashboardScheduleGapQuickAction(
+                hasResolvedOutlet:
+                    !_loadingScheduleGapNotices && hasResolvedScheduleGapOutlet,
+                notices: _scheduleGapNotices,
+                onTap: _showScheduleGapNoticeSheet,
+              ),
+            ],
             // Belum Pulang button — only visible when open shifts exist
             if (_openShifts.isNotEmpty) ...[
               const SizedBox(width: 10),
@@ -1121,12 +1256,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  void _openShiftScheduler() {
-    final appState = ref.read(appProvider);
-    final outletId =
-        appState.isKepalaGerai ? appState.managedOutletId : _selectedOutletId;
-
-    if (outletId == null) {
+  Future<void> _openShiftScheduler() async {
+    final outletContext = _resolveActiveDashboardOutletContext();
+    if (outletContext == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pilih outlet terlebih dahulu'),
@@ -1136,21 +1268,53 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       return;
     }
 
-    final outletName = _outlets
-            .where((o) => o.id == outletId)
-            .map((o) => o.name)
-            .firstOrNull ??
-        'Unknown';
-
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ShiftSchedulerScreen(
-          outletId: outletId,
-          outletName: outletName,
+          outletId: outletContext.outletId,
+          outletName: outletContext.outlet.name,
         ),
       ),
     );
+
+    if (!mounted) return;
+    await _refreshDashboardData();
+  }
+
+  void _showScheduleGapNoticeSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return AdminScheduleGapNoticeSheet(
+          notices: _scheduleGapNotices,
+          onOpenScheduler: () {
+            Navigator.of(sheetContext).pop();
+            _openShiftScheduler();
+          },
+        );
+      },
+    );
+  }
+
+  ({String outletId, Outlet outlet})? _resolveActiveDashboardOutletContext() {
+    final appState = ref.read(appProvider);
+    final outletId =
+        appState.isKepalaGerai ? appState.managedOutletId : _selectedOutletId;
+    if (outletId == null || outletId.trim().isEmpty) {
+      return null;
+    }
+
+    final outlet = _outlets.where((item) => item.id == outletId).firstOrNull;
+    if (outlet == null) {
+      return null;
+    }
+
+    return (outletId: outletId, outlet: outlet);
   }
 
   void _showOpenShiftsSheet() {

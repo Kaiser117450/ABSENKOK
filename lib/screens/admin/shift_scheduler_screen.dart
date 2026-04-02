@@ -5,20 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/supabase_client.dart';
-import '../../core/theme.dart';
-import '../../models/attendance_log.dart';
-import '../../models/employee.dart';
-import '../../models/employee_contract.dart';
-import '../../models/shift_band.dart';
-import '../../models/shift_schedule.dart';
-import '../../providers/app_provider.dart';
-import '../../services/pdf_service.dart';
-import '../../services/schedule_policy_service.dart';
-import '../../services/schedule_sqlite_service.dart';
-import 'widgets/schedule_policy_summary_card.dart';
-import 'widgets/schedule_table_view.dart';
-import 'widgets/schedule_legend.dart';
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/attendance_log.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
+import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
+import 'package:absensi_enakko_flutter/providers/app_provider.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_legend.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_policy_summary_card.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_table_view.dart';
+import 'package:absensi_enakko_flutter/services/pdf_service.dart';
+import 'package:absensi_enakko_flutter/services/schedule_policy_service.dart';
+import 'package:absensi_enakko_flutter/services/schedule_sqlite_service.dart';
 
 class ShiftSchedulerScreen extends ConsumerStatefulWidget {
   final String? outletId;

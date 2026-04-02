@@ -203,21 +203,16 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
           ref.read(appProvider.notifier).forceUnblockLoading();
         }
       });
-
-      // Request overlay permission proaktif saat pertama launch (Android only)
-      if (Platform.isAndroid) {
-        KioskBackgroundService.requestOverlayPermission();
-      }
     });
 
     // Subscribe to Supabase admin auth state changes.
     // Only set admin mode on EXPLICIT sign-in (signedIn event), not on
-        final notifier = ref.read(appProvider.notifier);
     // session restore (initialSession / tokenRefreshed). This ensures
     // biometric gate isn't bypassed when the app restarts with a saved session.
     if (supabaseReady) {
       Supabase.instance.client.auth.onAuthStateChange.listen((data) {
         final event = data.event;
+        final notifier = ref.read(appProvider.notifier);
 
         if (event == AuthChangeEvent.signedOut) {
           // Full logout — clear all roles

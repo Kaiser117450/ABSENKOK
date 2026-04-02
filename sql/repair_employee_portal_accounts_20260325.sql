@@ -117,4 +117,4 @@ ON CONFLICT (employee_id) DO UPDATE
 SET
   auth_email = EXCLUDED.auth_email,
   updated_at = now()
-WHERE employee_portal_accounts.auth_user_id = EXCLUDED.auth_user_id;
+WHERE EXCLUDED.auth_user_id = employee_portal_accounts.auth_user_id;

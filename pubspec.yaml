@@ -1,7 +1,7 @@
 name: absensi_enakko_flutter
 description: Sistem Absensi NFC Ayam Guling Enakko
 publish_to: 'none'
-version: 7.0.0+8013
+version: 8.1.0+8101
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

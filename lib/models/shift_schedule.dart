@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../services/schedule_policy_service.dart';
-import 'employee.dart';
-import 'employee_contract.dart';
-import 'shift_band.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
+import 'package:absensi_enakko_flutter/services/schedule_policy_service.dart';
 
 /// Model untuk slot shift (Pagi, Siang, Sore, Libur)
 class ShiftSlot {

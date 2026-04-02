@@ -464,21 +464,6 @@ class KioskBackgroundService {
     }
   }
 
-  /// Request overlay permission from the user.
-  /// Returns true if permission is already granted.
-  static Future<bool> requestOverlayPermission() async {
-    if (!Platform.isAndroid) return false;
-    try {
-      final granted = await FlutterOverlayWindow.isPermissionGranted();
-      if (granted) return true;
-      await FlutterOverlayWindow.requestPermission();
-      return await FlutterOverlayWindow.isPermissionGranted();
-    } catch (e) {
-      debugPrint('[BgService] requestOverlayPermission error: $e');
-      return false;
-    }
-  }
-
   // ── Rotating notification ─────────────────────────────────────────────────
 
   /// Call when pushing event mode overlay to prevent idle rotation overwriting it.

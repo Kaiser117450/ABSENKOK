@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,41 +10,74 @@ import '../../core/supabase_client.dart';
 import '../../core/theme.dart';
 import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
+import '../../models/kiosk_scan_context.dart';
 import '../../models/overlay_pill_state.dart';
+import '../../models/pending_log.dart';
 import '../../providers/app_provider.dart';
 import '../../services/badge_service.dart';
+import '../../services/employee_cache_service.dart';
 import '../../services/kiosk_background_service.dart';
+import '../../services/kiosk_scan_authority_service.dart';
 import '../../services/location_service.dart';
 import '../../services/pattern_detection_service.dart';
-import '../../services/streak_badge_service.dart';
 import '../../services/sqlite_service.dart';
+import '../../services/streak_badge_service.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/badge_avatar.dart';
 
 enum _ScanStep { selectAction, submitting, success, error }
 
 @visibleForTesting
+class KioskScanActionDebugState {
+  final KioskScanContext context;
+  final List<PendingLog> pendingLogs;
+
+  const KioskScanActionDebugState({
+    required this.context,
+    this.pendingLogs = const [],
+  });
+}
+
+typedef KioskScanSubmitDebugHandler = FutureOr<void> Function(
+  AttendanceType type,
+  InitialScanIntent initialScanIntent,
+);
+
+@visibleForTesting
 class KioskScanSuccessDebugState {
   final AttendanceType submittedType;
+  final KioskScanAuthorityState authorityState;
+  final String scannedAtWitaLabel;
+  final InitialScanIntent initialScanIntent;
   final int currentStreak;
   final int? milestoneCelebration;
 
   const KioskScanSuccessDebugState({
     required this.submittedType,
+    this.authorityState = KioskScanAuthorityState.liveConfirmed,
+    this.scannedAtWitaLabel = '07:00 WITA',
+    this.initialScanIntent = InitialScanIntent.none,
     this.currentStreak = 0,
     this.milestoneCelebration,
   });
 }
 
 class KioskScanScreen extends ConsumerStatefulWidget {
+  final KioskScanActionDebugState? debugActionState;
   final KioskScanSuccessDebugState? debugSuccessState;
+  final KioskScanSubmitDebugHandler? debugSubmitHandler;
 
-  const KioskScanScreen({super.key}) : debugSuccessState = null;
+  const KioskScanScreen({super.key})
+      : debugActionState = null,
+        debugSuccessState = null,
+        debugSubmitHandler = null;
 
   @visibleForTesting
   const KioskScanScreen.testable({
     super.key,
-    required this.debugSuccessState,
+    this.debugActionState,
+    this.debugSuccessState,
+    this.debugSubmitHandler,
   });
 
   @override
@@ -55,21 +87,26 @@ class KioskScanScreen extends ConsumerStatefulWidget {
 class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     with TickerProviderStateMixin {
   _ScanStep _step = _ScanStep.selectAction;
-  String? _errorMessage;
+  String? _errorTitle;
+  String? _errorBody;
   Timer? _resetTimer;
 
-  // Smart break: last attendance type of this employee today
-  AttendanceType? _lastType;
-  bool _loadingLastType = true;
+  KioskScanContext? _authorityContext;
+  List<PendingLog> _pendingLogs = [];
+  bool _loadingActionState = true;
 
-  // Submitted type — shown in success screen
   AttendanceType? _submittedType;
+  KioskScanAuthorityState _successAuthorityState =
+      KioskScanAuthorityState.liveConfirmed;
+  String _successScannedAtWitaLabel = '';
+  InitialScanIntent _submittedInitialIntent = InitialScanIntent.none;
 
-  // Streak display
   int _currentStreak = 0;
-  int? _milestoneCelebration; // 7, 30, or 90 if just hit
+  int? _milestoneCelebration;
 
-  // Confetti & success animation
+  final KioskScanAuthorityService _authorityService =
+      KioskScanAuthorityService();
+
   late final ConfettiController _confettiCtrl;
   late final AnimationController _successScaleCtrl;
   late final Animation<double> _successScaleAnim;
@@ -78,12 +115,9 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   void initState() {
     super.initState();
 
-    // Confetti controller — single burst, auto-stop setelah 1.5s
     _confettiCtrl = ConfettiController(
       duration: const Duration(milliseconds: 1500),
     );
-
-    // Scale animation for checkmark (ElasticOut bounce)
     _successScaleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -97,22 +131,38 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     if (debugSuccessState != null) {
       _step = _ScanStep.success;
       _submittedType = debugSuccessState.submittedType;
+      _successAuthorityState = debugSuccessState.authorityState;
+      _successScannedAtWitaLabel = debugSuccessState.scannedAtWitaLabel;
+      _submittedInitialIntent = debugSuccessState.initialScanIntent;
       _currentStreak = debugSuccessState.currentStreak;
       _milestoneCelebration = debugSuccessState.milestoneCelebration;
-      _loadingLastType = false;
+      _loadingActionState = false;
       _successScaleCtrl.value = 1;
       return;
     }
 
-    // Load smart break status
+    final debugActionState = widget.debugActionState;
+    if (debugActionState != null) {
+      _authorityContext = debugActionState.context;
+      _pendingLogs = List<PendingLog>.from(debugActionState.pendingLogs)
+        ..sort((a, b) => a.queueOrder.compareTo(b.queueOrder));
+      _loadingActionState = false;
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Warm badge cache for BadgeAvatar
       BadgeService.instance.fetchAll();
-      final employee = ref.read(appProvider).detectedEmployee;
-      if (employee != null) {
-        _loadLastAttendance(employee.id);
+      final appState = ref.read(appProvider);
+      final employee = appState.detectedEmployee;
+      final session = appState.kioskSession;
+      if (employee != null && session != null) {
+        _loadActionState(
+          employee: employee,
+          outletId: session.outletId,
+          deviceId: session.deviceId,
+        );
       } else {
-        setState(() => _loadingLastType = false);
+        setState(() => _loadingActionState = false);
       }
     });
   }
@@ -125,46 +175,168 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     super.dispose();
   }
 
-  // ── Smart break: fetch last attendance ────────────────────────────────────
-
-  Future<void> _loadLastAttendance(String employeeId) async {
+  Future<void> _loadActionState({
+    required Employee employee,
+    required String outletId,
+    required String deviceId,
+  }) async {
+    KioskScanContext? resolvedContext;
     try {
-      // 24h window: covers overnight shifts (e.g. 22:00 → 06:00 next day)
-      // Safety net: no record in 24h → _lastType = null → Masuk shown (correct)
-      final cutoff = DateTime.now()
-          .subtract(const Duration(hours: 24))
-          .toUtc()
-          .toIso8601String();
-
-      final data = await SupabaseClientFactory.kiosk
-          .from('attendance_logs')
-          .select('type, scanned_at')
-          .eq('employee_id', employeeId)
-          .gte('scanned_at', cutoff)
-          .order('scanned_at', ascending: false)
-          .limit(1)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 4));
-
-      if (data != null && mounted) {
-        setState(() {
-          _lastType = AttendanceTypeExt.fromString(data['type'] as String);
-          // pulang → _lastType = pulang → _buildSmartButtons shows Masuk (new cycle) ✓
-          // masuk/kembali/breakTime within 24h → correct next-step buttons shown ✓
-        });
-      }
-      // null → no log in last 24h → _lastType stays null → Masuk shown ✓ (safety net)
-    } catch (_) {
-      // Network/timeout → _lastType stays null → show Masuk as safe fallback
-    } finally {
-      if (mounted) setState(() => _loadingLastType = false);
+      resolvedContext = await _authorityService.fetchContext(
+        employeeId: employee.id,
+        outletId: outletId,
+        deviceId: deviceId,
+      );
+      await EmployeeCacheService.instance.putScanContext(
+        employee.id,
+        resolvedContext,
+      );
+    } catch (error) {
+      debugPrint('[KioskScan] fetchContext failed: $error');
+      resolvedContext = await EmployeeCacheService.instance.getScanContext(
+        employee.id,
+      );
     }
+
+    List<PendingLog> pendingLogs = const [];
+    try {
+      pendingLogs = (await SqliteService.getPendingLogs())
+          .where(
+            (log) =>
+                log.employeeId == employee.id &&
+                log.scanOutletId == outletId &&
+                log.deviceId == deviceId,
+          )
+          .toList()
+        ..sort((a, b) => a.queueOrder.compareTo(b.queueOrder));
+    } catch (error) {
+      debugPrint('[KioskScan] load pending logs failed: $error');
+    }
+
+    if (!mounted) return;
+
+    if (resolvedContext == null) {
+      _showErrorState(
+        title: 'Belum Bisa Diproses Offline',
+        body:
+            'Karyawan ini belum tersimpan di perangkat. Sambungkan internet lalu coba lagi.',
+      );
+      _scheduleReset(
+        const Duration(milliseconds: AppConstants.errorResetDurationMs),
+      );
+      return;
+    }
+
+    setState(() {
+      _authorityContext = resolvedContext;
+      _pendingLogs = pendingLogs;
+      _loadingActionState = false;
+    });
   }
 
-  // ── Submit attendance ─────────────────────────────────────────────────────
+  AttendanceType? _resolveLastType() {
+    if (_pendingLogs.isNotEmpty) {
+      return _pendingLogs.last.type;
+    }
+    return _authorityContext?.lastAuthoritativeType;
+  }
 
-  Future<void> _submitAttendance(AttendanceType type) async {
+  Future<void> _refreshPendingCount() async {
+    final count = await SqliteService.countPendingLogs();
+    ref.read(appProvider.notifier).setPendingCount(count);
+  }
+
+  Future<void> _syncPendingBestEffort() async {
+    try {
+      await SyncService.syncPendingLogs();
+    } catch (error) {
+      debugPrint('[KioskScan] background sync failed: $error');
+    }
+    await _refreshPendingCount();
+  }
+
+  Future<void> _handleBreakFirstTap() async {
+    final confirmed = await _showBreakFirstConfirmationDialog();
+    if (!confirmed) return;
+
+    await _submitAttendance(
+      AttendanceType.breakTime,
+      initialScanIntent: InitialScanIntent.breakFirst,
+    );
+  }
+
+  Future<bool> _showBreakFirstConfirmationDialog() async {
+    return (await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Color(0xFFFEF3C7),
+                    child: Icon(
+                      Icons.pause_circle_outline_rounded,
+                      color: Color(0xFFD97706),
+                      size: 30,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Mulai dengan istirahat?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              content: const Text(
+                'Scan ini akan dicatat sebagai istirahat lebih dulu. Setelah selesai, tap Selesai Istirahat.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Kembali ke Pilihan Scan'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Simpan Istirahat Dulu'),
+                ),
+              ],
+            );
+          },
+        )) ??
+        false;
+  }
+
+  Future<void> _submitAttendance(
+    AttendanceType type, {
+    InitialScanIntent initialScanIntent = InitialScanIntent.none,
+  }) async {
     if (_step != _ScanStep.selectAction) return;
+
+    final debugSubmitHandler = widget.debugSubmitHandler;
+    if (debugSubmitHandler != null) {
+      await debugSubmitHandler(type, initialScanIntent);
+      return;
+    }
 
     final session = ref.read(appProvider).kioskSession;
     final employee = ref.read(appProvider).detectedEmployee;
@@ -175,79 +347,134 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     setState(() {
       _step = _ScanStep.submitting;
       _submittedType = type;
+      _submittedInitialIntent = initialScanIntent;
     });
 
+    LatLng? position;
     try {
-      // Best-effort GPS — max 1 second (faster than before)
-      LatLng? position;
-      try {
-        position = await LocationService.getCurrentPosition()
-            .timeout(const Duration(seconds: 1), onTimeout: () => null);
-      } catch (_) {}
+      position = await LocationService.getCurrentPosition()
+          .timeout(const Duration(seconds: 1), onTimeout: () => null);
+    } catch (_) {}
 
-      final scanTime = DateTime.now();
-      final now = scanTime.toUtc().toIso8601String();
+    final deviceCapturedAt = DateTime.now();
 
-      await SqliteService.insertPendingLog(
-        employeeId: employee.id,
-        scanOutletId: session.outletId,
-        type: type,
-        lat: position?.lat,
-        lng: position?.lng,
-        deviceId: session.deviceId,
-        scannedAt: now,
-        isBackup: isBackup,
-        notes: backupNotes,
+    try {
+      final liveResult = await _authorityService.recordScan(
+        KioskScanRecordRequest(
+          employeeId: employee.id,
+          outletId: session.outletId,
+          deviceId: session.deviceId,
+          type: type,
+          captureMode: AttendanceCaptureMode.live,
+          deviceCapturedAt: deviceCapturedAt,
+          initialScanIntent: initialScanIntent,
+          isBackup: isBackup,
+          notes: backupNotes,
+          lat: position?.lat,
+          lng: position?.lng,
+        ),
       );
 
-      // Update pending badge count
-      final count = await SqliteService.countPendingLogs();
-      ref.read(appProvider.notifier).setPendingCount(count);
-
-      // Sync in background — best-effort
-      try {
-        await SyncService.syncPendingLogs();
-        final newCount = await SqliteService.countPendingLogs();
-        ref.read(appProvider.notifier).setPendingCount(newCount);
-      } catch (_) {}
+      final witaLabel = liveResult.scannedAtWitaLabel.isNotEmpty
+          ? liveResult.scannedAtWitaLabel
+          : _formatWitaLabel(liveResult.scannedAtUtc ?? deviceCapturedAt);
 
       await _pushAttendanceOverlayEvent(
-        type: type,
+        type: liveResult.recordedType,
         outletName: session.outletName,
       );
 
-      if (mounted) {
-        setState(() => _step = _ScanStep.success);
-        // Start confetti + bounce animation
-        _confettiCtrl.play();
-        _successScaleCtrl.forward();
-        if (type == AttendanceType.masuk) {
-          unawaited(
-            PatternDetectionService.instance
-                .checkAndNotifyIfLate(
-              employeeId: employee.id,
-              outletId: session.outletId,
-              scanTime: scanTime,
-            )
-                .catchError((Object error) {
-              debugPrint('[KioskScan] pattern check error: $error');
-            }),
-          );
-          // Fire-and-forget streak update
-          unawaited(_updateStreakAfterMasuk(employee.id));
-        }
-        // Auto-close after success
-        _scheduleReset(
-            const Duration(milliseconds: AppConstants.successScreenDurationMs));
+      if (!mounted) return;
+
+      setState(() {
+        _step = _ScanStep.success;
+        _submittedType = liveResult.recordedType;
+        _successAuthorityState = KioskScanAuthorityState.liveConfirmed;
+        _successScannedAtWitaLabel = witaLabel;
+        _submittedInitialIntent = liveResult.initialScanIntent;
+      });
+      _confettiCtrl.play();
+      _successScaleCtrl.forward(from: 0);
+
+      if (liveResult.recordedType == AttendanceType.masuk &&
+          liveResult.scannedAtUtc != null) {
+        final authoritativeWita = _projectUtcToWita(liveResult.scannedAtUtc!);
+        unawaited(
+          PatternDetectionService.instance
+              .checkAndNotifyIfLate(
+            employeeId: employee.id,
+            outletId: session.outletId,
+            scanTime: authoritativeWita,
+          )
+              .catchError((Object error) {
+            debugPrint('[KioskScan] pattern check error: $error');
+          }),
+        );
+        unawaited(_updateStreakAfterMasuk(employee.id));
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _step = _ScanStep.error;
-          _errorMessage = 'Gagal menyimpan absensi';
-        });
+
+      _scheduleReset(
+        const Duration(milliseconds: AppConstants.successScreenDurationMs),
+      );
+    } catch (error) {
+      debugPrint('[KioskScan] live submit failed: $error');
+
+      final cachedContext = _authorityContext ??
+          await EmployeeCacheService.instance.getScanContext(employee.id);
+      if (cachedContext == null) {
+        if (!mounted) return;
+        _showErrorState(
+          title: 'Belum Bisa Diproses Offline',
+          body:
+              'Karyawan ini belum tersimpan di perangkat. Sambungkan internet lalu coba lagi.',
+        );
         _scheduleReset(
-            const Duration(milliseconds: AppConstants.errorResetDurationMs));
+          const Duration(milliseconds: AppConstants.errorResetDurationMs),
+        );
+        return;
+      }
+
+      try {
+        await SqliteService.insertPendingLog(
+          employeeId: employee.id,
+          scanOutletId: session.outletId,
+          type: type,
+          lat: position?.lat,
+          lng: position?.lng,
+          deviceId: session.deviceId,
+          scannedAt: deviceCapturedAt.toUtc().toIso8601String(),
+          deviceCapturedAt: deviceCapturedAt,
+          captureMode: AttendanceCaptureMode.queued,
+          initialScanIntent: initialScanIntent,
+          isBackup: isBackup,
+          notes: backupNotes,
+        );
+
+        await _refreshPendingCount();
+        await _syncPendingBestEffort();
+        await _pushAttendanceOverlayEvent(
+          type: type,
+          outletName: session.outletName,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _step = _ScanStep.success;
+          _successAuthorityState = KioskScanAuthorityState.queuedPending;
+          _successScannedAtWitaLabel = '';
+        });
+        _successScaleCtrl.forward(from: 0);
+        _scheduleReset(
+          const Duration(milliseconds: AppConstants.successScreenDurationMs),
+        );
+      } catch (queueError) {
+        debugPrint('[KioskScan] queued fallback failed: $queueError');
+        if (!mounted) return;
+        _showErrorState(title: 'Gagal menyimpan absensi');
+        _scheduleReset(
+          const Duration(milliseconds: AppConstants.errorResetDurationMs),
+        );
       }
     }
   }
@@ -261,7 +488,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       final badge =
           BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
       final badgeEmoji = badge?.emoji ?? '';
-
       final now = DateTime.now();
       final state = OverlayPillState(
         mode: OverlayPillMode.event,
@@ -276,12 +502,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         expanded: true,
         badgeEmoji: badgeEmoji,
       );
-
       await KioskBackgroundService.updateOverlayState(state);
-      // Prevent idle rotation from overwriting event overlay
       KioskBackgroundService.markEventActive(state.eventUntilEpochMs);
-    } catch (e) {
-      debugPrint('[KioskScan] push overlay event error: $e');
+    } catch (error) {
+      debugPrint('[KioskScan] push overlay event error: $error');
     }
   }
 
@@ -289,6 +513,28 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     final h = value.hour.toString().padLeft(2, '0');
     final m = value.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  String _formatWitaLabel(DateTime value) {
+    final projected = _projectUtcToWita(value);
+    final h = projected.hour.toString().padLeft(2, '0');
+    final m = projected.minute.toString().padLeft(2, '0');
+    return '$h:$m WITA';
+  }
+
+  DateTime _projectUtcToWita(DateTime value) {
+    final projected =
+        (value.isUtc ? value : value.toUtc()).add(const Duration(hours: 8));
+    return DateTime(
+      projected.year,
+      projected.month,
+      projected.day,
+      projected.hour,
+      projected.minute,
+      projected.second,
+      projected.millisecond,
+      projected.microsecond,
+    );
   }
 
   String _colorToHex(Color color) {
@@ -307,7 +553,16 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     });
   }
 
-  // ── Streak update after masuk ────────────────────────────────────────────
+  void _showErrorState({
+    required String title,
+    String? body,
+  }) {
+    setState(() {
+      _step = _ScanStep.error;
+      _errorTitle = title;
+      _errorBody = body;
+    });
+  }
 
   Future<void> _updateStreakAfterMasuk(String employeeId) async {
     try {
@@ -318,8 +573,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       if (result != null && mounted) {
         final streak = (result['current_streak'] as num?)?.toInt() ?? 0;
         setState(() => _currentStreak = streak);
-
-        // Check for milestone badge award
         final milestone =
             await StreakBadgeService.instance.checkAndAwardMilestone(
           employeeId: employeeId,
@@ -327,15 +580,13 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         );
         if (milestone != null && mounted) {
           setState(() => _milestoneCelebration = milestone);
-          _confettiCtrl.play(); // Celebrate milestone
+          _confettiCtrl.play();
         }
       }
-    } catch (e) {
-      debugPrint('[KioskScan] Streak update failed: $e');
+    } catch (error) {
+      debugPrint('[KioskScan] Streak update failed: $error');
     }
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -344,37 +595,24 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: _buildBody(employee),
+        child: switch (_step) {
+          _ScanStep.selectAction => _buildActionSelection(employee),
+          _ScanStep.submitting => _buildSubmitting(),
+          _ScanStep.success => _buildSuccess(employee),
+          _ScanStep.error => _buildError(),
+        },
       ),
     );
   }
 
-  Widget _buildBody(Employee? employee) {
-    switch (_step) {
-      case _ScanStep.selectAction:
-        return _buildActionSelection(employee);
-      case _ScanStep.submitting:
-        return _buildSubmitting();
-      case _ScanStep.success:
-        return _buildSuccess(employee);
-      case _ScanStep.error:
-        return _buildError();
-    }
-  }
-
-  // ── Action Selection ──────────────────────────────────────────────────────
-
   Widget _buildActionSelection(Employee? employee) {
     final name = employee?.name ?? '-';
-    final position = employee?.position;
     final badge =
         BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
 
     return Column(
       children: [
         const SizedBox(height: 32),
-
-        // ── EMPLOYEE CARD ─────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Container(
@@ -385,7 +623,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
               border: Border.all(color: AppColors.border),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -393,7 +631,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             ),
             child: Row(
               children: [
-                // Avatar
                 BadgeAvatar(
                   photoUrl: employee?.photoUrl,
                   name: name,
@@ -401,8 +638,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                   badge: badge,
                 ),
                 const SizedBox(width: 16),
-
-                // Name + position
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,10 +653,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       ),
-                      if (position != null && position.isNotEmpty) ...[
+                      if ((employee?.position ?? '').isNotEmpty) ...[
                         const SizedBox(height: 3),
                         Text(
-                          position,
+                          employee!.position!,
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textSecondary,
@@ -432,27 +667,31 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     ],
                   ),
                 ),
-
-                // Verified badge + Backup badge
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Backup badge (hanya muncul saat mode backup)
                     if (ref.watch(appProvider).isBackupMode) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0F2FE), // Light cyan
+                          color: const Color(0xFFE0F2FE),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: const Color(0xFF0891B2).withOpacity(0.3)),
+                            color:
+                                const Color(0xFF0891B2).withValues(alpha: 0.3),
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.support_agent_rounded,
-                                size: 12, color: Color(0xFF0891B2)),
+                            Icon(
+                              Icons.support_agent_rounded,
+                              size: 12,
+                              color: Color(0xFF0891B2),
+                            ),
                             SizedBox(width: 3),
                             Text(
                               'BACKUP',
@@ -467,10 +706,11 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                       ),
                       const SizedBox(height: 6),
                     ],
-                    // Verified badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.successLight,
                         borderRadius: BorderRadius.circular(8),
@@ -478,8 +718,11 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.verified_rounded,
-                              size: 12, color: AppColors.success),
+                          Icon(
+                            Icons.verified_rounded,
+                            size: 12,
+                            color: AppColors.success,
+                          ),
                           SizedBox(width: 3),
                           Text(
                             'Terverifikasi',
@@ -498,10 +741,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             ),
           ),
         ),
-
         const SizedBox(height: 28),
-
-        // ── SECTION LABEL ─────────────────────────────────────────────
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 28),
           child: Align(
@@ -517,16 +757,13 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             ),
           ),
         ),
-
         const SizedBox(height: 12),
-
-        // ── SMART BUTTONS ─────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: _loadingLastType
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
+          child: _loadingActionState
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
                     child: CircularProgressIndicator(
                       color: AppColors.primary,
                       strokeWidth: 2.5,
@@ -535,17 +772,17 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                 )
               : _buildSmartButtons(),
         ),
-
         const Spacer(),
-
-        // ── CANCEL ────────────────────────────────────────────────────
         TextButton.icon(
           onPressed: () {
             ref.read(appProvider.notifier).resetScanFlow();
             context.go('/kiosk');
           },
-          icon: const Icon(Icons.arrow_back_rounded,
-              size: 16, color: AppColors.textMuted),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
           label: const Text(
             'Kembali',
             style: TextStyle(
@@ -560,79 +797,57 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     );
   }
 
-  /// Smart button builder: shows relevant buttons based on last attendance type
   Widget _buildSmartButtons() {
-    // Determine which buttons to show based on last scan today
-    // null → belum ada scan hari ini → Masuk
-    // masuk → Istirahat + Pulang
-    // breakTime → Selesai Istirahat + Pulang
-    // pulang → Masuk (lembur / hari baru edge case)
-
+    final lastType = _resolveLastType();
     final buttons = <Widget>[];
 
-    switch (_lastType) {
+    void addButton(Widget button) {
+      if (buttons.isNotEmpty) buttons.add(const SizedBox(height: 8));
+      buttons.add(button);
+    }
+
+    switch (lastType) {
       case null:
-        // Belum scan hari ini → hanya Masuk
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.masuk,
           onTap: () => _submitAttendance(AttendanceType.masuk),
         ));
+        if (_authorityContext?.breakFirstEligible ?? false) {
+          addButton(_AttendanceButton(
+            type: AttendanceType.breakTime,
+            customLabel: 'ISTIRAHAT DULU',
+            customIcon: Icons.pause_circle_outline_rounded,
+            onTap: _handleBreakFirstTap,
+          ));
+        }
         break;
-
       case AttendanceType.masuk:
-        // Sudah masuk → Istirahat + Pulang
-        buttons.add(_AttendanceButton(
-          type: AttendanceType.breakTime,
-          onTap: () => _submitAttendance(AttendanceType.breakTime),
-        ));
-        buttons.add(const SizedBox(height: 10));
-        buttons.add(_AttendanceButton(
-          type: AttendanceType.pulang,
-          onTap: () => _submitAttendance(AttendanceType.pulang),
-        ));
-        break;
-
       case AttendanceType.kembali:
-        // Seharusnya tidak terjadi (kembali → state sudah kembali bekerja)
-        // Tampilkan pilihan sama seperti setelah masuk
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.breakTime,
           onTap: () => _submitAttendance(AttendanceType.breakTime),
         ));
-        buttons.add(const SizedBox(height: 10));
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.pulang,
           onTap: () => _submitAttendance(AttendanceType.pulang),
         ));
         break;
-
       case AttendanceType.breakTime:
-        // Sedang istirahat → Kembali Bekerja + Pulang
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.kembali,
           customLabel: 'SELESAI ISTIRAHAT',
           customIcon: Icons.play_circle_outline_rounded,
           onTap: () => _submitAttendance(AttendanceType.kembali),
         ));
-        buttons.add(const SizedBox(height: 10));
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.pulang,
           onTap: () => _submitAttendance(AttendanceType.pulang),
         ));
         break;
-
       case AttendanceType.pulang:
-        // Sudah pulang → hanya Masuk (lembur / hari baru)
-        buttons.add(_AttendanceButton(
-          type: AttendanceType.masuk,
-          onTap: () => _submitAttendance(AttendanceType.masuk),
-        ));
-        break;
-
       case AttendanceType.sakit:
       case AttendanceType.izin:
-        // Sakit/Izin input dari admin, treat seperti belum scan
-        buttons.add(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.masuk,
           onTap: () => _submitAttendance(AttendanceType.masuk),
         ));
@@ -641,48 +856,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
 
     return Column(children: buttons);
   }
-
-  // ── Avatar helper ─────────────────────────────────────────────────────────
-
-  Widget _buildAvatarCircle(String? photoUrl, String initial, double size) {
-    if (photoUrl != null && photoUrl.isNotEmpty) {
-      return ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: photoUrl,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          placeholder: (context, url) =>
-              Container(width: size, height: size, color: Colors.grey.shade200),
-          errorWidget: (context, url, error) => _initialCircle(initial, size),
-        ),
-      );
-    }
-    return _initialCircle(initial, size);
-  }
-
-  Widget _initialCircle(String initial, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size * 0.43,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Submitting ────────────────────────────────────────────────────────────
 
   Widget _buildSubmitting() {
     return const Center(
@@ -711,100 +884,110 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     );
   }
 
-  // ── Success — animasi ceklis + confetti ───────────────────────────────────
-
   Widget _buildSuccess(Employee? employee) {
-    final typeLabel = _submittedType?.label ?? 'Absensi';
-    final typeColor = switch (_submittedType) {
-      AttendanceType.masuk => AppColors.success,
-      AttendanceType.kembali => const Color(0xFF0891B2),
-      AttendanceType.breakTime => const Color(0xFFF59E0B),
-      AttendanceType.pulang => AppColors.danger,
-      AttendanceType.sakit => const Color(0xFFDC2626),
-      AttendanceType.izin => const Color(0xFF2563EB),
-      null => AppColors.success,
-    };
+    final isQueued =
+        _successAuthorityState == KioskScanAuthorityState.queuedPending;
+    final accentColor = isQueued
+        ? const Color(0xFF92400E)
+        : switch (_submittedType) {
+            AttendanceType.masuk => AppColors.success,
+            AttendanceType.kembali => const Color(0xFF0891B2),
+            AttendanceType.breakTime => const Color(0xFFD97706),
+            AttendanceType.pulang => const Color(0xFFB91C1C),
+            AttendanceType.sakit => const Color(0xFFDC2626),
+            AttendanceType.izin => const Color(0xFF2563EB),
+            null => AppColors.success,
+          };
+    final medallionColor = isQueued ? const Color(0xFFD97706) : accentColor;
+    final medallionIcon =
+        isQueued ? Icons.schedule_rounded : Icons.check_rounded;
+    final actionLabel = () {
+      if (_submittedInitialIntent == InitialScanIntent.breakFirst) {
+        return 'ISTIRAHAT DULU';
+      }
+      if (_submittedType == AttendanceType.kembali) {
+        return 'SELESAI ISTIRAHAT';
+      }
+      return (_submittedType?.label ?? 'Absensi').toUpperCase();
+    }();
+    final statusLine = isQueued
+        ? 'Scan disimpan di perangkat dan akan dikirim otomatis saat koneksi kembali.'
+        : _submittedInitialIntent == InitialScanIntent.breakFirst
+            ? 'Istirahat dulu disimpan'
+            : '${_submittedType?.label ?? 'Absensi'} tercatat';
+    final witaLabel = _successScannedAtWitaLabel.isEmpty
+        ? (_authorityContext?.serverNowWitaLabel ?? '--:-- WITA')
+        : _successScannedAtWitaLabel;
 
     return Stack(
       alignment: Alignment.topCenter,
       children: [
-        // Confetti burst from center-top
-        Positioned(
-          top: 0,
-          child: ConfettiWidget(
-            confettiController: _confettiCtrl,
-            blastDirectionality: BlastDirectionality.explosive,
-            emissionFrequency: 0, // single burst, bukan continuous rain
-            numberOfParticles: 30, // cukup padat tapi tidak lebay
-            maxBlastForce: 25,
-            minBlastForce: 10,
-            gravity: 0.2, // jatuh pelan & natural
-            colors: const [
-              Color(0xFF22C55E), // hijau sukses
-              Color(0xFFF59E0B), // kuning aksen
-              Color(0xFFDC2626), // merah brand
-              Colors.white,
-            ],
+        if (!isQueued)
+          Positioned(
+            top: 0,
+            child: ConfettiWidget(
+              confettiController: _confettiCtrl,
+              blastDirectionality: BlastDirectionality.explosive,
+              emissionFrequency: 0,
+              numberOfParticles: 30,
+              maxBlastForce: 25,
+              minBlastForce: 10,
+              gravity: 0.2,
+              colors: const [
+                Color(0xFF22C55E),
+                Color(0xFFF59E0B),
+                Color(0xFFDC2626),
+                Colors.white,
+              ],
+            ),
           ),
-        ),
-
-        // Main success content
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Bouncing checkmark circle
                 ScaleTransition(
                   scale: _successScaleAnim,
                   child: Container(
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: typeColor,
+                      color: medallionColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: typeColor.withOpacity(0.35),
+                          color: medallionColor.withValues(alpha: 0.3),
                           blurRadius: 24,
                           spreadRadius: 4,
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 56,
-                      ),
+                    child: Center(
+                      child: Icon(medallionIcon, color: Colors.white, size: 56),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
-                const Text(
-                  'Berhasil!',
-                  style: TextStyle(
+                Text(
+                  isQueued ? 'Tersimpan Sementara' : 'Berhasil!',
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.5,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 Text(
-                  '$typeLabel tercatat',
+                  statusLine,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: isQueued ? 14 : 18,
                     fontWeight: FontWeight.w600,
-                    color: typeColor,
+                    color: accentColor,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-
                 if (employee != null) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -816,46 +999,141 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  // Badge label (emoji + name)
-                  Builder(builder: (_) {
-                    final badge = BadgeService.instance
-                        .getBadgeByIdSync(employee.activeBadgeId);
-                    if (badge == null || badge.name.isEmpty)
-                      return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            badge.emoji,
-                            style: const TextStyle(fontSize: 14),
+                  Builder(
+                    builder: (_) {
+                      final badge = BadgeService.instance
+                          .getBadgeByIdSync(employee.activeBadgeId);
+                      if (badge == null || badge.name.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              badge.emoji,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              badge.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: badge.color1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+                const SizedBox(height: 20),
+                if (!isQueued)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 18,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Waktu WITA tercatat',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                            letterSpacing: 0.4,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            badge.name,
-                            style: TextStyle(
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          witaLabel,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 18,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            actionLabel,
+                            style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: badge.color1,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF92400E),
+                              letterSpacing: 0.6,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  }),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Lihat tanda pending di layar utama.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!isQueued &&
+                    _submittedInitialIntent ==
+                        InitialScanIntent.breakFirst) ...[
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Berikutnya tap Selesai Istirahat.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
                 ],
-
-                // Streak display (only shown for masuk with streak >= 2)
-                if (_submittedType == AttendanceType.masuk &&
+                if (!isQueued &&
+                    _submittedType == AttendanceType.masuk &&
                     _currentStreak >= 2) ...[
                   const SizedBox(height: 16),
                   _buildStreakRow(),
                 ],
-
                 const SizedBox(height: 32),
-
-                // Subtle returning indicator
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -868,9 +1146,9 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
+                    const Text(
                       'Kembali ke layar utama...',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
                       ),
@@ -886,7 +1164,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   }
 
   Widget _buildStreakRow() {
-    // Check if this is a milestone celebration
     if (_milestoneCelebration != null) {
       final milestoneText = _milestoneCelebration == 90
           ? 'Streak 90 Hari! Luar Biasa!'
@@ -894,8 +1171,11 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.local_fire_department,
-              size: 24, color: Color(0xFFF59E0B)),
+          const Icon(
+            Icons.local_fire_department,
+            size: 24,
+            color: Color(0xFFF59E0B),
+          ),
           const SizedBox(width: 8),
           Text(
             milestoneText,
@@ -908,12 +1188,15 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         ],
       );
     }
-    // Normal streak display
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.local_fire_department,
-            size: 24, color: Color(0xFFF59E0B)),
+        const Icon(
+          Icons.local_fire_department,
+          size: 24,
+          color: Color(0xFFF59E0B),
+        ),
         const SizedBox(width: 8),
         Text(
           '$_currentStreak hari berturut-turut!',
@@ -926,8 +1209,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       ],
     );
   }
-
-  // ── Error ─────────────────────────────────────────────────────────────────
 
   Widget _buildError() {
     return Center(
@@ -951,7 +1232,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             ),
             const SizedBox(height: 24),
             Text(
-              _errorMessage ?? 'Terjadi kesalahan',
+              _errorTitle ?? 'Terjadi kesalahan',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -959,6 +1240,18 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
               ),
               textAlign: TextAlign.center,
             ),
+            if (_errorBody != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorBody!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const SizedBox(height: 8),
             const Text(
               'Kembali otomatis...',
@@ -973,10 +1266,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Attendance action button — supports custom label + icon override
-// ---------------------------------------------------------------------------
 
 class _AttendanceButton extends StatelessWidget {
   final AttendanceType type;
@@ -1076,7 +1365,8 @@ class _AttendanceButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: _bgColor,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _color.withOpacity(0.35), width: 1.5),
+              border:
+                  Border.all(color: _color.withValues(alpha: 0.35), width: 1.5),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -1104,7 +1394,7 @@ class _AttendanceButton extends StatelessWidget {
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: _color.withOpacity(0.5),
+                  color: _color.withValues(alpha: 0.5),
                 ),
               ],
             ),

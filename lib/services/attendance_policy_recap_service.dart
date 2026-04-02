@@ -1,5 +1,5 @@
-import '../core/supabase_client.dart';
-import '../models/attendance_policy_recap_day.dart';
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 
 class AttendancePolicyRecapService {
   const AttendancePolicyRecapService();

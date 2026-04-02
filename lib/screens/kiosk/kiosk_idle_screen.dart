@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nfc_manager/nfc_manager.dart';
@@ -17,14 +16,27 @@ import '../../models/employee.dart';
 import '../../providers/app_provider.dart';
 import '../../services/employee_cache_service.dart';
 import '../../services/kiosk_background_service.dart';
+import '../../services/kiosk_scan_authority_service.dart';
 import '../../services/nfc_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/sync_service.dart';
 
-enum _KioskState { idle, detecting, notFound, nfcError }
+enum _KioskState { idle, detecting, notFound, nfcError, offlineUnavailable }
 
 class KioskIdleScreen extends ConsumerStatefulWidget {
-  const KioskIdleScreen({super.key});
+  final bool debugOfflineUnavailable;
+  final bool? debugNfcAvailable;
+
+  const KioskIdleScreen({super.key})
+      : debugOfflineUnavailable = false,
+        debugNfcAvailable = null;
+
+  @visibleForTesting
+  const KioskIdleScreen.testable({
+    super.key,
+    this.debugOfflineUnavailable = false,
+    this.debugNfcAvailable,
+  });
 
   @override
   ConsumerState<KioskIdleScreen> createState() => _KioskIdleScreenState();
@@ -57,14 +69,30 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
   // Periodic pending count refresh timer
   Timer? _pendingRefreshTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  final KioskScanAuthorityService _authorityService =
+      KioskScanAuthorityService();
 
   @override
   void initState() {
     super.initState();
     _initAnimations();
+
+    final debugMode =
+        widget.debugOfflineUnavailable || widget.debugNfcAvailable != null;
+    if (debugMode) {
+      _nfcAvailable = widget.debugNfcAvailable ?? true;
+      if (widget.debugOfflineUnavailable) {
+        _kioskState = _KioskState.offlineUnavailable;
+      }
+      return;
+    }
+
     _checkNfcThenListen();
     _syncOnMount();
     _startBackgroundService();
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_handleConnectivityChange);
     _pendingRefreshTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => _refreshPendingCount(),
@@ -76,107 +104,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     final session = ref.read(appProvider).kioskSession;
     if (session == null) return;
     try {
-      if (Platform.isAndroid) {
-        await _requestOverlayPermission();
-      }
       await KioskBackgroundService.start(session);
     } catch (e) {
       debugPrint('[KioskIdle] start background service error: $e');
-    }
-  }
-
-  /// Cek dan minta izin SYSTEM_ALERT_WINDOW untuk Dynamic Island overlay.
-  /// Menampilkan instruksi khusus untuk MIUI/HyperOS (Xiaomi) yang punya
-  /// dua lapisan permission terpisah untuk floating window.
-  Future<bool> _requestOverlayPermission() async {
-    if (!Platform.isAndroid) return false;
-    try {
-      final granted = await FlutterOverlayWindow.isPermissionGranted();
-      debugPrint('[KioskIdle] overlay permission granted: $granted');
-      if (granted) return true; // sudah ada izin, langsung lanjut
-
-      if (!mounted) return false;
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.layers_rounded, color: Color(0xFFDC2626)),
-              SizedBox(width: 8),
-              Text('Izin Overlay Diperlukan',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Agar indikator kiosk mengambang (Dynamic Island) bisa tampil '
-                'di atas semua aplikasi, ikuti langkah berikut:',
-                style: TextStyle(fontSize: 13),
-              ),
-              SizedBox(height: 12),
-              _StepRow(step: '1', text: 'Tap "Buka Pengaturan" di bawah'),
-              SizedBox(height: 6),
-              _StepRow(
-                  step: '2', text: 'Cari "Absensi Enakko" → aktifkan toggle'),
-              SizedBox(height: 6),
-              _StepRow(step: '3', text: 'Kembali ke aplikasi ini'),
-              SizedBox(height: 12),
-              Text(
-                '📱 HP Xiaomi / MIUI / HyperOS:',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFDC2626)),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Setelah langkah di atas, buka juga:\n'
-                'Pengaturan → Aplikasi → Absensi Enakko\n'
-                '→ Izin Lainnya → Tampil di atas aplikasi lain → Izinkan',
-                style: TextStyle(fontSize: 12, color: Color(0xFF555555)),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Lewati'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                // Di Xiaomi/MIUI: buka halaman izin per-app MIUI secara langsung
-                // (menampilkan toggle "Tampil di latar belakang" yang sering terlewat).
-                // Di non-Xiaomi: fallback ke standard SYSTEM_ALERT_WINDOW settings.
-                bool openedMiui = false;
-                try {
-                  final miuiCh = MethodChannel('com.enakko.kiosk/miui_perms');
-                  openedMiui =
-                      await miuiCh.invokeMethod<bool>('openMiuiPermissions') ??
-                          false;
-                } catch (_) {}
-                if (!openedMiui) {
-                  await FlutterOverlayWindow.requestPermission();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626)),
-              child: const Text('Buka Pengaturan',
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      );
-      return await FlutterOverlayWindow.isPermissionGranted();
-    } catch (e) {
-      debugPrint('[KioskIdle] overlay permission error: $e');
-      return false;
     }
   }
 
@@ -228,6 +158,27 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
         ref.read(appProvider.notifier).setPendingCount(count);
       }
     } catch (_) {}
+  }
+
+  Future<void> _handleConnectivityChange(
+    List<ConnectivityResult> results,
+  ) async {
+    if (results.isEmpty || results.contains(ConnectivityResult.none)) {
+      return;
+    }
+
+    try {
+      final pendingCount = await SqliteService.countPendingLogs();
+      if (pendingCount <= 0) {
+        return;
+      }
+
+      await SyncService.syncPendingLogs();
+    } catch (_) {
+      // Passive reconnect sync is best-effort only.
+    } finally {
+      await _refreshPendingCount();
+    }
   }
 
   void _initAnimations() {
@@ -293,6 +244,55 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     } catch (_) {}
   }
 
+  Future<bool> _ensureScanContext(Employee employee) async {
+    final session = ref.read(appProvider).kioskSession;
+    if (session == null) return false;
+
+    try {
+      final context = await _authorityService.fetchContext(
+        employeeId: employee.id,
+        outletId: session.outletId,
+        deviceId: session.deviceId,
+      );
+      await EmployeeCacheService.instance.putScanContext(employee.id, context);
+      return true;
+    } catch (error) {
+      debugPrint('[KioskIdle] authority context fetch failed: $error');
+      final cachedContext =
+          await EmployeeCacheService.instance.getScanContext(employee.id);
+      return cachedContext != null;
+    }
+  }
+
+  void _showOfflineUnavailableState() {
+    if (!mounted) return;
+
+    setState(() => _kioskState = _KioskState.offlineUnavailable);
+    Future<void>.delayed(
+      Duration(milliseconds: AppConstants.errorResetDurationMs),
+      () {
+        if (mounted && _kioskState == _KioskState.offlineUnavailable) {
+          setState(() => _kioskState = _KioskState.idle);
+        }
+      },
+    );
+  }
+
+  Future<void> _continueToScan(Employee employee, int transitionDelayMs) async {
+    final hasContext = await _ensureScanContext(employee);
+    if (!hasContext) {
+      ref.read(appProvider.notifier).resetScanFlow();
+      _showOfflineUnavailableState();
+      return;
+    }
+
+    _showEmployeeToast(employee.name);
+    await Future<void>.delayed(Duration(milliseconds: transitionDelayMs));
+    if (mounted) {
+      context.push('/kiosk/scan');
+    }
+  }
+
   Future<void> _onNfcTag(String uid) async {
     if (_kioskState != _KioskState.idle) return;
     final session = ref.read(appProvider).kioskSession;
@@ -312,10 +312,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               'Backup di ${session.outletName}',
               session.outletId,
             );
-        _showEmployeeToast(cached.name);
-        await Future<void>.delayed(
-            const Duration(milliseconds: AppConstants.cacheFastPathDelayMs));
-        if (mounted) context.push('/kiosk/scan');
+        await _continueToScan(cached, AppConstants.cacheFastPathDelayMs);
         return;
       }
     }
@@ -367,10 +364,13 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
         ref.read(appProvider.notifier).setBackupMode(false, null, null);
         await EmployeeCacheService.instance.clearBackupMode(uid);
       }
-      _showEmployeeToast(cached.name);
-      await Future<void>.delayed(
-          const Duration(milliseconds: AppConstants.cacheFastPathDelayMs));
-      if (mounted) context.push('/kiosk/scan');
+      final activeEmployee = ref.read(appProvider).detectedEmployee;
+      if (activeEmployee != null) {
+        await _continueToScan(
+          activeEmployee,
+          AppConstants.cacheFastPathDelayMs,
+        );
+      }
       return;
     }
 
@@ -448,13 +448,17 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
         }
 
         setState(() => _kioskState = _KioskState.idle);
-        _showEmployeeToast(employee.name);
-        await Future<void>.delayed(
-            const Duration(milliseconds: AppConstants.scanTransitionDelayMs));
-        if (mounted) context.push('/kiosk/scan');
+        final activeEmployee = ref.read(appProvider).detectedEmployee;
+        if (activeEmployee != null) {
+          await _continueToScan(
+            activeEmployee,
+            AppConstants.scanTransitionDelayMs,
+          );
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _kioskState = _KioskState.idle);
+      ref.read(appProvider.notifier).resetScanFlow();
+      _showOfflineUnavailableState();
     }
   }
 
@@ -553,7 +557,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.danger.withOpacity(0.08),
+                color: AppColors.danger.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.logout_rounded,
@@ -608,7 +612,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                 debugPrint('[Logout] navigating to /setup');
                 context.go('/setup');
               } else {
-                debugPrint('[Logout] widget already unmounted (GoRouter redirect handled it)');
+                debugPrint(
+                    '[Logout] widget already unmounted (GoRouter redirect handled it)');
               }
             },
             child: const Text('Reset',
@@ -630,7 +635,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.admin_panel_settings_outlined,
@@ -677,6 +682,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     _fadeController.dispose();
     _glowController.dispose();
     _syncSlideController.dispose();
+    _connectivitySubscription?.cancel();
     _pendingRefreshTimer?.cancel();
     _nfcCheckTimer?.cancel();
     final cleanup = _nfcCleanup;
@@ -728,7 +734,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                   // ── TOP HEADER ─────────────────────────────────────────────
                   _buildHeader(session?.outletName, pendingCount),
 
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+                  const Divider(
+                      height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
 
                   // ── SYNC INDICATOR (hanya muncul jika ada pending) ─────────
                   _buildSyncIndicator(pendingCount),
@@ -773,7 +780,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
           color: const Color(0xFFFEF3C7),
           border: Border(
             bottom: BorderSide(
-              color: const Color(0xFFF59E0B).withOpacity(0.4),
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
               width: 1,
             ),
           ),
@@ -813,58 +820,58 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               context.push('/kiosk/diagnostics');
             },
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/images/logo_enakko.png',
-                      width: 32,
-                      height: 32,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Container(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/images/logo_enakko.png',
                         width: 32,
                         height: 32,
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(8),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 32,
+                          height: 32,
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.restaurant,
+                              color: AppColors.primary, size: 16),
                         ),
-                        child: const Icon(Icons.restaurant,
-                            color: AppColors.primary, size: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Absensi Enakko',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+                if (outletName != null) ...[
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 30),
+                    child: Text(
+                      outletName,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Absensi Enakko',
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
                 ],
-              ),
-              if (outletName != null) ...[
-                const SizedBox(height: 2),
-                Padding(
-                  padding: const EdgeInsets.only(left: 30),
-                  child: Text(
-                    outletName,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
               ],
-            ],
-          ),
+            ),
           ), // end GestureDetector
 
           const Spacer(),
@@ -876,8 +883,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               decoration: BoxDecoration(
                 color: const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -908,7 +916,9 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               decoration: BoxDecoration(
                 color: AppColors.dangerLight,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.danger.withOpacity(0.25)),
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: 0.25),
+                ),
               ),
               child: const Icon(Icons.logout_rounded,
                   size: 16, color: AppColors.danger),
@@ -950,7 +960,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
         color: const Color(0xFFFFF7ED), // warm amber bg
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFF59E0B).withOpacity(0.5),
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.5),
           width: 1.5,
         ),
       ),
@@ -1050,6 +1060,15 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
           title: 'Gagal Membaca Kartu',
           subtitle: 'Coba tempelkan kembali',
         );
+      case _KioskState.offlineUnavailable:
+        return _buildResultState(
+          icon: Icons.cloud_off_rounded,
+          iconColor: AppColors.danger,
+          ringColor: AppColors.danger,
+          title: 'Belum Bisa Diproses Offline',
+          subtitle:
+              'Karyawan ini belum tersimpan di perangkat. Sambungkan internet lalu coba lagi.',
+        );
     }
   }
 
@@ -1073,7 +1092,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFF59E0B).withOpacity(0.2),
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
                       width: 1.5,
                     ),
                   ),
@@ -1087,7 +1106,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.12),
+                    color: AppColors.primary.withValues(alpha: 0.12),
                     width: 1.5,
                   ),
                 ),
@@ -1100,7 +1119,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                 child: AnimatedBuilder(
                   animation: _pulseAnim,
                   builder: (context, child) => CustomPaint(
-                    painter: _GradientRingPainter(pulseValue: _pulseAnim.value - 1.0),
+                    painter: _GradientRingPainter(
+                        pulseValue: _pulseAnim.value - 1.0),
                     child: child,
                   ),
                   child: Container(
@@ -1212,8 +1232,11 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
           height: 128,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: ringColor.withOpacity(0.08),
-            border: Border.all(color: ringColor.withOpacity(0.25), width: 2),
+            color: ringColor.withValues(alpha: 0.08),
+            border: Border.all(
+              color: ringColor.withValues(alpha: 0.25),
+              width: 2,
+            ),
           ),
           child: Center(
             child: Icon(icon, size: 52, color: iconColor),
@@ -1247,8 +1270,6 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   // ---------------------------------------------------------------------------
 
   Widget _buildBottomBar() {
-    final isIdle = _kioskState == _KioskState.idle && _nfcAvailable;
-
     // Determine dot color & label based on combined state
     final Color dotColor;
     final String statusLabel;
@@ -1285,7 +1306,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
                   color: dotColor,
                   boxShadow: [
                     BoxShadow(
-                      color: dotColor.withOpacity(0.5),
+                      color: dotColor.withValues(alpha: 0.5),
                       blurRadius: 6,
                     ),
                   ],
@@ -1442,8 +1463,9 @@ class _OutletConfirmationDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFEF3C7),
                 shape: BoxShape.circle,
-                border:
-                    Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                ),
               ),
               child: const Icon(
                 Icons.swap_horiz_rounded,
@@ -1466,7 +1488,7 @@ class _OutletConfirmationDialog extends StatelessWidget {
 
             // Subtitle
             Text(
-              'Kamu sebelumnya absen di:\n${homeOutletName}',
+              'Kamu sebelumnya absen di:\n$homeOutletName',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -1647,9 +1669,9 @@ class _ActionButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             children: [
@@ -1667,7 +1689,7 @@ class _ActionButton extends StatelessWidget {
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                   fontSize: 10,
                 ),
               ),
@@ -1675,45 +1697,6 @@ class _ActionButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Helper widget untuk dialog instruksi overlay permission
-// ---------------------------------------------------------------------------
-class _StepRow extends StatelessWidget {
-  final String step;
-  final String text;
-  const _StepRow({required this.step, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 20,
-          height: 20,
-          decoration: const BoxDecoration(
-            color: Color(0xFFDC2626),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            step,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 13)),
-        ),
-      ],
     );
   }
 }

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/supabase_client.dart';
-import '../../core/theme.dart';
-import '../../models/employee.dart';
-import '../../models/outlet.dart';
-import '../../providers/app_provider.dart';
-import '../../widgets/app_card.dart';
-import '../../widgets/app_empty_state.dart';
-import '../../widgets/app_toast.dart';
-import '../../widgets/employee_contract_badge.dart';
-import '../../widgets/shimmer_skeleton.dart';
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/outlet.dart';
+import 'package:absensi_enakko_flutter/providers/app_provider.dart';
+import 'package:absensi_enakko_flutter/widgets/app_card.dart';
+import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
+import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
+import 'package:absensi_enakko_flutter/widgets/employee_contract_badge.dart';
+import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 
 class ArchivedEmployeesScreen extends ConsumerStatefulWidget {
   const ArchivedEmployeesScreen({super.key});

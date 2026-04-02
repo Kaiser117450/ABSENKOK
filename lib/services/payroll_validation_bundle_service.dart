@@ -1,4 +1,4 @@
-import '../models/payroll_rollout_acceptance.dart';
+import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
 
 typedef PayrollValidationBundleNowProvider = DateTime Function();
 

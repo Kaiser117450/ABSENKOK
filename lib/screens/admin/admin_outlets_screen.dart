@@ -2,16 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/supabase_client.dart';
-import '../../core/theme.dart';
-import '../../widgets/app_card.dart';
-import '../../widgets/app_empty_state.dart';
-import '../../widgets/shimmer_skeleton.dart';
-import '../../widgets/app_toast.dart';
-
-import '../../models/outlet.dart';
-import '../../models/outlet_operating_mode.dart';
-import '../../widgets/outlet_mode_badge.dart';
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/outlet.dart';
+import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
+import 'package:absensi_enakko_flutter/widgets/app_card.dart';
+import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
+import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
+import 'package:absensi_enakko_flutter/widgets/outlet_mode_badge.dart';
+import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 
 class AdminOutletsScreen extends ConsumerStatefulWidget {
   const AdminOutletsScreen({super.key});
@@ -176,7 +175,7 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.4),
+                          color: AppColors.accent.withValues(alpha: 0.4),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -300,9 +299,9 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -319,7 +318,7 @@ class _MiniStat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
@@ -519,9 +518,9 @@ class _ActionBtn extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           shape: BoxShape.circle,
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Icon(icon, size: 16, color: color),
       ),
@@ -620,16 +619,23 @@ class _OutletSheetState extends State<_OutletSheet> {
         }
       } else {
         // Create baru: nama, alamat, password (di-hash via RPC)
+        final outletName = _nameCtrl.text.trim();
+        final outletAddress = _addressCtrl.text.trim().isEmpty
+            ? null
+            : _addressCtrl.text.trim();
         final password = _passwordCtrl.text;
-        await SupabaseClientFactory.admin.rpc(
+        final createResult = await SupabaseClientFactory.admin.rpc(
           'create_outlet_with_password',
           params: {
-            'outlet_name': _nameCtrl.text.trim(),
-            'outlet_address': _addressCtrl.text.trim().isEmpty
-                ? null
-                : _addressCtrl.text.trim(),
+            'outlet_name': outletName,
+            'outlet_address': outletAddress,
             'password': password,
           },
+        );
+        await _persistCreatedOutletMode(
+          createResult: createResult,
+          outletName: outletName,
+          selectedMode: _selectedMode,
         );
       }
 
@@ -643,6 +649,64 @@ class _OutletSheetState extends State<_OutletSheet> {
         });
       }
     }
+  }
+
+  Future<void> _persistCreatedOutletMode({
+    required dynamic createResult,
+    required String outletName,
+    required OutletOperatingMode selectedMode,
+  }) async {
+    if (selectedMode == OutletOperatingMode.normal) {
+      return;
+    }
+
+    final outletId =
+        _extractCreatedOutletId(createResult) ?? await _lookupCreatedOutletId(outletName);
+    if (outletId == null) {
+      throw Exception(
+        'Gerai berhasil dibuat, tetapi mode operasi belum bisa dipastikan tersimpan.',
+      );
+    }
+
+    await SupabaseClientFactory.admin.from('outlets').update({
+      'operating_mode': selectedMode.dbValue,
+    }).eq('id', outletId);
+  }
+
+  String? _extractCreatedOutletId(dynamic createResult) {
+    if (createResult is String && createResult.isNotEmpty) {
+      return createResult;
+    }
+
+    if (createResult is Map) {
+      final id = createResult['id'] ??
+          createResult['outlet_id'] ??
+          createResult['outletId'];
+      return id is String && id.isNotEmpty ? id : null;
+    }
+
+    if (createResult is List && createResult.isNotEmpty) {
+      return _extractCreatedOutletId(createResult.first);
+    }
+
+    return null;
+  }
+
+  Future<String?> _lookupCreatedOutletId(String outletName) async {
+    final data = await SupabaseClientFactory.admin
+        .from('outlets')
+        .select('id')
+        .eq('name', outletName)
+        .order('created_at', ascending: false)
+        .limit(1);
+
+    if (data.isEmpty) return null;
+
+    final first = data.first;
+    final id = first['id'];
+    if (id is String && id.isNotEmpty) return id;
+
+    return null;
   }
 
   @override
@@ -685,7 +749,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -838,7 +902,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                               color: const Color(0xFFFFF7ED),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                  color: const Color(0xFFF59E0B).withOpacity(0.4)),
+                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
                             ),
                             child: const Row(
                               children: [
@@ -884,7 +948,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                               ),
                               value: _isActive,
                               onChanged: (v) => setState(() => _isActive = v),
-                              activeColor: AppColors.success,
+                              activeThumbColor: AppColors.success,
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -903,7 +967,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: _showPasswordReset
-                                      ? AppColors.danger.withOpacity(0.3)
+                                      ? AppColors.danger.withValues(alpha: 0.3)
                                       : AppColors.border,
                                 ),
                               ),
@@ -987,7 +1051,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                     color: const Color(0xFFF59E0B)
-                                        .withOpacity(0.4)),
+                                        .withValues(alpha: 0.4)),
                               ),
                               child: const Row(
                                 children: [
@@ -1022,7 +1086,7 @@ class _OutletSheetState extends State<_OutletSheet> {
                         color: AppColors.dangerLight,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: AppColors.danger.withOpacity(0.3)),
+                            color: AppColors.danger.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [

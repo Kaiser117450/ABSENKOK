@@ -1,8 +1,8 @@
-import '../models/attendance_log.dart';
-import '../models/attendance_policy_recap_day.dart';
-import '../models/employee.dart';
-import '../models/outlet_operating_mode.dart';
-import 'legacy_payroll_recap_fallback_service.dart';
+import 'package:absensi_enakko_flutter/models/attendance_log.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
+import 'package:absensi_enakko_flutter/services/legacy_payroll_recap_fallback_service.dart';
 
 class AdminPolicyRecapDatasetResult {
   const AdminPolicyRecapDatasetResult({

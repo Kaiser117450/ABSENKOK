@@ -3,6 +3,8 @@
 /// Pure Dart — no Flutter imports — easily unit-testable.
 library;
 
+import 'employee_contract.dart';
+
 /// A single row parsed from the CSV file.
 class CsvRow {
   /// 1-based row number from CSV (excluding header).
@@ -10,6 +12,7 @@ class CsvRow {
   final String nama;
   final String? jabatan;
   final String gerai;
+  final String kontrak;
   final String? fotoUrl;
 
   const CsvRow({
@@ -17,12 +20,13 @@ class CsvRow {
     required this.nama,
     this.jabatan,
     required this.gerai,
+    required this.kontrak,
     this.fotoUrl,
   });
 
   @override
   String toString() =>
-      'CsvRow(row=$rowNumber, nama=$nama, jabatan=$jabatan, gerai=$gerai, fotoUrl=$fotoUrl)';
+      'CsvRow(row=$rowNumber, nama=$nama, jabatan=$jabatan, gerai=$gerai, kontrak=$kontrak, fotoUrl=$fotoUrl)';
 }
 
 /// Validation result for a single [CsvRow].
@@ -31,12 +35,14 @@ class CsvRowValidation {
   final List<String> errors;
   final String? resolvedOutletId;
   final String? resolvedOutletName;
+  final EmployeeContract? resolvedContract;
 
   const CsvRowValidation({
     required this.row,
     required this.errors,
     this.resolvedOutletId,
     this.resolvedOutletName,
+    this.resolvedContract,
   });
 
   /// True when no validation errors were found.

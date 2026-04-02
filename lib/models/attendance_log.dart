@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'employee.dart';
-import 'outlet.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/outlet.dart';
 
 enum AttendanceType { masuk, breakTime, pulang, kembali, sakit, izin }
 
@@ -93,6 +93,52 @@ extension AttendanceTypeExt on AttendanceType {
   }
 }
 
+enum AttendanceCaptureMode { live, queued }
+
+extension AttendanceCaptureModeExt on AttendanceCaptureMode {
+  String get value {
+    switch (this) {
+      case AttendanceCaptureMode.live:
+        return 'live';
+      case AttendanceCaptureMode.queued:
+        return 'queued';
+    }
+  }
+
+  static AttendanceCaptureMode fromString(String? raw) {
+    switch (raw?.trim().toLowerCase()) {
+      case 'queued':
+        return AttendanceCaptureMode.queued;
+      case 'live':
+      default:
+        return AttendanceCaptureMode.live;
+    }
+  }
+}
+
+enum InitialScanIntent { none, breakFirst }
+
+extension InitialScanIntentExt on InitialScanIntent {
+  String get value {
+    switch (this) {
+      case InitialScanIntent.none:
+        return 'none';
+      case InitialScanIntent.breakFirst:
+        return 'break_first';
+    }
+  }
+
+  static InitialScanIntent fromString(String? raw) {
+    switch (raw?.trim().toLowerCase()) {
+      case 'break_first':
+        return InitialScanIntent.breakFirst;
+      case 'none':
+      default:
+        return InitialScanIntent.none;
+    }
+  }
+}
+
 class AttendanceLog {
   final String id;
   final String employeeId;
@@ -108,6 +154,11 @@ class AttendanceLog {
   final String createdAt;
   final bool isBackup; // true jika karyawan backup di gerai lain
   final String? notes; // keterangan backup
+  final DateTime? deviceCapturedAt;
+  final AttendanceCaptureMode captureMode;
+  final int? queueOrder;
+  final InitialScanIntent initialScanIntent;
+  final bool requiresAdminReview;
 
   // Joined fields (from Supabase select with joins)
   final Employee? employee;
@@ -128,6 +179,11 @@ class AttendanceLog {
     required this.createdAt,
     this.isBackup = false,
     this.notes,
+    this.deviceCapturedAt,
+    this.captureMode = AttendanceCaptureMode.live,
+    this.queueOrder,
+    this.initialScanIntent = InitialScanIntent.none,
+    this.requiresAdminReview = false,
     this.employee,
     this.outlet,
   });
@@ -159,8 +215,39 @@ class AttendanceLog {
       createdAt: json['created_at'] as String? ?? '',
       isBackup: json['is_backup'] as bool? ?? false,
       notes: json['notes'] as String?,
+      deviceCapturedAt: _readDateTime(json['device_captured_at']),
+      captureMode: AttendanceCaptureModeExt.fromString(
+        json['capture_mode']?.toString(),
+      ),
+      queueOrder: _readInt(json['queue_order']),
+      initialScanIntent: InitialScanIntentExt.fromString(
+        json['initial_scan_intent']?.toString(),
+      ),
+      requiresAdminReview: _readBool(json['requires_admin_review']),
       employee: emp,
       outlet: outl,
     );
+  }
+
+  static DateTime? _readDateTime(Object? raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    final value = raw.toString().trim();
+    if (value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  static int? _readInt(Object? raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw.toString());
+  }
+
+  static bool _readBool(Object? raw) {
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    final value = raw?.toString().trim().toLowerCase();
+    return value == 'true' || value == 't' || value == '1';
   }
 }

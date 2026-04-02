@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../models/employee.dart';
+import '../models/kiosk_scan_context.dart';
 
 /// In-memory cache untuk employee lookup berdasarkan NFC UID.
 /// TTL 5 menit — kartu NFC karyawan bisa berpindah outlet sewaktu-waktu,
@@ -16,6 +17,7 @@ class EmployeeCacheService {
   static const _backupTtl = Duration(hours: 5); // TTL 5 jam untuk backup mode
   
   final _cache = <String, _CachedEntry>{};
+  final _scanContextCache = <String, _ScanContextEntry>{};
   final _backupCache = <String, _BackupEntry>{}; // Cache untuk backup mode
 
   // Mutex implementation for thread-safety against race conditions
@@ -67,6 +69,38 @@ class EmployeeCacheService {
     }
   }
 
+  /// Ambil scan context cache untuk employee. Return null jika tidak ada atau expired.
+  Future<KioskScanContext?> getScanContext(String employeeId) async {
+    await _acquireLock();
+    try {
+      final entry = _scanContextCache[employeeId];
+      if (entry == null) return null;
+      if (DateTime.now().difference(entry.cachedAt) > _ttl) {
+        _scanContextCache.remove(employeeId);
+        return null;
+      }
+      return entry.context;
+    } finally {
+      _releaseLock();
+    }
+  }
+
+  /// Simpan authority scan context dalam lifecycle cache yang sama dengan employee cache.
+  Future<void> putScanContext(
+    String employeeId,
+    KioskScanContext context,
+  ) async {
+    await _acquireLock();
+    try {
+      _scanContextCache[employeeId] = _ScanContextEntry(
+        context: context,
+        cachedAt: DateTime.now(),
+      );
+    } finally {
+      _releaseLock();
+    }
+  }
+
   /// Cek apakah karyawan masih dalam mode backup (TTL 5 jam)
   /// Return backup outlet ID jika masih valid, null jika expired
   Future<String?> getBackupOutletId(String uid) async {
@@ -113,6 +147,7 @@ class EmployeeCacheService {
     await _acquireLock();
     try {
       _cache.clear();
+      _scanContextCache.clear();
       _backupCache.clear();
     } finally {
       _releaseLock();
@@ -128,6 +163,12 @@ class _CachedEntry {
   final Employee employee;
   final DateTime cachedAt;
   const _CachedEntry({required this.employee, required this.cachedAt});
+}
+
+class _ScanContextEntry {
+  final KioskScanContext context;
+  final DateTime cachedAt;
+  const _ScanContextEntry({required this.context, required this.cachedAt});
 }
 
 class _BackupEntry {

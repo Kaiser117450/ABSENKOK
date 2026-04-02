@@ -1,5 +1,5 @@
-import 'attendance_policy_signal.dart';
-import 'shift_band.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_signal.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
 
 enum AttendancePolicyStatus {
   hadir,

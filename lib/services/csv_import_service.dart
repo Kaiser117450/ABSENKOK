@@ -12,9 +12,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase_client.dart';
 import '../models/csv_import_result.dart';
+import '../models/employee_contract.dart';
 
 /// Expected CSV column headers (case-insensitive).
-const _expectedHeaders = ['nama', 'jabatan', 'gerai', 'foto_url'];
+const _expectedHeaders = ['nama', 'jabatan', 'gerai', 'kontrak', 'foto_url'];
 
 class CsvImportService {
   // ──────────────────────────────────────────────────────────────────
@@ -81,13 +82,15 @@ class CsvImportService {
       final nama = _cell(row, 0);
       final jabatan = _cellOrNull(row, 1);
       final gerai = _cell(row, 2);
-      final fotoUrl = _cellOrNull(row, 3);
+      final kontrak = _cell(row, 3);
+      final fotoUrl = _cellOrNull(row, 4);
 
       dataRows.add(CsvRow(
         rowNumber: dataRows.length + 1,
         nama: nama,
         jabatan: jabatan,
         gerai: gerai,
+        kontrak: kontrak,
         fotoUrl: fotoUrl,
       ));
     }
@@ -123,6 +126,7 @@ class CsvImportService {
       final errors = <String>[];
       String? resolvedOutletId;
       String? resolvedOutletName;
+      EmployeeContract? resolvedContract;
 
       // --- nama validation ---
       final namaTrimmed = row.nama.trim();
@@ -143,6 +147,19 @@ class CsvImportService {
         resolvedOutletName = outletNameDisplay[key];
         if (resolvedOutletId == null) {
           errors.add('Outlet "$geraiTrimmed" tidak ditemukan');
+        }
+      }
+
+      // --- kontrak validation ---
+      final kontrakTrimmed = row.kontrak.trim();
+      if (kontrakTrimmed.isEmpty) {
+        errors.add('Kontrak wajib diisi (FULLTIME atau PARTTIME)');
+      } else {
+        resolvedContract = EmployeeContract.tryParse(kontrakTrimmed);
+        if (resolvedContract == null) {
+          errors.add(
+            'Kontrak "$kontrakTrimmed" tidak valid. Gunakan FULLTIME atau PARTTIME',
+          );
         }
       }
 
@@ -181,6 +198,7 @@ class CsvImportService {
         errors: errors,
         resolvedOutletId: errors.isEmpty ? resolvedOutletId : null,
         resolvedOutletName: errors.isEmpty ? resolvedOutletName : null,
+        resolvedContract: resolvedContract,
       ));
     }
 
@@ -206,6 +224,7 @@ class CsvImportService {
                   ? v.row.jabatan!.trim()
                   : null,
               'home_outlet_id': v.resolvedOutletId,
+              'employment_contract': v.resolvedContract!.dbValue,
               'photo_url': v.row.fotoUrl?.trim().isNotEmpty == true
                   ? v.row.fotoUrl!.trim()
                   : null,
@@ -221,9 +240,9 @@ class CsvImportService {
   /// Generate a CSV template string with headers and sample rows.
   static String generateTemplateCsv() {
     final buffer = StringBuffer();
-    buffer.writeln('nama,jabatan,gerai,foto_url');
-    buffer.writeln('Ahmad Fauzi,Kasir,Panjer,');
-    buffer.writeln('Budi Santoso,Koki,Ahmad Yani,');
+    buffer.writeln('nama,jabatan,gerai,kontrak,foto_url');
+    buffer.writeln('Ahmad Fauzi,Kasir,Panjer,FULLTIME,');
+    buffer.writeln('Budi Santoso,Koki,Ahmad Yani,PARTTIME,');
     return buffer.toString();
   }
 

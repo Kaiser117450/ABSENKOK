@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme.dart';
-import '../../../models/payroll_rollout_acceptance.dart';
-import '../../../services/payroll_rollout_acceptance_service.dart';
-import '../../../widgets/app_card.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
+import 'package:absensi_enakko_flutter/services/payroll_rollout_acceptance_service.dart';
+import 'package:absensi_enakko_flutter/widgets/app_card.dart';
 
 class PayrollRolloutAcceptancePanel extends StatefulWidget {
   const PayrollRolloutAcceptancePanel({

@@ -109,6 +109,8 @@ class PdfService {
     }
   }
 
+  static Future<Uint8List?> loadBrandLogo() => _loadLogo();
+
   /// Build logo widget — image if available, red "E" box fallback
   static pw.Widget _buildLogo(Uint8List? logoBytes, {double size = 50}) {
     if (logoBytes != null) {
@@ -997,8 +999,9 @@ class PdfService {
     if (entry.status == ScheduleStatus.sakit) return 'Sakit';
     if (entry.status == ScheduleStatus.izin) return 'Izin';
     if (entry.status == ScheduleStatus.libur) return 'Libur';
-    if (entry.isCustomName && entry.displayName != 'Unknown')
+    if (entry.isCustomName && entry.displayName != 'Unknown') {
       return entry.displayName.toUpperCase();
+    }
 
     final name = entry.shift.name.toLowerCase();
     if (name.contains('pagi')) return 'Pagi';

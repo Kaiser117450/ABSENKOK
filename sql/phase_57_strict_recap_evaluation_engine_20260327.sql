@@ -326,26 +326,16 @@ BEGIN
   attendance_events AS (
     SELECT
       re.*,
-      CASE
-        WHEN re.operating_mode = 'TWENTY_FOUR_HOUR'::public.outlet_operating_mode THEN
-          concat(
-            re.employee_id::text,
-            ':',
-            re.outlet_id::text,
-            ':',
-            CASE
-              WHEN re.chain_seed = 0 THEN to_char(re.local_date, 'YYYYMMDD')
-              ELSE lpad(re.chain_seed::text, 6, '0')
-            END
-          )
-        ELSE concat(
-          re.employee_id::text,
-          ':',
-          re.outlet_id::text,
-          ':',
-          to_char(re.local_date, 'YYYYMMDD')
-        )
-      END AS logical_chain_id
+      concat(
+        re.employee_id::text,
+        ':',
+        re.outlet_id::text,
+        ':',
+        CASE
+          WHEN re.chain_seed = 0 THEN to_char(re.local_date, 'YYYYMMDD')
+          ELSE lpad(re.chain_seed::text, 6, '0')
+        END
+      ) AS logical_chain_id
     FROM raw_events re
   ),
   event_order AS (

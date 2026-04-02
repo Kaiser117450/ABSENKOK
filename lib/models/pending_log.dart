@@ -41,6 +41,10 @@ class PendingLog {
   final double? lng;
   final String deviceId;
   final String scannedAt;
+  final DateTime? deviceCapturedAt;
+  final AttendanceCaptureMode captureMode;
+  final int queueOrder;
+  final InitialScanIntent initialScanIntent;
   final SyncStatus syncStatus;
   final int retryCount;
   final String createdAt;
@@ -56,6 +60,10 @@ class PendingLog {
     this.lng,
     required this.deviceId,
     required this.scannedAt,
+    this.deviceCapturedAt,
+    this.captureMode = AttendanceCaptureMode.queued,
+    required this.queueOrder,
+    this.initialScanIntent = InitialScanIntent.none,
     required this.syncStatus,
     required this.retryCount,
     required this.createdAt,
@@ -72,6 +80,14 @@ class PendingLog {
         lng: map['lng'] as double?,
         deviceId: map['device_id'] as String,
         scannedAt: map['scanned_at'] as String,
+        deviceCapturedAt: _readDateTime(map['device_captured_at']),
+        captureMode: AttendanceCaptureModeExt.fromString(
+          map['capture_mode']?.toString(),
+        ),
+        queueOrder: _readInt(map['queue_order']) ?? 0,
+        initialScanIntent: InitialScanIntentExt.fromString(
+          map['initial_scan_intent']?.toString(),
+        ),
         syncStatus: SyncStatusExt.fromString(map['sync_status'] as String),
         retryCount: map['retry_count'] as int? ?? 0,
         createdAt: map['created_at'] as String? ?? '',
@@ -88,10 +104,29 @@ class PendingLog {
         'lng': lng,
         'device_id': deviceId,
         'scanned_at': scannedAt,
+        'device_captured_at': deviceCapturedAt?.toUtc().toIso8601String(),
+        'capture_mode': captureMode.value,
+        'queue_order': queueOrder,
+        'initial_scan_intent': initialScanIntent.value,
         'sync_status': syncStatus.value,
         'retry_count': retryCount,
         'created_at': createdAt,
         'is_backup': isBackup ? 1 : 0,
         'notes': notes,
       };
+
+  static DateTime? _readDateTime(Object? raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    final value = raw.toString().trim();
+    if (value.isEmpty) return null;
+    return DateTime.tryParse(value);
+  }
+
+  static int? _readInt(Object? raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw.toString());
+  }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/outlet_operating_mode.dart';
+import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
 
 /// Compact informative badge showing the outlet's operating mode.
 ///

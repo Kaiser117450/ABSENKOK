@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
-import '../../../models/employee.dart';
-import '../../../models/shift_schedule.dart';
-import '../../../models/attendance_log.dart';
-import 'schedule_cells.dart';
+import 'package:absensi_enakko_flutter/models/attendance_log.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_cells.dart';
 
 /// Wraps [TableView.builder] with pinned header row and employee column.
 ///

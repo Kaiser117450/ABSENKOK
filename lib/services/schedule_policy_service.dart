@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/employee_contract.dart';
-import '../models/shift_band.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
 
 class SchedulePolicyService {
   static const int fulltimeRequiredWorkMinutes = 600;
@@ -43,6 +43,17 @@ class SchedulePolicyService {
       case EmployeeContract.parttime:
         return parttimeBreakFirstExtensionMinutes;
     }
+  }
+
+  static int payrollBreakAllowanceMinutes({
+    required EmployeeContract contract,
+    bool isOvertime = false,
+  }) {
+    if (isOvertime) {
+      return fulltimeBreakFirstExtensionMinutes;
+    }
+
+    return breakFirstExtensionMinutes(contract);
   }
 
   static bool isLate({

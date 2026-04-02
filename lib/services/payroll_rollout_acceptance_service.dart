@@ -1,4 +1,4 @@
-import '../models/payroll_rollout_acceptance.dart';
+import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
 
 const String payrollRolloutAdditiveOnlyTitle = 'Mode rollout additive';
 const String payrollRolloutAdditiveOnlyBody =

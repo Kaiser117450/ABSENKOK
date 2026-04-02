@@ -354,10 +354,19 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Format: nama, jabatan, gerai, foto_url',
+              'Format: nama, jabatan, gerai, kontrak, foto_url',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Kolom kontrak wajib diisi dengan FULLTIME atau PARTTIME.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textMuted,
               ),
               textAlign: TextAlign.center,
             ),
@@ -456,6 +465,7 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                   DataColumn(label: Text('Nama', style: TextStyle(fontWeight: FontWeight.w700))),
                   DataColumn(label: Text('Jabatan', style: TextStyle(fontWeight: FontWeight.w700))),
                   DataColumn(label: Text('Gerai', style: TextStyle(fontWeight: FontWeight.w700))),
+                  DataColumn(label: Text('Kontrak', style: TextStyle(fontWeight: FontWeight.w700))),
                   DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
                 ],
                 rows: _validations.asMap().entries.map((entry) {
@@ -477,6 +487,16 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
                         v.isValid
                             ? (v.resolvedOutletName ?? v.row.gerai)
                             : v.row.gerai,
+                      )),
+                      DataCell(Text(
+                        _buildContractPreviewLabel(v),
+                        style: TextStyle(
+                          color: v.isValid
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                          fontWeight:
+                              v.isValid ? FontWeight.w600 : FontWeight.w500,
+                        ),
                       )),
                       DataCell(
                         v.isValid
@@ -615,6 +635,15 @@ class _CsvImportScreenState extends ConsumerState<CsvImportScreen> {
               ),
             ),
     );
+  }
+
+  String _buildContractPreviewLabel(CsvRowValidation validation) {
+    if (validation.isValid) {
+      return validation.resolvedContract?.label ?? validation.row.kontrak;
+    }
+
+    final rawValue = validation.row.kontrak.trim();
+    return rawValue.isEmpty ? '-' : rawValue;
   }
 
   // ──────────────────────────────────────────────────────────────────

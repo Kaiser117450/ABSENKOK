@@ -30,7 +30,7 @@ class ScheduleGenerator {
     
     // 1. Buat map request libur: {employeeId: Set<tanggal>}
     final dayOffMap = <String, Set<DateTime>>{};
-    for (final req in timeOffRequests.where((r) => r.status == 'approved')) {
+    for (final req in timeOffRequests.where((r) => r.status == TimeOffStatus.approved)) {
       dayOffMap.putIfAbsent(req.employeeId, () => <DateTime>{}).add(
         DateTime(req.requestDate.year, req.requestDate.month, req.requestDate.day),
       );
@@ -46,7 +46,7 @@ class ScheduleGenerator {
     final availableManDays = employees.length * maxDaysPerWeek * (template.slots.length > 1 ? 1 : 2);
     if (availableManDays < totalSlotsNeeded) {
       // Warning: akan ada slot yang kosong (OPEN)
-      print('[ScheduleGenerator] WARNING: Understaffed! Need $totalSlotsNeeded slots, have $availableManDays');
+      debugPrint('[ScheduleGenerator] WARNING: Understaffed! Need $totalSlotsNeeded slots, have $availableManDays');
     }
 
     // 4. Track hari kerja per karyawan
@@ -168,8 +168,6 @@ class ScheduleGenerator {
     }
 
     // Cari karyawan yang kelebihan dan kekurangan
-    final avgDays = workDays.values.isEmpty ? 0 : workDays.values.reduce((a, b) => a + b) / workDays.length;
-    
     // TODO: Implementasi algoritma balancing yang lebih canggih
     // Untuk sekarang, return entries as-is
     return entries;

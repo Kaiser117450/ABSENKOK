@@ -7,15 +7,46 @@ import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_table_view
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _SchedulePolicyHarness extends StatefulWidget {
+  const _SchedulePolicyHarness();
+
+  @override
+  State<_SchedulePolicyHarness> createState() => _SchedulePolicyHarnessState();
+}
+
+class _SchedulePolicyHarnessState extends State<_SchedulePolicyHarness> {
+  bool _visible = true;
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: _visible
+            ? SchedulePolicySummaryCard(
+                isExpanded: _expanded,
+                onToggleExpanded: () {
+                  setState(() {
+                    _expanded = !_expanded;
+                  });
+                },
+                onDismiss: () {
+                  setState(() {
+                    _visible = false;
+                  });
+                },
+              )
+            : const SizedBox.shrink(),
+      ),
+    );
+  }
+}
+
 void main() {
   group('SchedulePolicySummaryCard', () {
     testWidgets('renders locked policy copy and WITA cutoffs', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: SchedulePolicySummaryCard(),
-          ),
-        ),
+        const _SchedulePolicyHarness(),
       );
 
       expect(find.text('Aturan Jadwal Minggu Ini'), findsOneWidget);
@@ -27,6 +58,39 @@ void main() {
       );
       expect(find.text('Pagi 07:00\nSiang 10:00\nSore 15:00'), findsOneWidget);
       expect(find.text('FULLTIME 10j\nPARTTIME 9j'), findsOneWidget);
+    });
+
+    testWidgets('collapses into a compact summary state', (tester) async {
+      await tester.pumpWidget(
+        const _SchedulePolicyHarness(),
+      );
+
+      await tester
+          .tap(find.byKey(const ValueKey<String>('schedule-policy-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aturan Jadwal Minggu Ini'), findsOneWidget);
+      expect(
+        find.text(
+          'Ringkas aturan jadwal. Buka lagi jika perlu lihat detail.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Pagi 07:00\nSiang 10:00\nSore 15:00'), findsNothing);
+    });
+
+    testWidgets('dismisses the card for the current screen session',
+        (tester) async {
+      await tester.pumpWidget(
+        const _SchedulePolicyHarness(),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('schedule-policy-dismiss')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aturan Jadwal Minggu Ini'), findsNothing);
     });
   });
 

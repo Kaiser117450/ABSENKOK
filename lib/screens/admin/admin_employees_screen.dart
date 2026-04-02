@@ -3,23 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/supabase_client.dart';
-import '../../core/theme.dart';
-import '../../models/employee.dart';
-import '../../models/employee_contract.dart';
-import '../../models/outlet.dart';
-import '../../providers/app_provider.dart';
-import '../../widgets/employee_contract_badge.dart';
-import '../../services/nfc_service.dart';
-import '../../services/badge_service.dart';
-import '../../widgets/app_card.dart';
-import '../../widgets/app_empty_state.dart';
-import '../../widgets/app_toast.dart';
-import '../../widgets/badge_avatar.dart';
-import '../../widgets/shimmer_skeleton.dart';
-import 'badge_management_screen.dart';
-import 'sakit_izin_dialog.dart';
-import 'sakit_izin_list_screen.dart';
+import 'package:absensi_enakko_flutter/core/supabase_client.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/outlet.dart';
+import 'package:absensi_enakko_flutter/providers/app_provider.dart';
+import 'package:absensi_enakko_flutter/screens/admin/badge_management_screen.dart';
+import 'package:absensi_enakko_flutter/screens/admin/sakit_izin_dialog.dart';
+import 'package:absensi_enakko_flutter/screens/admin/sakit_izin_list_screen.dart';
+import 'package:absensi_enakko_flutter/services/badge_service.dart';
+import 'package:absensi_enakko_flutter/services/nfc_service.dart';
+import 'package:absensi_enakko_flutter/widgets/app_card.dart';
+import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
+import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
+import 'package:absensi_enakko_flutter/widgets/badge_avatar.dart';
+import 'package:absensi_enakko_flutter/widgets/employee_contract_badge.dart';
+import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 
 class AdminEmployeesScreen extends ConsumerStatefulWidget {
   const AdminEmployeesScreen({super.key});
@@ -342,10 +342,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: AppColors.textMuted.withOpacity(0.1),
+                              color: AppColors.textMuted.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: AppColors.textMuted.withOpacity(0.2)),
+                                  color: AppColors.textMuted.withValues(alpha: 0.2)),
                             ),
                             child: const Tooltip(
                               message: 'Riwayat Karyawan',
@@ -394,7 +394,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.4),
+                          color: AppColors.accent.withValues(alpha: 0.4),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -473,10 +473,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withOpacity(0.08),
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: const Color(0xFFF59E0B).withOpacity(0.18)),
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.18)),
                       ),
                       child: const Icon(Icons.workspace_premium,
                           size: 20, color: Color(0xFFF59E0B)),
@@ -635,7 +635,7 @@ class _ArchiveConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.danger.withOpacity(0.15),
+                      color: AppColors.danger.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.archive_outlined,
@@ -662,9 +662,10 @@ class _ArchiveConfirmDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.1),
+                      color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                      border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -731,9 +732,9 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -750,7 +751,7 @@ class _MiniStat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
@@ -1052,9 +1053,9 @@ class _ActionBtn extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Icon(icon, size: 16, color: color),
         ),
@@ -1211,7 +1212,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.15),
+                            color: AppColors.accent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.nfc, color: AppColors.accent, size: 22),
@@ -1247,7 +1248,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.accent.withOpacity(0.1),
+                            color: AppColors.accent.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.contactless,
@@ -1599,7 +1600,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -1632,10 +1633,12 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                             prefixIcon: Icon(Icons.person_outline, size: 20),
                           ),
                           validator: (v) {
-                            if (v == null || v.trim().isEmpty)
+                            if (v == null || v.trim().isEmpty) {
                               return 'Nama wajib diisi';
-                            if (v.trim().length < 3)
+                            }
+                            if (v.trim().length < 3) {
                               return 'Nama minimal 3 karakter';
+                            }
                             return null;
                           },
                         ),
@@ -1657,7 +1660,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                         ),
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
-                          value: _selectedOutletId,
+                          initialValue: _selectedOutletId,
                           decoration: InputDecoration(
                             labelText: 'Outlet',
                             prefixIcon:
@@ -1767,7 +1770,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                             ),
                             value: _isActive,
                             onChanged: (v) => setState(() => _isActive = v),
-                            activeColor: AppColors.success,
+                            activeThumbColor: AppColors.success,
                           ),
                         ),
                       ],
@@ -1782,7 +1785,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                         color: AppColors.dangerLight,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: AppColors.danger.withOpacity(0.3)),
+                            color: AppColors.danger.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [

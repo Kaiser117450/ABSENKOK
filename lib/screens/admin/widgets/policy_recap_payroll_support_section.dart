@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
-import '../../../core/theme.dart';
-import '../../../models/payroll_rollout_acceptance.dart';
-import '../../../widgets/app_card.dart';
+import 'package:absensi_enakko_flutter/core/theme.dart';
+import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
+import 'package:absensi_enakko_flutter/widgets/app_card.dart';
 
 class PolicyRecapPayrollSupportSection extends StatelessWidget {
   const PolicyRecapPayrollSupportSection({

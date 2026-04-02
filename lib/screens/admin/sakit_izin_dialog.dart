@@ -91,7 +91,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
   Future<bool> _checkDuplicate() async {
     if (widget.existingLog != null) {
       // In edit mode, skip duplicate check if same date
-      final existingDate = DateTime.parse(widget.existingLog!.scannedAt).toLocal();
+      final existingDate =
+          DateTime.parse(widget.existingLog!.scannedAt).toLocal();
       if (existingDate.year == _selectedDate.year &&
           existingDate.month == _selectedDate.month &&
           existingDate.day == _selectedDate.day) {
@@ -99,7 +100,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
       }
     }
 
-    final dayStart = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final dayStart =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
 
     try {
@@ -119,7 +121,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
   }
 
   Future<void> _submit() async {
-    if (_notesCtrl.text.trim().isEmpty && _selectedType == AttendanceType.izin) {
+    if (_notesCtrl.text.trim().isEmpty &&
+        _selectedType == AttendanceType.izin) {
       setState(() => _error = 'Keterangan wajib diisi untuk izin');
       return;
     }
@@ -149,38 +152,36 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
       ).toUtc().toIso8601String();
 
       final notes = _selectedType == AttendanceType.sakit
-          ? (_notesCtrl.text.trim().isEmpty ? 'Sakit' : 'Sakit: ${_notesCtrl.text.trim()}')
+          ? (_notesCtrl.text.trim().isEmpty
+              ? 'Sakit'
+              : 'Sakit: ${_notesCtrl.text.trim()}')
           : 'Izin: ${_notesCtrl.text.trim()}';
 
       final isEditMode = widget.existingLog != null;
 
       if (isEditMode) {
         // UPDATE existing record
-        await SupabaseClientFactory.admin
-            .from('attendance_logs')
-            .update({
-              'type': _selectedType.value,
-              'scanned_at': scannedAt,
-              'notes': notes,
-            })
-            .eq('id', widget.existingLog!.id);
+        await SupabaseClientFactory.admin.from('attendance_logs').update({
+          'type': _selectedType.value,
+          'scanned_at': scannedAt,
+          'notes': notes,
+        }).eq('id', widget.existingLog!.id);
       } else {
         // INSERT new record — direct to Supabase
         try {
-          await SupabaseClientFactory.admin
-              .from('attendance_logs')
-              .insert({
-                'employee_id': widget.employee.id,
-                'scan_outlet_id': widget.outletId,
-                'type': _selectedType.value,
-                'device_id': 'ADMIN_INPUT',
-                'scanned_at': scannedAt,
-                'is_backup': false,
-                'notes': notes,
-              });
+          await SupabaseClientFactory.admin.from('attendance_logs').insert({
+            'employee_id': widget.employee.id,
+            'scan_outlet_id': widget.outletId,
+            'type': _selectedType.value,
+            'device_id': 'ADMIN_INPUT',
+            'scanned_at': scannedAt,
+            'is_backup': false,
+            'notes': notes,
+          });
         } catch (supabaseError) {
           // Fallback to SQLite offline queue if Supabase fails
-          debugPrint('[SakitIzin] Supabase insert failed, using offline queue: $supabaseError');
+          debugPrint(
+              '[SakitIzin] Supabase insert failed, using offline queue: $supabaseError');
           await SqliteService.insertPendingLog(
             employeeId: widget.employee.id,
             scanOutletId: widget.outletId,
@@ -189,10 +190,15 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
             lng: null,
             deviceId: 'ADMIN_INPUT',
             scannedAt: scannedAt,
+            deviceCapturedAt: DateTime.parse(scannedAt),
+            captureMode: AttendanceCaptureMode.queued,
+            initialScanIntent: InitialScanIntent.none,
             isBackup: false,
             notes: notes,
           );
-          try { await SyncService.syncPendingLogs(); } catch (_) {}
+          try {
+            await SyncService.syncPendingLogs();
+          } catch (_) {}
         }
       }
 
@@ -202,7 +208,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
       if (mounted) {
         Navigator.of(context).pop(true);
         final action = isEditMode ? 'diperbarui' : 'tercatat';
-        AppToast.success(context, '${_selectedType.label} $action untuk ${widget.employee.name}');
+        AppToast.success(context,
+            '${_selectedType.label} $action untuk ${widget.employee.name}');
       }
     } catch (e) {
       setState(() {
@@ -220,13 +227,13 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
         Duration(days: _selectedDate.weekday - 1),
       );
       final endOfWeek = startOfWeek.add(const Duration(days: 6));
-      
+
       final schedule = await ScheduleSQLiteService.getSchedule(
         widget.outletId,
         startOfWeek,
         endOfWeek,
       );
-      
+
       if (schedule != null) {
         // Cari entry untuk karyawan ini di tanggal yang dipilih
         final entryIndex = schedule.entries.indexWhere((e) =>
@@ -234,7 +241,7 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
             e.date.year == _selectedDate.year &&
             e.date.month == _selectedDate.month &&
             e.date.day == _selectedDate.day);
-        
+
         if (entryIndex != -1) {
           // Update entry dengan status sakit/izin
           final oldEntry = schedule.entries[entryIndex];
@@ -243,18 +250,19 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
             date: oldEntry.date,
             employeeId: oldEntry.employeeId,
             customName: oldEntry.customName,
-            displayName: '${widget.employee.name} (${_selectedType.label.toUpperCase()})',
+            displayName:
+                '${widget.employee.name} (${_selectedType.label.toUpperCase()})',
             isCustomName: oldEntry.isCustomName,
             shift: oldEntry.shift,
             isDayOff: true,
-            status: _selectedType == AttendanceType.sakit 
-                ? ScheduleStatus.sakit 
+            status: _selectedType == AttendanceType.sakit
+                ? ScheduleStatus.sakit
                 : ScheduleStatus.izin,
-            notes: _notesCtrl.text.trim().isEmpty 
-                ? _selectedType.label 
+            notes: _notesCtrl.text.trim().isEmpty
+                ? _selectedType.label
                 : '${_selectedType.label}: ${_notesCtrl.text.trim()}',
           );
-          
+
           schedule.entries[entryIndex] = newEntry;
           await ScheduleSQLiteService.saveSchedule(schedule);
         }
@@ -299,7 +307,9 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.existingLog != null ? 'Edit Sakit/Izin' : 'Input Sakit/Izin',
+                        widget.existingLog != null
+                            ? 'Edit Sakit/Izin'
+                            : 'Input Sakit/Izin',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -327,7 +337,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
                   child: _TypeButton(
                     type: AttendanceType.sakit,
                     isSelected: _selectedType == AttendanceType.sakit,
-                    onTap: () => setState(() => _selectedType = AttendanceType.sakit),
+                    onTap: () =>
+                        setState(() => _selectedType = AttendanceType.sakit),
                     icon: Icons.sick_outlined,
                     color: const Color(0xFFDC2626),
                   ),
@@ -337,7 +348,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
                   child: _TypeButton(
                     type: AttendanceType.izin,
                     isSelected: _selectedType == AttendanceType.izin,
-                    onTap: () => setState(() => _selectedType = AttendanceType.izin),
+                    onTap: () =>
+                        setState(() => _selectedType = AttendanceType.izin),
                     icon: Icons.event_note_outlined,
                     color: const Color(0xFF2563EB),
                   ),
@@ -360,7 +372,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
               onTap: _pickDate,
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
@@ -396,8 +409,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
 
             // Keterangan
             Text(
-              _selectedType == AttendanceType.sakit 
-                  ? 'Keterangan (opsional)' 
+              _selectedType == AttendanceType.sakit
+                  ? 'Keterangan (opsional)'
                   : 'Keterangan (wajib)',
               style: TextStyle(
                 fontSize: 12,
@@ -450,7 +463,7 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline, 
+                    Icon(Icons.error_outline,
                         color: AppColors.danger, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
@@ -474,7 +487,8 @@ class _SakitIzinDialogState extends ConsumerState<SakitIzinDialog> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+                    onPressed:
+                        _isSubmitting ? null : () => Navigator.pop(context),
                     child: const Text('Batal'),
                   ),
                 ),

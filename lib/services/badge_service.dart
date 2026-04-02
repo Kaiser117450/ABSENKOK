@@ -100,7 +100,7 @@ class BadgeService {
         .select()
         .single();
 
-    final badge = EmployeeBadge.fromJson(data as Map<String, dynamic>);
+    final badge = EmployeeBadge.fromJson(data);
     _cache[badge.id] = badge;
     return badge;
   }
@@ -129,7 +129,7 @@ class BadgeService {
         .select()
         .single();
 
-    final badge = EmployeeBadge.fromJson(data as Map<String, dynamic>);
+    final badge = EmployeeBadge.fromJson(data);
     _cache[badge.id] = badge;
     return badge;
   }

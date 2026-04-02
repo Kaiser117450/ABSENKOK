@@ -29,8 +29,19 @@ enum EmployeeContract {
   /// Returns [EmployeeContract.fulltime] for null or unrecognized values so the
   /// app degrades safely during staged rollout.
   static EmployeeContract parse(String? raw) {
-    if (raw == null) return EmployeeContract.fulltime;
-    final normalized = raw.replaceAll('-', '').trim().toUpperCase();
+    return tryParse(raw) ?? EmployeeContract.fulltime;
+  }
+
+  /// Parse a raw value only when it matches one of the supported aliases.
+  ///
+  /// Returns null for empty or unsupported values so validation flows can
+  /// surface a clear operator error instead of silently defaulting.
+  static EmployeeContract? tryParse(String? raw) {
+    if (raw == null) return null;
+    final normalized =
+        raw.replaceAll(RegExp(r'[\s_-]+'), '').trim().toUpperCase();
+    if (normalized.isEmpty) return null;
+
     switch (normalized) {
       case 'FULLTIME':
         return EmployeeContract.fulltime;
@@ -38,7 +49,7 @@ enum EmployeeContract {
       case 'PARTIME': // common typo
         return EmployeeContract.parttime;
       default:
-        return EmployeeContract.fulltime;
+        return null;
     }
   }
 }
