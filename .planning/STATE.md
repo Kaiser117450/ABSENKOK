@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: milestone
+milestone: v8.1
+milestone_name: reporting-recovery-schedule-gap-notifications
 status: verifying
-stopped_at: Completed 63-02-PLAN.md
+stopped_at: Completed Phase 63 export-parity-re-lock
 last_updated: "2026-04-02T06:56:38.343Z"
-last_activity: 2026-04-02
+last_activity: 2026-04-02 -- Phase 63 complete
 progress:
   total_phases: 3
   completed_phases: 3
@@ -19,7 +19,7 @@ progress:
 
 Milestone: v8.1 — ACTIVE
 Phase: 63
-Plan: Not started
+Plan: Complete
 Status: Phase 63 complete — ready for milestone verification and closeout
 Last activity: 2026-04-02
 
@@ -59,10 +59,10 @@ v8.1 implementation completed through export parity re-lock
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-01)
+See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Reliable, 24/7 unattended NFC attendance with accurate cross-day shift handling and real-time admin visibility.
-**Current focus:** Phase 63 will relock spreadsheet and payroll PDF parity now that recap recovery and schedule-gap notices are both shipped.
+**Current focus:** Phase 63 completed the export parity relock; remaining follow-up is milestone closeout plus manual operator UAT for generated spreadsheet/PDF artifacts.
 
 ## What Was Shipped
 
