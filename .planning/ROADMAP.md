@@ -19,7 +19,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 61 | Recap Semantics Recovery | 2/2 | Complete    | 2026-04-01 |
-| 62 | Schedule Gap Notices | Surface missing schedule follow-up as non-blocking kepala gerai notifications | SCHED-05 | 3 |
+| 62 | Schedule Gap Notices | 2/2 | Complete    | 2026-04-01 |
 | 63 | Export Parity Re-lock | Keep spreadsheet and payroll PDF aligned with the corrected merged recap dataset | REPORT-04, REPORT-05 | 4 |
 
 ### Phase 61: Recap Semantics Recovery
@@ -40,6 +40,8 @@
 
 **Goal:** Surface missing schedule follow-up as outlet-scoped kepala gerai notices instead of recap-breaking enforcement.
 
+**Plan progress:** 2 of 2 plans complete (`62-01-SUMMARY.md` and `62-02-SUMMARY.md` created on 2026-04-01). Phase 62 is complete; Phase 63 can now relock spreadsheet/PDF parity on top of the corrected recap dataset and the shipped dashboard notice flow.
+
 **Requirements:** `SCHED-05`
 
 **Success criteria:**
@@ -53,6 +55,12 @@
 
 **Requirements:** `REPORT-04`, `REPORT-05`
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] `63-01-PLAN.md` - Restore the shared export parity fixtures and replace the stale `PayrollRecapTab` test seam.
+- [ ] `63-02-PLAN.md` - Re-lock spreadsheet and payroll PDF service tests onto the shared merged recap parity fixtures.
+
 **Success criteria:**
 1. Spreadsheet export uses the corrected merged recap dataset and preserves compact payroll-facing output plus summary counts.
 2. Payroll PDF uses the same corrected merged recap dataset and preserves the same reporting meaning as admin recap and spreadsheet export.
@@ -63,9 +71,9 @@
 
 - Active milestone: **v8.1 Reporting Recovery & Schedule Gap Notifications**
 - Latest shipped milestone: **v8.0 Strict Attendance & Payroll Reporting**
-- Product state: strict reporting foundations remain valuable, but recap continuity for legacy no-schedule data must be corrected before payroll trust expands
+- Product state: recap continuity is restored and kepala gerai now receives non-blocking `Jadwal Kosong` follow-up notices; remaining milestone work is export parity re-lock before payroll trust expands
 - Database guard: any production SQL apply step still requires explicit user confirmation and must stay additive-only
-- Next execution step: start Phase 62 schedule-gap notices, then relock export parity in Phase 63
+- Next execution step: plan and execute Phase 63 export-parity re-lock
 
 ---
 _For current project status, see `.planning/PROJECT.md`_  
