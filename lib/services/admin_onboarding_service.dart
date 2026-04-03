@@ -52,14 +52,39 @@ class AdminOnboardingService {
     required String email,
     required String outletId,
   }) async {
-    final response = await _client.functions.invoke(
-      'create-admin-user',
-      body: {
-        'email': email.trim().toLowerCase(),
-        'name': name.trim(),
-        'outlet_id': outletId,
-      },
-    );
+    // Refresh session to ensure JWT is fresh before calling Edge Function.
+    // Stale/expired JWTs cause 401 "invalid JWT" at Supabase gateway level
+    // (verify_jwt=true) before the function code even executes.
+    try {
+      await _client.auth.refreshSession();
+    } catch (_) {
+      // If refresh fails, proceed anyway — the existing token might still
+      // be valid, and the Edge Function will return a clear 401 if not.
+    }
+
+    final FunctionResponse response;
+    try {
+      response = await _client.functions.invoke(
+        'create-admin-user',
+        body: {
+          'email': email.trim().toLowerCase(),
+          'name': name.trim(),
+          'outlet_id': outletId,
+        },
+      );
+    } on FunctionException catch (e) {
+      // FunctionException with 401 = JWT rejected by Supabase gateway.
+      // This means the session is invalid even after refresh attempt.
+      final status = e.status;
+      if (status == 401) {
+        throw Exception(
+          'Sesi login telah berakhir. Silakan logout dan login kembali.',
+        );
+      }
+      final details = e.details;
+      final msg = details is Map ? (details['message'] ?? details['error']) : null;
+      throw Exception(msg ?? 'Terjadi kesalahan server (status $status)');
+    }
 
     if (response.status != 200) {
       final error = response.data is Map

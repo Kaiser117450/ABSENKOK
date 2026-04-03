@@ -28,13 +28,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Verify the caller is an admin using their JWT
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    )
-    const { data: { user: caller }, error: callerError } = await supabaseUser.auth.getUser()
+    // Verify the caller is an admin using their JWT.
+    // Extract the raw token and pass it directly to getUser() — the
+    // global.headers approach doesn't reliably set the auth context
+    // inside Edge Functions, causing "invalid JWT" 401 errors.
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: caller }, error: callerError } = await supabaseAdmin.auth.getUser(token)
     if (callerError || !caller) {
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
