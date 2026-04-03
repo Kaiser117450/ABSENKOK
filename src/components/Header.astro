@@ -1,13 +1,14 @@
 ---
-// Header.astro — Sticky navigation with brand logo (rounded image) + anchor links
+// Header.astro — Sticky navigation with mobile menu
 import { Image } from 'astro:assets';
+import { Menu, X, Download } from '@lucide/astro';
 import absenkokLogo from '../assets/images/ABSENKOK.png';
 ---
 
-<header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border">
+<header id="main-header" class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border transition-shadow duration-300">
   <nav class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
     <!-- Brand Logo -->
-    <a href="/" class="flex items-center gap-2.5">
+    <a href="/" class="flex items-center gap-2.5 group">
       <Image
         src={absenkokLogo}
         alt="ABSENKOK"
@@ -19,7 +20,7 @@ import absenkokLogo from '../assets/images/ABSENKOK.png';
       </span>
     </a>
 
-    <!-- Nav Links (hidden on mobile) -->
+    <!-- Desktop Nav Links -->
     <ul class="hidden md:flex items-center gap-8">
       <li>
         <a href="#fitur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
@@ -38,9 +39,88 @@ import absenkokLogo from '../assets/images/ABSENKOK.png';
       </li>
       <li>
         <a href="#download" class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2 hover:bg-brand-pink-dark transition-colors duration-300 shadow-sm hover:shadow-md">
+          <Download size={16} />
           Download
         </a>
       </li>
     </ul>
+
+    <!-- Mobile Menu Button -->
+    <button
+      id="mobile-menu-btn"
+      class="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+      aria-label="Toggle menu"
+      type="button"
+    >
+      <Menu id="icon-open" size={22} class="text-brand-navy" />
+      <X id="icon-close" size={22} class="text-brand-navy hidden" />
+    </button>
   </nav>
+
+  <!-- Mobile Menu Panel -->
+  <div
+    id="mobile-panel"
+    class="md:hidden hidden bg-white border-t border-brand-border"
+  >
+    <div class="px-6 py-5 space-y-1">
+      <a href="#fitur" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+        Fitur
+      </a>
+      <a href="#cara-kerja" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+        Cara Kerja
+      </a>
+      <a href="#arsitektur" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+        Arsitektur
+      </a>
+      <div class="pt-3">
+        <a href="#download" class="mobile-link inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2.5 hover:bg-brand-pink-dark transition-colors duration-300">
+          <Download size={16} />
+          Download APK
+        </a>
+      </div>
+    </div>
+  </div>
 </header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const panel = document.getElementById('mobile-panel');
+  const iconOpen = document.getElementById('icon-open');
+  const iconClose = document.getElementById('icon-close');
+  const links = document.querySelectorAll('.mobile-link');
+  const header = document.getElementById('main-header');
+
+  let open = false;
+
+  function toggle() {
+    open = !open;
+    panel?.classList.toggle('hidden', !open);
+    iconOpen?.classList.toggle('hidden', open);
+    iconClose?.classList.toggle('hidden', !open);
+  }
+
+  btn?.addEventListener('click', toggle);
+
+  links.forEach(l => l.addEventListener('click', () => {
+    if (open) toggle();
+  }));
+
+  // Scroll shadow
+  let scrolled = false;
+  window.addEventListener('scroll', () => {
+    requestAnimationFrame(() => {
+      if (window.scrollY > 20 && !scrolled) {
+        scrolled = true;
+        header?.classList.add('shadow-md');
+      } else if (window.scrollY <= 20 && scrolled) {
+        scrolled = false;
+        header?.classList.remove('shadow-md');
+      }
+    });
+  });
+
+  // Escape to close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && open) toggle();
+  });
+</script>

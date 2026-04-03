@@ -9,21 +9,17 @@
   --font-sans: 'Inter', sans-serif;
 
   /* 60-30-10 Color Theory */
-  /* 60% dominant: white + mint backgrounds */
   --color-brand-mint: #C4EDDE;
   --color-brand-mint-light: #E8F7F0;
 
-  /* 30% secondary: dark navy for text & structure */
   --color-brand-navy: #384259;
   --color-brand-navy-light: #4A5678;
   --color-brand-navy-dark: #2A3244;
 
-  /* 10% accent: vibrant pink for CTAs & highlights */
   --color-brand-pink: #F73859;
   --color-brand-pink-dark: #E5203F;
   --color-brand-pink-light: #FDE8EC;
 
-  /* Supporting accent: teal */
   --color-brand-teal: #7AC7C4;
   --color-brand-teal-light: #B8E2E0;
   --color-brand-teal-dark: #5EACA9;
@@ -47,7 +43,8 @@
   --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
 }
 
-/* Keyframes */
+/* ========== Base Keyframes ========== */
+
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
@@ -83,10 +80,252 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* Stagger delay utilities */
+/* ========== NEW: Looping & Enhanced Animations ========== */
+
+/* Gradient background shift — looping color wave */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Text shimmer — looping shine across text */
+@keyframes text-shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Bounce in — elastic entrance */
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Scale up — smooth grow */
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* NFC Ripple — pulsing outward ring */
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Spin slow — looping rotation for decorative elements */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Counter-spin */
+@keyframes counter-spin {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* Marquee — scrolling ticker */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Glow pulse — looping shadow glow */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(247, 56, 89, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(247, 56, 89, 0.5); }
+}
+
+/* Icon bounce — subtle bounce for icons */
+@keyframes icon-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Slide up & fade — for staggered card reveals */
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Floating shapes — multi-axis float for background decoration */
+@keyframes float-diagonal {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(10px, -15px) rotate(5deg); }
+  50% { transform: translate(-5px, -25px) rotate(-3deg); }
+  75% { transform: translate(-15px, -10px) rotate(4deg); }
+}
+
+/* Dash offset for SVG line drawing */
+@keyframes draw-line {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Wobble — playful attention grab */
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* Ping — notification-style ripple */
+@keyframes ping-ring {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ========== Stagger Delay Utilities ========== */
 .delay-100 { animation-delay: 0.1s; }
 .delay-200 { animation-delay: 0.2s; }
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
 .delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-800 { animation-delay: 0.8s; }
+
+/* ========== Scroll-triggered Animation Classes ========== */
+/* Elements start invisible, animate when .is-visible is added by IntersectionObserver */
+.animate-on-scroll {
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.animate-on-scroll.is-visible {
+  opacity: 1;
+}
+
+.animate-on-scroll.is-visible.anim-fade-up {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+.animate-on-scroll.is-visible.anim-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.animate-on-scroll.is-visible.anim-slide-left {
+  animation: slide-in-left 0.8s ease-out both;
+}
+
+.animate-on-scroll.is-visible.anim-slide-right {
+  animation: slide-in-right 0.8s ease-out both;
+}
+
+.animate-on-scroll.is-visible.anim-bounce-in {
+  animation: bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) both;
+}
+
+.animate-on-scroll.is-visible.anim-scale-up {
+  animation: scale-up 0.6s ease-out both;
+}
+
+.animate-on-scroll.is-visible.anim-slide-up {
+  animation: slide-up-fade 0.7s ease-out both;
+}
+
+/* ========== Utility Classes ========== */
+
+/* Gradient text helper */
+.text-gradient-pink {
+  background: linear-gradient(135deg, #F73859 0%, #E5203F 50%, #F73859 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shimmer 3s linear infinite;
+}
+
+.text-gradient-teal {
+  background: linear-gradient(135deg, #7AC7C4 0%, #5EACA9 50%, #7AC7C4 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: text-shimmer 4s linear infinite;
+}
+
+/* Animated gradient background */
+.bg-gradient-animated {
+  background: linear-gradient(-45deg, #384259, #2A3244, #4A5678, #384259);
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Glow button */
+.glow-pink {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* NFC ripple container */
+.nfc-ripple {
+  position: relative;
+}
+
+.nfc-ripple::before,
+.nfc-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(247, 56, 89, 0.3);
+  animation: ripple 2s ease-out infinite;
+}
+
+.nfc-ripple::after {
+  animation-delay: 1s;
+}
+
+/* Smooth scroll for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Card hover glow effect */
+.card-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(122, 199, 196, 0.08), transparent);
+  transition: left 0.6s ease;
+}
+
+.card-glow:hover::before {
+  left: 100%;
+}
+
+/* Animated underline for links */
+.animated-underline {
+  position: relative;
+}
+
+.animated-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #F73859;
+  transition: width 0.3s ease;
+}
+
+.animated-underline:hover::after {
+  width: 100%;
+}

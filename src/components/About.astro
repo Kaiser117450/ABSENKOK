@@ -1,16 +1,21 @@
 ---
-// About.astro — Architecture & project story with tech stack icons, client logo, and content cards
+// About.astro — Architecture & project story with animated tech stack, cards, and trust badge
 import { Image } from 'astro:assets';
+import { Code, Sparkles, TabletSmartphone, Zap, Shield, Globe } from '@lucide/astro';
 import teamImg from '../assets/images/team-hands.png';
 import enakkoLogo from '../assets/images/Logo Ayam Guling Enakko (Outline).png';
 ---
 
-<section id="arsitektur" class="bg-brand-surface py-20 lg:py-28">
+<section id="arsitektur" class="bg-brand-surface py-20 lg:py-28 overflow-hidden">
   <div class="max-w-7xl mx-auto px-6 lg:px-8">
     <!-- Section header -->
-    <div class="text-center max-w-2xl mx-auto mb-16" style="animation: fade-in-up 0.6s ease-out both;">
+    <div class="text-center max-w-2xl mx-auto mb-16 animate-on-scroll anim-fade-up">
+      <div class="inline-flex items-center gap-2 rounded-full bg-brand-navy/10 px-4 py-1.5 text-sm font-medium text-brand-navy mb-4">
+        <Code class="h-4 w-4" />
+        Open Source
+      </div>
       <h2 class="text-3xl font-bold tracking-tight text-brand-navy sm:text-4xl">
-        Tentang ABSENKOK
+        Tentang <span class="text-gradient-pink">ABSENKOK</span>
       </h2>
       <p class="mt-4 text-lg leading-8 text-brand-text-secondary">
         Solo project, dibangun dengan vibe coding dan AI.
@@ -18,68 +23,82 @@ import enakkoLogo from '../assets/images/Logo Ayam Guling Enakko (Outline).png';
     </div>
 
     <!-- Trusted By -->
-    <div class="flex flex-col items-center gap-3 mb-14" style="animation: fade-in-up 0.6s ease-out 0.15s both;">
+    <div class="flex flex-col items-center gap-3 mb-14 animate-on-scroll anim-fade-up delay-100">
       <span class="text-xs font-semibold uppercase tracking-widest text-brand-text-muted">Dipercaya oleh</span>
-      <div class="bg-white rounded-2xl px-8 py-4 shadow-sm ring-1 ring-brand-border">
+      <div class="relative group bg-white rounded-2xl px-8 py-4 shadow-sm ring-1 ring-brand-border hover:shadow-md transition-all duration-300">
         <Image
           src={enakkoLogo}
           alt="Logo Ayam Guling Enakko — klien ABSENKOK"
           width={140}
-          class="h-12 w-auto"
+          class="h-12 w-auto group-hover:scale-105 transition-transform duration-300"
         />
+        <!-- Subtle badge -->
+        <div class="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-brand-teal flex items-center justify-center">
+          <Shield class="h-3 w-3 text-white" />
+        </div>
       </div>
     </div>
 
-    <!-- Tech Stack Icon Row -->
+    <!-- Tech Stack — Animated Icon Row -->
     <div class="flex flex-wrap justify-center gap-8 lg:gap-12 mb-16">
       <!-- Flutter -->
-      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.1s both;">
-        <div class="h-16 w-16 rounded-2xl bg-[#027DFD]/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none">
+      <div class="flex flex-col items-center text-center animate-on-scroll anim-bounce-in delay-100">
+        <div class="group relative h-16 w-16 rounded-2xl bg-[#027DFD]/10 flex items-center justify-center hover:bg-[#027DFD]/20 transition-colors duration-300 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" class="group-hover:scale-110 transition-transform duration-300">
             <path d="M14.314 0L3.098 11.216l3.47 3.47L17.784 3.47M14.314 11.216l-5.648 5.648 3.47 3.47 9.177-9.118-3.47-3.47-3.529 3.47" fill="#54C5F8"/>
             <path d="M8.666 16.864l3.47 3.47 3.47-3.47-3.47-3.47" fill="#01579B"/>
           </svg>
+          <!-- Tooltip -->
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-brand-navy text-white text-xs font-medium px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            Mobile App
+          </div>
         </div>
-        <span class="mt-2 text-sm font-medium text-brand-navy">Flutter</span>
+        <span class="mt-3 text-sm font-medium text-brand-navy">Flutter</span>
       </div>
 
       <!-- Supabase -->
-      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.2s both;">
-        <div class="h-16 w-16 rounded-2xl bg-[#3ECF8E]/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 109 113" fill="none">
-            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-a)"/>
-            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-b)" fill-opacity=".2"/>
+      <div class="flex flex-col items-center text-center animate-on-scroll anim-bounce-in delay-200">
+        <div class="group relative h-16 w-16 rounded-2xl bg-[#3ECF8E]/10 flex items-center justify-center hover:bg-[#3ECF8E]/20 transition-colors duration-300 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 109 113" fill="none" class="group-hover:scale-110 transition-transform duration-300">
+            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-a2)"/>
+            <path d="M63.708 110.284c-2.86 3.601-8.658 1.628-8.727-2.97l-1.007-67.251h45.22c8.19 0 12.758 9.46 7.665 15.874L63.708 110.284z" fill="url(#supa-b2)" fill-opacity=".2"/>
             <path d="M45.317 2.071c2.86-3.601 8.657-1.628 8.726 2.97l.442 67.251H9.83c-8.19 0-12.759-9.46-7.665-15.875L45.317 2.072z" fill="#3ECF8E"/>
             <defs>
-              <linearGradient id="supa-a" x1="53.974" y1="54.974" x2="94.163" y2="71.829" gradientUnits="userSpaceOnUse">
+              <linearGradient id="supa-a2" x1="53.974" y1="54.974" x2="94.163" y2="71.829" gradientUnits="userSpaceOnUse">
                 <stop stop-color="#249361"/><stop offset="1" stop-color="#3ECF8E"/>
               </linearGradient>
-              <linearGradient id="supa-b" x1="36.156" y1="30.578" x2="54.484" y2="65.081" gradientUnits="userSpaceOnUse">
+              <linearGradient id="supa-b2" x1="36.156" y1="30.578" x2="54.484" y2="65.081" gradientUnits="userSpaceOnUse">
                 <stop/><stop offset="1" stop-opacity="0"/>
               </linearGradient>
             </defs>
           </svg>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-brand-navy text-white text-xs font-medium px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            Database & Auth
+          </div>
         </div>
-        <span class="mt-2 text-sm font-medium text-brand-navy">Supabase</span>
+        <span class="mt-3 text-sm font-medium text-brand-navy">Supabase</span>
       </div>
 
       <!-- NFC -->
-      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.3s both;">
-        <div class="h-16 w-16 rounded-2xl bg-brand-pink/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F73859" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="flex flex-col items-center text-center animate-on-scroll anim-bounce-in delay-300">
+        <div class="group relative h-16 w-16 rounded-2xl bg-brand-pink/10 flex items-center justify-center hover:bg-brand-pink/20 transition-colors duration-300 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F73859" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform duration-300">
             <path d="M6 8.32a7.43 7.43 0 0 1 0 7.36"/>
             <path d="M9.46 6.21a11.76 11.76 0 0 1 0 11.58"/>
             <path d="M12.91 4.1a16.07 16.07 0 0 1 0 15.8"/>
             <path d="M16.37 2a20.4 20.4 0 0 1 0 20"/>
           </svg>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-brand-navy text-white text-xs font-medium px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            Tap & Scan
+          </div>
         </div>
-        <span class="mt-2 text-sm font-medium text-brand-navy">NFC</span>
+        <span class="mt-3 text-sm font-medium text-brand-navy">NFC</span>
       </div>
 
       <!-- Android -->
-      <div class="flex flex-col items-center text-center" style="animation: fade-in-up 0.6s ease-out 0.4s both;">
-        <div class="h-16 w-16 rounded-2xl bg-[#3DDC84]/10 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3DDC84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="flex flex-col items-center text-center animate-on-scroll anim-bounce-in delay-400">
+        <div class="group relative h-16 w-16 rounded-2xl bg-[#3DDC84]/10 flex items-center justify-center hover:bg-[#3DDC84]/20 transition-colors duration-300 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3DDC84" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:scale-110 transition-transform duration-300">
             <rect x="5" y="11" width="14" height="10" rx="2"/>
             <path d="M12 2C8.69 2 6 4.69 6 8v3h12V8c0-3.31-2.69-6-6-6z"/>
             <circle cx="9" cy="7" r="1" fill="#3DDC84"/>
@@ -87,68 +106,91 @@ import enakkoLogo from '../assets/images/Logo Ayam Guling Enakko (Outline).png';
             <line x1="7" y1="2" x2="9" y2="5"/>
             <line x1="17" y1="2" x2="15" y2="5"/>
           </svg>
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-brand-navy text-white text-xs font-medium px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            Kiosk Platform
+          </div>
         </div>
-        <span class="mt-2 text-sm font-medium text-brand-navy">Android</span>
+        <span class="mt-3 text-sm font-medium text-brand-navy">Android</span>
+      </div>
+
+      <!-- Astro (new!) -->
+      <div class="flex flex-col items-center text-center animate-on-scroll anim-bounce-in delay-500">
+        <div class="group relative h-16 w-16 rounded-2xl bg-purple-500/10 flex items-center justify-center hover:bg-purple-500/20 transition-colors duration-300 cursor-pointer">
+          <Globe class="h-8 w-8 text-purple-500 group-hover:scale-110 transition-transform duration-300" />
+          <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-brand-navy text-white text-xs font-medium px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            Website
+          </div>
+        </div>
+        <span class="mt-3 text-sm font-medium text-brand-navy">Astro</span>
       </div>
     </div>
 
-    <!-- Content Cards -->
+    <!-- Content Cards — with gradient border effect -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       <!-- Card 1: Tech Stack -->
-      <div
-        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-        style="animation: fade-in-up 0.6s ease-out 0.2s both;"
-      >
-        <div class="h-12 w-12 rounded-xl bg-brand-teal/15 text-brand-teal-dark flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="16 18 22 12 16 6"/>
-            <polyline points="8 6 2 12 8 18"/>
-          </svg>
+      <div class="animate-on-scroll anim-slide-up delay-200">
+        <div class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 card-glow h-full">
+          {/* Gradient top border */}
+          <div class="absolute top-0 left-6 right-6 h-0.5 bg-gradient-to-r from-transparent via-brand-teal to-transparent rounded-full"></div>
+          <div class="h-12 w-12 rounded-xl bg-brand-teal/15 text-brand-teal-dark flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <Code class="h-6 w-6" />
+          </div>
+          <h3 class="mt-6 text-lg font-semibold text-brand-navy">Tech Stack</h3>
+          <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+            Dibangun dengan Flutter untuk mobile app, Supabase sebagai backend (database + auth, free tier), dan NFC reader untuk absensi. Kompatibel dengan e-KTP, e-Toll, dan kartu Flazz.
+          </p>
+          {/* Tags */}
+          <div class="flex flex-wrap gap-1.5 mt-4">
+            <span class="text-xs bg-brand-teal/10 text-brand-teal-dark px-2 py-0.5 rounded-full">Dart</span>
+            <span class="text-xs bg-brand-teal/10 text-brand-teal-dark px-2 py-0.5 rounded-full">PostgreSQL</span>
+            <span class="text-xs bg-brand-teal/10 text-brand-teal-dark px-2 py-0.5 rounded-full">Kotlin</span>
+          </div>
         </div>
-        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Tech Stack</h3>
-        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
-          Dibangun dengan Flutter untuk mobile app, Supabase sebagai backend (database + auth, free tier), dan NFC reader untuk absensi. Kompatibel dengan e-KTP, e-Toll, dan kartu Flazz.
-        </p>
       </div>
 
       <!-- Card 2: Development Story -->
-      <div
-        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-        style="animation: fade-in-up 0.6s ease-out 0.35s both;"
-      >
-        <div class="h-12 w-12 rounded-xl bg-brand-pink/10 text-brand-pink flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/>
-          </svg>
+      <div class="animate-on-scroll anim-slide-up delay-300">
+        <div class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 card-glow h-full">
+          <div class="absolute top-0 left-6 right-6 h-0.5 bg-gradient-to-r from-transparent via-brand-pink to-transparent rounded-full"></div>
+          <div class="h-12 w-12 rounded-xl bg-brand-pink/10 text-brand-pink flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <Sparkles class="h-6 w-6" />
+          </div>
+          <h3 class="mt-6 text-lg font-semibold text-brand-navy">Vibe Coding dengan AI</h3>
+          <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+            Solo project oleh Akmal — dibangun dengan pendekatan 'vibe coding' menggunakan Claude Sonnet dan Gemini Pro. Dari ide sampai production dalam hitungan hari, bukan bulan.
+          </p>
+          <div class="flex flex-wrap gap-1.5 mt-4">
+            <span class="text-xs bg-brand-pink/10 text-brand-pink px-2 py-0.5 rounded-full">Claude AI</span>
+            <span class="text-xs bg-brand-pink/10 text-brand-pink px-2 py-0.5 rounded-full">Gemini</span>
+            <span class="text-xs bg-brand-pink/10 text-brand-pink px-2 py-0.5 rounded-full">Solo Dev</span>
+          </div>
         </div>
-        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Vibe Coding dengan AI</h3>
-        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
-          Solo project oleh Akmal — dibangun dengan pendekatan 'vibe coding' menggunakan Claude Sonnet dan Gemini Pro. Dari ide sampai production dalam hitungan hari, bukan bulan.
-        </p>
       </div>
 
       <!-- Card 3: Deployment -->
-      <div
-        class="group rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-        style="animation: fade-in-up 0.6s ease-out 0.5s both;"
-      >
-        <div class="h-12 w-12 rounded-xl bg-brand-navy/10 text-brand-navy flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-            <line x1="12" y1="18" x2="12" y2="18.01"/>
-          </svg>
+      <div class="animate-on-scroll anim-slide-up delay-400">
+        <div class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-brand-border hover:shadow-lg hover:-translate-y-1 transition-all duration-300 card-glow h-full">
+          <div class="absolute top-0 left-6 right-6 h-0.5 bg-gradient-to-r from-transparent via-brand-navy to-transparent rounded-full"></div>
+          <div class="h-12 w-12 rounded-xl bg-brand-navy/10 text-brand-navy flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <TabletSmartphone class="h-6 w-6" />
+          </div>
+          <h3 class="mt-6 text-lg font-semibold text-brand-navy">Android Kiosk</h3>
+          <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
+            Tablet Android berjalan 24/7 di pintu masuk restoran sebagai kiosk absensi. Tidak perlu server management — Supabase handles everything. Sudah berjalan di 4 gerai.
+          </p>
+          <div class="flex flex-wrap gap-1.5 mt-4">
+            <span class="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded-full">12+ Gerai</span>
+            <span class="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded-full">24/7</span>
+            <span class="text-xs bg-brand-navy/10 text-brand-navy px-2 py-0.5 rounded-full">Offline</span>
+          </div>
         </div>
-        <h3 class="mt-6 text-lg font-semibold text-brand-navy">Android Kiosk</h3>
-        <p class="mt-2 text-sm leading-6 text-brand-text-secondary">
-          Tablet Android berjalan 24/7 di pintu masuk restoran sebagai kiosk absensi. Tidak perlu server management — Supabase handles everything. Sudah berjalan di 4 gerai.
-        </p>
       </div>
     </div>
 
   </div>
 
   <!-- Team Image — centered, forward overlap into Download section -->
-  <div class="relative mt-16 -mb-32 lg:-mb-44 pointer-events-none w-full z-20 flex justify-center px-6" style="animation: fade-in-up 0.8s ease-out 0.8s both;">
+  <div class="relative mt-16 -mb-32 lg:-mb-44 pointer-events-none w-full z-20 flex justify-center px-6 animate-on-scroll anim-scale-up delay-300">
     <Image
       src={teamImg}
       alt="Tim kolaborasi dalam pengembangan ABSENKOK"
