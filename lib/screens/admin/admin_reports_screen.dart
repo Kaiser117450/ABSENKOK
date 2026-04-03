@@ -16,24 +16,17 @@ import 'package:absensi_enakko_flutter/models/employee.dart';
 import 'package:absensi_enakko_flutter/models/outlet.dart';
 import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
 import 'package:absensi_enakko_flutter/models/payroll_matrix_row.dart';
-import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
 import 'package:absensi_enakko_flutter/providers/app_provider.dart';
-import 'package:absensi_enakko_flutter/screens/admin/widgets/payroll_matrix_table.dart';
-import 'package:absensi_enakko_flutter/screens/admin/widgets/payroll_rollout_acceptance_panel.dart';
-import 'package:absensi_enakko_flutter/screens/admin/widgets/policy_recap_payroll_support_section.dart';
 import 'package:absensi_enakko_flutter/services/admin_policy_recap_dataset_service.dart';
 import 'package:absensi_enakko_flutter/services/attendance_policy_recap_service.dart';
 import 'package:absensi_enakko_flutter/services/badge_service.dart';
 import 'package:absensi_enakko_flutter/services/payroll_matrix_builder.dart';
 import 'package:absensi_enakko_flutter/services/payroll_pdf_matrix_export_service.dart';
 import 'package:absensi_enakko_flutter/services/payroll_spreadsheet_export_service.dart';
-import 'package:absensi_enakko_flutter/services/payroll_validation_bundle_service.dart';
 import 'package:absensi_enakko_flutter/services/pdf_service.dart';
 import 'package:absensi_enakko_flutter/widgets/app_card.dart';
 import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
 import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
-import 'package:absensi_enakko_flutter/widgets/attendance_policy_badge.dart';
-import 'package:absensi_enakko_flutter/widgets/attendance_policy_signal_chip.dart';
 import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,9 +220,6 @@ String _formatPolicyMinutes(int? minutes) {
 const String payrollCompatibilityModeTitle = 'Mode kompatibilitas aktif';
 const String payrollCompatibilityModeBody =
     'Sebagian hari payroll dihitung dari log absensi dan kontrak karena jadwal belum tersedia.';
-const String policyRecapCompatibilityModeTitle = 'Mode kompatibilitas aktif';
-const String policyRecapCompatibilityModeBody =
-    'Sebagian hari admin recap dipulihkan dari log absensi dan kontrak karena jadwal belum tersedia.';
 
 class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
@@ -278,8 +268,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       PayrollPdfMatrixExportService();
   final PayrollSpreadsheetExportService _payrollSpreadsheetExportService =
       PayrollSpreadsheetExportService();
-  final PayrollValidationBundleService _payrollValidationBundleService =
-      PayrollValidationBundleService();
 
   // Tab: 0 = Per Scan, 1 = Rekap Harian
   late final TabController _tabCtrl;
@@ -442,7 +430,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   Future<void> _loadDailySummaryData() async {
     final outletId = _selectedOutletId?.trim();
-    final shouldLoadPolicyRecap = outletId != null && outletId.isNotEmpty;
+    final isSingleOutlet = outletId != null && outletId.isNotEmpty;
 
     setState(() {
       _loadingDaily = true;
@@ -451,25 +439,37 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
     try {
       final allRowsFuture = _fetchAllRowsForExport(ascending: true);
-      final employeesFuture = shouldLoadPolicyRecap
+      final employeesFuture = isSingleOutlet
           ? _fetchPayrollRoster(outletId)
-          : Future<List<Employee>>.value(const <Employee>[]);
+          : _fetchAllEmployeesForPayroll();
       final recapFuture = () async {
-        if (!shouldLoadPolicyRecap) {
-          return (
-            rows: const <AttendancePolicyRecapDay>[],
-            error: null as String?,
-          );
-        }
-
         try {
-          final rows =
-              await _attendancePolicyRecapService.fetchAdminSchedulePolicyRecap(
-            outletId: outletId,
-            startDate: _startDate,
-            endDate: _endDate,
-          );
-          return (rows: rows, error: null as String?);
+          if (isSingleOutlet) {
+            // Single outlet — call RPC directly
+            final rows = await _attendancePolicyRecapService
+                .fetchAdminSchedulePolicyRecap(
+              outletId: outletId,
+              startDate: _startDate,
+              endDate: _endDate,
+            );
+            return (rows: rows, error: null as String?);
+          } else {
+            // "Semua" — call RPC for each active outlet and merge
+            final outletIds = _outlets.map((o) => o.id).toList(growable: false);
+            if (outletIds.isEmpty) {
+              return (
+                rows: const <AttendancePolicyRecapDay>[],
+                error: null as String?,
+              );
+            }
+            final rows = await _attendancePolicyRecapService
+                .fetchAllOutletsPolicyRecap(
+              outletIds: outletIds,
+              startDate: _startDate,
+              endDate: _endDate,
+            );
+            return (rows: rows, error: null as String?);
+          }
         } catch (e) {
           return (
             rows: const <AttendancePolicyRecapDay>[],
@@ -483,23 +483,28 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final recapResult = await recapFuture;
       if (!mounted) return;
 
-      final payrollOutletContext = _resolvePayrollOutletContext(allRows);
-      final recapDataset = shouldLoadPolicyRecap
-          ? _adminPolicyRecapDatasetService.build(
-              employees: employees,
-              strictRows: recapResult.rows,
-              attendanceLogs: allRows.map((row) => row.log),
-              outletId: outletId,
-              outletName: payrollOutletContext.outletName,
-              outletOperatingMode: payrollOutletContext.operatingMode,
-              now: DateTime.now(),
-            )
-          : const AdminPolicyRecapDatasetResult(
-              mergedRows: <AttendancePolicyRecapDay>[],
-              strictRows: <AttendancePolicyRecapDay>[],
-              fallbackRows: <AttendancePolicyRecapDay>[],
-            );
-      final payrollDataset = shouldLoadPolicyRecap
+      final AdminPolicyRecapDatasetResult recapDataset;
+      if (isSingleOutlet) {
+        final payrollOutletContext = _resolvePayrollOutletContext(allRows);
+        recapDataset = _adminPolicyRecapDatasetService.build(
+          employees: employees,
+          strictRows: recapResult.rows,
+          attendanceLogs: allRows.map((row) => row.log),
+          outletId: outletId,
+          outletName: payrollOutletContext.outletName,
+          outletOperatingMode: payrollOutletContext.operatingMode,
+          now: DateTime.now(),
+        );
+      } else {
+        // "Semua" — build dataset per outlet then merge all results
+        recapDataset = _buildAllOutletsRecapDataset(
+          employees: employees,
+          strictRows: recapResult.rows,
+          allRows: allRows,
+        );
+      }
+
+      final payrollDataset = employees.isNotEmpty
           ? buildPayrollMatrix(
               startDate: _startDate,
               endDate: _endDate,
@@ -526,6 +531,101 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     }
   }
 
+  /// Build recap dataset for "Semua" mode by grouping employees per outlet
+  /// and running the fallback service for each outlet independently, then
+  /// merging all results.
+  AdminPolicyRecapDatasetResult _buildAllOutletsRecapDataset({
+    required List<Employee> employees,
+    required List<AttendancePolicyRecapDay> strictRows,
+    required List<_ReportRow> allRows,
+  }) {
+    // Build a lookup of outlet id → outlet for resolving names/modes
+    final outletById = <String, Outlet>{
+      for (final outlet in _outlets) outlet.id: outlet,
+    };
+
+    // Also gather outlet info from attendance logs for outlets not in
+    // the dropdown (edge case: employee scanned at an unlisted outlet)
+    for (final row in allRows) {
+      final outlet = row.outlet;
+      if (outlet != null && !outletById.containsKey(outlet.id)) {
+        outletById[outlet.id] = outlet;
+      }
+    }
+
+    // Group employees by home_outlet_id
+    final employeesByOutlet = <String, List<Employee>>{};
+    for (final emp in employees) {
+      final homeOutletId = emp.homeOutletId;
+      if (homeOutletId != null && homeOutletId.isNotEmpty) {
+        employeesByOutlet
+            .putIfAbsent(homeOutletId, () => <Employee>[])
+            .add(emp);
+      }
+    }
+
+    final allMergedRows = <AttendancePolicyRecapDay>[];
+    final allStrictRows = <AttendancePolicyRecapDay>[];
+    final allFallbackRows = <AttendancePolicyRecapDay>[];
+
+    // For each outlet that has employees, run the dataset builder
+    for (final entry in employeesByOutlet.entries) {
+      final oId = entry.key;
+      final outletEmployees = entry.value;
+      final outlet = outletById[oId];
+      final outletName = outlet?.name ?? 'Outlet';
+      final operatingMode =
+          outlet?.operatingMode ?? OutletOperatingMode.normal;
+
+      final result = _adminPolicyRecapDatasetService.build(
+        employees: outletEmployees,
+        strictRows: strictRows.where((r) => r.outletId == oId),
+        attendanceLogs: allRows.map((row) => row.log),
+        outletId: oId,
+        outletName: outletName,
+        outletOperatingMode: operatingMode,
+        now: DateTime.now(),
+      );
+
+      allMergedRows.addAll(result.mergedRows);
+      allStrictRows.addAll(result.strictRows);
+      allFallbackRows.addAll(result.fallbackRows);
+    }
+
+    // Also handle strict rows from outlets with no local employees
+    // (employee may be assigned to a different outlet but scheduled here)
+    final coveredOutletIds = employeesByOutlet.keys.toSet();
+    final uncoveredStrictRows = strictRows
+        .where((r) => !coveredOutletIds.contains(r.outletId))
+        .toList(growable: false);
+    allMergedRows.addAll(uncoveredStrictRows);
+    allStrictRows.addAll(uncoveredStrictRows);
+
+    // Deduplicate by employee+date key (prefer strict over fallback)
+    final deduped = <String, AttendancePolicyRecapDay>{};
+    for (final row in allMergedRows) {
+      final key =
+          '${row.employeeId}|${row.logicalDate.year}-${row.logicalDate.month.toString().padLeft(2, '0')}-${row.logicalDate.day.toString().padLeft(2, '0')}';
+      // First entry wins (strict rows were added first)
+      deduped.putIfAbsent(key, () => row);
+    }
+
+    final mergedSorted = deduped.values.toList(growable: false)
+      ..sort((a, b) {
+        final dc = a.logicalDate.compareTo(b.logicalDate);
+        if (dc != 0) return dc;
+        return a.employeeName
+            .toLowerCase()
+            .compareTo(b.employeeName.toLowerCase());
+      });
+
+    return AdminPolicyRecapDatasetResult(
+      mergedRows: mergedSorted,
+      strictRows: allStrictRows,
+      fallbackRows: allFallbackRows,
+    );
+  }
+
   Future<List<Employee>> _fetchPayrollRoster(String outletId) async {
     final data = await SupabaseClientFactory.admin
         .from('employees')
@@ -534,6 +634,17 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         .eq('home_outlet_id', outletId)
         .order('name');
 
+    return (data as List)
+        .map((item) => Employee.fromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  Future<List<Employee>> _fetchAllEmployeesForPayroll() async {
+    final data = await SupabaseClientFactory.admin
+        .from('employees')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
     return (data as List)
         .map((item) => Employee.fromJson(item as Map<String, dynamic>))
         .toList(growable: false);
@@ -732,10 +843,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   bool get _canExportPayrollSpreadsheet {
     final dataset = _payrollMatrixDataset;
-    final hasSelectedOutlet =
-        _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty;
-    return hasSelectedOutlet &&
-        _hasValidPayrollDateRange &&
+    return _hasValidPayrollDateRange &&
         dataset != null &&
         !dataset.isEmpty &&
         !_exportingSpreadsheet &&
@@ -744,10 +852,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   bool get _canExportPayrollPdf {
     final dataset = _payrollMatrixDataset;
-    final hasSelectedOutlet =
-        _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty;
-    return hasSelectedOutlet &&
-        _hasValidPayrollDateRange &&
+    return _hasValidPayrollDateRange &&
         dataset != null &&
         !dataset.isEmpty &&
         !_exportingPayrollPdf &&
@@ -838,6 +943,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         startDate: _startDate,
         endDate: _endDate,
         dataset: dataset,
+        recapRows: _policyRecapRows,
       );
 
       await Share.shareXFiles(
@@ -872,46 +978,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       if (mounted) {
         setState(() => _exportingSpreadsheet = false);
       }
-    }
-  }
-
-  Future<void> _downloadPayrollValidationBundle(
-    PayrollRolloutAcceptanceSummary summary,
-  ) async {
-    final outletName = _resolvedOutletName();
-
-    try {
-      final bundle =
-          _payrollValidationBundleService.buildPayrollValidationBundle(
-        outletName: outletName,
-        startDate: _startDate,
-        endDate: _endDate,
-        summary: summary,
-      );
-      final directory = await getTemporaryDirectory();
-      final file = File(
-        '${directory.path}${Platform.pathSeparator}${bundle.filename}',
-      );
-      await file.writeAsString(bundle.content, flush: true);
-
-      await Share.shareXFiles(
-        <XFile>[
-          XFile(
-            file.path,
-            mimeType: 'text/markdown',
-          ),
-        ],
-        subject: 'Bukti Validasi Payroll Enakko - $outletName',
-      );
-
-      if (!mounted) return;
-      AppToast.success(context, 'Bukti validasi siap dibagikan.');
-    } catch (_) {
-      if (!mounted) return;
-      AppToast.error(
-        context,
-        'Bukti validasi belum bisa dibuat. Coba lagi setelah review parity.',
-      );
     }
   }
 
@@ -991,21 +1057,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       if (outlet.id == _selectedOutletId) return outlet.name;
     }
     return 'Outlet Terpilih';
-  }
-
-  List<PayrollScenarioReview> _buildPayrollRolloutReviews() {
-    final logicalWorkdayLabel = _formatDate(_endDate);
-    return requiredPayrollRolloutScenarioIds
-        .map(
-          (scenarioId) => PayrollScenarioReview(
-            scenarioId: scenarioId,
-            logicalWorkdayLabel: logicalWorkdayLabel,
-            contextLabel: 'Menunggu bukti parity',
-            evidenceBySource: const <PayrollEvidenceSource,
-                PayrollEvidenceSnapshot>{},
-          ),
-        )
-        .toList(growable: false);
   }
 
   String _formatDate(DateTime dt) {
@@ -1626,10 +1677,19 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Widget _buildRekapHarian() {
+    // Hitung scan count per (employeeId, logicalDate) dari raw logs
+    final scanCountMap = <String, int>{};
+    for (final row in _dailyRows) {
+      final dt = DateTime.tryParse(row.log.scannedAt)?.toLocal();
+      if (dt == null) continue;
+      final key =
+          '${row.log.employeeId}|${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      scanCountMap[key] = (scanCountMap[key] ?? 0) + 1;
+    }
+
     return PolicyRecapTab(
       isLoading: _loadingDaily,
-      hasSelectedOutlet:
-          _selectedOutletId != null && _selectedOutletId!.trim().isNotEmpty,
+      hasSelectedOutlet: true,
       policyError: _policyRecapError,
       rows: _policyRecapRows,
       fallbackRows: _policyRecapFallbackRows,
@@ -1638,86 +1698,16 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         setState(() => _selectedPolicyRecapFilter = filter);
       },
       loadingBuilder: _buildReportShimmer,
-      salaryOutputSection: _buildPayrollSupportSection(),
-    );
-  }
-
-  Widget _buildPayrollSupportSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        PayrollRolloutAcceptancePanel(
-          reviews: _buildPayrollRolloutReviews(),
-          outletName: _resolvedOutletName(),
-          startDate: _startDate,
-          endDate: _endDate,
-          onDownloadValidationBundle: _downloadPayrollValidationBundle,
-          onMarkPayrollReady: () {},
-        ),
-        const SizedBox(height: 16),
-        PolicyRecapPayrollSupportSection(
-          reviews: _buildPayrollRolloutReviews(),
-          outletName: _resolvedOutletName(),
-          startDate: _startDate,
-          endDate: _endDate,
-          onDownloadValidationBundle: (_) async {},
-          onMarkPayrollReady: null,
-          canExportPayrollPdf: _canExportPayrollPdf,
-          canExportPayrollSpreadsheet: _canExportPayrollSpreadsheet,
-          exportingPayrollPdf: _exportingPayrollPdf,
-          exportingSpreadsheet: _exportingSpreadsheet,
-          onExportPayrollPdf: _canExportPayrollPdf ? _exportPayrollPdf : null,
-          onExportPayrollSpreadsheet:
-              _canExportPayrollSpreadsheet ? _exportPayrollSpreadsheet : null,
-          payrollExportStatusMessage: _payrollExportStatusMessage,
-          payrollExportStatusIsError: _payrollExportStatusIsError,
-          previewSection: _buildPayrollMatrixPreviewSection(),
-        ),
-      ],
-    );
-  }
-
-  Widget? _buildPayrollMatrixPreviewSection() {
-    final dataset = _payrollMatrixDataset;
-    if (dataset == null || dataset.isEmpty) {
-      return null;
-    }
-
-    return Theme(
-      data: Theme.of(context).copyWith(
-        dividerColor: Colors.transparent,
-      ),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: const EdgeInsets.only(top: 12),
-        title: const Text(
-          'Pratinjau payroll matrix',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        subtitle: const Text(
-          'Tetap tersedia sebagai referensi pendukung gaji.',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        children: [
-          SizedBox(
-            height: math.min(
-              320.0,
-              MediaQuery.of(context).size.height * 0.42,
-            ),
-            child: PayrollMatrixTable(
-              dataset: dataset,
-              dateHeaders: dataset.dates,
-            ),
-          ),
-        ],
-      ),
+      scanCountMap: scanCountMap,
+      canExportPayrollPdf: _canExportPayrollPdf,
+      canExportPayrollSpreadsheet: _canExportPayrollSpreadsheet,
+      exportingPayrollPdf: _exportingPayrollPdf,
+      exportingSpreadsheet: _exportingSpreadsheet,
+      onExportPayrollPdf: _canExportPayrollPdf ? _exportPayrollPdf : null,
+      onExportPayrollSpreadsheet:
+          _canExportPayrollSpreadsheet ? _exportPayrollSpreadsheet : null,
+      payrollExportStatusMessage: _payrollExportStatusMessage,
+      payrollExportStatusIsError: _payrollExportStatusIsError,
     );
   }
 
@@ -1770,7 +1760,15 @@ class PolicyRecapTab extends StatelessWidget {
     required this.selectedFilter,
     required this.onFilterChanged,
     required this.loadingBuilder,
-    this.salaryOutputSection,
+    required this.scanCountMap,
+    required this.canExportPayrollPdf,
+    required this.canExportPayrollSpreadsheet,
+    required this.exportingPayrollPdf,
+    required this.exportingSpreadsheet,
+    this.onExportPayrollPdf,
+    this.onExportPayrollSpreadsheet,
+    this.payrollExportStatusMessage,
+    this.payrollExportStatusIsError = false,
     this.emptyNoDataSubtext = 'Tidak ada hari recap pada rentang waktu ini.',
   });
 
@@ -1782,8 +1780,16 @@ class PolicyRecapTab extends StatelessWidget {
   final PolicyRecapFilter selectedFilter;
   final ValueChanged<PolicyRecapFilter> onFilterChanged;
   final Widget Function() loadingBuilder;
+  final Map<String, int> scanCountMap;
   final String emptyNoDataSubtext;
-  final Widget? salaryOutputSection;
+  final bool canExportPayrollPdf;
+  final bool canExportPayrollSpreadsheet;
+  final bool exportingPayrollPdf;
+  final bool exportingSpreadsheet;
+  final VoidCallback? onExportPayrollPdf;
+  final VoidCallback? onExportPayrollSpreadsheet;
+  final String? payrollExportStatusMessage;
+  final bool payrollExportStatusIsError;
 
   @override
   Widget build(BuildContext context) {
@@ -1814,6 +1820,7 @@ class PolicyRecapTab extends StatelessWidget {
     final activeIncompleteCount =
         rows.where(_isActiveIncompletePolicyRecapRow).length;
     final pendingCount = pendingBelumPulangCount + activeIncompleteCount;
+    final hasActiveFilter = selectedFilter != PolicyRecapFilter.semua;
 
     final summaryChips = <Widget>[
       _PolicyMetaChip(
@@ -1842,26 +1849,48 @@ class PolicyRecapTab extends StatelessWidget {
         ),
     ];
 
+    final statusColor =
+        payrollExportStatusIsError ? AppColors.danger : AppColors.textSecondary;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       children: [
-        const Text(
-          'Rekap Harian',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
+        // ── Export buttons at top ──────────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: _CompactExportButton(
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'PDF Payroll',
+                isLoading: exportingPayrollPdf,
+                onPressed: canExportPayrollPdf ? onExportPayrollPdf : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _CompactExportButton(
+                icon: Icons.grid_on_outlined,
+                label: 'Spreadsheet',
+                isLoading: exportingSpreadsheet,
+                onPressed: canExportPayrollSpreadsheet
+                    ? onExportPayrollSpreadsheet
+                    : null,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        const Text(
-          'Pantau recap harian per karyawan. PDF payroll dan spreadsheet tetap tersedia sebagai output gaji pendukung.',
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.45,
-            color: AppColors.textSecondary,
+        if (payrollExportStatusMessage != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            payrollExportStatusMessage!,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: statusColor,
+            ),
           ),
-        ),
+        ],
+        // ── Policy error partial warning ──────────────────────────
         if (policyError != null && rows.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
@@ -1882,56 +1911,38 @@ class PolicyRecapTab extends StatelessWidget {
             ),
           ),
         ],
+        // ── Compatibility mode subtle chip ─────────────────────────
         if (fallbackRows.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: Icon(
-                    Icons.info_outline_rounded,
-                    size: 18,
-                    color: Color(0xFF475569),
-                  ),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Color(0xFF64748B),
                 ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        policyRecapCompatibilityModeTitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        policyRecapCompatibilityModeBody,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 1.45,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                SizedBox(width: 6),
+                Text(
+                  'Kompatibilitas aktif',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
                   ),
                 ),
               ],
             ),
           ),
         ],
+        // ── Summary chips ─────────────────────────────────────────
         if (summaryChips.isNotEmpty) ...[
           const SizedBox(height: 12),
           AppCard(
@@ -1943,31 +1954,15 @@ class PolicyRecapTab extends StatelessWidget {
             ),
           ),
         ],
+        // ── Filter toggle + chips ─────────────────────────────────
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: PolicyRecapFilter.values.map((filter) {
-            final isSelected = filter == selectedFilter;
-            return ChoiceChip(
-              label: Text(filter.label),
-              selected: isSelected,
-              showCheckmark: false,
-              selectedColor: AppColors.primary.withValues(alpha: 0.12),
-              backgroundColor: Colors.white,
-              side: BorderSide(
-                color: isSelected ? AppColors.primary : AppColors.border,
-              ),
-              labelStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              ),
-              onSelected: (_) => onFilterChanged(filter),
-            );
-          }).toList(growable: false),
+        _PolicyRecapFilterSection(
+          selectedFilter: selectedFilter,
+          onFilterChanged: onFilterChanged,
+          hasActiveFilter: hasActiveFilter,
         ),
         const SizedBox(height: 12),
+        // ── Filtered rows ─────────────────────────────────────────
         if (filteredRows.isEmpty)
           AppEmptyState(
             icon: Icons.event_busy_outlined,
@@ -1977,11 +1972,9 @@ class PolicyRecapTab extends StatelessWidget {
                 : 'Tidak ada hari yang cocok dengan filter ${selectedFilter.label.toLowerCase()} pada rentang ini.',
           )
         else
-          ...filteredRows.map((row) => PolicyRecapTile(recap: row)),
-        if (salaryOutputSection != null) ...[
-          const SizedBox(height: 16),
-          salaryOutputSection!,
-        ],
+          ...filteredRows.map(
+            (row) => PolicyRecapTile(recap: row, scanCountMap: scanCountMap),
+          ),
       ],
     );
   }
@@ -2131,8 +2124,13 @@ class _ReportTile extends StatelessWidget {
 
 class PolicyRecapTile extends StatelessWidget {
   final AttendancePolicyRecapDay recap;
+  final Map<String, int> scanCountMap;
 
-  const PolicyRecapTile({super.key, required this.recap});
+  const PolicyRecapTile({
+    super.key,
+    required this.recap,
+    required this.scanCountMap,
+  });
 
   String _formatDate(DateTime dt) {
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -2154,75 +2152,143 @@ class PolicyRecapTile extends StatelessWidget {
     return '${days[dt.weekday % 7]}, ${dt.day} ${months[dt.month]} ${dt.year}';
   }
 
-  String _requiredHours() {
-    final minutes = recap.requiredWorkMinutes;
-    if (minutes == null || minutes <= 0) return '-';
-    return '${minutes ~/ 60}j';
+  int _scanCount() {
+    final d = recap.logicalDate;
+    final key =
+        '${recap.employeeId}|${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    return scanCountMap[key] ?? 0;
   }
 
-  String _policyContext() {
-    if (recap.shiftBand == null) {
-      return 'Tanpa jadwal';
+  List<Widget> _buildSignalBadges() {
+    final badges = <Widget>[];
+
+    // Attendance status badges
+    if (recap.attendanceStatus == AttendancePolicyStatus.tidakHadir ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.absence ||
+        recap.hasSignal(AttendancePolicySignal.absence)) {
+      badges.add(_SignalBadge(
+        label: 'Tidak Hadir',
+        bgColor: const Color(0xFFFEE2E2),
+        textColor: const Color(0xFFDC2626),
+      ));
     }
 
-    return '${recap.shiftBand!.label} · ${_requiredHours()}';
+    if (recap.attendanceStatus == AttendancePolicyStatus.hadirTanpaJadwal ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.hadirTanpaJadwal ||
+        recap.hasSignal(AttendancePolicySignal.hadirTanpaJadwal)) {
+      badges.add(_SignalBadge(
+        label: 'Hadir Tanpa Jadwal',
+        bgColor: const Color(0xFFECFEFF),
+        textColor: const Color(0xFF0F766E),
+      ));
+    }
+
+    // Late
+    if (recap.isLate ||
+        recap.lateKind == LateKind.normal ||
+        recap.lateKind == LateKind.breakFirstConfirmed ||
+        recap.hasSignal(AttendancePolicySignal.late) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.late) {
+      final lateLabel = recap.lateKind == LateKind.breakFirstConfirmed
+          ? 'Terlambat (break-first)'
+          : 'Terlambat';
+      badges.add(_SignalBadge(
+        label: lateLabel,
+        bgColor: const Color(0xFFFEF3C7),
+        textColor: const Color(0xFF92400E),
+      ));
+    }
+
+    // Short work
+    if (recap.hasSignal(AttendancePolicySignal.shortWork) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.shortWork) {
+      final shortMin = recap.shortWorkMinutes ?? 0;
+      final shortLabel = shortMin > 0
+          ? 'Kurang Jam (${_formatPolicyMinutes(shortMin)})'
+          : 'Kurang Jam Kerja';
+      badges.add(_SignalBadge(
+        label: shortLabel,
+        bgColor: const Color(0xFFFEE2E2),
+        textColor: const Color(0xFFDC2626),
+      ));
+    }
+
+    // Excess break
+    if (recap.hasSignal(AttendancePolicySignal.excessBreak) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.excessBreak) {
+      final excessMin = recap.excessBreakMinutes ?? 0;
+      final excessLabel = excessMin > 0
+          ? 'Istirahat Berlebih (+${_formatPolicyMinutes(excessMin)})'
+          : 'Istirahat Berlebih';
+      badges.add(_SignalBadge(
+        label: excessLabel,
+        bgColor: const Color(0xFFFEE2E2),
+        textColor: const Color(0xFFDC2626),
+      ));
+    }
+
+    // Overtime
+    if (recap.hasSignal(AttendancePolicySignal.overtime) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.overtime) {
+      final otMin = recap.overtimeMinutes ?? 0;
+      final otLabel = otMin > 0
+          ? 'Lembur (${_formatPolicyMinutes(otMin)})'
+          : 'Lembur';
+      badges.add(_SignalBadge(
+        label: otLabel,
+        bgColor: const Color(0xFFFEF3C7),
+        textColor: const Color(0xFF92400E),
+      ));
+    }
+
+    // Manager exempt
+    if (recap.isManagerExempt ||
+        recap.hasSignal(AttendancePolicySignal.exemptManager) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.exemptManager) {
+      badges.add(_SignalBadge(
+        label: 'Manager Exempt',
+        bgColor: const Color(0xFFF8FAFC),
+        textColor: const Color(0xFF334155),
+      ));
+    }
+
+    // Belum absen pulang
+    if (recap.hasSignal(AttendancePolicySignal.belumAbsenPulang) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.belumAbsenPulang) {
+      badges.add(_SignalBadge(
+        label: 'Belum Absen Pulang',
+        bgColor: const Color(0xFFFEE2E2),
+        textColor: const Color(0xFFDC2626),
+      ));
+    }
+
+    // Active incomplete (still working today)
+    if (recap.hasSignal(AttendancePolicySignal.activeIncomplete) ||
+        recap.primaryStatus == AttendancePolicyPrimaryStatus.activeIncomplete) {
+      badges.add(_SignalBadge(
+        label: 'Hari Berjalan',
+        bgColor: const Color(0xFFDBEAFE),
+        textColor: const Color(0xFF1E40AF),
+      ));
+    }
+
+    return badges;
   }
 
-  String _cutoffContext() {
-    if (recap.shiftBand == null) {
-      return 'Hadir tanpa jadwal';
-    }
-
-    final cutoff = recap.lateCutoffLocal ?? '--:--';
-    final breakFirst = recap.breakFirstDeadlineLocal;
-    if (breakFirst == null || breakFirst.isEmpty) {
-      return 'Batas telat $cutoff';
-    }
-
-    return 'Batas $cutoff · Break-first $breakFirst';
+  String? _buildReasonText() {
+    final reason = buildPolicyRecapReasonCopy(recap);
+    // Don't show generic status labels as reason — they're already visible
+    if (reason == recap.attendanceStatus.label) return null;
+    if (reason.isEmpty) return null;
+    return reason;
   }
 
   @override
   Widget build(BuildContext context) {
-    final detailChips = recap.detailSignals
-        .map((signal) => AttendancePolicySignalChip(signal: signal))
-        .toList(growable: false);
-    final metricChips = [
-      _PolicyMetaChip(
-        icon: Icons.schedule_outlined,
-        label: _policyContext(),
-      ),
-      _PolicyMetaChip(
-        icon: Icons.timer_outlined,
-        label: _cutoffContext(),
-      ),
-      if (recap.netWorkMinutes != null)
-        _PolicyMetaChip(
-          icon: Icons.work_outline,
-          label: 'Kerja ${_formatPolicyMinutes(recap.netWorkMinutes)}',
-        ),
-      if (recap.totalBreakMinutes != null)
-        _PolicyMetaChip(
-          icon: Icons.free_breakfast_outlined,
-          label: 'Break ${_formatPolicyMinutes(recap.totalBreakMinutes)}',
-        ),
-      if ((recap.overtimeMinutes ?? 0) > 0)
-        _PolicyMetaChip(
-          icon: Icons.trending_up_outlined,
-          label: 'Lembur ${_formatPolicyMinutes(recap.overtimeMinutes)}',
-        ),
-      if ((recap.shortWorkMinutes ?? 0) > 0)
-        _PolicyMetaChip(
-          icon: Icons.timer_off_outlined,
-          label: 'Kurang ${_formatPolicyMinutes(recap.shortWorkMinutes)}',
-        ),
-      if ((recap.excessBreakMinutes ?? 0) > 0)
-        _PolicyMetaChip(
-          icon: Icons.hourglass_bottom_outlined,
-          label:
-              'Lebih break ${_formatPolicyMinutes(recap.excessBreakMinutes)}',
-        ),
-    ];
+    final initial = recap.employeeName.isNotEmpty
+        ? recap.employeeName[0].toUpperCase()
+        : '?';
+    final count = _scanCount();
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -2230,9 +2296,28 @@ class PolicyRecapTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header: avatar · nama · badge scan ──────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFEE2E2),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2240,10 +2325,11 @@ class PolicyRecapTile extends StatelessWidget {
                     Text(
                       recap.employeeName,
                       style: const TextStyle(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         color: AppColors.textPrimary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -2252,47 +2338,285 @@ class PolicyRecapTile extends StatelessWidget {
                         fontSize: 11,
                         color: AppColors.textSecondary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              AttendancePolicyBadge(
-                primaryStatus: recap.primaryStatus,
-                primarySeverity: recap.primarySeverity,
-                status: recap.attendanceStatus,
-                lateKind: recap.lateKind,
-              ),
+              if (count > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$count scan',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: metricChips,
+          // ── 4 time chips ─────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: _TimeChip(
+                  icon: Icons.login_outlined,
+                  label: 'Masuk',
+                  value: _formatPolicyTime(recap.firstScanLocal),
+                  bgColor: const Color(0xFFDCFCE7),
+                  textColor: const Color(0xFF16A34A),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _TimeChip(
+                  icon: Icons.logout_outlined,
+                  label: 'Pulang',
+                  value: _formatPolicyTime(recap.lastPulangLocal),
+                  bgColor: const Color(0xFFFEE2E2),
+                  textColor: const Color(0xFFDC2626),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _TimeChip(
+                  icon: Icons.timer_outlined,
+                  label: 'Kerja',
+                  value: _formatPolicyMinutes(recap.netWorkMinutes),
+                  bgColor: const Color(0xFFFEE2E2),
+                  textColor: const Color(0xFFDC2626),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _TimeChip(
+                  icon: Icons.free_breakfast_outlined,
+                  label: 'Istirahat',
+                  value: (recap.totalBreakMinutes ?? 0) > 0
+                      ? _formatPolicyMinutes(recap.totalBreakMinutes)
+                      : '–',
+                  bgColor: const Color(0xFFFEF9C3),
+                  textColor: const Color(0xFFD97706),
+                ),
+              ),
+            ],
           ),
-          if (detailChips.isNotEmpty) ...[
+          // ── Violation / status badges ──────────────────────────────
+          if (_buildSignalBadges().isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: detailChips,
+              spacing: 6,
+              runSpacing: 6,
+              children: _buildSignalBadges(),
             ),
           ],
-          const SizedBox(height: 12),
-          Text(
-            buildPolicyRecapReasonCopy(recap),
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: AppColors.textSecondary,
+          // ── Reason copy ─────────────────────────────────────────────
+          if (_buildReasonText() != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _buildReasonText()!,
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compact Export Button
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CompactExportButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _CompactExportButton({
+    required this.icon,
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        side: BorderSide(
+          color: onPressed != null ? AppColors.primary : AppColors.border,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      icon: isLoading
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            )
+          : Icon(icon, size: 16, color: AppColors.primary),
+      label: Text(
+        isLoading ? '...' : label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: onPressed != null
+              ? AppColors.primary
+              : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filter Toggle Section (AnimatedCrossFade)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PolicyRecapFilterSection extends StatefulWidget {
+  final PolicyRecapFilter selectedFilter;
+  final ValueChanged<PolicyRecapFilter> onFilterChanged;
+  final bool hasActiveFilter;
+
+  const _PolicyRecapFilterSection({
+    required this.selectedFilter,
+    required this.onFilterChanged,
+    required this.hasActiveFilter,
+  });
+
+  @override
+  State<_PolicyRecapFilterSection> createState() =>
+      _PolicyRecapFilterSectionState();
+}
+
+class _PolicyRecapFilterSectionState extends State<_PolicyRecapFilterSection> {
+  bool _showFilters = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _showFilters = !_showFilters),
+          child: Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Icons.filter_list_rounded,
+                    size: 20,
+                    color: widget.hasActiveFilter
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                  ),
+                  if (widget.hasActiveFilter)
+                    Positioned(
+                      top: -2,
+                      right: -4,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.hasActiveFilter
+                    ? widget.selectedFilter.label
+                    : 'Filter',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: widget.hasActiveFilter
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _showFilters
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 250),
+          crossFadeState: _showFilters
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: PolicyRecapFilter.values.map((filter) {
+                final isSelected = filter == widget.selectedFilter;
+                return ChoiceChip(
+                  label: Text(filter.label),
+                  selected: isSelected,
+                  showCheckmark: false,
+                  selectedColor: AppColors.primary.withValues(alpha: 0.12),
+                  backgroundColor: Colors.white,
+                  side: BorderSide(
+                    color:
+                        isSelected ? AppColors.primary : AppColors.border,
+                  ),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                  ),
+                  onSelected: (_) => widget.onFilterChanged(filter),
+                );
+              }).toList(growable: false),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Policy Meta Chip
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PolicyMetaChip extends StatelessWidget {
   final IconData icon;
@@ -2326,6 +2650,93 @@ class _PolicyMetaChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TimeChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color bgColor;
+  final Color textColor;
+
+  const _TimeChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.bgColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 12, color: textColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalBadge extends StatelessWidget {
+  final String label;
+  final Color bgColor;
+  final Color textColor;
+
+  const _SignalBadge({
+    required this.label,
+    required this.bgColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: textColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
       ),
     );
   }
