@@ -290,22 +290,53 @@ class PdfService {
 
                   // Data rows
                   ...employees.map((emp) {
+                    // Find the most common role for this employee across all schedule entries
+                    final employeeEntries = schedule.entries
+                        .where((e) => e.employeeId == emp.id)
+                        .toList();
+
+                    final String? commonRole = _getMostCommonRole(employeeEntries);
+
                     return pw.TableRow(
                       children: [
-                        // Employee name cell
+                        // Employee name cell (with role if available)
                         pw.Container(
                           padding: const pw.EdgeInsets.all(8),
                           decoration: pw.BoxDecoration(
                             color: PdfColor.fromHex('F9FAFB'),
                           ),
-                          child: pw.Text(
-                            emp.name,
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              font: ttf,
-                              fontSize: 9,
-                            ),
-                          ),
+                          child: commonRole != null && commonRole.isNotEmpty
+                              ? pw.Column(
+                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                  mainAxisSize: pw.MainAxisSize.min,
+                                  children: [
+                                    pw.Text(
+                                      emp.name,
+                                      style: pw.TextStyle(
+                                        fontWeight: pw.FontWeight.bold,
+                                        font: ttfBold,
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                    pw.SizedBox(height: 2),
+                                    pw.Text(
+                                      commonRole,
+                                      style: pw.TextStyle(
+                                        font: ttf,
+                                        fontSize: 7,
+                                        color: PdfColor.fromHex('6B7280'),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : pw.Text(
+                                  emp.name,
+                                  style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    font: ttfBold,
+                                    fontSize: 9,
+                                  ),
+                                ),
                         ),
 
                         // Day cells
@@ -1011,6 +1042,35 @@ class PdfService {
     return entry.shift.name.substring(0, 1).toUpperCase();
   }
 
+  /// Find the most common role for an employee across schedule entries
+  /// Returns null if no role is found or if roles are inconsistent
+  static String? _getMostCommonRole(List<ScheduleEntry> entries) {
+    if (entries.isEmpty) return null;
+
+    final roleCounts = <String, int>{};
+
+    for (final entry in entries) {
+      if (entry.role != null && entry.role!.isNotEmpty) {
+        roleCounts[entry.role!] = (roleCounts[entry.role!] ?? 0) + 1;
+      }
+    }
+
+    if (roleCounts.isEmpty) return null;
+
+    // Return the most frequently occurring role
+    String mostCommonRole = roleCounts.keys.first;
+    int maxCount = roleCounts[mostCommonRole]!;
+
+    for (final entry in roleCounts.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        mostCommonRole = entry.key;
+      }
+    }
+
+    return mostCommonRole;
+  }
+
   // ─── Test-visible wrappers ──────────────────────────────────────────────
   @visibleForTesting
   static PdfColor statusTextColorForTest(String status) =>
@@ -1018,4 +1078,8 @@ class PdfService {
 
   @visibleForTesting
   static PdfColor typeTextColorForTest(String jenis) => _typeTextColor(jenis);
+
+  @visibleForTesting
+  static String? getMostCommonRoleForTest(List<ScheduleEntry> entries) =>
+      _getMostCommonRole(entries);
 }

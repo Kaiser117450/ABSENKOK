@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:absensi_enakko_flutter/core/supabase_client.dart';
@@ -18,7 +19,6 @@ import 'package:absensi_enakko_flutter/widgets/app_card.dart';
 import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
 import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
 import 'package:absensi_enakko_flutter/widgets/badge_avatar.dart';
-import 'package:absensi_enakko_flutter/widgets/employee_contract_badge.dart';
 import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 
 class AdminEmployeesScreen extends ConsumerStatefulWidget {
@@ -465,6 +465,123 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
+                // Filter button — PopupMenuButton for contract filter
+                PopupMenuButton<String>(
+                  offset: const Offset(0, 40),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) {
+                    setState(() {
+                      if (value == 'semua') {
+                        _filterContract = null;
+                      } else if (value == 'fulltime') {
+                        _filterContract = EmployeeContract.fulltime;
+                      } else if (value == 'parttime') {
+                        _filterContract = EmployeeContract.parttime;
+                      }
+                    });
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'semua',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 18,
+                            color: _filterContract == null
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Semua',
+                            style: TextStyle(
+                              fontWeight: _filterContract == null
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem<String>(
+                      value: 'fulltime',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 10,
+                            color:
+                                _filterContract == EmployeeContract.fulltime
+                                    ? const Color(0xFF2563EB)
+                                    : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Full-Time',
+                            style: TextStyle(
+                              fontWeight: _filterContract ==
+                                      EmployeeContract.fulltime
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'parttime',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.circle_outlined,
+                            size: 10,
+                            color:
+                                _filterContract == EmployeeContract.parttime
+                                    ? const Color(0xFF7C3AED)
+                                    : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Part-Time',
+                            style: TextStyle(
+                              fontWeight: _filterContract ==
+                                      EmployeeContract.parttime
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _filterContract != null
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : const Color(0xFFF8F5F0),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _filterContract != null
+                            ? AppColors.primary.withValues(alpha: 0.3)
+                            : AppColors.border,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.filter_list,
+                      size: 20,
+                      color: _filterContract != null
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 // Badge management button — compact circle (admin only)
                 if (isFullAdmin)
                   GestureDetector(
@@ -498,70 +615,39 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                         height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
                     SizedBox(
                       height: 48,
-                      child: ListView(
+                      child: SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                         scrollDirection: Axis.horizontal,
-                        children: [
-                          // "Semua" chip hanya tampil untuk admin penuh
-                          if (!isKepalaGerai)
-                            _FilterChip2(
-                              label: 'Semua',
-                              selected: _filterOutletId == null,
-                              onTap: () =>
-                                  setState(() => _filterOutletId = null),
-                            ),
-                          ..._outlets.map((o) => Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: _FilterChip2(
-                                  label: o.name,
-                                  selected: _filterOutletId == o.id,
-                                  // Kepala gerai tidak bisa ganti filter outlet
-                                  onTap: isKepalaGerai
-                                      ? null
-                                      : () => setState(
-                                          () => _filterOutletId = o.id),
-                                ),
-                              )),
-                        ],
+                        child: Row(
+                          children: [
+                            // "Semua" chip hanya tampil untuk admin penuh
+                            if (!isKepalaGerai)
+                              _FilterChip2(
+                                label: 'Semua',
+                                selected: _filterOutletId == null,
+                                onTap: () =>
+                                    setState(() => _filterOutletId = null),
+                              ),
+                            ..._outlets.map((o) => Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: _FilterChip2(
+                                    label: o.name,
+                                    selected: _filterOutletId == o.id,
+                                    // Kepala gerai tidak bisa ganti filter outlet
+                                    onTap: isKepalaGerai
+                                        ? null
+                                        : () => setState(
+                                            () => _filterOutletId = o.id),
+                                  ),
+                                )),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               );
             }),
-
-          // ── CONTRACT FILTER CHIPS ───────────────────────────────────────
-          Container(
-            color: Colors.white,
-            child: SizedBox(
-              height: 40,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip2(
-                    label: 'Semua Kontrak',
-                    selected: _filterContract == null,
-                    onTap: () => setState(() => _filterContract = null),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip2(
-                    label: 'Full-Time',
-                    selected: _filterContract == EmployeeContract.fulltime,
-                    onTap: () => setState(
-                        () => _filterContract = EmployeeContract.fulltime),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip2(
-                    label: 'Part-Time',
-                    selected: _filterContract == EmployeeContract.parttime,
-                    onTap: () => setState(
-                        () => _filterContract = EmployeeContract.parttime),
-                  ),
-                ],
-              ),
-            ),
-          ),
 
           // ── LIST ─────────────────────────────────────────────────────────
           Expanded(
@@ -795,236 +881,263 @@ class _EmployeeCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
-      child: Row(
-        children: [
-          // Left color bar (red if active, gray if inactive)
-          Container(
-            width: 5,
-            height: 80,
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : AppColors.textMuted,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // Left color bar (flexible height)
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: isActive ? AppColors.primary : AppColors.textMuted,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
               ),
             ),
-          ),
 
-          // Avatar circle
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Stack(
-              children: [
-                BadgeAvatar(
-                  photoUrl: employee.photoUrl,
-                  name: employee.name,
-                  size: 52,
-                  badge: badge,
-                ),
-                // NFC badge
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: hasNfc ? AppColors.success : AppColors.textMuted,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: Icon(
-                      hasNfc ? Icons.nfc : Icons.nfc_outlined,
-                      size: 10,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Info
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Avatar circle
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Stack(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          employee.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                            color: isActive
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (!isActive)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Text(
-                            'Non-aktif',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                    ],
+                  BadgeAvatar(
+                    photoUrl: employee.photoUrl,
+                    name: employee.name,
+                    size: 52,
+                    badge: badge,
                   ),
-                  const SizedBox(height: 3),
-                  EmployeeContractBadge(
-                      contract: employee.employmentContract),
-                  if (employee.position != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      employee.position!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
+                  // NFC badge
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: hasNfc ? AppColors.success : AppColors.textMuted,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        hasNfc ? Icons.nfc : Icons.nfc_outlined,
+                        size: 10,
+                        color: Colors.white,
                       ),
                     ),
-                  ],
-                  // Outlet info - tampilkan nama gerai atau "Belum punya gerai"
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(Icons.store_outlined,
-                          size: 11,
-                          color: outletName != null
-                              ? AppColors.textMuted
-                              : const Color(0xFFF59E0B)),
-                      const SizedBox(width: 3),
-                      Text(
-                        outletName ?? 'Belum punya gerai',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: outletName != null
-                              ? AppColors.textMuted
-                              : const Color(0xFFD97706),
-                          fontStyle: outletName != null
-                              ? FontStyle.normal
-                              : FontStyle.italic,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
-          ),
 
-          // Action buttons
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // NFC Button (primary action)
-                _ActionBtn(
-                  icon: Icons.nfc,
-                  color: hasNfc ? AppColors.success : AppColors.accent,
-                  tooltip: hasNfc ? 'NFC Tersedia' : 'Assign NFC',
-                  onTap: onAssignNfc,
-                ),
-                const SizedBox(width: 8),
-                // More options menu (contains Edit, Sakit/Izin, Badge)
-                PopupMenuButton<String>(
-                  offset: const Offset(0, 40),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      onEdit();
-                    } else if (value == 'sakit_izin') {
-                      onSakitIzin();
-                    } else if (value == 'sakit_izin_history') {
-                      onSakitIzinHistory();
-                    } else if (value == 'assign_badge') {
-                      onAssignBadge();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined,
-                              size: 18, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          const Text('Edit Karyawan'),
-                        ],
-                      ),
+            // Info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  employee.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                    color: isActive
+                                        ? AppColors.textPrimary
+                                        : AppColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              // Compact contract indicator
+                              Text(
+                                employee.employmentContract ==
+                                        EmployeeContract.fulltime
+                                    ? 'FT'
+                                    : 'PT',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: employee.employmentContract ==
+                                          EmployeeContract.fulltime
+                                      ? const Color(0xFF2563EB)
+                                      : const Color(0xFF7C3AED),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!isActive)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Non-aktif',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'sakit_izin',
-                      child: Row(
-                        children: [
-                          Icon(Icons.medical_services_outlined,
-                              size: 18, color: const Color(0xFFDC2626)),
-                          const SizedBox(width: 12),
-                          const Text('Input Sakit/Izin'),
-                        ],
+                    if (employee.position != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        employee.position!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'sakit_izin_history',
-                      child: Row(
-                        children: [
-                          Icon(Icons.history,
-                              size: 18, color: AppColors.textSecondary),
-                          const SizedBox(width: 12),
-                          const Text('Riwayat Sakit/Izin'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'assign_badge',
-                      child: Row(
-                        children: [
-                          Icon(Icons.workspace_premium_outlined,
-                              size: 18, color: const Color(0xFFF59E0B)),
-                          const SizedBox(width: 12),
-                          const Text('Assign Badge'),
-                        ],
-                      ),
+                    ],
+                    // Outlet info
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.store_outlined,
+                            size: 11,
+                            color: outletName != null
+                                ? AppColors.textMuted
+                                : const Color(0xFFF59E0B)),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            outletName ?? 'Belum punya gerai',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: outletName != null
+                                  ? AppColors.textMuted
+                                  : const Color(0xFFD97706),
+                              fontStyle: outletName != null
+                                  ? FontStyle.normal
+                                  : FontStyle.italic,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+
+            // Action buttons
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // NFC Button (primary action)
+                  _ActionBtn(
+                    icon: Icons.nfc,
+                    color: hasNfc ? AppColors.success : AppColors.accent,
+                    tooltip: hasNfc ? 'NFC Tersedia' : 'Assign NFC',
+                    onTap: onAssignNfc,
+                  ),
+                  const SizedBox(width: 8),
+                  // More options menu (contains Edit, Sakit/Izin, Badge)
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      Icons.more_vert,
-                      size: 18,
-                      color: Colors.grey.shade700,
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'sakit_izin') {
+                        onSakitIzin();
+                      } else if (value == 'sakit_izin_history') {
+                        onSakitIzinHistory();
+                      } else if (value == 'assign_badge') {
+                        onAssignBadge();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined,
+                                size: 18, color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            const Text('Edit Karyawan'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'sakit_izin',
+                        child: Row(
+                          children: [
+                            Icon(Icons.medical_services_outlined,
+                                size: 18, color: const Color(0xFFDC2626)),
+                            const SizedBox(width: 12),
+                            const Text('Input Sakit/Izin'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'sakit_izin_history',
+                        child: Row(
+                          children: [
+                            Icon(Icons.history,
+                                size: 18, color: AppColors.textSecondary),
+                            const SizedBox(width: 12),
+                            const Text('Riwayat Sakit/Izin'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'assign_badge',
+                        child: Row(
+                          children: [
+                            Icon(Icons.workspace_premium_outlined,
+                                size: 18, color: const Color(0xFFF59E0B)),
+                            const SizedBox(width: 12),
+                            const Text('Assign Badge'),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 18,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1425,11 +1538,15 @@ class _EmployeeSheet extends StatefulWidget {
 }
 
 class _EmployeeSheetState extends State<_EmployeeSheet> {
+  static const _defaultPositions = ['Crew', 'Kepala Gerai'];
+  static const _prefsKey = 'custom_employee_positions';
+
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _positionCtrl;
   late final TextEditingController _empCodeCtrl;
   String? _selectedOutletId;
+  String? _selectedPosition;
+  List<String> _customPositions = [];
   late EmployeeContract _selectedContract;
   bool _isActive = true;
   bool _saving = false;
@@ -1440,7 +1557,6 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     super.initState();
     final emp = widget.employee;
     _nameCtrl = TextEditingController(text: emp?.name ?? '');
-    _positionCtrl = TextEditingController(text: emp?.position ?? '');
     _empCodeCtrl = TextEditingController(text: emp?.employeeCode ?? '');
     // forcedOutletId: kepala_gerai yang tambah karyawan baru → auto-set outlet mereka
     _selectedOutletId = widget.forcedOutletId ??
@@ -1449,12 +1565,78 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     _isActive = emp?.isActive ?? true;
     // New employees default to PARTTIME; existing keep their stored value
     _selectedContract = emp?.employmentContract ?? EmployeeContract.parttime;
+    // Position: load custom positions then set initial value
+    _selectedPosition = emp?.position ?? _defaultPositions.first;
+    _loadCustomPositions();
+  }
+
+  Future<void> _loadCustomPositions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_prefsKey) ?? [];
+    if (!mounted) return;
+    setState(() {
+      _customPositions = saved;
+      // If existing employee has a position not in any list, add it temporarily
+      final emp = widget.employee;
+      if (emp?.position != null &&
+          emp!.position!.isNotEmpty &&
+          !_defaultPositions.contains(emp.position) &&
+          !_customPositions.contains(emp.position)) {
+        _customPositions.add(emp.position!);
+      }
+    });
+  }
+
+  Future<void> _showAddPositionDialog() async {
+    final controller = TextEditingController();
+    final newPosition = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tambah Posisi Baru'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            hintText: 'Nama posisi baru',
+            prefixIcon: Icon(Icons.work_outline, size: 20),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) Navigator.pop(ctx, value);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (newPosition == null || newPosition.isEmpty) return;
+
+    // Avoid duplicates
+    final allExisting = [..._defaultPositions, ..._customPositions];
+    if (!allExisting.contains(newPosition)) {
+      _customPositions.add(newPosition);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_prefsKey, _customPositions);
+    }
+
+    if (mounted) {
+      setState(() => _selectedPosition = newPosition);
+    }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _positionCtrl.dispose();
     _empCodeCtrl.dispose();
     super.dispose();
   }
@@ -1469,9 +1651,9 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     try {
       final payload = {
         'name': _nameCtrl.text.trim(),
-        'position': _positionCtrl.text.trim().isEmpty
+        'position': (_selectedPosition == null || _selectedPosition!.isEmpty)
             ? null
-            : _positionCtrl.text.trim(),
+            : _selectedPosition,
         'employee_code':
             _empCodeCtrl.text.trim().isEmpty ? null : _empCodeCtrl.text.trim(),
         'home_outlet_id': _selectedOutletId,
@@ -1643,12 +1825,44 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                           },
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _positionCtrl,
+                        DropdownButtonFormField<String>(
+                          value: _selectedPosition,
                           decoration: const InputDecoration(
-                            labelText: 'Jabatan / Posisi (opsional)',
+                            labelText: 'Jabatan / Posisi',
                             prefixIcon: Icon(Icons.work_outline, size: 20),
                           ),
+                          items: [
+                            ...[..._defaultPositions, ..._customPositions]
+                                .map((p) => DropdownMenuItem(
+                                      value: p,
+                                      child: Text(p),
+                                    )),
+                            const DropdownMenuItem<String>(
+                              value: '__add_new__',
+                              child: Text(
+                                '＋ Tambah Posisi Baru...',
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                          validator: (v) {
+                            if (v == null || v.isEmpty || v == '__add_new__') {
+                              return 'Jabatan wajib dipilih';
+                            }
+                            return null;
+                          },
+                          onChanged: (v) {
+                            if (v == '__add_new__') {
+                              // Reset to previous value before opening dialog
+                              setState(() {});
+                              _showAddPositionDialog();
+                            } else {
+                              setState(() => _selectedPosition = v);
+                            }
+                          },
                         ),
                         const SizedBox(height: 14),
                         TextFormField(

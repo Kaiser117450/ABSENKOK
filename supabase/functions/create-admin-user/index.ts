@@ -72,6 +72,7 @@ serve(async (req) => {
       app_metadata: {
         app_role: 'kepala_gerai',
         managed_outlet_id: outlet_id,
+        must_change_password: true,
       },
       user_metadata: {
         name: name,

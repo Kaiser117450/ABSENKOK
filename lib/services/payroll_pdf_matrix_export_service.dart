@@ -19,12 +19,14 @@ typedef PayrollPdfNowProvider = DateTime Function();
 class PayrollPdfMatrixCellPreview {
   final String primaryLabel;
   final List<String> secondaryTags;
+  final List<String> secondaryDescriptions;
   final String fillColorHex;
   final String textColorHex;
 
   const PayrollPdfMatrixCellPreview({
     required this.primaryLabel,
     required this.secondaryTags,
+    this.secondaryDescriptions = const [],
     required this.fillColorHex,
     required this.textColorHex,
   });
@@ -33,6 +35,7 @@ class PayrollPdfMatrixCellPreview {
     return PayrollPdfMatrixCellPreview(
       primaryLabel: cell.primaryLabel,
       secondaryTags: List<String>.from(cell.secondaryTags),
+      secondaryDescriptions: List<String>.from(cell.secondaryDescriptions),
       fillColorHex: cell.fillColorHex,
       textColorHex: cell.textColorHex,
     );
@@ -42,6 +45,7 @@ class PayrollPdfMatrixCellPreview {
     return <String, dynamic>{
       'primaryLabel': primaryLabel,
       'secondaryTags': secondaryTags,
+      'secondaryDescriptions': secondaryDescriptions,
       'fillColorHex': fillColorHex,
       'textColorHex': textColorHex,
     };
@@ -51,12 +55,14 @@ class PayrollPdfMatrixCellPreview {
 class PayrollPdfMatrixRowPreview {
   final String employeeName;
   final String employmentContract;
+  final String employeeRole;
   final List<PayrollPdfMatrixCellPreview> cells;
   final List<int> summaryValues;
 
   const PayrollPdfMatrixRowPreview({
     required this.employeeName,
     required this.employmentContract,
+    required this.employeeRole,
     required this.cells,
     required this.summaryValues,
   });
@@ -68,6 +74,7 @@ class PayrollPdfMatrixRowPreview {
     return PayrollPdfMatrixRowPreview(
       employeeName: employeeName,
       employmentContract: employmentContract,
+      employeeRole: employeeRole,
       cells: cells.sublist(start, end),
       summaryValues: summaryValues,
     );
@@ -77,6 +84,7 @@ class PayrollPdfMatrixRowPreview {
     return <String, dynamic>{
       'employeeName': employeeName,
       'employmentContract': employmentContract,
+      'employeeRole': employeeRole,
       'cells': cells.map((cell) => cell.toJson()).toList(growable: false),
       'summaryValues': summaryValues,
     };
@@ -277,6 +285,7 @@ class PayrollPdfMatrixExportService {
           (row) => PayrollPdfMatrixRowPreview(
             employeeName: row.employeeName,
             employmentContract: row.employmentContract.dbValue,
+            employeeRole: row.employeeRole,
             cells: List<PayrollPdfMatrixCellPreview>.generate(
               dates.length,
               (index) {
@@ -434,6 +443,14 @@ class PayrollPdfMatrixExportService {
           regular: regular,
           bold: bold,
         ),
+        pw.SizedBox(height: 16),
+        _buildContractBreakdown(preview: preview, regular: regular, bold: bold),
+        pw.SizedBox(height: 16),
+        _buildAverageDeficitInsights(preview: preview, regular: regular, bold: bold),
+        pw.SizedBox(height: 16),
+        _buildTopInsightsSection(preview: preview, regular: regular, bold: bold),
+        pw.SizedBox(height: 16),
+        _buildKepalaGeraiSection(preview: preview, regular: regular, bold: bold),
         pw.SizedBox(height: 18),
         pw.Text(
           'Legend payroll',
@@ -654,11 +671,13 @@ class PayrollPdfMatrixExportService {
       (item) => item.tag == tag,
       orElse: () => const PayrollMatrixSummaryMetric(
         tag: PayrollMatrixSemantics.managerExemptTag,
-        label: PayrollMatrixSemantics.managerExemptTag,
+        label: 'Manager Exempt',
         fillColorHex: '#F8FAFC',
         textColorHex: '#334155',
       ),
     );
+    // Show "TAG = Full Label" for clarity, e.g. "OT = Lembur"
+    final displayText = '$tag = ${metric.label}';
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: pw.BoxDecoration(
@@ -667,14 +686,409 @@ class PayrollPdfMatrixExportService {
         border: pw.Border.all(color: PdfColor.fromHex('E5E7EB')),
       ),
       child: pw.Text(
-        tag,
+        displayText,
         style: pw.TextStyle(
           font: tag == PayrollMatrixSemantics.managerExemptTag ? regular : bold,
-          fontSize: 9,
+          fontSize: 8,
           color: PdfColor.fromHex(metric.textColorHex),
         ),
       ),
     );
+  }
+
+  pw.Widget _buildContractBreakdown({
+    required PayrollPdfDocumentPreview preview,
+    required pw.Font regular,
+    required pw.Font bold,
+  }) {
+    final contractCounts = <String, int>{};
+    for (final page in preview.matrixPages) {
+      for (final row in page.rows) {
+        contractCounts[row.employmentContract] =
+            (contractCounts[row.employmentContract] ?? 0) + 1;
+      }
+    }
+
+    final fulltimeCount = contractCounts['FULLTIME'] ?? 0;
+    final parttimeCount = contractCounts['PARTTIME'] ?? 0;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('F8FAFC'),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: PdfColor.fromHex('E2E8F0')),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Breakdown Kontrak Karyawan',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 11,
+              color: PdfColor.fromHex('111827'),
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            'Fulltime: $fulltimeCount | Parttime: $parttimeCount',
+            style: pw.TextStyle(
+              font: regular,
+              fontSize: 9,
+              color: PdfColor.fromHex('475569'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildAverageDeficitInsights({
+    required PayrollPdfDocumentPreview preview,
+    required pw.Font regular,
+    required pw.Font bold,
+  }) {
+    final deficitData = <Map<String, dynamic>>[];
+
+    for (final page in preview.matrixPages) {
+      for (final row in page.rows) {
+        final workDays = _countWorkDays(row.cells);
+        if (workDays == 0) continue;
+
+        final totalShortWorkMinutes = _extractTotalMinutes(row.cells, 'Kurang Jam');
+        final totalExcessBreakMinutes = _extractTotalMinutes(row.cells, 'Break Lebih');
+
+        final avgShortWork = totalShortWorkMinutes / workDays;
+        final avgExcessBreak = totalExcessBreakMinutes / workDays;
+
+        if (avgShortWork > 0 || avgExcessBreak > 0) {
+          deficitData.add({
+            'name': row.employeeName,
+            'contract': row.employmentContract,
+            'avgShortWork': avgShortWork,
+            'avgExcessBreak': avgExcessBreak,
+          });
+        }
+      }
+    }
+
+    if (deficitData.isEmpty) {
+      return pw.SizedBox();
+    }
+
+    // Sort by total deficit (short work + excess break)
+    deficitData.sort((a, b) =>
+        (b['avgShortWork'] + b['avgExcessBreak']).compareTo(a['avgShortWork'] + a['avgExcessBreak']));
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('FEF2F2'),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: PdfColor.fromHex('FECACA')),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Rata-Rata Deficit Harian',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 11,
+              color: PdfColor.fromHex('111827'),
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          ...deficitData.take(5).map((data) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.Text(
+              '• ${data['name']} (${data['contract']}): Kurang ${_formatMinutesToHours(data['avgShortWork'])}, Break +${_formatMinutesToHours(data['avgExcessBreak'])}',
+              style: pw.TextStyle(
+                font: regular,
+                fontSize: 8,
+                color: PdfColor.fromHex('B91C1C'),
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildTopInsightsSection({
+    required PayrollPdfDocumentPreview preview,
+    required pw.Font regular,
+    required pw.Font bold,
+  }) {
+    final employeeData = <Map<String, dynamic>>[];
+
+    for (final page in preview.matrixPages) {
+      for (final row in page.rows) {
+        final totalIssues = row.summaryValues[0] + row.summaryValues[1] + row.summaryValues[2]; // late + short work + excess break
+        final overtimeCount = row.summaryValues[4];
+
+        employeeData.add({
+          'name': row.employeeName,
+          'contract': row.employmentContract,
+          'totalIssues': totalIssues,
+          'overtimeCount': overtimeCount,
+          'lateCount': row.summaryValues[0],
+          'shortWorkCount': row.summaryValues[1],
+          'excessBreakCount': row.summaryValues[2],
+        });
+      }
+    }
+
+    // Sort by issues (descending) and overtime (descending)
+    final mostProblematic = List<Map<String, dynamic>>.from(employeeData)
+      ..sort((a, b) => b['totalIssues'].compareTo(a['totalIssues']));
+
+    final mostOvertime = List<Map<String, dynamic>>.from(employeeData)
+      ..sort((a, b) => b['overtimeCount'].compareTo(a['overtimeCount']));
+
+    final cleanEmployees = employeeData.where((emp) => emp['totalIssues'] == 0).toList();
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('F0FDF4'),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: PdfColor.fromHex('BBF7D0')),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Top Insights',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 11,
+              color: PdfColor.fromHex('111827'),
+            ),
+          ),
+          pw.SizedBox(height: 10),
+
+          // Top 5 Most Problematic
+          pw.Text(
+            'TOP 5 PALING BERMASALAH:',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 9,
+              color: PdfColor.fromHex('DC2626'),
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          ...mostProblematic.take(5).where((emp) => emp['totalIssues'] > 0).toList().asMap().entries.map((entry) {
+            final index = entry.key;
+            final emp = entry.value;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2),
+              child: pw.Text(
+                '${index + 1}. ${emp['name']} (${emp['contract']}) - ${emp['totalIssues']} masalah',
+                style: pw.TextStyle(
+                  font: regular,
+                  fontSize: 8,
+                  color: PdfColor.fromHex('374151'),
+                ),
+              ),
+            );
+          }),
+
+          pw.SizedBox(height: 8),
+
+          // Top 5 Most Overtime
+          pw.Text(
+            'TOP 5 LEMBUR:',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 9,
+              color: PdfColor.fromHex('D97706'),
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          ...mostOvertime.take(5).where((emp) => emp['overtimeCount'] > 0).toList().asMap().entries.map((entry) {
+            final index = entry.key;
+            final emp = entry.value;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2),
+              child: pw.Text(
+                '${index + 1}. ${emp['name']} (${emp['contract']}) - ${emp['overtimeCount']} hari',
+                style: pw.TextStyle(
+                  font: regular,
+                  fontSize: 8,
+                  color: PdfColor.fromHex('374151'),
+                ),
+              ),
+            );
+          }),
+
+          pw.SizedBox(height: 8),
+
+          // Clean Employees
+          pw.Text(
+            'KARYAWAN BERSIH (${cleanEmployees.length}):',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 9,
+              color: PdfColor.fromHex('059669'),
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          if (cleanEmployees.isNotEmpty) ...[
+            pw.Text(
+              cleanEmployees.map((emp) => '${emp['name']} (${emp['contract']})').join(', '),
+              style: pw.TextStyle(
+                font: regular,
+                fontSize: 8,
+                color: PdfColor.fromHex('374151'),
+              ),
+            ),
+          ] else ...[
+            pw.Text(
+              'Tidak ada karyawan dengan record bersih.',
+              style: pw.TextStyle(
+                font: regular,
+                fontSize: 8,
+                color: PdfColor.fromHex('6B7280'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildKepalaGeraiSection({
+    required PayrollPdfDocumentPreview preview,
+    required pw.Font regular,
+    required pw.Font bold,
+  }) {
+    final managerEmployees = <Map<String, dynamic>>[];
+
+    for (final page in preview.matrixPages) {
+      for (final row in page.rows) {
+        // Check if employee has Manager Exempt (ME) tag in any cell
+        final hasManagerExempt = row.cells.any((cell) =>
+            cell.secondaryTags.contains('ME') ||
+            cell.secondaryDescriptions.any((desc) => desc.contains('Manager Exempt')));
+
+        if (hasManagerExempt) {
+          final presentDays = row.cells.where((cell) =>
+              cell.primaryLabel.isNotEmpty &&
+              !cell.primaryLabel.contains('Tidak Hadir') &&
+              !cell.primaryLabel.contains('Belum')).length;
+
+          final absentDays = row.cells.where((cell) =>
+              cell.primaryLabel.contains('Tidak Hadir')).length;
+
+          managerEmployees.add({
+            'name': row.employeeName,
+            'contract': row.employmentContract,
+            'presentDays': presentDays,
+            'absentDays': absentDays,
+          });
+        }
+      }
+    }
+
+    if (managerEmployees.isEmpty) {
+      return pw.SizedBox();
+    }
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('F8FAFC'),
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: PdfColor.fromHex('CBD5E1')),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'KEPALA GERAI / STORE MANAGER',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: 11,
+              color: PdfColor.fromHex('111827'),
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          ...managerEmployees.map((manager) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.Text(
+              '• ${manager['name']} (${manager['contract']}) - Hadir: ${manager['presentDays']} hari, Tidak hadir: ${manager['absentDays']} hari (tanpa penalti)',
+              style: pw.TextStyle(
+                font: regular,
+                fontSize: 8,
+                color: PdfColor.fromHex('334155'),
+              ),
+            ),
+          )),
+          if (managerEmployees.isNotEmpty) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Catatan: Manager exempt tidak dikenakan penalti untuk keterlambatan atau deficit jam kerja.',
+              style: pw.TextStyle(
+                font: regular,
+                fontSize: 7,
+                color: PdfColor.fromHex('64748B'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  int _countWorkDays(List<PayrollPdfMatrixCellPreview> cells) {
+    return cells.where((cell) =>
+        cell.primaryLabel.isNotEmpty &&
+        !cell.primaryLabel.contains('Libur') &&
+        !cell.primaryLabel.contains('Cuti') &&
+        !cell.primaryLabel.contains('Izin')).length;
+  }
+
+  double _extractTotalMinutes(List<PayrollPdfMatrixCellPreview> cells, String type) {
+    double total = 0;
+    for (final cell in cells) {
+      for (final desc in cell.secondaryDescriptions) {
+        if (desc.contains(type)) {
+          final minutes = _parseMinutesFromDescription(desc);
+          if (minutes != null) total += minutes;
+        }
+      }
+    }
+    return total;
+  }
+
+  double? _parseMinutesFromDescription(String description) {
+    // Parse formats like "Kurang Jam 1j 30m" or "Break Lebih 45m"
+    final regex = RegExp(r'(\d+)j\s*(\d+)m|(\d+)m');
+    final match = regex.firstMatch(description);
+    if (match != null) {
+      if (match.group(1) != null && match.group(2) != null) {
+        // Format: "1j 30m"
+        final hours = int.parse(match.group(1)!);
+        final minutes = int.parse(match.group(2)!);
+        return (hours * 60 + minutes).toDouble();
+      } else if (match.group(3) != null) {
+        // Format: "45m"
+        return int.parse(match.group(3)!).toDouble();
+      }
+    }
+    return null;
+  }
+
+  String _formatMinutesToHours(double minutes) {
+    if (minutes <= 0) return '0m';
+    final totalMinutes = minutes.round();
+    if (totalMinutes < 60) return '${totalMinutes}m';
+    final hours = totalMinutes ~/ 60;
+    final remainder = totalMinutes % 60;
+    if (remainder == 0) return '${hours}j';
+    return '${hours}j ${remainder}m';
   }
 
   pw.Widget _buildMatrixPage({
@@ -688,12 +1102,13 @@ class PayrollPdfMatrixExportService {
     final columnWidths = <int, pw.TableColumnWidth>{
       0: const pw.FixedColumnWidth(86),
       1: const pw.FixedColumnWidth(52),
+      2: const pw.FixedColumnWidth(56),
     };
     for (var index = 0; index < page.dates.length; index++) {
-      columnWidths[index + 2] = const pw.FixedColumnWidth(44);
+      columnWidths[index + 3] = const pw.FixedColumnWidth(44);
     }
     for (var index = 0; index < PayrollMatrixRow.summaryLabels.length; index++) {
-      columnWidths[page.dates.length + 2 + index] = const pw.FixedColumnWidth(38);
+      columnWidths[page.dates.length + 3 + index] = const pw.FixedColumnWidth(38);
     }
 
     return pw.Column(
@@ -749,6 +1164,7 @@ class PayrollPdfMatrixExportService {
               children: [
                 _buildHeaderCell('Karyawan', bold),
                 _buildHeaderCell('Kontrak', bold),
+                _buildHeaderCell('Jabatan', bold),
                 ...page.dates.map(
                   (date) => _buildHeaderCell(_formatDateHeader(date), bold),
                 ),
@@ -767,6 +1183,10 @@ class PayrollPdfMatrixExportService {
                   ),
                   _buildIdentityCell(
                     row.employmentContract,
+                    regular,
+                  ),
+                  _buildIdentityCell(
+                    row.employeeRole.isNotEmpty ? row.employeeRole : '-',
                     regular,
                   ),
                   ...row.cells.map(
@@ -853,6 +1273,10 @@ class PayrollPdfMatrixExportService {
     required pw.Font regular,
     required pw.Font bold,
   }) {
+    // Use enriched descriptions if available, fallback to tags
+    final displayTags = cell.secondaryDescriptions.isNotEmpty
+        ? cell.secondaryDescriptions
+        : cell.secondaryTags;
     return pw.Container(
       height: 40,
       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
@@ -870,14 +1294,14 @@ class PayrollPdfMatrixExportService {
               color: PdfColor.fromHex(cell.textColorHex),
             ),
           ),
-          if (cell.secondaryTags.isNotEmpty) ...[
+          if (displayTags.isNotEmpty) ...[
             pw.SizedBox(height: 1),
             pw.Text(
-              cell.secondaryTags.join(' '),
+              displayTags.join(' | '),
               textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
                 font: regular,
-                fontSize: 6.3,
+                fontSize: 5.8,
                 color: PdfColor.fromHex(cell.textColorHex),
               ),
             ),

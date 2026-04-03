@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../main.dart' show supabaseReady;
 import '../../providers/app_provider.dart';
 import '../../services/biometric_service.dart';
+import 'change_password_screen.dart';
 
 bool canUseBiometricLogin({
   required bool hasBiometricHardware,
@@ -154,6 +155,22 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
       if (mounted) setState(() => _loading = false);
       ref.read(appProvider.notifier).applyAdminSessionClaims(claims);
+
+      // First-login: force password change for accounts flagged with
+      // must_change_password in app_metadata (set by create-admin-user).
+      final mustChange =
+          user?.appMetadata['must_change_password'] == true;
+      if (mustChange) {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  const ChangePasswordScreen(isFirstLogin: true),
+            ),
+          );
+        }
+        return; // Don't proceed to dashboard
+      }
 
       // Save biometric preference if "Ingat saya" is checked
       if (_rememberMe && _hasBiometric) {

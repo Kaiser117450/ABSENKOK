@@ -222,7 +222,7 @@ class CsvImportService {
               'name': v.row.nama.trim(),
               'position': v.row.jabatan?.trim().isNotEmpty == true
                   ? v.row.jabatan!.trim()
-                  : null,
+                  : 'Crew',
               'home_outlet_id': v.resolvedOutletId,
               'employment_contract': v.resolvedContract!.dbValue,
               'photo_url': v.row.fotoUrl?.trim().isNotEmpty == true
@@ -241,8 +241,8 @@ class CsvImportService {
   static String generateTemplateCsv() {
     final buffer = StringBuffer();
     buffer.writeln('nama,jabatan,gerai,kontrak,foto_url');
-    buffer.writeln('Ahmad Fauzi,Kasir,Panjer,FULLTIME,');
-    buffer.writeln('Budi Santoso,Koki,Ahmad Yani,PARTTIME,');
+    buffer.writeln('Ahmad Fauzi,Crew,Panjer,FULLTIME,');
+    buffer.writeln('Budi Santoso,Crew,Ahmad Yani,PARTTIME,');
     return buffer.toString();
   }
 
