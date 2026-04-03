@@ -17,6 +17,10 @@ class AppState {
   /// true jika user login dengan role 'kepala_gerai'
   final bool isKepalaGerai;
 
+  /// true when the user must change their password before accessing dashboard.
+  /// Set from app_metadata.must_change_password on first login.
+  final bool mustChangePassword;
+
   /// outlet_id yang dikelola oleh kepala_gerai (null untuk admin / kiosk)
   final String? managedOutletId;
   final bool isLoading;
@@ -33,6 +37,7 @@ class AppState {
     this.kioskSession,
     this.isAdmin = false,
     this.isKepalaGerai = false,
+    this.mustChangePassword = false,
     this.managedOutletId,
     this.isLoading = true,
     this.detectedEmployee,
@@ -53,6 +58,7 @@ class AppState {
     bool clearKiosk = false,
     bool? isAdmin,
     bool? isKepalaGerai,
+    bool? mustChangePassword,
     String? managedOutletId,
     bool clearManagedOutlet = false,
     bool? isLoading,
@@ -71,6 +77,7 @@ class AppState {
         kioskSession: clearKiosk ? null : (kioskSession ?? this.kioskSession),
         isAdmin: isAdmin ?? this.isAdmin,
         isKepalaGerai: isKepalaGerai ?? this.isKepalaGerai,
+        mustChangePassword: mustChangePassword ?? this.mustChangePassword,
         managedOutletId: clearManagedOutlet
             ? null
             : (managedOutletId ?? this.managedOutletId),
@@ -162,11 +169,12 @@ class AppNotifier extends StateNotifier<AppState> {
     state = state.copyWith(
       isAdmin: false,
       isKepalaGerai: false,
+      mustChangePassword: false,
       clearManagedOutlet: true,
     );
   }
 
-  void applyAdminSessionClaims(AdminSessionClaims? claims) {
+  void applyAdminSessionClaims(AdminSessionClaims? claims, {bool mustChangePassword = false}) {
     if (claims == null) {
       clearAdminSessionMode();
       return;
@@ -176,6 +184,7 @@ class AppNotifier extends StateNotifier<AppState> {
       state = state.copyWith(
         isAdmin: true,
         isKepalaGerai: false,
+        mustChangePassword: mustChangePassword,
         clearManagedOutlet: true,
       );
       return;
@@ -184,6 +193,7 @@ class AppNotifier extends StateNotifier<AppState> {
     state = state.copyWith(
       isAdmin: false,
       isKepalaGerai: true,
+      mustChangePassword: mustChangePassword,
       managedOutletId: claims.managedOutletId,
     );
   }

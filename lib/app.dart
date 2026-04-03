@@ -22,6 +22,7 @@ import 'screens/admin/admin_outlets_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/archived_employees_screen.dart';
+import 'screens/admin/change_password_screen.dart';
 import 'screens/admin/create_admin_screen.dart';
 import 'screens/admin/csv_import_screen.dart';
 import 'screens/kiosk/kiosk_diagnostics_screen.dart';
@@ -64,6 +65,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAdmin = appState.isAdmin;
       final isKepalaGerai = appState.isKepalaGerai;
       final hasKiosk = appState.kioskSession != null;
+      final mustChangePassword = appState.mustChangePassword;
+
+      // Force password change: if flagged, only allow /admin/change-password
+      if (mustChangePassword && (isAdmin || isKepalaGerai)) {
+        if (loc == '/admin/change-password') return null;
+        return '/admin/change-password';
+      }
 
       // /admin/login: allow unauthenticated users (kiosk operators can tap
       // "Admin" button anytime), but redirect already-authenticated users
@@ -71,6 +79,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc == '/admin/login') {
         if (isAdmin || isKepalaGerai) return '/admin/dashboard';
         return null;
+      }
+
+      // /admin/change-password: only accessible when mustChangePassword is true.
+      // If user navigates here without the flag, redirect to dashboard or login.
+      if (loc == '/admin/change-password') {
+        if (isAdmin || isKepalaGerai) return '/admin/dashboard';
+        return '/admin/login';
       }
 
       if (isAdmin) {
@@ -118,6 +133,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/login',
         builder: (_, __) => const AdminLoginScreen(),
+      ),
+      GoRoute(
+        path: '/admin/change-password',
+        builder: (_, __) => const ChangePasswordScreen(isFirstLogin: true),
       ),
       ShellRoute(
         builder: (_, __, child) => AdminShell(child: child),
@@ -224,8 +243,10 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
         // Biometric login sets admin mode itself in _triggerBiometricLogin().
         if (event != AuthChangeEvent.signedIn) return;
 
-        final claims = AdminSessionClaims.fromUser(data.session?.user);
-        notifier.applyAdminSessionClaims(claims);
+        final user = data.session?.user;
+        final claims = AdminSessionClaims.fromUser(user);
+        final mustChange = user?.appMetadata['must_change_password'] == true;
+        notifier.applyAdminSessionClaims(claims, mustChangePassword: mustChange);
       });
     }
   }

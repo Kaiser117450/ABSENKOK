@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/admin_session_claims.dart';
 import '../../core/theme.dart';
 import '../../main.dart' show supabaseReady;
+import '../../providers/app_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Password strength evaluation
@@ -30,7 +33,7 @@ PasswordStrength _evaluateStrength(String password) {
 // ChangePasswordScreen
 // ---------------------------------------------------------------------------
 
-class ChangePasswordScreen extends StatefulWidget {
+class ChangePasswordScreen extends ConsumerStatefulWidget {
   /// When [isFirstLogin] is true the user cannot navigate back and must
   /// create a new password before proceeding.
   const ChangePasswordScreen({super.key, this.isFirstLogin = false});
@@ -38,10 +41,10 @@ class ChangePasswordScreen extends StatefulWidget {
   final bool isFirstLogin;
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -94,6 +97,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // 3. Refresh the session so the JWT carries the updated app_metadata
       await Supabase.instance.client.auth.refreshSession();
 
+      // 4. Clear the mustChangePassword flag in AppState — this triggers
+      //    GoRouter to redirect from /admin/change-password to /admin/dashboard.
+      ref.read(appProvider.notifier).applyAdminSessionClaims(
+            ref.read(appProvider).isAdmin
+                ? const AdminSessionClaims.admin()
+                : AdminSessionClaims.kepalaGerai(
+                    ref.read(appProvider).managedOutletId ?? '',
+                  ),
+            mustChangePassword: false,
+          );
+
       // 4. Show success & navigate to dashboard
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,6 +117,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+        // GoRouter redirect will handle navigation to /admin/dashboard
+        // since mustChangePassword is now false.
         context.go('/admin/dashboard');
       }
     } catch (e) {
