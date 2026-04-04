@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:absensi_enakko_flutter/models/payroll_matrix_day_cell.dart';
 import 'package:absensi_enakko_flutter/models/payroll_matrix_row.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/services/admin_policy_recap_dataset_service.dart';
 import 'package:absensi_enakko_flutter/services/payroll_matrix_builder.dart';
 import 'package:absensi_enakko_flutter/services/payroll_spreadsheet_export_service.dart';
@@ -42,6 +43,7 @@ void main() {
         startDate: context.bundle.startDate,
         endDate: context.bundle.endDate,
         dataset: context.dataset,
+        recapRows: context.recapRows,
       );
 
       expect(await file.exists(), isTrue);
@@ -64,13 +66,14 @@ void main() {
           .map((cell) => cell.value.toString())
           .toList(growable: false);
 
-      expect(headerValues.take(2).toList(growable: false), <String>[
+      expect(headerValues.take(3).toList(growable: false), <String>[
         'Karyawan',
         'Kontrak',
+        'Jabatan',
       ]);
       expect(
         headerValues
-            .skip(2 + context.dataset.dates.length)
+            .skip(3 + context.dataset.dates.length)
             .take(PayrollMatrixRow.summaryLabels.length)
             .toList(growable: false),
         PayrollMatrixRow.summaryLabels,
@@ -89,17 +92,39 @@ void main() {
       );
 
       expect(allValues, contains('Ayu Full Time'));
-      expect(allValues, contains('FULLTIME'));
+      expect(allValues, contains('Full-Time'));
       expect(allValues, contains('Hana Tanpa Jadwal'));
-      expect(allValues, contains('PARTTIME'));
-      expect(allValues, contains(lateCell.exportText));
-      expect(allValues, contains(overtimeCell.exportText));
-      expect(allValues, contains(absenceCell.exportText));
-      expect(allValues, contains(fallbackCell.exportText));
+      expect(allValues, contains('Part-Time'));
+      // Now uses enrichedExportText with full labels + duration
+      expect(allValues, contains(lateCell.enrichedExportText));
+      expect(allValues, contains(overtimeCell.enrichedExportText));
+      expect(allValues, contains(absenceCell.enrichedExportText));
+      expect(allValues, contains(fallbackCell.enrichedExportText));
+      // Enriched text uses full labels like "Terlambat", "Lembur", "Tidak Hadir"
+      expect(lateCell.enrichedExportText, contains('Terlambat'));
+      expect(overtimeCell.enrichedExportText, contains('Lembur'));
+      expect(absenceCell.enrichedExportText, contains('Tidak Hadir'));
+      expect(fallbackCell.enrichedExportText, contains('Hadir tanpa jadwal'));
+      // Original short tags still available via exportText
       expect(lateCell.exportText, contains('TLT'));
       expect(overtimeCell.exportText, contains('OT'));
       expect(absenceCell.exportText, contains('ABS'));
-      expect(fallbackCell.exportText, contains('Hadir tanpa jadwal'));
+
+      // Verify Sheet 2 "Insight Payroll" exists
+      expect(workbook.tables.containsKey('Insight Payroll'), isTrue,
+          reason: 'Workbook should contain Insight Payroll sheet');
+      final insightSheet = workbook.tables['Insight Payroll']!;
+      expect(insightSheet.rows.isNotEmpty, isTrue,
+          reason: 'Insight sheet should have data');
+      // Verify insight sheet contains key section titles
+      final insightValues = insightSheet.rows
+          .expand((row) => row)
+          .whereType<Data>()
+          .map((cell) => cell.value.toString())
+          .toList(growable: false);
+      expect(insightValues, contains(contains('RINGKASAN KESELURUHAN')));
+      expect(insightValues, contains(contains('RINGKASAN PER KARYAWAN')));
+      expect(insightValues, contains(contains('TOP INSIGHT')));
 
       final archive = ZipDecoder().decodeBytes(bytes);
       final stylesXml = _archiveFileText(archive, 'xl/styles.xml');
@@ -187,17 +212,23 @@ _ParitySpreadsheetContext _buildParitySpreadsheetContext(
     recapRows: recapDataset.mergedRows,
   );
 
-  return _ParitySpreadsheetContext(bundle: bundle, dataset: dataset);
+  return _ParitySpreadsheetContext(
+    bundle: bundle,
+    dataset: dataset,
+    recapRows: recapDataset.mergedRows,
+  );
 }
 
 class _ParitySpreadsheetContext {
   const _ParitySpreadsheetContext({
     required this.bundle,
     required this.dataset,
+    required this.recapRows,
   });
 
   final ReportExportParityFixtureBundle bundle;
   final PayrollMatrixDataset dataset;
+  final List<AttendancePolicyRecapDay> recapRows;
 
   PayrollMatrixDayCell cellFor(String employeeId, DateTime date) {
     final row = dataset.rows
@@ -217,7 +248,7 @@ class _ParitySpreadsheetContext {
     );
     expect(columnIndex, isNonNegative);
 
-    return '${_excelColumnName(columnIndex + 3)}${rowIndex + 2}';
+    return '${_excelColumnName(columnIndex + 4)}${rowIndex + 2}';
   }
 }
 

@@ -851,6 +851,14 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           type: AttendanceType.masuk,
           onTap: () => _submitAttendance(AttendanceType.masuk),
         ));
+        if (_authorityContext?.breakFirstEligible ?? false) {
+          addButton(_AttendanceButton(
+            type: AttendanceType.breakTime,
+            customLabel: 'ISTIRAHAT DULU',
+            customIcon: Icons.pause_circle_outline_rounded,
+            onTap: _handleBreakFirstTap,
+          ));
+        }
         break;
     }
 

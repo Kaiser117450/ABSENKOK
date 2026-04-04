@@ -154,7 +154,6 @@ class PdfService {
     final dateFormat = DateFormat('dd MMM yyyy');
     final logoBytes = await _loadLogo();
 
-    // Use default Helvetica font
     final ttf = pw.Font.helvetica();
     final ttfBold = pw.Font.helveticaBold();
 
@@ -162,249 +161,265 @@ class PdfService {
     final daysCount =
         schedule.endDate.difference(schedule.startDate).inDays + 1;
 
+    // Scale day column width based on count — narrower when many days
+    final double dayColWidth = daysCount <= 7
+        ? 60
+        : daysCount <= 14
+            ? 48
+            : 38;
+
+    final createdAt = DateFormat('dd MMM yyyy HH:mm').format(DateTime.now());
+
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
         margin: const pw.EdgeInsets.all(24),
+        footer: (context) => pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'Dibuat pada: $createdAt',
+              style: pw.TextStyle(
+                font: ttf,
+                fontSize: 8,
+                color: PdfColor.fromHex('9CA3AF'),
+              ),
+            ),
+            pw.Text(
+              'Hal. ${context.pageNumber} / ${context.pagesCount}',
+              style: pw.TextStyle(
+                font: ttf,
+                fontSize: 8,
+                color: PdfColor.fromHex('9CA3AF'),
+              ),
+            ),
+          ],
+        ),
         build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // Header dengan Logo
-              pw.Row(
-                children: [
-                  // Logo
-                  _buildLogo(logoBytes, size: 50),
-                  pw.SizedBox(width: 16),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'Ayam Guling Enakko',
+          return [
+            // Header dengan Logo
+            pw.Row(
+              children: [
+                _buildLogo(logoBytes, size: 50),
+                pw.SizedBox(width: 16),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Ayam Guling Enakko',
+                      style: pw.TextStyle(
+                        fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                        font: ttfBold,
+                        color: PdfColor.fromHex('DC2626'),
+                      ),
+                    ),
+                    pw.Text(
+                      'Jadwal Shift - $outletName',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        font: ttf,
+                        color: PdfColor.fromHex('6B7280'),
+                      ),
+                    ),
+                    pw.Text(
+                      'Periode: ${dateFormat.format(schedule.startDate)} - ${dateFormat.format(schedule.endDate)}',
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        font: ttf,
+                        color: PdfColor.fromHex('9CA3AF'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Legend
+            pw.Row(
+              children: [
+                _buildLegendChip('Pagi', PdfColor.fromHex('3B82F6'), ttf),
+                pw.SizedBox(width: 12),
+                _buildLegendChip('Siang', PdfColor.fromHex('F59E0B'), ttf),
+                pw.SizedBox(width: 12),
+                _buildLegendChip('Sore', PdfColor.fromHex('F97316'), ttf),
+                pw.SizedBox(width: 12),
+                _buildLegendChip('Libur', PdfColor.fromHex('DC2626'), ttf),
+                pw.SizedBox(width: 12),
+                _buildLegendChip('Sakit', PdfColor.fromHex('991B1B'), ttf),
+                pw.SizedBox(width: 12),
+                _buildLegendChip('Izin', PdfColor.fromHex('1E40AF'), ttf),
+              ],
+            ),
+
+            pw.SizedBox(height: 16),
+
+            // Schedule Table
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: PdfColor.fromHex('E5E7EB'),
+                width: 0.5,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2.5), // Employee name — flex to fill remaining space
+                for (int i = 1; i <= daysCount; i++)
+                  i: pw.FixedColumnWidth(dayColWidth),
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('FEE2E2'),
+                  ),
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        'KARYAWAN',
                         style: pw.TextStyle(
-                          fontSize: 20,
                           fontWeight: pw.FontWeight.bold,
                           font: ttfBold,
-                          color: PdfColor.fromHex('DC2626'),
+                          fontSize: 10,
                         ),
                       ),
-                      pw.Text(
-                        'Jadwal Shift - $outletName',
-                        style: pw.TextStyle(
-                          fontSize: 14,
-                          font: ttf,
-                          color: PdfColor.fromHex('6B7280'),
-                        ),
-                      ),
-                      pw.Text(
-                        'Periode: ${dateFormat.format(schedule.startDate)} - ${dateFormat.format(schedule.endDate)}',
-                        style: pw.TextStyle(
-                          fontSize: 11,
-                          font: ttf,
-                          color: PdfColor.fromHex('9CA3AF'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              pw.SizedBox(height: 20),
-
-              // Legend
-              pw.Row(
-                children: [
-                  _buildLegendChip('Pagi', PdfColor.fromHex('3B82F6'), ttf),
-                  pw.SizedBox(width: 12),
-                  _buildLegendChip('Siang', PdfColor.fromHex('F59E0B'), ttf),
-                  pw.SizedBox(width: 12),
-                  _buildLegendChip('Sore', PdfColor.fromHex('F97316'), ttf),
-                  pw.SizedBox(width: 12),
-                  _buildLegendChip('Libur', PdfColor.fromHex('DC2626'), ttf),
-                  pw.SizedBox(width: 12),
-                  _buildLegendChip('Sakit', PdfColor.fromHex('991B1B'), ttf),
-                  pw.SizedBox(width: 12),
-                  _buildLegendChip('Izin', PdfColor.fromHex('1E40AF'), ttf),
-                ],
-              ),
-
-              pw.SizedBox(height: 16),
-
-              // Schedule Table
-              pw.Table(
-                border: pw.TableBorder.all(
-                  color: PdfColor.fromHex('E5E7EB'),
-                  width: 0.5,
-                ),
-                columnWidths: {
-                  0: const pw.FixedColumnWidth(100), // Employee name
-                  for (int i = 1; i <= daysCount; i++)
-                    i: const pw.FixedColumnWidth(60), // Days
-                },
-                children: [
-                  // Header row
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: PdfColor.fromHex('FEE2E2'),
                     ),
-                    children: [
-                      pw.Container(
+                    ...List.generate(daysCount, (i) {
+                      final date = schedule.startDate.add(Duration(days: i));
+                      return pw.Container(
                         padding: const pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          'KARYAWAN',
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            font: ttfBold,
-                            fontSize: 10,
-                          ),
+                        child: pw.Column(
+                          children: [
+                            pw.Text(
+                              days[date.weekday % 7],
+                              style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold,
+                                font: ttfBold,
+                                fontSize: 9,
+                              ),
+                            ),
+                            pw.Text(
+                              '${date.day}',
+                              style: pw.TextStyle(
+                                font: ttf,
+                                fontSize: 8,
+                                color: PdfColor.fromHex('6B7280'),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      ...List.generate(daysCount, (i) {
-                        final date = schedule.startDate.add(Duration(days: i));
-                        return pw.Container(
-                          padding: const pw.EdgeInsets.all(8),
-                          child: pw.Column(
-                            children: [
-                              pw.Text(
-                                days[date.weekday % 7],
+                      );
+                    }),
+                  ],
+                ),
+
+                // Data rows
+                ...employees.map((emp) {
+                  final employeeEntries = schedule.entries
+                      .where((e) => e.employeeId == emp.id)
+                      .toList();
+
+                  final String? commonRole = _getMostCommonRole(employeeEntries);
+
+                  return pw.TableRow(
+                    children: [
+                      // Employee name cell
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromHex('F9FAFB'),
+                        ),
+                        child: commonRole != null && commonRole.isNotEmpty
+                            ? pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                mainAxisSize: pw.MainAxisSize.min,
+                                children: [
+                                  pw.Text(
+                                    emp.name,
+                                    style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold,
+                                      font: ttfBold,
+                                      fontSize: 8,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: pw.TextOverflow.clip,
+                                  ),
+                                  pw.SizedBox(height: 1),
+                                  pw.Text(
+                                    commonRole,
+                                    style: pw.TextStyle(
+                                      font: ttf,
+                                      fontSize: 6,
+                                      color: PdfColor.fromHex('6B7280'),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : pw.Text(
+                                emp.name,
                                 style: pw.TextStyle(
                                   fontWeight: pw.FontWeight.bold,
                                   font: ttfBold,
-                                  fontSize: 9,
-                                ),
-                              ),
-                              pw.Text(
-                                '${date.day}',
-                                style: pw.TextStyle(
-                                  font: ttf,
                                   fontSize: 8,
-                                  color: PdfColor.fromHex('6B7280'),
                                 ),
+                                maxLines: 2,
+                                overflow: pw.TextOverflow.clip,
                               ),
-                            ],
+                      ),
+
+                      // Day cells
+                      ...List.generate(daysCount, (dayIndex) {
+                        final date =
+                            schedule.startDate.add(Duration(days: dayIndex));
+
+                        final entries = schedule.entries
+                            .where((e) =>
+                                e.employeeId == emp.id &&
+                                e.date.year == date.year &&
+                                e.date.month == date.month &&
+                                e.date.day == date.day)
+                            .toList();
+
+                        if (entries.isEmpty) {
+                          return pw.Container(
+                            padding: const pw.EdgeInsets.all(4),
+                            child: pw.Text(
+                              '-',
+                              style: pw.TextStyle(font: ttf, fontSize: 8),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          );
+                        }
+
+                        final entry = entries.first;
+                        final shiftColors =
+                            _getShiftColors(entry.shift.name, entry.status);
+
+                        return pw.Container(
+                          padding: const pw.EdgeInsets.all(4),
+                          color: shiftColors.background,
+                          child: pw.Center(
+                            child: pw.Text(
+                              _getShiftLabel(entry),
+                              style: pw.TextStyle(
+                                font: ttf,
+                                fontSize: 8,
+                                color: shiftColors.text,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                              textAlign: pw.TextAlign.center,
+                            ),
                           ),
                         );
                       }),
                     ],
-                  ),
-
-                  // Data rows
-                  ...employees.map((emp) {
-                    // Find the most common role for this employee across all schedule entries
-                    final employeeEntries = schedule.entries
-                        .where((e) => e.employeeId == emp.id)
-                        .toList();
-
-                    final String? commonRole = _getMostCommonRole(employeeEntries);
-
-                    return pw.TableRow(
-                      children: [
-                        // Employee name cell (with role if available)
-                        pw.Container(
-                          padding: const pw.EdgeInsets.all(8),
-                          decoration: pw.BoxDecoration(
-                            color: PdfColor.fromHex('F9FAFB'),
-                          ),
-                          child: commonRole != null && commonRole.isNotEmpty
-                              ? pw.Column(
-                                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                  mainAxisSize: pw.MainAxisSize.min,
-                                  children: [
-                                    pw.Text(
-                                      emp.name,
-                                      style: pw.TextStyle(
-                                        fontWeight: pw.FontWeight.bold,
-                                        font: ttfBold,
-                                        fontSize: 9,
-                                      ),
-                                    ),
-                                    pw.SizedBox(height: 2),
-                                    pw.Text(
-                                      commonRole,
-                                      style: pw.TextStyle(
-                                        font: ttf,
-                                        fontSize: 7,
-                                        color: PdfColor.fromHex('6B7280'),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : pw.Text(
-                                  emp.name,
-                                  style: pw.TextStyle(
-                                    fontWeight: pw.FontWeight.bold,
-                                    font: ttfBold,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                        ),
-
-                        // Day cells
-                        ...List.generate(daysCount, (dayIndex) {
-                          final date =
-                              schedule.startDate.add(Duration(days: dayIndex));
-
-                          // Find entries for this employee on this date
-                          final entries = schedule.entries
-                              .where((e) =>
-                                  e.employeeId == emp.id &&
-                                  e.date.year == date.year &&
-                                  e.date.month == date.month &&
-                                  e.date.day == date.day)
-                              .toList();
-
-                          if (entries.isEmpty) {
-                            return pw.Container(
-                              padding: const pw.EdgeInsets.all(8),
-                              child: pw.Text(
-                                '-',
-                                style: pw.TextStyle(font: ttf, fontSize: 8),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            );
-                          }
-
-                          // Get the first entry (should be only one per day)
-                          final entry = entries.first;
-                          final shiftColors =
-                              _getShiftColors(entry.shift.name, entry.status);
-
-                          return pw.Container(
-                            padding: const pw.EdgeInsets.all(4),
-                            color: shiftColors.background,
-                            child: pw.Center(
-                              child: pw.Text(
-                                _getShiftLabel(entry),
-                                style: pw.TextStyle(
-                                  font: ttf,
-                                  fontSize: 8,
-                                  color: shiftColors.text,
-                                  fontWeight: pw.FontWeight.bold,
-                                ),
-                                textAlign: pw.TextAlign.center,
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-
-              pw.Spacer(),
-
-              // Footer
-              pw.Text(
-                'Dibuat pada: ${DateFormat('dd MMM yyyy HH:mm').format(DateTime.now())}',
-                style: pw.TextStyle(
-                  font: ttf,
-                  fontSize: 8,
-                  color: PdfColor.fromHex('9CA3AF'),
-                ),
-              ),
-            ],
-          );
+                  );
+                }),
+              ],
+            ),
+          ];
         },
       ),
     );
