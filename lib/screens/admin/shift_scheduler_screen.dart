@@ -10,11 +10,12 @@ import 'package:absensi_enakko_flutter/core/theme.dart';
 import 'package:absensi_enakko_flutter/models/attendance_log.dart';
 import 'package:absensi_enakko_flutter/models/employee.dart';
 import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
 import 'package:absensi_enakko_flutter/models/shift_band.dart';
 import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
 import 'package:absensi_enakko_flutter/providers/app_provider.dart';
 import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_legend.dart';
-import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_policy_summary_card.dart';
+import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_summary_bar.dart';
 import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_table_view.dart';
 import 'package:absensi_enakko_flutter/services/pdf_service.dart';
 import 'package:absensi_enakko_flutter/services/schedule_policy_service.dart';
@@ -34,8 +35,6 @@ class ShiftSchedulerScreen extends ConsumerStatefulWidget {
 class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   bool _isLoading = true;
   bool _hasUnsavedChanges = false;
-  bool _showPolicySummary = true;
-  bool _isPolicySummaryExpanded = true;
   List<Employee> _employees = [];
   OutletSchedule? _currentSchedule;
 
@@ -47,6 +46,9 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   Map<String, Map<String, AttendanceType>> _sakitIzinMap = {};
   Map<String, List<DateTime>> _timeOffMap = {};
   Map<String, int> _leaveBalance = {};
+
+  // Outlet operating mode (for role filtering)
+  OutletOperatingMode _outletOperatingMode = OutletOperatingMode.normal;
 
   // Settings
   DateTime _startDate = _getStartOfWeek(DateTime.now());
@@ -80,9 +82,30 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           .eq('is_active', true)
           .order('name');
 
-      final loadedEmployees = (empData as List)
+      final allEmployees = (empData as List)
           .map((e) => Employee.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      // Exclude kepala toko / kepala gerai from schedule
+      final loadedEmployees = allEmployees.where((emp) {
+        final pos = (emp.position ?? '').toLowerCase().trim();
+        return pos != 'kepala toko' && pos != 'kepala gerai';
+      }).toList();
+
+      // Load outlet operating mode for role filtering
+      try {
+        final outletData = await SupabaseClientFactory.admin
+            .from('outlets')
+            .select('operating_mode')
+            .eq('id', outletId)
+            .maybeSingle();
+        if (outletData != null) {
+          _outletOperatingMode = OutletOperatingMode.parse(
+              outletData['operating_mode'] as String?);
+        }
+      } catch (e) {
+        debugPrint('Error loading outlet mode: $e');
+      }
 
       await _loadSakitIzinData(outletId, loadedEmployees);
       await _loadTimeOffRequests(outletId, loadedEmployees);
@@ -171,6 +194,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           shift: ShiftSlot.fromJson(shiftJson),
           isDayOff: e['is_day_off'] ?? false,
           notes: e['notes'],
+          role: e['role'] as String?,
         );
       }).toList();
 
@@ -324,7 +348,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return _formatClock(shift.lateCutoffHour, shift.lateCutoffMinute);
   }
 
-  void _replaceEntryForDay(Employee emp, DateTime date, ShiftSlot shift) {
+  void _replaceEntryForDay(Employee emp, DateTime date, ShiftSlot shift,
+      {String? role}) {
     _currentSchedule!.entries.removeWhere((e) =>
         e.employeeId == emp.id &&
         e.date.year == date.year &&
@@ -338,12 +363,13 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         employee: emp,
         shift: shift,
         isDayOff: shift.band == ShiftBand.libur,
+        role: role,
       ),
     );
   }
 
   void _addShift(Employee emp, DateTime date, ShiftBand band,
-      {int? requiredWorkMinutes}) {
+      {int? requiredWorkMinutes, String? role}) {
     final sakitIzin = _getSakitIzin(emp.id, date);
     if (sakitIzin != null) {
       _showError('${emp.name} sedang ${sakitIzin.label}');
@@ -356,7 +382,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     );
 
     setState(() {
-      _replaceEntryForDay(emp, date, shift);
+      _replaceEntryForDay(emp, date, shift, role: role);
       _hasUnsavedChanges = true;
     });
   }
@@ -416,7 +442,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       _hasUnsavedChanges = true;
     });
 
-    _showSuccess('${band.label} assigned to ${selectedEmps.length} karyawan');
+    _showSuccess('${band.label} diterapkan ke ${selectedEmps.length} karyawan');
   }
 
   String _buildBulkRequiredHoursSummary(
@@ -526,7 +552,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Periksa band, jam wajib, dan batas telat sebelum konfirmasi.',
+                'Periksa shift, jam wajib, dan batas telat sebelum konfirmasi.',
                 style: TextStyle(
                     fontSize: 13, color: Color(0xFF475569), height: 1.4),
               ),
@@ -546,7 +572,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildReviewRow('Band', policyShift.band.label),
+              _buildReviewRow('Shift', policyShift.band.label),
               _buildReviewRow(
                 'Jam wajib',
                 _buildBulkRequiredHoursSummary(band, selectedEmployees),
@@ -601,7 +627,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Assign shift untuk ${_selectedEmployeeIds.length} karyawan',
+                'Terapkan shift untuk ${_selectedEmployeeIds.length} karyawan',
                 style:
                     const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
@@ -715,8 +741,11 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       final days = List.generate(7, (i) => _startDate.add(Duration(days: i)));
       final newEntries = <ScheduleEntry>[];
 
+      // Per-employee leave days map (computed in pass 1)
+      final empLeaveDays = <String, List<DateTime>>{};
+
+      // Pass 1: Compute leave days for each employee
       for (final emp in _employees) {
-        // Count existing libur + sakit + izin + timeoff minggu ini
         int existingLeave = 0;
         final leaveDays = <DateTime>[];
 
@@ -734,7 +763,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         int needLeave = (1 + carryOver) - existingLeave;
 
         if (needLeave > 0) {
-          // Assign libur ke hari yang masih kosong
           final availableDays =
               days.where((d) => !leaveDays.contains(d)).toList()..shuffle();
           for (int i = 0; i < needLeave && i < availableDays.length; i++) {
@@ -742,15 +770,25 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           }
         }
 
-        // Update carry over untuk minggu depan:
-        // Jika tidak cukup hari untuk assign semua libur, sisa carry over ke depan
+        // Update carry over untuk minggu depan
         final assignedLeave = leaveDays.length;
         final totalRequired = 1 + carryOver;
         final remainingLeave =
             totalRequired > assignedLeave ? totalRequired - assignedLeave : 0;
         _leaveBalance[emp.id] = remainingLeave;
 
-        // Generate entries
+        empLeaveDays[emp.id] = leaveDays;
+      }
+
+      // Pass 2: Generate entries with pagi cap (max 2 per day)
+      const maxPagiPerDay = 2;
+      final pagiCountPerDay = <int, int>{}; // dayIndex → count
+      final shiftSlots = _template?.slots ??
+          [ShiftSlot.pagi(), ShiftSlot.siang(), ShiftSlot.sore()];
+
+      for (final emp in _employees) {
+        final leaveDays = empLeaveDays[emp.id] ?? [];
+
         for (final day in days) {
           if (leaveDays.contains(day)) {
             newEntries.add(ScheduleEntry.fromEmployee(
@@ -761,13 +799,30 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             ));
           } else if (_getSakitIzin(emp.id, day) == null &&
               !_hasTimeOff(emp.id, day)) {
-            // Rotate shift berdasarkan template (2 atau 3 shift)
-            final shiftSlots = _template?.slots ??
-                [ShiftSlot.pagi(), ShiftSlot.siang(), ShiftSlot.sore()];
-            final shiftIndex = (_employees.indexOf(emp) + days.indexOf(day)) %
-                shiftSlots.length;
-            final shift =
-                _buildShiftForEmployee(emp, shiftSlots[shiftIndex].band);
+            final dayIdx = days.indexOf(day);
+            final baseIndex =
+                (_employees.indexOf(emp) + dayIdx) % shiftSlots.length;
+            var band = shiftSlots[baseIndex].band;
+
+            // Cap pagi at maxPagiPerDay per day
+            if (band == ShiftBand.pagi) {
+              final currentPagi = pagiCountPerDay[dayIdx] ?? 0;
+              if (currentPagi >= maxPagiPerDay) {
+                // Redistribute to next available non-pagi slot
+                for (int offset = 1; offset < shiftSlots.length; offset++) {
+                  final altBand =
+                      shiftSlots[(baseIndex + offset) % shiftSlots.length].band;
+                  if (altBand != ShiftBand.pagi) {
+                    band = altBand;
+                    break;
+                  }
+                }
+              } else {
+                pagiCountPerDay[dayIdx] = currentPagi + 1;
+              }
+            }
+
+            final shift = _buildShiftForEmployee(emp, band);
             newEntries.add(ScheduleEntry.fromEmployee(
               id: 'shift_${emp.id}_${day.day}',
               date: day,
@@ -796,7 +851,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
       setState(() => _isLoading = false);
       _showSuccess(
-          'Jadwal ${_template!.name} generated! Tap Simpan untuk sync ke cloud.');
+          'Jadwal ${_template!.name} berhasil dibuat! Tap Simpan untuk sinkronisasi ke cloud.');
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Error: $e');
@@ -956,6 +1011,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                   'shift_slot': entry.shift.toJson(),
                   'is_day_off': entry.isDayOff,
                   'notes': entry.notes,
+                  'role': entry.role,
                 })
             .toList();
 
@@ -1006,6 +1062,48 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       _showError('Error: $e');
     }
   }
+
+  // ===========================================================================
+  // CLEAR SCHEDULE
+  // ===========================================================================
+
+  void _clearSchedule() {
+    if (_currentSchedule == null) return;
+    showDialog(
+      context: context,
+      useRootNavigator: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Semua Jadwal?'),
+        content: const Text(
+          'Semua jadwal minggu ini akan dihapus. '
+          'Anda masih perlu menyimpan untuk sync ke cloud.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _currentSchedule!.entries.clear();
+                _hasUnsavedChanges = true;
+              });
+              _showSuccess('Jadwal dibersihkan');
+            },
+            child: const Text('Hapus Semua',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // PDF EXPORT
+  // ===========================================================================
 
   Future<void> _exportToPdf() async {
     if (_currentSchedule == null) return;
@@ -1114,7 +1212,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 icon: const Icon(Icons.close), onPressed: _toggleBulkMode)
             : null,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_isBulkMode ? 'Bulk Assign' : 'Jadwal Shift',
+          Text(_isBulkMode ? 'Penugasan Massal' : 'Jadwal Shift',
               style: const TextStyle(fontSize: 18)),
           Text(
             _isBulkMode
@@ -1152,6 +1250,13 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
           : Column(children: [
               _buildHeader(),
               const ScheduleLegend(),
+              ScheduleSummaryBar(
+                entries: _currentSchedule?.entries ?? [],
+                employees: _employees,
+                startDate: _startDate,
+                sakitIzinMap: _sakitIzinMap,
+                timeOffMap: _timeOffMap,
+              ),
               Expanded(
                 child: ScheduleTableView(
                   employees: _employees,
@@ -1183,6 +1288,15 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Clear schedule FAB
+          FloatingActionButton.small(
+            heroTag: 'clear',
+            onPressed: _clearSchedule,
+            backgroundColor: Colors.red.shade400,
+            child: const Icon(Icons.delete_sweep,
+                color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 8),
           // Bulk assign FAB
           FloatingActionButton.small(
             heroTag: 'bulk',
@@ -1235,7 +1349,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Band utama, jam wajib, dan batas telat minggu ini',
+                    'Shift utama, jam wajib, dan batas telat minggu ini',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
@@ -1251,20 +1365,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               },
             ),
           ]),
-          if (_showPolicySummary)
-            SchedulePolicySummaryCard(
-              isExpanded: _isPolicySummaryExpanded,
-              onToggleExpanded: () {
-                setState(() {
-                  _isPolicySummaryExpanded = !_isPolicySummaryExpanded;
-                });
-              },
-              onDismiss: () {
-                setState(() {
-                  _showPolicySummary = false;
-                });
-              },
-            ),
         ],
       ),
     );
@@ -1287,6 +1387,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       builder: (sheetContext) => ScheduleAssignedEntryEditorSheet(
         employee: emp,
         entry: entry,
+        outletOperatingMode: _outletOperatingMode,
         onDelete: () {
           _removeEntry(entry.id);
           Navigator.pop(sheetContext);
@@ -1297,6 +1398,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             entry.date,
             selection.band,
             requiredWorkMinutes: selection.requiredWorkMinutes,
+            role: selection.role,
           );
           Navigator.pop(sheetContext);
         },
@@ -1406,10 +1508,12 @@ class ScheduleEntryEditorSelection {
   const ScheduleEntryEditorSelection({
     required this.band,
     required this.requiredWorkMinutes,
+    this.role,
   });
 
   final ShiftBand band;
   final int? requiredWorkMinutes;
+  final String? role;
 }
 
 class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
@@ -1419,12 +1523,14 @@ class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
     required this.entry,
     required this.onDelete,
     required this.onSave,
+    this.outletOperatingMode = OutletOperatingMode.normal,
   });
 
   final Employee employee;
   final ScheduleEntry entry;
   final VoidCallback onDelete;
   final ValueChanged<ScheduleEntryEditorSelection> onSave;
+  final OutletOperatingMode outletOperatingMode;
 
   @override
   State<ScheduleAssignedEntryEditorSheet> createState() =>
@@ -1434,9 +1540,24 @@ class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
 class _ScheduleAssignedEntryEditorSheetState
     extends State<ScheduleAssignedEntryEditorSheet> {
   static const List<int> _workMinuteOptions = <int>[480, 540, 600, 660, 720];
+  static const List<String> _baseRoles = [
+    'Kasir',
+    'Assambler',
+    'Housekeeping',
+    'Checker',
+    'Ayam',
+  ];
 
   late ShiftBand _selectedBand;
   late int _selectedMinutes;
+  String? _selectedRole;
+
+  List<String> get _availableEditorRoles {
+    if (widget.outletOperatingMode == OutletOperatingMode.twentyFourHour) {
+      return [..._baseRoles, 'Kopi'];
+    }
+    return _baseRoles;
+  }
 
   @override
   void initState() {
@@ -1447,6 +1568,7 @@ class _ScheduleAssignedEntryEditorSheetState
             widget.employee.employmentContract,
           )
         : widget.entry.shift.requiredWorkMinutes;
+    _selectedRole = widget.entry.role;
   }
 
   @override
@@ -1513,7 +1635,52 @@ class _ScheduleAssignedEntryEditorSheetState
               }).toList(),
             ),
             const SizedBox(height: 16),
-            _buildReviewRow('Band', previewShift.band.label),
+            const Text(
+              'Posisi (opsional)',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: _scheduleChipBackgroundColor,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedRole,
+                  hint: const Text('— Tidak ada —',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+                  isExpanded: true,
+                  isDense: true,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('— Tidak ada —',
+                          style: TextStyle(
+                              fontSize: 13, color: Color(0xFF94A3B8))),
+                    ),
+                    ..._availableEditorRoles.map(
+                      (role) => DropdownMenuItem(
+                        value: role,
+                        child: Text(role),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    setState(() => _selectedRole = v);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildReviewRow('Shift', previewShift.band.label),
             _buildReviewRow(
               'Jam wajib',
               previewShift.band == ShiftBand.libur
@@ -1544,6 +1711,7 @@ class _ScheduleAssignedEntryEditorSheetState
                           requiredWorkMinutes: _selectedBand == ShiftBand.libur
                               ? null
                               : _selectedMinutes,
+                          role: _selectedRole,
                         ),
                       );
                     },
@@ -1611,3 +1779,7 @@ class _ScheduleAssignedEntryEditorSheetState
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Role Picker Sheet — REMOVED (roles now assigned per schedule entry)
+// ---------------------------------------------------------------------------

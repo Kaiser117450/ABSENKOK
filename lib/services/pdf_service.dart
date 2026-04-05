@@ -316,57 +316,25 @@ class PdfService {
 
                 // Data rows
                 ...employees.map((emp) {
-                  final employeeEntries = schedule.entries
-                      .where((e) => e.employeeId == emp.id)
-                      .toList();
-
-                  final String? commonRole = _getMostCommonRole(employeeEntries);
-
                   return pw.TableRow(
                     children: [
-                      // Employee name cell
+                      // Employee name cell — name only, no role sub-label
                       pw.Container(
                         padding: const pw.EdgeInsets.symmetric(
                             horizontal: 8, vertical: 6),
                         decoration: pw.BoxDecoration(
                           color: PdfColor.fromHex('F9FAFB'),
                         ),
-                        child: commonRole != null && commonRole.isNotEmpty
-                            ? pw.Column(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                mainAxisSize: pw.MainAxisSize.min,
-                                children: [
-                                  pw.Text(
-                                    emp.name,
-                                    style: pw.TextStyle(
-                                      fontWeight: pw.FontWeight.bold,
-                                      font: ttfBold,
-                                      fontSize: 8,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: pw.TextOverflow.clip,
-                                  ),
-                                  pw.SizedBox(height: 1),
-                                  pw.Text(
-                                    commonRole,
-                                    style: pw.TextStyle(
-                                      font: ttf,
-                                      fontSize: 6,
-                                      color: PdfColor.fromHex('6B7280'),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : pw.Text(
-                                emp.name,
-                                style: pw.TextStyle(
-                                  fontWeight: pw.FontWeight.bold,
-                                  font: ttfBold,
-                                  fontSize: 8,
-                                ),
-                                maxLines: 2,
-                                overflow: pw.TextOverflow.clip,
-                              ),
+                        child: pw.Text(
+                          emp.name,
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            font: ttfBold,
+                            fontSize: 8,
+                          ),
+                          maxLines: 2,
+                          overflow: pw.TextOverflow.clip,
+                        ),
                       ),
 
                       // Day cells
@@ -401,15 +369,31 @@ class PdfService {
                           padding: const pw.EdgeInsets.all(4),
                           color: shiftColors.background,
                           child: pw.Center(
-                            child: pw.Text(
-                              _getShiftLabel(entry),
-                              style: pw.TextStyle(
-                                font: ttf,
-                                fontSize: 8,
-                                color: shiftColors.text,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                              textAlign: pw.TextAlign.center,
+                            child: pw.Column(
+                              mainAxisSize: pw.MainAxisSize.min,
+                              children: [
+                                pw.Text(
+                                  _getShiftLabel(entry),
+                                  style: pw.TextStyle(
+                                    font: ttfBold,
+                                    fontSize: 8,
+                                    color: shiftColors.text,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                  textAlign: pw.TextAlign.center,
+                                ),
+                                if (entry.role != null &&
+                                    entry.role!.isNotEmpty)
+                                  pw.Text(
+                                    entry.role!,
+                                    style: pw.TextStyle(
+                                      font: ttf,
+                                      fontSize: 6,
+                                      color: shiftColors.text,
+                                    ),
+                                    textAlign: pw.TextAlign.center,
+                                  ),
+                              ],
                             ),
                           ),
                         );
