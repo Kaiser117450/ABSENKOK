@@ -213,6 +213,7 @@ void main() {
             employeeId: 'emp-1',
             employeeName: 'Ayu',
             employmentContract: EmployeeContract.fulltime,
+            employeeRole: '',
             cells: <PayrollMatrixDayCell>[
               PayrollMatrixDayCell(
                 date: DateTime(2026, 3, 18),
@@ -235,6 +236,7 @@ void main() {
             employeeId: 'emp-2',
             employeeName: 'Citra',
             employmentContract: EmployeeContract.parttime,
+            employeeRole: '',
             cells: <PayrollMatrixDayCell>[
               PayrollMatrixDayCell.placeholder(DateTime(2026, 3, 18)),
               PayrollMatrixDayCell(

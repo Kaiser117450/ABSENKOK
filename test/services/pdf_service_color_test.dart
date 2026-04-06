@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:absensi_enakko_flutter/services/pdf_service.dart';
+import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
+import 'package:flutter/material.dart';
 
 /// Phase 8.1 — PDF Export Validation Tests
 /// Tests status/type color mapping and label correctness
@@ -145,6 +148,185 @@ void main() {
       expect(stats.totalMasuk, 0);
       expect(stats.totalTidakHadir, 0);
       expect(stats.totalBelumPulang, 0);
+    });
+  });
+
+  group('PdfService._getMostCommonRole — Role detection for schedule PDF', () {
+    // Helper to create a shift slot for testing
+    ShiftSlot _createTestShift() => ShiftSlot(
+          name: 'Pagi',
+          band: ShiftBand.pagi,
+          startTime: const TimeOfDay(hour: 9, minute: 0),
+          endTime: const TimeOfDay(hour: 17, minute: 0),
+          color: Colors.blue,
+          requiredWorkMinutes: 480,
+          lateCutoffHour: 9,
+          lateCutoffMinute: 30,
+          breakFirstDeadlineHour: 12,
+          breakFirstDeadlineMinute: 0,
+        );
+
+    test('returns null for empty entries', () {
+      final result = PdfService.getMostCommonRoleForTest([]);
+      expect(result, isNull);
+    });
+
+    test('returns null when no entries have roles', () {
+      final entries = [
+        ScheduleEntry(
+          id: '1',
+          date: DateTime(2024, 1, 1),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: null,
+        ),
+        ScheduleEntry(
+          id: '2',
+          date: DateTime(2024, 1, 2),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: '',
+        ),
+      ];
+
+      final result = PdfService.getMostCommonRoleForTest(entries);
+      expect(result, isNull);
+    });
+
+    test('returns single role when all entries have same role', () {
+      final entries = [
+        ScheduleEntry(
+          id: '1',
+          date: DateTime(2024, 1, 1),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+        ScheduleEntry(
+          id: '2',
+          date: DateTime(2024, 1, 2),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+      ];
+
+      final result = PdfService.getMostCommonRoleForTest(entries);
+      expect(result, 'Kasir');
+    });
+
+    test('returns most common role when entries have different roles', () {
+      final entries = [
+        ScheduleEntry(
+          id: '1',
+          date: DateTime(2024, 1, 1),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+        ScheduleEntry(
+          id: '2',
+          date: DateTime(2024, 1, 2),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+        ScheduleEntry(
+          id: '3',
+          date: DateTime(2024, 1, 3),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Manager',
+        ),
+      ];
+
+      final result = PdfService.getMostCommonRoleForTest(entries);
+      expect(result, 'Kasir'); // 2 occurrences vs 1
+    });
+
+    test('returns first role when frequencies are tied', () {
+      final entries = [
+        ScheduleEntry(
+          id: '1',
+          date: DateTime(2024, 1, 1),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+        ScheduleEntry(
+          id: '2',
+          date: DateTime(2024, 1, 2),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Manager',
+        ),
+      ];
+
+      final result = PdfService.getMostCommonRoleForTest(entries);
+      expect(result, isNotNull);
+      expect(['Kasir', 'Manager'], contains(result)); // Either is valid for tie
+    });
+
+    test('ignores null and empty roles in frequency calculation', () {
+      final entries = [
+        ScheduleEntry(
+          id: '1',
+          date: DateTime(2024, 1, 1),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+        ScheduleEntry(
+          id: '2',
+          date: DateTime(2024, 1, 2),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: null,
+        ),
+        ScheduleEntry(
+          id: '3',
+          date: DateTime(2024, 1, 3),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: '',
+        ),
+        ScheduleEntry(
+          id: '4',
+          date: DateTime(2024, 1, 4),
+          employeeId: 'emp1',
+          displayName: 'John',
+          isCustomName: false,
+          shift: _createTestShift(),
+          role: 'Kasir',
+        ),
+      ];
+
+      final result = PdfService.getMostCommonRoleForTest(entries);
+      expect(result, 'Kasir'); // Should ignore null and empty entries
     });
   });
 }

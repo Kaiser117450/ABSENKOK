@@ -85,9 +85,7 @@ enum AttendancePolicyStatus {
 
 enum LateKind {
   none,
-  normal,
-  breakFirstEligible,
-  breakFirstConfirmed;
+  normal;
 
   String get storageValue {
     switch (this) {
@@ -95,10 +93,6 @@ enum LateKind {
         return 'none';
       case LateKind.normal:
         return 'normal';
-      case LateKind.breakFirstEligible:
-        return 'break_first_eligible';
-      case LateKind.breakFirstConfirmed:
-        return 'break_first_confirmed';
     }
   }
 
@@ -108,10 +102,6 @@ enum LateKind {
         return '-';
       case LateKind.normal:
         return 'Terlambat';
-      case LateKind.breakFirstEligible:
-        return 'Break-first eligible';
-      case LateKind.breakFirstConfirmed:
-        return 'Break-first confirmed';
     }
   }
 
@@ -128,9 +118,8 @@ enum LateKind {
       case 'normal':
         return LateKind.normal;
       case 'breakfirsteligible':
-        return LateKind.breakFirstEligible;
       case 'breakfirstconfirmed':
-        return LateKind.breakFirstConfirmed;
+        return null; // graceful fallback for old values
       default:
         return null;
     }
@@ -146,12 +135,9 @@ class AttendancePolicyRecapDay {
   final ShiftBand? shiftBand;
   final int? requiredWorkMinutes;
   final String? lateCutoffLocal;
-  final String? breakFirstDeadlineLocal;
   final AttendancePolicyStatus attendanceStatus;
   final LateKind lateKind;
   final bool isLate;
-  final bool breakFirstEligible;
-  final bool breakFirstConfirmed;
   final DateTime? firstScanLocal;
   final DateTime? firstBreakLocal;
   final DateTime? lastPulangLocal;
@@ -180,12 +166,9 @@ class AttendancePolicyRecapDay {
     required this.shiftBand,
     required this.requiredWorkMinutes,
     required this.lateCutoffLocal,
-    required this.breakFirstDeadlineLocal,
     required this.attendanceStatus,
     required this.lateKind,
     required this.isLate,
-    required this.breakFirstEligible,
-    required this.breakFirstConfirmed,
     required this.firstScanLocal,
     required this.firstBreakLocal,
     required this.lastPulangLocal,
@@ -215,11 +198,6 @@ class AttendancePolicyRecapDay {
     final primarySeverity = AttendancePolicySeverity.tryParse(
             json['primary_severity']?.toString()) ??
         _derivePrimarySeverity(primaryStatus);
-    final breakFirstConfirmed =
-        _readOptionalBool(json['break_first_confirmed']) ??
-            detailSignals.contains(AttendancePolicySignal.breakFirstConfirmed);
-    final breakFirstEligible =
-        _readOptionalBool(json['break_first_eligible']) ?? false;
     final isLate = _readOptionalBool(json['is_late']) ??
         detailSignals.contains(AttendancePolicySignal.late) ||
             primaryStatus == AttendancePolicyPrimaryStatus.late;
@@ -230,8 +208,6 @@ class AttendancePolicyRecapDay {
         _deriveLateKind(
           detailSignals: detailSignals,
           primaryStatus: primaryStatus,
-          breakFirstEligible: breakFirstEligible,
-          breakFirstConfirmed: breakFirstConfirmed,
         );
     final fallbackNotes = detailNotes.isEmpty && json['notes'] != null
         ? <String>[json['notes'].toString()]
@@ -246,12 +222,9 @@ class AttendancePolicyRecapDay {
       shiftBand: ShiftBand.tryParse(json['shift_band']?.toString()),
       requiredWorkMinutes: _readInt(json['required_work_minutes']),
       lateCutoffLocal: json['late_cutoff_local']?.toString(),
-      breakFirstDeadlineLocal: json['break_first_deadline_local']?.toString(),
       attendanceStatus: attendanceStatus,
       lateKind: lateKind,
       isLate: isLate,
-      breakFirstEligible: breakFirstEligible,
-      breakFirstConfirmed: breakFirstConfirmed,
       firstScanLocal: _readDateTime(json['first_scan_local']),
       firstBreakLocal: _readDateTime(json['first_break_local']),
       lastPulangLocal: _readDateTime(json['last_pulang_local']),
@@ -286,12 +259,9 @@ class AttendancePolicyRecapDay {
       'shift_band': shiftBand?.storageValue,
       'required_work_minutes': requiredWorkMinutes,
       'late_cutoff_local': lateCutoffLocal,
-      'break_first_deadline_local': breakFirstDeadlineLocal,
       'attendance_status': attendanceStatus.storageValue,
       'late_kind': lateKind.storageValue,
       'is_late': isLate,
-      'break_first_eligible': breakFirstEligible,
-      'break_first_confirmed': breakFirstConfirmed,
       'first_scan_local': firstScanLocal?.toIso8601String(),
       'first_break_local': firstBreakLocal?.toIso8601String(),
       'last_pulang_local': lastPulangLocal?.toIso8601String(),
@@ -362,8 +332,7 @@ class AttendancePolicyRecapDay {
     }
 
     final lateKind = LateKind.tryParse(json['late_kind']?.toString());
-    if (lateKind == LateKind.normal ||
-        lateKind == LateKind.breakFirstConfirmed) {
+    if (lateKind == LateKind.normal) {
       return AttendancePolicyPrimaryStatus.late;
     }
 
@@ -441,16 +410,7 @@ class AttendancePolicyRecapDay {
   static LateKind _deriveLateKind({
     required List<AttendancePolicySignal> detailSignals,
     required AttendancePolicyPrimaryStatus? primaryStatus,
-    required bool breakFirstEligible,
-    required bool breakFirstConfirmed,
   }) {
-    if (breakFirstConfirmed ||
-        detailSignals.contains(AttendancePolicySignal.breakFirstConfirmed)) {
-      return LateKind.breakFirstConfirmed;
-    }
-    if (breakFirstEligible) {
-      return LateKind.breakFirstEligible;
-    }
     if (detailSignals.contains(AttendancePolicySignal.late) ||
         primaryStatus == AttendancePolicyPrimaryStatus.late) {
       return LateKind.normal;

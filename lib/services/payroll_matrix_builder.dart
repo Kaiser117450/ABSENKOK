@@ -51,10 +51,18 @@ PayrollMatrixDataset buildPayrollMatrix({
       );
     }).toList(growable: false);
 
+    // Employee role: currently uses employee.position as the baseline.
+    // TODO(per-day-role): When the admin_schedule_policy_recap RPC returns
+    // a `role` column from schedule_entries, resolve per-day role from recap
+    // rows and pick the most frequent role (or first non-null) for the
+    // payroll matrix row. Until then, employee.position is the fallback.
+    final employeeRole = employee.position ?? '';
+
     return PayrollMatrixRow(
       employeeId: employee.id,
       employeeName: employee.name,
       employmentContract: employee.employmentContract,
+      employeeRole: employeeRole,
       cells: cells,
       lateCount: summary.lateCount,
       shortWorkCount: summary.shortWorkCount,

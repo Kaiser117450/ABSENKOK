@@ -255,77 +255,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     await _refreshPendingCount();
   }
 
-  Future<void> _handleBreakFirstTap() async {
-    final confirmed = await _showBreakFirstConfirmationDialog();
-    if (!confirmed) return;
-
-    await _submitAttendance(
-      AttendanceType.breakTime,
-      initialScanIntent: InitialScanIntent.breakFirst,
-    );
-  }
-
-  Future<bool> _showBreakFirstConfirmationDialog() async {
-    return (await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Color(0xFFFEF3C7),
-                    child: Icon(
-                      Icons.pause_circle_outline_rounded,
-                      color: Color(0xFFD97706),
-                      size: 30,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Mulai dengan istirahat?',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              content: const Text(
-                'Scan ini akan dicatat sebagai istirahat lebih dulu. Setelah selesai, tap Selesai Istirahat.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.45,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Kembali ke Pilihan Scan'),
-                ),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFD97706),
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(dialogContext).pop(true),
-                  child: const Text('Simpan Istirahat Dulu'),
-                ),
-              ],
-            );
-          },
-        )) ??
-        false;
-  }
-
   Future<void> _submitAttendance(
     AttendanceType type, {
     InitialScanIntent initialScanIntent = InitialScanIntent.none,
@@ -812,14 +741,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           type: AttendanceType.masuk,
           onTap: () => _submitAttendance(AttendanceType.masuk),
         ));
-        if (_authorityContext?.breakFirstEligible ?? false) {
-          addButton(_AttendanceButton(
-            type: AttendanceType.breakTime,
-            customLabel: 'ISTIRAHAT DULU',
-            customIcon: Icons.pause_circle_outline_rounded,
-            onTap: _handleBreakFirstTap,
-          ));
-        }
         break;
       case AttendanceType.masuk:
       case AttendanceType.kembali:
@@ -851,14 +772,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           type: AttendanceType.masuk,
           onTap: () => _submitAttendance(AttendanceType.masuk),
         ));
-        if (_authorityContext?.breakFirstEligible ?? false) {
-          addButton(_AttendanceButton(
-            type: AttendanceType.breakTime,
-            customLabel: 'ISTIRAHAT DULU',
-            customIcon: Icons.pause_circle_outline_rounded,
-            onTap: _handleBreakFirstTap,
-          ));
-        }
         break;
     }
 
@@ -910,9 +823,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     final medallionIcon =
         isQueued ? Icons.schedule_rounded : Icons.check_rounded;
     final actionLabel = () {
-      if (_submittedInitialIntent == InitialScanIntent.breakFirst) {
-        return 'ISTIRAHAT DULU';
-      }
       if (_submittedType == AttendanceType.kembali) {
         return 'SELESAI ISTIRAHAT';
       }
@@ -920,9 +830,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     }();
     final statusLine = isQueued
         ? 'Scan disimpan di perangkat dan akan dikirim otomatis saat koneksi kembali.'
-        : _submittedInitialIntent == InitialScanIntent.breakFirst
-            ? 'Istirahat dulu disimpan'
-            : '${_submittedType?.label ?? 'Absensi'} tercatat';
+        : '${_submittedType?.label ?? 'Absensi'} tercatat';
     final witaLabel = _successScannedAtWitaLabel.isEmpty
         ? (_authorityContext?.serverNowWitaLabel ?? '--:-- WITA')
         : _successScannedAtWitaLabel;
@@ -1122,19 +1030,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                       ],
                     ),
                   ),
-                if (!isQueued &&
-                    _submittedInitialIntent ==
-                        InitialScanIntent.breakFirst) ...[
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Berikutnya tap Selesai Istirahat.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
                 if (!isQueued &&
                     _submittedType == AttendanceType.masuk &&
                     _currentStreak >= 2) ...[

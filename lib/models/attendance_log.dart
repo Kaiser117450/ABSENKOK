@@ -116,22 +116,20 @@ extension AttendanceCaptureModeExt on AttendanceCaptureMode {
   }
 }
 
-enum InitialScanIntent { none, breakFirst }
+enum InitialScanIntent { none }
 
 extension InitialScanIntentExt on InitialScanIntent {
   String get value {
     switch (this) {
       case InitialScanIntent.none:
         return 'none';
-      case InitialScanIntent.breakFirst:
-        return 'break_first';
     }
   }
 
   static InitialScanIntent fromString(String? raw) {
     switch (raw?.trim().toLowerCase()) {
       case 'break_first':
-        return InitialScanIntent.breakFirst;
+        return InitialScanIntent.none; // backward compatibility
       case 'none':
       default:
         return InitialScanIntent.none;

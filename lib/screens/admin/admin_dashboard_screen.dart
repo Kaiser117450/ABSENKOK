@@ -67,6 +67,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   List<KioskDevice> _kioskDevices = [];
   RealtimeChannel? _kioskDevicesChannel;
+  bool _showAllDevices = false;
 
   @override
   void initState() {
@@ -172,59 +173,63 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Future<void> _showNicknameDialog(KioskDevice device) async {
     final controller = TextEditingController(text: device.nickname ?? '');
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Beri Nama Kiosk',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Kiosk Pintu Depan'),
-          autofocus: true,
-          maxLength: 40,
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Beri Nama Kiosk',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Kiosk Pintu Depan'),
+            autofocus: true,
+            maxLength: 40,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Batal',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Simpan Nama'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child:
-                Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan Nama'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && controller.text.trim().isNotEmpty) {
-      final newNickname = controller.text.trim();
-      final oldNickname = device.nickname;
-      // Optimistic update
-      setState(() {
-        _kioskDevices = _kioskDevices
-            .map((d) =>
-                d.id == device.id ? d.copyWith(nickname: newNickname) : d)
-            .toList();
-      });
-      try {
-        await SupabaseClientFactory.admin.rpc('set_device_nickname', params: {
-          'p_device_id': device.id,
-          'p_nickname': newNickname,
+      );
+      if (confirmed == true && controller.text.trim().isNotEmpty) {
+        final newNickname = controller.text.trim();
+        final oldNickname = device.nickname;
+        // Optimistic update
+        setState(() {
+          _kioskDevices = _kioskDevices
+              .map((d) =>
+                  d.id == device.id ? d.copyWith(nickname: newNickname) : d)
+              .toList();
         });
-      } catch (e) {
-        // Revert on error
-        if (mounted) {
-          setState(() {
-            _kioskDevices = _kioskDevices
-                .map((d) =>
-                    d.id == device.id ? d.copyWith(nickname: oldNickname) : d)
-                .toList();
+        try {
+          await SupabaseClientFactory.admin.rpc('set_device_nickname', params: {
+            'p_device_id': device.id,
+            'p_nickname': newNickname,
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menyimpan. Coba lagi.')),
-          );
+        } catch (e) {
+          // Revert on error
+          if (mounted) {
+            setState(() {
+              _kioskDevices = _kioskDevices
+                  .map((d) =>
+                      d.id == device.id ? d.copyWith(nickname: oldNickname) : d)
+                  .toList();
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Gagal menyimpan. Coba lagi.')),
+            );
+          }
         }
       }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -534,83 +539,87 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     // Show dialog for notes input
     final notesCtrl = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tutup Shift Manual'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Karyawan: ${shift.employeeName}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Masuk: ${_formatTime(shift.masukTime)}',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Tutup Shift Manual'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Karyawan: ${shift.employeeName}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Catatan (opsional)',
-                hintText: 'Contoh: Lupa absen pulang',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              const SizedBox(height: 4),
+              Text(
+                'Masuk: ${_formatTime(shift.masukTime)}',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
-              maxLines: 2,
+              const SizedBox(height: 16),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan (opsional)',
+                  hintText: 'Contoh: Lupa absen pulang',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Simpan Pulang'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+      );
+
+      if (confirmed != true) return;
+
+      try {
+        final notes = notesCtrl.text.trim();
+        await SupabaseClientFactory.admin.from('attendance_logs').insert({
+          'employee_id': shift.employeeId,
+          'scan_outlet_id': shift.outletId,
+          'type': 'pulang',
+          'scanned_at': DateTime.now().toUtc().toIso8601String(),
+          'notes': notes.isNotEmpty
+              ? notes
+              : 'Lupa absen pulang — diinput manual oleh admin',
+          'is_backup': false,
+        });
+
+        // Refresh open shifts list
+        await _loadOpenShifts();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menyimpan: $e'),
+              backgroundColor: AppColors.danger,
             ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Simpan Pulang'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      final notes = notesCtrl.text.trim();
-      await SupabaseClientFactory.admin.from('attendance_logs').insert({
-        'employee_id': shift.employeeId,
-        'scan_outlet_id': shift.outletId,
-        'type': 'pulang',
-        'scanned_at': DateTime.now().toUtc().toIso8601String(),
-        'notes': notes.isNotEmpty
-            ? notes
-            : 'Lupa absen pulang — diinput manual oleh admin',
-        'is_backup': false,
-      });
-
-      // Refresh open shifts list
-      await _loadOpenShifts();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+          );
+        }
       }
+    } finally {
+      notesCtrl.dispose();
     }
   }
 
@@ -1009,6 +1018,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     final hasIssues = offlineCount > 0;
 
+    // Limit to 5 when collapsed
+    const maxCollapsed = 5;
+    final shouldCollapse = devicesForOutlet.length > maxCollapsed;
+    final visibleDevices = shouldCollapse && !_showAllDevices
+        ? devicesForOutlet.take(maxCollapsed).toList()
+        : devicesForOutlet;
+    final hiddenCount = devicesForOutlet.length - maxCollapsed;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
@@ -1079,14 +1096,57 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 ),
               ],
             )
-          else
-            ...devicesForOutlet.map(
+          else ...[
+            ...visibleDevices.map(
               (d) => KioskDeviceCard(
                 device: d,
                 onNickname: () => _showNicknameDialog(d),
                 onArchive: () => _showArchiveDialog(d),
               ),
             ),
+            // Show more / show less button
+            if (shouldCollapse)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () =>
+                        setState(() => _showAllDevices = !_showAllDevices),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _showAllDevices
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _showAllDevices
+                                ? 'Sembunyikan'
+                                : 'Tampilkan $hiddenCount lainnya',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -1856,7 +1916,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      addressCtrl.dispose();
+      passwordCtrl.dispose();
+    });
   }
 }
 

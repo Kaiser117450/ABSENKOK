@@ -98,8 +98,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc.startsWith('/admin/network-summary')) return '/admin/dashboard';
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
         if (loc.startsWith('/admin/csv-import')) return '/admin/dashboard';
-        if (loc.startsWith('/admin/archived-employees'))
+        if (loc.startsWith('/admin/archived-employees')) {
           return '/admin/dashboard';
+        }
         if (loc.startsWith('/admin/create-account')) return '/admin/dashboard';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
@@ -205,6 +206,8 @@ class AbsensiEnakkoApp extends ConsumerStatefulWidget {
 
 class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
     with WidgetsBindingObserver {
+  StreamSubscription<AuthState>? _authStateSub;
+
   @override
   void initState() {
     super.initState();
@@ -229,7 +232,9 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
     // session restore (initialSession / tokenRefreshed). This ensures
     // biometric gate isn't bypassed when the app restarts with a saved session.
     if (supabaseReady) {
-      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      _authStateSub = Supabase.instance.client.auth.onAuthStateChange.listen((
+        data,
+      ) {
         final event = data.event;
         final notifier = ref.read(appProvider.notifier);
 
@@ -246,13 +251,16 @@ class _AbsensiEnakkoAppState extends ConsumerState<AbsensiEnakkoApp>
         final user = data.session?.user;
         final claims = AdminSessionClaims.fromUser(user);
         final mustChange = user?.appMetadata['must_change_password'] == true;
-        notifier.applyAdminSessionClaims(claims, mustChangePassword: mustChange);
+        notifier.applyAdminSessionClaims(claims,
+            mustChangePassword: mustChange);
       });
     }
   }
 
   @override
   void dispose() {
+    _authStateSub?.cancel();
+    _authStateSub = null;
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

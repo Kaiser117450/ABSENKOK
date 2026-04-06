@@ -13,6 +13,7 @@ class PayrollMatrixRow {
   final String employeeId;
   final String employeeName;
   final EmployeeContract employmentContract;
+  final String employeeRole;
   final List<PayrollMatrixDayCell> cells;
   final int lateCount;
   final int shortWorkCount;
@@ -24,6 +25,7 @@ class PayrollMatrixRow {
     required this.employeeId,
     required this.employeeName,
     required this.employmentContract,
+    required this.employeeRole,
     required this.cells,
     required this.lateCount,
     required this.shortWorkCount,

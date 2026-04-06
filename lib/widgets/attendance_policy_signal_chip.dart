@@ -46,7 +46,6 @@ class AttendancePolicySignalChip extends StatelessWidget {
           borderColor: Color(0xFFFCA5A5),
         );
       case AttendancePolicySignal.overtime:
-      case AttendancePolicySignal.breakFirstConfirmed:
         return const _SignalChipStyle(
           foregroundColor: Color(0xFF92400E),
           backgroundColor: Color(0xFFFEF3C7),

@@ -40,7 +40,7 @@ class SqliteService {
                              CHECK (capture_mode IN ('live','queued')),
         queue_order          INTEGER NOT NULL,
         initial_scan_intent  TEXT NOT NULL DEFAULT 'none'
-                             CHECK (initial_scan_intent IN ('none','break_first')),
+                             CHECK (initial_scan_intent IN ('none')),
         sync_status          TEXT NOT NULL DEFAULT 'pending'
                              CHECK (sync_status IN ('pending','uploading','synced','failed')),
         retry_count          INTEGER NOT NULL DEFAULT 0,

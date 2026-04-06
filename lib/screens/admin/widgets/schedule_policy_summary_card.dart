@@ -43,7 +43,7 @@ class SchedulePolicySummaryCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       isExpanded
-                          ? 'Band dan jam wajib menjadi acuan utama. Jam lama hanya tampil sebagai petunjuk kecil bila masih dibutuhkan.'
+                          ? 'Shift dan jam wajib menjadi acuan utama. Jam lama hanya tampil sebagai petunjuk kecil bila masih dibutuhkan.'
                           : 'Ringkas aturan jadwal. Buka lagi jika perlu lihat detail.',
                       style: const TextStyle(
                         fontSize: 12,

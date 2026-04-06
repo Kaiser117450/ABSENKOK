@@ -179,15 +179,68 @@ class PayrollMatrixSemantics {
     }
 
     final palette = _paletteFor(recap);
+    final tags = secondaryTagsFor(recap);
     return PayrollMatrixDayCell(
       date: DateTime(date.year, date.month, date.day),
       primaryLabel: _primaryLabelFor(recap),
-      secondaryTags: secondaryTagsFor(recap),
+      secondaryTags: tags,
+      secondaryDescriptions: _buildDescriptions(tags, recap),
       fillColorHex: palette.fillColorHex,
       textColorHex: palette.textColorHex,
       primaryStatus: recap.primaryStatus,
       hasData: true,
     );
+  }
+
+  /// Builds human-readable descriptions for each tag with duration info.
+  /// E.g. "OT" → "Lembur 45m", "TLT" → "Terlambat 15m".
+  List<String> _buildDescriptions(
+    List<String> tags,
+    AttendancePolicyRecapDay recap,
+  ) {
+    return tags.map((tag) {
+      switch (tag) {
+        case lateTag:
+          return _descWithDuration('Terlambat', _estimateLateMinutes(recap));
+        case shortWorkTag:
+          return _descWithDuration('Kurang Jam', recap.shortWorkMinutes);
+        case excessBreakTag:
+          return _descWithDuration('Break Lebih', recap.excessBreakMinutes);
+        case absenceTag:
+          return 'Tidak Hadir';
+        case overtimeTag:
+          return _descWithDuration('Lembur', recap.overtimeMinutes);
+        case managerExemptTag:
+          return 'Manager Exempt';
+        default:
+          return tag;
+      }
+    }).toList(growable: false);
+  }
+
+  /// Formats a description with duration in minutes/hours.
+  /// E.g. "Lembur 45m", "Kurang Jam 1j 30m".
+  static String _descWithDuration(String label, int? minutes) {
+    if (minutes == null || minutes == 0) return label;
+    final absMinutes = minutes.abs();
+    if (absMinutes < 60) return '$label ${absMinutes}m';
+    final hours = absMinutes ~/ 60;
+    final remainder = absMinutes % 60;
+    if (remainder == 0) return '$label ${hours}j';
+    return '$label ${hours}j ${remainder}m';
+  }
+
+  /// Estimate late minutes from recap data.
+  /// The recap model doesn't have a direct `lateMinutes` field, so we
+  /// derive it from the difference between scheduled start and actual scan.
+  static int? _estimateLateMinutes(AttendancePolicyRecapDay recap) {
+    if (recap.firstScanLocal == null || recap.lateCutoffLocal == null) {
+      return null;
+    }
+    final cutoff = DateTime.tryParse(recap.lateCutoffLocal!);
+    if (cutoff == null) return null;
+    final diff = recap.firstScanLocal!.difference(cutoff).inMinutes;
+    return diff > 0 ? diff : null;
   }
 
   List<String> secondaryTagsFor(AttendancePolicyRecapDay recap) {

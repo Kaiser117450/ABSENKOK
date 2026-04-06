@@ -1,6 +1,5 @@
 import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/screens/admin/admin_reports_screen.dart';
-import 'package:absensi_enakko_flutter/screens/admin/widgets/policy_recap_payroll_support_section.dart';
 import 'package:absensi_enakko_flutter/services/admin_policy_recap_dataset_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,25 +30,6 @@ void main() {
     );
   }
 
-  Widget buildSalaryOutputSection() {
-    return PolicyRecapPayrollSupportSection(
-      reviews: const [],
-      outletName: 'Outlet Parity',
-      startDate: DateTime(2026, 3, 18),
-      endDate: DateTime(2026, 3, 28),
-      onDownloadValidationBundle: (_) async {},
-      onMarkPayrollReady: null,
-      canExportPayrollPdf: true,
-      canExportPayrollSpreadsheet: true,
-      exportingPayrollPdf: false,
-      exportingSpreadsheet: false,
-      onExportPayrollPdf: () {},
-      onExportPayrollSpreadsheet: () {},
-      payrollExportStatusMessage: null,
-      payrollExportStatusIsError: false,
-    );
-  }
-
   Future<void> pumpPolicyRecapTab(
     WidgetTester tester, {
     required bool hasSelectedOutlet,
@@ -73,7 +53,13 @@ void main() {
               selectedFilter: PolicyRecapFilter.semua,
               onFilterChanged: (_) {},
               loadingBuilder: () => const SizedBox.shrink(),
-              salaryOutputSection: buildSalaryOutputSection(),
+              scanCountMap: const <String, int>{},
+              canExportPayrollPdf: true,
+              canExportPayrollSpreadsheet: true,
+              exportingPayrollPdf: false,
+              exportingSpreadsheet: false,
+              onExportPayrollPdf: () {},
+              onExportPayrollSpreadsheet: () {},
             ),
           ),
         ),

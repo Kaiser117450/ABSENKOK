@@ -52,6 +52,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
   // Settings
   DateTime _startDate = _getStartOfWeek(DateTime.now());
+  DateTime? _selectedDay;
   ShiftTemplate? _template;
 
   @override
@@ -485,12 +486,12 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         employees.any((emp) => emp.employmentContract.dbValue == 'PARTTIME');
 
     if (hasFulltime && hasParttime) {
-      return 'FULLTIME sampai ${_formatClock(fulltimeShift.breakFirstDeadlineHour, fulltimeShift.breakFirstDeadlineMinute)} • PARTTIME sampai ${_formatClock(parttimeShift.breakFirstDeadlineHour, parttimeShift.breakFirstDeadlineMinute)}';
+      return 'FULLTIME sampai ${_formatClock(fulltimeShift.lateCutoffHour, fulltimeShift.lateCutoffMinute)} • PARTTIME sampai ${_formatClock(parttimeShift.lateCutoffHour, parttimeShift.lateCutoffMinute)}';
     }
     if (hasParttime) {
-      return 'PARTTIME sampai ${_formatClock(parttimeShift.breakFirstDeadlineHour, parttimeShift.breakFirstDeadlineMinute)}';
+      return 'PARTTIME sampai ${_formatClock(parttimeShift.lateCutoffHour, parttimeShift.lateCutoffMinute)}';
     }
-    return 'FULLTIME sampai ${_formatClock(fulltimeShift.breakFirstDeadlineHour, fulltimeShift.breakFirstDeadlineMinute)}';
+    return 'FULLTIME sampai ${_formatClock(fulltimeShift.lateCutoffHour, fulltimeShift.lateCutoffMinute)}';
   }
 
   Widget _buildReviewRow(String label, String value) {
@@ -1256,6 +1257,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 startDate: _startDate,
                 sakitIzinMap: _sakitIzinMap,
                 timeOffMap: _timeOffMap,
+                selectedDay: _selectedDay,
               ),
               Expanded(
                 child: ScheduleTableView(
@@ -1282,6 +1284,15 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                   },
                   getSakitIzin: _getSakitIzin,
                   getHasTimeOff: _hasTimeOff,
+                  selectedDay: _selectedDay,
+                  onDayHeaderTap: (date) {
+                    setState(() {
+                      _selectedDay = (_selectedDay != null &&
+                          _selectedDay!.year == date.year &&
+                          _selectedDay!.month == date.month &&
+                          _selectedDay!.day == date.day) ? null : date;
+                    });
+                  },
                 ),
               ),
             ]),
@@ -1334,6 +1345,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               onPressed: () {
                 setState(() {
                   _startDate = _startDate.subtract(const Duration(days: 7));
+                  _selectedDay = null;
                 });
                 _loadData();
               },
@@ -1360,6 +1372,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               onPressed: () {
                 setState(() {
                   _startDate = _startDate.add(const Duration(days: 7));
+                  _selectedDay = null;
                 });
                 _loadData();
               },
@@ -1501,7 +1514,7 @@ String _formatPreviewBreakFirst(ShiftSlot shift) {
   if (shift.band == ShiftBand.libur) {
     return 'Tidak berlaku';
   }
-  return 'sampai ${_formatScheduleClock(shift.breakFirstDeadlineHour, shift.breakFirstDeadlineMinute)} (${shift.requiredWorkMinutes == SchedulePolicyService.parttimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
+  return 'sampai ${_formatScheduleClock(shift.lateCutoffHour, shift.lateCutoffMinute)} (${shift.requiredWorkMinutes == SchedulePolicyService.parttimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
 }
 
 class ScheduleEntryEditorSelection {

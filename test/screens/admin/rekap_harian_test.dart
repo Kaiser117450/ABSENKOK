@@ -241,6 +241,11 @@ class _PolicyRecapHarnessState extends State<_PolicyRecapHarness> {
         setState(() => _selectedFilter = filter);
       },
       loadingBuilder: () => const SizedBox.shrink(),
+      scanCountMap: const <String, int>{},
+      canExportPayrollPdf: false,
+      canExportPayrollSpreadsheet: false,
+      exportingPayrollPdf: false,
+      exportingSpreadsheet: false,
     );
   }
 }

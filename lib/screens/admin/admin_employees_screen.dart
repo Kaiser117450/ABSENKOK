@@ -511,13 +511,27 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                       value: 'fulltime',
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.circle,
-                            size: 10,
-                            color:
-                                _filterContract == EmployeeContract.fulltime
-                                    ? const Color(0xFF2563EB)
-                                    : AppColors.textSecondary,
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _filterContract == EmployeeContract.fulltime
+                                  ? const Color(0xFFDC2626)
+                                  : AppColors.textSecondary,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'F',
+                              style: TextStyle(
+                                fontSize: 7,
+                                fontWeight: FontWeight.w800,
+                                color: _filterContract == EmployeeContract.fulltime
+                                    ? Colors.white
+                                    : Colors.white,
+                                height: 1,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -536,13 +550,27 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                       value: 'parttime',
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.circle_outlined,
-                            size: 10,
-                            color:
-                                _filterContract == EmployeeContract.parttime
-                                    ? const Color(0xFF7C3AED)
-                                    : AppColors.textSecondary,
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: _filterContract == EmployeeContract.parttime
+                                  ? const Color(0xFFF97316)
+                                  : AppColors.textSecondary,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'P',
+                              style: TextStyle(
+                                fontSize: 7,
+                                fontWeight: FontWeight.w800,
+                                color: _filterContract == EmployeeContract.parttime
+                                    ? Colors.white
+                                    : Colors.white,
+                                height: 1,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -957,19 +985,25 @@ class _EmployeeCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 5),
-                              // Compact contract indicator
-                              Text(
-                                employee.employmentContract ==
-                                        EmployeeContract.fulltime
-                                    ? 'FT'
-                                    : 'PT',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: employee.employmentContract ==
-                                          EmployeeContract.fulltime
-                                      ? const Color(0xFF2563EB)
-                                      : const Color(0xFF7C3AED),
+                              // Compact contract indicator - circular badge
+                              Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: employee.employmentContract == EmployeeContract.fulltime
+                                      ? const Color(0xFFDC2626)
+                                      : const Color(0xFFF97316),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  employee.employmentContract == EmployeeContract.fulltime ? 'F' : 'P',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    height: 1,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1558,16 +1592,23 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     final emp = widget.employee;
     _nameCtrl = TextEditingController(text: emp?.name ?? '');
     _empCodeCtrl = TextEditingController(text: emp?.employeeCode ?? '');
-    // forcedOutletId: kepala_gerai yang tambah karyawan baru → auto-set outlet mereka
-    _selectedOutletId = widget.forcedOutletId ??
-        emp?.homeOutletId ??
-        widget.outlets.firstOrNull?.id;
+    // forcedOutletId ALWAYS takes precedence for kepala_gerai
+    _selectedOutletId = widget.forcedOutletId ?? emp?.homeOutletId ?? widget.outlets.firstOrNull?.id;
     _isActive = emp?.isActive ?? true;
     // New employees default to PARTTIME; existing keep their stored value
     _selectedContract = emp?.employmentContract ?? EmployeeContract.parttime;
     // Position: load custom positions then set initial value
     _selectedPosition = emp?.position ?? _defaultPositions.first;
     _loadCustomPositions();
+
+    // Re-assert forced outlet after frame to handle late widget.outlets population
+    if (widget.forcedOutletId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedOutletId != widget.forcedOutletId) {
+          setState(() => _selectedOutletId = widget.forcedOutletId);
+        }
+      });
+    }
   }
 
   Future<void> _loadCustomPositions() async {
@@ -1649,6 +1690,17 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     });
 
     try {
+      final effectiveOutletId = _selectedOutletId ?? widget.forcedOutletId;
+
+      // Validation: new employee must have outlet assigned
+      if (effectiveOutletId == null && widget.employee == null) {
+        setState(() {
+          _error = 'Outlet harus dipilih untuk karyawan baru';
+          _saving = false;
+        });
+        return;
+      }
+
       final payload = {
         'name': _nameCtrl.text.trim(),
         'position': (_selectedPosition == null || _selectedPosition!.isEmpty)
@@ -1656,7 +1708,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
             : _selectedPosition,
         'employee_code':
             _empCodeCtrl.text.trim().isEmpty ? null : _empCodeCtrl.text.trim(),
-        'home_outlet_id': _selectedOutletId,
+        'home_outlet_id': effectiveOutletId,
         'is_active': _isActive,
         'employment_contract': _selectedContract.dbValue,
       };
@@ -1891,6 +1943,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                                     child: Text(o.name),
                                   ))
                               .toList(),
+                          validator: (v) => v == null ? 'Outlet harus dipilih' : null,
                           // null = read-only (kepala_gerai tidak bisa ganti outlet)
                           onChanged: widget.forcedOutletId != null
                               ? null

@@ -24,24 +24,24 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
-    // Verify the user's JWT
-    const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
+    // Use the service_role client to verify the user's JWT.
+    // We pass the raw token to getUser(token) — the global.headers
+    // approach doesn't reliably set the auth context in Edge Functions.
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    const token = authHeader.replace('Bearer ', '')
 
-    const { data: { user }, error: userError } = await userClient.auth.getUser()
+    const { data: { user }, error: userError } = await adminClient.auth.getUser(token)
     if (userError || !user) {
+      const errMsg = userError?.message ?? 'Unknown auth error'
+      console.error('getUser failed:', errMsg)
       return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
+        JSON.stringify({ error: `Invalid token: ${errMsg}` }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Use service role to update app_metadata (can't be done client-side)
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
-
     const currentMeta = user.app_metadata || {}
     const { must_change_password, ...restMeta } = currentMeta
 

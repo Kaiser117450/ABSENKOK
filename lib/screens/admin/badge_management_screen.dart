@@ -50,7 +50,8 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
   bool _loading = true;
 
   String _colorToHex(Color color) {
-    final rgbHex = color.value.toRadixString(16).padLeft(8, '0').substring(2);
+    final rgbHex =
+        color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2);
     return '#${rgbHex.toUpperCase()}';
   }
 
@@ -111,182 +112,195 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
         TextEditingController(text: existing?.borderColor2 ?? '');
     String selectedStyle = existing?.borderStyle ?? 'gradient';
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(existing != null ? 'Edit Badge' : 'Buat Badge Baru'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Preview
-                BadgeAvatar(
-                  name: nameCtrl.text.isNotEmpty ? nameCtrl.text : 'A',
-                  size: 56,
-                  badge: EmployeeBadge(
-                    id: '',
-                    name: nameCtrl.text,
-                    emoji: emojiCtrl.text,
-                    borderColor: color1Ctrl.text.isNotEmpty
-                        ? color1Ctrl.text
-                        : '#9CA3AF',
-                    borderColor2:
-                        color2Ctrl.text.isNotEmpty ? color2Ctrl.text : null,
-                    borderStyle: selectedStyle,
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(existing != null ? 'Edit Badge' : 'Buat Badge Baru'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Preview
+                  BadgeAvatar(
+                    name: nameCtrl.text.isNotEmpty ? nameCtrl.text : 'A',
+                    size: 56,
+                    badge: EmployeeBadge(
+                      id: '',
+                      name: nameCtrl.text,
+                      emoji: emojiCtrl.text,
+                      borderColor: color1Ctrl.text.isNotEmpty
+                          ? color1Ctrl.text
+                          : '#9CA3AF',
+                      borderColor2:
+                          color2Ctrl.text.isNotEmpty ? color2Ctrl.text : null,
+                      borderStyle: selectedStyle,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                // Name field
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Badge',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  // Name field
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Badge',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
                   ),
-                  onChanged: (_) => setDialogState(() {}),
-                ),
-                const SizedBox(height: 12),
-                // Emoji field
-                TextField(
-                  controller: emojiCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Emoji',
-                    hintText: 'e.g. \u{1F3C6}',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  // Emoji field
+                  TextField(
+                    controller: emojiCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Emoji',
+                      hintText: 'e.g. \u{1F3C6}',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
                   ),
-                  onChanged: (_) => setDialogState(() {}),
-                ),
-                const SizedBox(height: 12),
-                _buildColorPickerField(
-                  dialogContext: ctx,
-                  label: 'Warna Utama',
-                  currentColor: _safeParseHex(
-                    color1Ctrl.text,
-                    fallback: const Color(0xFFFFD700),
-                  ),
-                  onColorSelected: (color) {
-                    color1Ctrl.text = _colorToHex(color);
-                  },
-                  setDialogState: setDialogState,
-                ),
-                if (selectedStyle == 'gradient') ...[
                   const SizedBox(height: 12),
                   _buildColorPickerField(
                     dialogContext: ctx,
-                    label: 'Warna Gradient',
+                    label: 'Warna Utama',
                     currentColor: _safeParseHex(
-                      color2Ctrl.text,
-                      fallback: const Color(0xFFFFA500),
+                      color1Ctrl.text,
+                      fallback: const Color(0xFFFFD700),
                     ),
                     onColorSelected: (color) {
-                      color2Ctrl.text = _colorToHex(color);
+                      color1Ctrl.text = _colorToHex(color);
                     },
                     setDialogState: setDialogState,
                   ),
-                ],
-                const SizedBox(height: 12),
-                // Style selector
-                DropdownButtonFormField<String>(
-                  value: selectedStyle,
-                  decoration: const InputDecoration(
-                    labelText: 'Style',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'solid', child: Text('Solid')),
-                    DropdownMenuItem(
-                        value: 'gradient', child: Text('Gradient')),
-                    DropdownMenuItem(value: 'glow', child: Text('Glow')),
+                  if (selectedStyle == 'gradient') ...[
+                    const SizedBox(height: 12),
+                    _buildColorPickerField(
+                      dialogContext: ctx,
+                      label: 'Warna Gradient',
+                      currentColor: _safeParseHex(
+                        color2Ctrl.text,
+                        fallback: const Color(0xFFFFA500),
+                      ),
+                      onColorSelected: (color) {
+                        color2Ctrl.text = _colorToHex(color);
+                      },
+                      setDialogState: setDialogState,
+                    ),
                   ],
-                  onChanged: (v) => setDialogState(() {
-                    if (v != null) selectedStyle = v;
-                  }),
-                ),
-                const SizedBox(height: 12),
-                // Description field (optional)
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi (opsional)',
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  // Style selector
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedStyle,
+                    decoration: const InputDecoration(
+                      labelText: 'Style',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'solid', child: Text('Solid')),
+                      DropdownMenuItem(
+                          value: 'gradient', child: Text('Gradient')),
+                      DropdownMenuItem(value: 'glow', child: Text('Glow')),
+                    ],
+                    onChanged: (v) => setDialogState(() {
+                      if (v != null) selectedStyle = v;
+                    }),
                   ),
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameCtrl.text.trim().isEmpty) return;
-                try {
-                  if (existing != null) {
-                    await BadgeService.instance.updateBadge(
-                      id: existing.id,
-                      name: nameCtrl.text.trim(),
-                      description: descCtrl.text.trim().isNotEmpty
-                          ? descCtrl.text.trim()
-                          : null,
-                      emoji: emojiCtrl.text.trim(),
-                      borderColor: color1Ctrl.text.trim(),
-                      borderColor2: selectedStyle == 'gradient' &&
-                              color2Ctrl.text.trim().isNotEmpty
-                          ? color2Ctrl.text.trim()
-                          : null,
-                      borderStyle: selectedStyle,
-                    );
-                  } else {
-                    await BadgeService.instance.createBadge(
-                      name: nameCtrl.text.trim(),
-                      description: descCtrl.text.trim().isNotEmpty
-                          ? descCtrl.text.trim()
-                          : null,
-                      emoji: emojiCtrl.text.trim(),
-                      borderColor: color1Ctrl.text.trim(),
-                      borderColor2: selectedStyle == 'gradient' &&
-                              color2Ctrl.text.trim().isNotEmpty
-                          ? color2Ctrl.text.trim()
-                          : null,
-                      borderStyle: selectedStyle,
-                    );
-                  }
-                  Navigator.pop(ctx, true);
-                } catch (e) {
-                  AppToast.error(ctx, 'Gagal menyimpan: $e');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                  const SizedBox(height: 12),
+                  // Description field (optional)
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Deskripsi (opsional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
               ),
-              child: Text(existing != null ? 'Perbarui' : 'Buat'),
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty) return;
+                  try {
+                    if (existing != null) {
+                      await BadgeService.instance.updateBadge(
+                        id: existing.id,
+                        name: nameCtrl.text.trim(),
+                        description: descCtrl.text.trim().isNotEmpty
+                            ? descCtrl.text.trim()
+                            : null,
+                        emoji: emojiCtrl.text.trim(),
+                        borderColor: color1Ctrl.text.trim(),
+                        borderColor2: selectedStyle == 'gradient' &&
+                                color2Ctrl.text.trim().isNotEmpty
+                            ? color2Ctrl.text.trim()
+                            : null,
+                        borderStyle: selectedStyle,
+                      );
+                    } else {
+                      await BadgeService.instance.createBadge(
+                        name: nameCtrl.text.trim(),
+                        description: descCtrl.text.trim().isNotEmpty
+                            ? descCtrl.text.trim()
+                            : null,
+                        emoji: emojiCtrl.text.trim(),
+                        borderColor: color1Ctrl.text.trim(),
+                        borderColor2: selectedStyle == 'gradient' &&
+                                color2Ctrl.text.trim().isNotEmpty
+                            ? color2Ctrl.text.trim()
+                            : null,
+                        borderStyle: selectedStyle,
+                      );
+                    }
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx, true);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      AppToast.error(ctx, 'Gagal menyimpan: $e');
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(existing != null ? 'Perbarui' : 'Buat'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    if (result == true) {
-      _loadBadges();
-      if (mounted) {
-        AppToast.success(
-            context, existing != null ? 'Badge diperbarui' : 'Badge dibuat');
+      if (result == true) {
+        _loadBadges();
+        if (mounted) {
+          AppToast.success(
+              context, existing != null ? 'Badge diperbarui' : 'Badge dibuat');
+        }
       }
+    } finally {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+      emojiCtrl.dispose();
+      color1Ctrl.dispose();
+      color2Ctrl.dispose();
     }
   }
 
   Future<void> _deleteBadge(EmployeeBadge badge) async {
-    final assignedCount = await BadgeService.instance.getAssignedCount(badge.id);
+    final assignedCount =
+        await BadgeService.instance.getAssignedCount(badge.id);
     final warning = assignedCount > 0
         ? '\n\nBadge ini sedang dipakai oleh $assignedCount karyawan. Badge akan dihapus dari mereka.'
         : '';
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -329,8 +343,7 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
           (index) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: AppCard(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: const [
                   ShimmerSkeleton(width: 52, height: 52, borderRadius: 26),
@@ -342,8 +355,7 @@ class _BadgeManagementScreenState extends State<BadgeManagementScreen> {
                         ShimmerSkeleton(
                             width: 120, height: 14, borderRadius: 4),
                         SizedBox(height: 6),
-                        ShimmerSkeleton(
-                            width: 80, height: 12, borderRadius: 4),
+                        ShimmerSkeleton(width: 80, height: 12, borderRadius: 4),
                       ],
                     ),
                   ),
@@ -430,7 +442,8 @@ class BadgeColorPickerField extends StatelessWidget {
   });
 
   static String colorToHex(Color color) {
-    final rgbHex = color.value.toRadixString(16).padLeft(8, '0').substring(2);
+    final rgbHex =
+        color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2);
     return '#${rgbHex.toUpperCase()}';
   }
 
@@ -549,7 +562,8 @@ class _BadgeDefinitionCard extends StatelessWidget {
                     if (badge.emoji.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(right: 6),
-                        child: Text(badge.emoji, style: const TextStyle(fontSize: 16)),
+                        child: Text(badge.emoji,
+                            style: const TextStyle(fontSize: 16)),
                       ),
                     Expanded(
                       child: Text(
@@ -847,7 +861,7 @@ class _BadgePickerSheetState extends State<_BadgePickerSheet> {
                         shape: BoxShape.circle,
                         color: AppColors.dangerLight,
                         border: Border.all(
-                            color: AppColors.danger.withOpacity(0.3)),
+                            color: AppColors.danger.withValues(alpha: 0.3)),
                       ),
                       child: const Icon(Icons.remove_circle_outline,
                           color: AppColors.danger, size: 20),
@@ -870,7 +884,8 @@ class _BadgePickerSheetState extends State<_BadgePickerSheet> {
                     child: AppEmptyState(
                       icon: Icons.workspace_premium_outlined,
                       heading: 'Belum ada badge',
-                      subtext: 'Buat badge terlebih dahulu dari menu Kelola Badge',
+                      subtext:
+                          'Buat badge terlebih dahulu dari menu Kelola Badge',
                     ),
                   ),
               ],

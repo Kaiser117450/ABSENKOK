@@ -155,7 +155,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: PolicyRecapTile(recap: recap),
+              body: PolicyRecapTile(recap: recap, scanCountMap: const <String, int>{}),
             ),
           ),
         );
@@ -204,8 +204,8 @@ void main() {
             home: Scaffold(
               body: ListView(
                 children: [
-                  PolicyRecapTile(recap: strictOvernightRecap),
-                  PolicyRecapTile(recap: fallbackNoScheduleRecap),
+                  PolicyRecapTile(recap: strictOvernightRecap, scanCountMap: const <String, int>{}),
+                  PolicyRecapTile(recap: fallbackNoScheduleRecap, scanCountMap: const <String, int>{}),
                 ],
               ),
             ),

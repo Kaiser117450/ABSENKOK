@@ -29,14 +29,16 @@ serve(async (req) => {
     )
 
     // Verify the caller is an admin using their JWT.
-    // Extract the raw token and pass it directly to getUser() — the
-    // global.headers approach doesn't reliably set the auth context
-    // inside Edge Functions, causing "invalid JWT" 401 errors.
+    // We use verify_jwt=false at the gateway so the function always executes,
+    // then we validate the JWT ourselves via getUser(token) with the
+    // service_role client which has full auth.admin access.
     const token = authHeader.replace('Bearer ', '')
     const { data: { user: caller }, error: callerError } = await supabaseAdmin.auth.getUser(token)
     if (callerError || !caller) {
+      const errMsg = callerError?.message ?? 'Unknown auth error'
+      console.error('getUser failed:', errMsg)
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: `Unauthorized: ${errMsg}` }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

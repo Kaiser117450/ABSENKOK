@@ -167,10 +167,6 @@ String buildPolicyRecapReasonCopy(AttendancePolicyRecapDay recap) {
     }
   }
 
-  if (recap.lateKind == LateKind.breakFirstEligible) {
-    return 'Masih dalam jendela break-first, menunggu konfirmasi.';
-  }
-
   if (recap.attendanceStatus == AttendancePolicyStatus.belumMasuk) {
     return 'Hari kerja masih berjalan dan belum ada scan masuk.';
   }
@@ -187,8 +183,8 @@ String buildPolicyRecapReasonCopy(AttendancePolicyRecapDay recap) {
     return 'Terlambat: scan pertama ${_formatPolicyTime(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
   }
 
-  if (recap.lateKind == LateKind.breakFirstConfirmed) {
-    return 'Break-first: scan pertama ${_formatPolicyTime(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
+  if (recap.lateKind == LateKind.normal) {
+    return 'Terlambat: scan pertama ${_formatPolicyTime(recap.firstScanLocal)}, batas ${recap.lateCutoffLocal ?? '--:--'}';
   }
 
   final notes = recap.notes?.trim();
@@ -2186,14 +2182,10 @@ class PolicyRecapTile extends StatelessWidget {
     // Late
     if (recap.isLate ||
         recap.lateKind == LateKind.normal ||
-        recap.lateKind == LateKind.breakFirstConfirmed ||
         recap.hasSignal(AttendancePolicySignal.late) ||
         recap.primaryStatus == AttendancePolicyPrimaryStatus.late) {
-      final lateLabel = recap.lateKind == LateKind.breakFirstConfirmed
-          ? 'Terlambat (break-first)'
-          : 'Terlambat';
       badges.add(_SignalBadge(
-        label: lateLabel,
+        label: 'Terlambat',
         bgColor: const Color(0xFFFEF3C7),
         textColor: const Color(0xFF92400E),
       ));

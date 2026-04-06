@@ -144,6 +144,44 @@ class OutletControlCenterRow {
   }
 }
 
+/// Employee insight data for chart dashboard showing attendance issues.
+class EmployeeInsightData {
+  final String employeeId;
+  final String employeeName;
+  final int lateCount;
+  final int absenceCount;
+  final int shortWorkCount;
+  final int excessBreakCount;
+  final int overtimeCount;
+  final int safeCount; // days without issues
+
+  const EmployeeInsightData({
+    required this.employeeId,
+    required this.employeeName,
+    required this.lateCount,
+    required this.absenceCount,
+    required this.shortWorkCount,
+    required this.excessBreakCount,
+    required this.overtimeCount,
+    required this.safeCount,
+  });
+
+  int get totalIssues => lateCount + absenceCount + shortWorkCount + excessBreakCount;
+
+  factory EmployeeInsightData.fromJson(Map<String, dynamic> json) {
+    return EmployeeInsightData(
+      employeeId: json['employee_id'] as String,
+      employeeName: json['employee_name'] as String,
+      lateCount: (json['late_count'] as num?)?.toInt() ?? 0,
+      absenceCount: (json['absence_count'] as num?)?.toInt() ?? 0,
+      shortWorkCount: (json['short_work_count'] as num?)?.toInt() ?? 0,
+      excessBreakCount: (json['excess_break_count'] as num?)?.toInt() ?? 0,
+      overtimeCount: (json['overtime_count'] as num?)?.toInt() ?? 0,
+      safeCount: (json['safe_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AnalyticsService
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,6 +322,92 @@ class AnalyticsService {
           .toList();
     } catch (e) {
       debugPrint('[AnalyticsService] getOutletControlCenter failed: $e');
+      return [];
+    }
+  }
+
+  /// Get employee insight data for the chart dashboard.
+  /// Returns aggregated attendance issues per employee for current month.
+  /// Returns empty list if [supabaseReady] is false or if the query fails.
+  Future<List<EmployeeInsightData>> getEmployeeInsights(String outletId) async {
+    if (!supabaseReady) return [];
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+
+      final startStr =
+          '${startOfMonth.year}-${startOfMonth.month.toString().padLeft(2, '0')}-${startOfMonth.day.toString().padLeft(2, '0')}';
+      final endStr =
+          '${endOfMonth.year}-${endOfMonth.month.toString().padLeft(2, '0')}-${endOfMonth.day.toString().padLeft(2, '0')}';
+
+      // Query attendance logs for current month and aggregate per employee
+      final result = await SupabaseClientFactory.admin
+        .from('attendance_logs')
+        .select('''
+          employee_id,
+          employees!inner(name),
+          status,
+          is_late,
+          created_at
+        ''')
+        .eq('outlet_id', outletId)
+        .gte('created_at', startStr)
+        .lte('created_at', endStr)
+        .order('employee_id');
+
+      if (result == null) return [];
+
+      // Group by employee and count issues
+      final Map<String, Map<String, dynamic>> employeeStats = {};
+
+      for (final record in result) {
+        final employeeId = record['employee_id'] as String;
+        final employeeName = record['employees']['name'] as String;
+        final status = record['status'] as String;
+        final isLate = record['is_late'] as bool? ?? false;
+
+        if (!employeeStats.containsKey(employeeId)) {
+          employeeStats[employeeId] = {
+            'employee_id': employeeId,
+            'employee_name': employeeName,
+            'late_count': 0,
+            'absence_count': 0,
+            'short_work_count': 0,
+            'excess_break_count': 0,
+            'overtime_count': 0,
+            'safe_count': 0,
+          };
+        }
+
+        final stats = employeeStats[employeeId]!;
+
+        // Count various issues based on status
+        if (isLate) {
+          stats['late_count'] = (stats['late_count'] as int) + 1;
+        }
+
+        // For now, we'll use simplified logic since we don't have the full attendance analysis
+        // In a real implementation, you'd want to analyze the full day's attendance pattern
+        switch (status) {
+          case 'absent':
+            stats['absence_count'] = (stats['absence_count'] as int) + 1;
+            break;
+          case 'masuk':
+            if (!isLate) {
+              stats['safe_count'] = (stats['safe_count'] as int) + 1;
+            }
+            break;
+          // Add more status analysis as needed
+        }
+      }
+
+      return employeeStats.values
+          .map((stats) => EmployeeInsightData.fromJson(stats))
+          .toList();
+
+    } catch (e) {
+      debugPrint('[AnalyticsService] getEmployeeInsights failed: $e');
       return [];
     }
   }

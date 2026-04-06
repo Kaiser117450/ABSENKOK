@@ -25,6 +25,10 @@ class ScheduleTableView extends StatelessWidget {
   final void Function(Employee emp) onTimeOffTap;
   final VoidCallback onToggleSelectAll;
   final void Function(String empId) onToggleEmployee;
+  final void Function(DateTime date)? onDayHeaderTap;
+
+  // State
+  final DateTime? selectedDay;
 
   // Helpers passed from parent (reuse existing logic, don't duplicate)
   final AttendanceType? Function(String empId, DateTime date) getSakitIzin;
@@ -47,6 +51,8 @@ class ScheduleTableView extends StatelessWidget {
     required this.onToggleEmployee,
     required this.getSakitIzin,
     required this.getHasTimeOff,
+    this.onDayHeaderTap,
+    this.selectedDay,
   });
 
   @override
@@ -56,6 +62,22 @@ class ScheduleTableView extends StatelessWidget {
     }
 
     final days = List.generate(7, (i) => startDate.add(Duration(days: i)));
+
+    // Compute which employees have no schedule entries for the entire week
+    bool empHasNoSchedule(Employee emp) {
+      for (final day in days) {
+        if (getSakitIzin(emp.id, day) != null) return false;
+        if (getHasTimeOff(emp.id, day)) return false;
+        final hasEntry = currentSchedule?.entries.any((e) =>
+                e.employeeId == emp.id &&
+                e.date.year == day.year &&
+                e.date.month == day.month &&
+                e.date.day == day.day) ??
+            false;
+        if (hasEntry) return false;
+      }
+      return true;
+    }
 
     return TableView.builder(
       diagonalDragBehavior: DiagonalDragBehavior.free,
@@ -79,6 +101,8 @@ class ScheduleTableView extends StatelessWidget {
           return buildHeaderCell(
             date: days[vicinity.column - 1],
             weekStart: startDate,
+            isSelected: selectedDay != null && _isSameDay(selectedDay!, days[vicinity.column - 1]),
+            onTap: () => onDayHeaderTap?.call(days[vicinity.column - 1]),
           );
         }
 
@@ -92,6 +116,7 @@ class ScheduleTableView extends StatelessWidget {
             leaveBalance: leaveBalance[emp.id] ?? 0,
             onToggle: () => onToggleEmployee(emp.id),
             onTimeOffTap: () => onTimeOffTap(emp),
+            hasNoSchedule: empHasNoSchedule(emp),
           );
         }
 
@@ -156,5 +181,10 @@ class ScheduleTableView extends StatelessWidget {
     return date.year == now.year &&
         date.month == now.month &&
         date.day == now.day;
+  }
+
+  /// Checks if two dates are the same day.
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }

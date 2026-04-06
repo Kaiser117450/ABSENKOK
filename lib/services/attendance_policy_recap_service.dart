@@ -35,6 +35,44 @@ class AttendancePolicyRecapService {
     return parseRows(result);
   }
 
+  /// Fetch recap for ALL outlets by calling the RPC once per outlet and
+  /// merging the results. Duplicates (same employee+date from multiple
+  /// outlets) are kept — the RPC already scopes by outlet schedule.
+  Future<List<AttendancePolicyRecapDay>> fetchAllOutletsPolicyRecap({
+    required List<String> outletIds,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    if (outletIds.isEmpty) {
+      return const <AttendancePolicyRecapDay>[];
+    }
+
+    final start = _dateOnly(startDate);
+    final end = _dateOnly(endDate);
+    if (end.isBefore(start)) {
+      throw ArgumentError.value(
+        endDate,
+        'endDate',
+        'End date must not be before start date',
+      );
+    }
+
+    final futures = outletIds.map(
+      (outletId) => fetchAdminSchedulePolicyRecap(
+        outletId: outletId,
+        startDate: start,
+        endDate: end,
+      ),
+    );
+
+    final results = await Future.wait(futures);
+    final merged = <AttendancePolicyRecapDay>[];
+    for (final rows in results) {
+      merged.addAll(rows);
+    }
+    return merged;
+  }
+
   static List<AttendancePolicyRecapDay> parseRows(dynamic raw) {
     final rows = _extractRows(raw);
     return rows

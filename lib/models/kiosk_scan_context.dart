@@ -51,8 +51,6 @@ class KioskScanContext {
   final ShiftBand? shiftBand;
   final EmployeeContract employmentContract;
   final String? lateCutoffLocal;
-  final String? breakFirstDeadlineLocal;
-  final bool breakFirstEligible;
 
   const KioskScanContext({
     required this.serverNowUtc,
@@ -63,8 +61,6 @@ class KioskScanContext {
     this.shiftBand,
     required this.employmentContract,
     this.lateCutoffLocal,
-    this.breakFirstDeadlineLocal,
-    required this.breakFirstEligible,
   });
 
   factory KioskScanContext.fromJson(Map<String, dynamic> json) {
@@ -91,8 +87,6 @@ class KioskScanContext {
       employmentContract:
           EmployeeContract.parse(json['employment_contract']?.toString()),
       lateCutoffLocal: _readString(json['late_cutoff_local']),
-      breakFirstDeadlineLocal: _readString(json['break_first_deadline_local']),
-      breakFirstEligible: _readBool(json['break_first_eligible']),
     );
   }
 }

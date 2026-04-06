@@ -10,6 +10,7 @@ void main() {
         employeeId: 'emp-1',
         employeeName: 'Ayu',
         employmentContract: EmployeeContract.fulltime,
+        employeeRole: '',
         cells: <PayrollMatrixDayCell>[
           PayrollMatrixDayCell.placeholder(DateTime(2026, 3, 27)),
         ],

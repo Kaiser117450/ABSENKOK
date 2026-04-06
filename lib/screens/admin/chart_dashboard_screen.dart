@@ -64,6 +64,7 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
   List<OvertimeFlag> _overtimeFlags = [];
   List<StreakLeaderEntry> _leaderboard = [];
   List<Map<String, dynamic>> _outletComparison = [];
+  List<EmployeeInsightData> _insightData = [];
 
   // Loading / error state
   bool _isLoading = true;
@@ -72,6 +73,8 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
   String? _overtimeError;
   String? _leaderboardError;
   String? _comparisonError;
+  String? _insightError;
+  int _insightSortIndex = 0; // 0=masalah, 1=terlambat, 2=overtime, 3=aman
 
   @override
   void initState() {
@@ -87,6 +90,7 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
       _outletComparison = debugData.outletComparison
           .map((item) => Map<String, dynamic>.from(item))
           .toList();
+      _insightData = []; // No debug data for insights yet
       _isLoading = false;
       return;
     }
@@ -103,6 +107,7 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
       _loadWeeklyTrend(outletId),
       _loadOvertimeFlags(outletId, now),
       _loadLeaderboard(outletId),
+      _loadInsightData(outletId),
       if (appState.isAdmin) _loadOutletComparison(now),
     ]);
     if (mounted) setState(() => _isLoading = false);
@@ -198,6 +203,35 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
     }
   }
 
+  Future<void> _loadInsightData(String outletId) async {
+    _insightError = null;
+    try {
+      final result = await AnalyticsService.instance.getEmployeeInsights(outletId);
+      if (mounted) setState(() => _insightData = result);
+    } catch (e) {
+      if (mounted) setState(() => _insightError = e.toString());
+    }
+  }
+
+  List<EmployeeInsightData> get _sortedInsightData {
+    final sorted = List<EmployeeInsightData>.from(_insightData);
+    switch (_insightSortIndex) {
+      case 0: // masalah
+        sorted.sort((a, b) => b.totalIssues.compareTo(a.totalIssues));
+        break;
+      case 1: // terlambat
+        sorted.sort((a, b) => b.lateCount.compareTo(a.lateCount));
+        break;
+      case 2: // overtime
+        sorted.sort((a, b) => b.overtimeCount.compareTo(a.overtimeCount));
+        break;
+      case 3: // aman
+        sorted.sort((a, b) => a.totalIssues.compareTo(b.totalIssues));
+        break;
+    }
+    return sorted.take(10).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
@@ -231,10 +265,14 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
             _buildOvertimeSection(),
             const SizedBox(height: 24),
 
-            // Section 5: Streak leaderboard
+            // Section 5: Employee Insights
+            _buildInsightSection(),
+            const SizedBox(height: 24),
+
+            // Section 6: Streak leaderboard
             _buildLeaderboardSection(),
 
-            // Section 6: Outlet comparison (admin only)
+            // Section 7: Outlet comparison (admin only)
             if (appState.isAdmin) ...[
               const SizedBox(height: 24),
               _buildOutletComparisonSection(),
@@ -559,7 +597,298 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
     );
   }
 
-  // ─── Section 5: Streak Leaderboard ──────────────────────────────────────────
+  // ─── Section 5: Employee Insights ──────────────────────────────────────────
+
+  Widget _buildInsightSection() {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Insight Karyawan',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Sort buttons row
+          _buildInsightSortButtons(),
+          const SizedBox(height: 16),
+
+          if (_isLoading)
+            const ShimmerSkeleton(height: 300)
+          else if (_insightError != null || _insightData.isEmpty)
+            const SizedBox(
+              height: 300,
+              child: AppEmptyState(
+                icon: Icons.analytics_outlined,
+                heading: 'Belum Ada Data',
+                subtext:
+                    'Data insight karyawan akan muncul setelah ada data kehadiran bulan ini.',
+              ),
+            )
+          else
+            _buildInsightChart(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightSortButtons() {
+    final buttons = [
+      {
+        'icon': Icons.warning_amber_outlined,
+        'label': 'Masalah',
+        'color': AppColors.danger,
+      },
+      {
+        'icon': Icons.schedule_outlined,
+        'label': 'Terlambat',
+        'color': const Color(0xFF3B82F6), // Blue
+      },
+      {
+        'icon': Icons.more_time_outlined,
+        'label': 'Overtime',
+        'color': AppColors.accent,
+      },
+      {
+        'icon': Icons.verified_outlined,
+        'label': 'Aman',
+        'color': AppColors.success,
+      },
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(buttons.length, (index) {
+          final button = buttons[index];
+          final isSelected = _insightSortIndex == index;
+
+          return Padding(
+            padding: EdgeInsets.only(right: index < buttons.length - 1 ? 8 : 0),
+            child: ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    button['icon'] as IconData,
+                    size: 16,
+                    color: isSelected
+                        ? Colors.white
+                        : button['color'] as Color,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    button['label'] as String,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : button['color'] as Color,
+                    ),
+                  ),
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() => _insightSortIndex = index);
+                }
+              },
+              selectedColor: button['color'] as Color,
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: isSelected
+                    ? button['color'] as Color
+                    : AppColors.border,
+                width: 1,
+              ),
+              showCheckmark: false,
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildInsightChart() {
+    final sortedData = _sortedInsightData;
+    if (sortedData.isEmpty) {
+      return const SizedBox(
+        height: 300,
+        child: AppEmptyState(
+          icon: Icons.analytics_outlined,
+          heading: 'Tidak Ada Data',
+          subtext: 'Tidak ada data karyawan untuk ditampilkan.',
+        ),
+      );
+    }
+
+    // Find max value for scaling
+    double maxY = 0;
+    for (final employee in sortedData) {
+      final maxValue = [
+        employee.totalIssues.toDouble(),
+        employee.overtimeCount.toDouble(),
+        employee.safeCount.toDouble(),
+      ].reduce((a, b) => a > b ? a : b);
+      if (maxValue > maxY) maxY = maxValue;
+    }
+
+    // Create bar groups - each employee gets 3 stacked/grouped bars
+    final barGroups = <BarChartGroupData>[];
+    for (int i = 0; i < sortedData.length; i++) {
+      final employee = sortedData[i];
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          groupVertically: false,
+          barRods: [
+            // Red bar for total issues
+            BarChartRodData(
+              toY: employee.totalIssues.toDouble(),
+              color: AppColors.danger,
+              width: 8,
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(2),
+              ),
+            ),
+            // Amber bar for overtime
+            BarChartRodData(
+              toY: employee.overtimeCount.toDouble(),
+              color: AppColors.accent,
+              width: 8,
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(2),
+              ),
+            ),
+            // Green bar for safe days
+            BarChartRodData(
+              toY: employee.safeCount.toDouble(),
+              color: AppColors.success,
+              width: 8,
+              borderRadius: const BorderRadius.horizontal(
+                right: Radius.circular(2),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 300,
+          child: BarChart(
+            BarChartData(
+              maxY: maxY > 0 ? maxY * 1.2 : 10,
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                drawHorizontalLine: false,
+                verticalInterval: maxY > 0 ? maxY / 4 : 2.5,
+                getDrawingVerticalLine: (value) {
+                  return const FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                  );
+                },
+              ),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      final idx = value.toInt();
+                      if (idx < 0 || idx >= sortedData.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final name = sortedData[idx].employeeName;
+                      final truncatedName = name.length > 12
+                          ? '${name.substring(0, 12)}..'
+                          : name;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          truncatedName,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => const Color(0xFF111827),
+                  tooltipRoundedRadius: 8,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final employee = sortedData[group.x];
+                    String label;
+                    switch (rodIndex) {
+                      case 0:
+                        label = 'Masalah: ${employee.totalIssues}';
+                        break;
+                      case 1:
+                        label = 'Overtime: ${employee.overtimeCount}';
+                        break;
+                      case 2:
+                        label = 'Aman: ${employee.safeCount}';
+                        break;
+                      default:
+                        label = '${rod.toY.toInt()}';
+                    }
+                    return BarTooltipItem(
+                      '${employee.employeeName}\n$label',
+                      const TextStyle(color: Colors.white, fontSize: 12),
+                    );
+                  },
+                ),
+              ),
+              groupsSpace: 12,
+              barGroups: barGroups,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Legend
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLegendDot(AppColors.danger, 'Masalah'),
+            const SizedBox(width: 16),
+            _buildLegendDot(AppColors.accent, 'Overtime'),
+            const SizedBox(width: 16),
+            _buildLegendDot(AppColors.success, 'Aman'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Section 6: Streak Leaderboard ──────────────────────────────────────────
 
   Widget _buildLeaderboardSection() {
     return AppCard(
@@ -666,7 +995,7 @@ class _ChartDashboardScreenState extends ConsumerState<ChartDashboardScreen>
     );
   }
 
-  // ─── Section 6: Outlet Comparison (admin only) ─────────────────────────────
+  // ─── Section 7: Outlet Comparison (admin only) ─────────────────────────────
 
   Widget _buildOutletComparisonSection() {
     return AppCard(

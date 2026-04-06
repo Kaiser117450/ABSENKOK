@@ -73,17 +73,16 @@ class AdminOnboardingService {
         },
       );
     } on FunctionException catch (e) {
-      // FunctionException with 401 = JWT rejected by Supabase gateway.
-      // This means the session is invalid even after refresh attempt.
-      final status = e.status;
-      if (status == 401) {
-        throw Exception(
-          'Sesi login telah berakhir. Silakan logout dan login kembali.',
-        );
-      }
+      // FunctionException = transport-level error from Supabase SDK.
+      // With verify_jwt=false on the gateway, this should be rare — most
+      // errors come through as response.status != 200 instead.
       final details = e.details;
-      final msg = details is Map ? (details['message'] ?? details['error']) : null;
-      throw Exception(msg ?? 'Terjadi kesalahan server (status $status)');
+      final msg = details is Map
+          ? (details['message'] ?? details['error'])
+          : null;
+      throw Exception(
+        msg ?? 'Terjadi kesalahan koneksi ke server (status ${e.status})',
+      );
     }
 
     if (response.status != 200) {

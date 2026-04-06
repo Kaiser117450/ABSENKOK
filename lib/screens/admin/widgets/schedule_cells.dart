@@ -55,25 +55,38 @@ TableViewCell buildCornerCell({
 TableViewCell buildHeaderCell({
   required DateTime date,
   required DateTime weekStart,
+  bool isSelected = false,
+  VoidCallback? onTap,
 }) {
   const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
   // DateTime.weekday: Monday=1 ... Sunday=7 → index 0..6
   final dayAbbr = dayNames[date.weekday - 1];
 
   return TableViewCell(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          dayAbbr,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEFF6FF) : null,
+          border: isSelected
+              ? const Border(bottom: BorderSide(color: Color(0xFF3B82F6), width: 2))
+              : null,
         ),
-        const SizedBox(height: 2),
-        Text(
-          '${date.day}',
-          style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayAbbr,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${date.day}',
+              style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 }
@@ -89,6 +102,7 @@ TableViewCell buildEmployeeCell({
   required int leaveBalance,
   required VoidCallback onToggle,
   required VoidCallback onTimeOffTap,
+  bool hasNoSchedule = false,
 }) {
   return TableViewCell(
     child: Container(
@@ -125,6 +139,37 @@ TableViewCell buildEmployeeCell({
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (hasNoSchedule)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.event_busy_rounded,
+                          size: 8,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Tanpa Jadwal',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (leaveBalance > 0)
                   Container(
                     margin: const EdgeInsets.only(top: 2),
@@ -266,7 +311,7 @@ TableViewCell buildShiftCell({
       child: Container(
         padding: const EdgeInsets.all(4),
         alignment: Alignment.center,
-        child: _policyChip(entry.shift, fg, icon, bg: bg),
+        child: _policyChip(entry.shift, fg, icon, bg: bg, role: entry.role),
       ),
     ),
   );
@@ -302,7 +347,8 @@ Widget _chip(String label, Color color, IconData icon, {Color? bg}) {
   );
 }
 
-Widget _policyChip(ShiftSlot shift, Color color, IconData icon, {Color? bg}) {
+Widget _policyChip(ShiftSlot shift, Color color, IconData icon,
+    {Color? bg, String? role}) {
   final primaryLabel = shift.band == ShiftBand.libur
       ? 'Libur'
       : '${shift.band.label} - ${_formatRequiredHours(shift.requiredWorkMinutes)}';
@@ -352,6 +398,20 @@ Widget _policyChip(ShiftSlot shift, Color color, IconData icon, {Color? bg}) {
                   color: color.withValues(alpha: 0.85),
                 ),
               ),
+              if (role != null && role.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  role,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.w700,
+                    color: color.withValues(alpha: 0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

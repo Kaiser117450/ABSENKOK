@@ -68,24 +68,6 @@ class AttendancePolicyBadge extends StatelessWidget {
     final resolvedStatus = status ?? AttendancePolicyStatus.hadir;
     final resolvedLateKind = lateKind ?? LateKind.none;
 
-    if (resolvedLateKind == LateKind.breakFirstConfirmed) {
-      return const _AttendancePolicyBadgeStyle(
-        label: 'Break-first',
-        foregroundColor: Color(0xFF9A3412),
-        backgroundColor: Color(0xFFFFEDD5),
-        borderColor: Color(0xFFF97316),
-      );
-    }
-
-    if (resolvedLateKind == LateKind.breakFirstEligible) {
-      return const _AttendancePolicyBadgeStyle(
-        label: 'Kandidat break-first',
-        foregroundColor: Color(0xFF92400E),
-        backgroundColor: Color(0xFFFEF3C7),
-        borderColor: Color(0xFFF59E0B),
-      );
-    }
-
     if (resolvedLateKind == LateKind.normal) {
       return _strictStyle('Terlambat', AttendancePolicySeverity.red);
     }

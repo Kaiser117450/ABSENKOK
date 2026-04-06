@@ -5,7 +5,6 @@ const List<PayrollRolloutScenarioId> requiredPayrollRolloutScenarioIds =
   PayrollRolloutScenarioId.overtime,
   PayrollRolloutScenarioId.outlet24Hour,
   PayrollRolloutScenarioId.outletNormal,
-  PayrollRolloutScenarioId.breakFirst,
   PayrollRolloutScenarioId.noShow,
 ];
 
@@ -23,7 +22,6 @@ enum PayrollRolloutScenarioId {
   overtime,
   outlet24Hour,
   outletNormal,
-  breakFirst,
   noShow,
 }
 
@@ -40,8 +38,6 @@ extension PayrollRolloutScenarioIdMetadata on PayrollRolloutScenarioId {
         return 'outlet24Hour';
       case PayrollRolloutScenarioId.outletNormal:
         return 'outletNormal';
-      case PayrollRolloutScenarioId.breakFirst:
-        return 'breakFirst';
       case PayrollRolloutScenarioId.noShow:
         return 'noShow';
     }
@@ -59,8 +55,6 @@ extension PayrollRolloutScenarioIdMetadata on PayrollRolloutScenarioId {
         return 'Outlet 24 jam';
       case PayrollRolloutScenarioId.outletNormal:
         return 'Outlet normal';
-      case PayrollRolloutScenarioId.breakFirst:
-        return 'Break-first';
       case PayrollRolloutScenarioId.noShow:
         return 'No-show';
     }

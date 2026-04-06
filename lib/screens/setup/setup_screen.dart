@@ -51,20 +51,25 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       return 'Aktivasi perangkat timeout. Periksa internet lalu coba lagi.';
     }
 
-    if (normalized.contains('device uuid')) {
-      return 'Aktivasi gagal. Identitas perangkat tidak valid.';
+    // Device identity cannot be read (null/empty UUID from SharedPreferences)
+    if (normalized.contains('identitas perangkat tidak dapat dibaca') ||
+        normalized.contains('tidak dapat dibaca')) {
+      return 'Identitas perangkat tidak dapat dibaca. Coba restart aplikasi.';
     }
 
-    if (normalized.contains('different outlet') ||
-        (normalized.contains('already activated') &&
-            normalized.contains('outlet'))) {
-      return 'Aktivasi gagal. Perangkat ini sudah terikat ke gerai lain.';
+    // Password wrong
+    if (normalized.contains('password salah')) {
+      return 'Aktivasi gagal. Password gerai salah.';
     }
 
+    // Outlet not found
+    if (normalized.contains('tidak ditemukan') ||
+        normalized.contains('not found')) {
+      return 'Aktivasi gagal. Nama gerai tidak ditemukan.';
+    }
+
+    // Generic password/outlet errors
     if (normalized.contains('password') ||
-        normalized.contains('outlet') ||
-        normalized.contains('not found') ||
-        normalized.contains('tidak ditemukan') ||
         normalized.contains('tidak valid')) {
       return 'Aktivasi gagal. Nama gerai atau password tidak valid.';
     }

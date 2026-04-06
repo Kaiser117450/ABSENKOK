@@ -15,8 +15,6 @@ class ShiftSlot {
   final int requiredWorkMinutes;
   final int lateCutoffHour;
   final int lateCutoffMinute;
-  final int breakFirstDeadlineHour;
-  final int breakFirstDeadlineMinute;
 
   const ShiftSlot({
     required this.name,
@@ -27,8 +25,6 @@ class ShiftSlot {
     required this.requiredWorkMinutes,
     required this.lateCutoffHour,
     required this.lateCutoffMinute,
-    required this.breakFirstDeadlineHour,
-    required this.breakFirstDeadlineMinute,
   });
 
   factory ShiftSlot.fromBand({
@@ -41,10 +37,6 @@ class ShiftSlot {
     String? name,
   }) {
     final lateCutoff = SchedulePolicyService.lateCutoff(band);
-    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
-      band: band,
-      contract: contract,
-    );
 
     return ShiftSlot(
       name: name ?? band.label,
@@ -58,8 +50,6 @@ class ShiftSlot {
               : SchedulePolicyService.defaultRequiredWorkMinutes(contract)),
       lateCutoffHour: lateCutoff?.hour ?? 0,
       lateCutoffMinute: lateCutoff?.minute ?? 0,
-      breakFirstDeadlineHour: breakFirstDeadline?.hour ?? 0,
-      breakFirstDeadlineMinute: breakFirstDeadline?.minute ?? 0,
     );
   }
 
@@ -105,8 +95,6 @@ class ShiftSlot {
         'required_work_minutes': requiredWorkMinutes,
         'late_cutoff_hour': lateCutoffHour,
         'late_cutoff_minute': lateCutoffMinute,
-        'break_first_deadline_hour': breakFirstDeadlineHour,
-        'break_first_deadline_minute': breakFirstDeadlineMinute,
         'start_hour': startTime.hour,
         'start_minute': startTime.minute,
         'end_hour': endTime.hour,
@@ -120,10 +108,6 @@ class ShiftSlot {
         _inferBandFromLegacyTimes(json) ??
         ShiftBand.pagi;
     final lateCutoff = SchedulePolicyService.lateCutoff(band);
-    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
-      band: band,
-      contract: EmployeeContract.fulltime,
-    );
 
     return ShiftSlot(
       name: (json['name'] as String?) ?? band.label,
@@ -158,14 +142,6 @@ class ShiftSlot {
       lateCutoffMinute: _readInt(
         json['late_cutoff_minute'],
         lateCutoff?.minute ?? 0,
-      ),
-      breakFirstDeadlineHour: _readInt(
-        json['break_first_deadline_hour'],
-        breakFirstDeadline?.hour ?? 0,
-      ),
-      breakFirstDeadlineMinute: _readInt(
-        json['break_first_deadline_minute'],
-        breakFirstDeadline?.minute ?? 0,
       ),
     );
   }
@@ -386,6 +362,7 @@ class ScheduleEntry {
   final bool isDayOff;
   final ScheduleStatus status; // normal, sakit, izin, libur, cuti
   final String? notes;
+  final String? role;
 
   ScheduleEntry({
     required this.id,
@@ -398,6 +375,7 @@ class ScheduleEntry {
     this.isDayOff = false,
     this.status = ScheduleStatus.normal,
     this.notes,
+    this.role,
   });
 
   factory ScheduleEntry.fromEmployee({
@@ -407,6 +385,7 @@ class ScheduleEntry {
     required ShiftSlot shift,
     bool isDayOff = false,
     ScheduleStatus status = ScheduleStatus.normal,
+    String? role,
   }) =>
       ScheduleEntry(
         id: id,
@@ -418,6 +397,7 @@ class ScheduleEntry {
         shift: shift,
         isDayOff: isDayOff,
         status: status,
+        role: role,
       );
 
   factory ScheduleEntry.customName({
@@ -426,6 +406,7 @@ class ScheduleEntry {
     required String name,
     required ShiftSlot shift,
     ScheduleStatus status = ScheduleStatus.normal,
+    String? role,
   }) =>
       ScheduleEntry(
         id: id,
@@ -436,6 +417,7 @@ class ScheduleEntry {
         isCustomName: true,
         shift: shift,
         status: status,
+        role: role,
       );
 
   factory ScheduleEntry.dayOff({
@@ -461,6 +443,7 @@ class ScheduleEntry {
     required Employee employee,
     required ShiftSlot shift,
     String? notes,
+    String? role,
   }) =>
       ScheduleEntry(
         id: id,
@@ -473,6 +456,7 @@ class ScheduleEntry {
         isDayOff: true,
         status: ScheduleStatus.sakit,
         notes: notes,
+        role: role,
       );
 
   factory ScheduleEntry.izin({
@@ -481,6 +465,7 @@ class ScheduleEntry {
     required Employee employee,
     required ShiftSlot shift,
     String? notes,
+    String? role,
   }) =>
       ScheduleEntry(
         id: id,
@@ -493,6 +478,7 @@ class ScheduleEntry {
         isDayOff: true,
         status: ScheduleStatus.izin,
         notes: notes,
+        role: role,
       );
 
   Map<String, dynamic> toJson() => {
@@ -506,6 +492,7 @@ class ScheduleEntry {
         'is_day_off': isDayOff,
         'status': status.name,
         'notes': notes,
+        'role': role,
       };
 
   factory ScheduleEntry.fromJson(Map<String, dynamic> json) => ScheduleEntry(
@@ -519,6 +506,7 @@ class ScheduleEntry {
         isDayOff: json['is_day_off'] as bool? ?? false,
         status: _parseStatus(json['status'] as String?),
         notes: json['notes'] as String?,
+        role: json['role'] as String?,
       );
 
   static ScheduleStatus _parseStatus(String? value) {

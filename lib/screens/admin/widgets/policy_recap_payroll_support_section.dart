@@ -1,19 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:absensi_enakko_flutter/core/theme.dart';
-import 'package:absensi_enakko_flutter/models/payroll_rollout_acceptance.dart';
 import 'package:absensi_enakko_flutter/widgets/app_card.dart';
 
 class PolicyRecapPayrollSupportSection extends StatelessWidget {
   const PolicyRecapPayrollSupportSection({
     super.key,
-    required this.reviews,
-    required this.outletName,
-    required this.startDate,
-    required this.endDate,
-    required this.onDownloadValidationBundle,
-    required this.onMarkPayrollReady,
     required this.canExportPayrollPdf,
     required this.canExportPayrollSpreadsheet,
     required this.exportingPayrollPdf,
@@ -25,12 +16,6 @@ class PolicyRecapPayrollSupportSection extends StatelessWidget {
     this.previewSection,
   });
 
-  final List<PayrollScenarioReview> reviews;
-  final String outletName;
-  final DateTime startDate;
-  final DateTime endDate;
-  final Future<void> Function(File) onDownloadValidationBundle;
-  final VoidCallback? onMarkPayrollReady;
   final bool canExportPayrollPdf;
   final bool canExportPayrollSpreadsheet;
   final bool exportingPayrollPdf;

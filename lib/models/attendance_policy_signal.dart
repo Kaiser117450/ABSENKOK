@@ -111,8 +111,7 @@ enum AttendancePolicySignal {
   exemptManager('exempt_manager', 'Manager exempt'),
   hadirTanpaJadwal('hadir_tanpa_jadwal', 'Hadir tanpa jadwal'),
   belumAbsenPulang('belum_absen_pulang', 'Belum absen pulang'),
-  activeIncomplete('active_incomplete', 'Hari masih berjalan'),
-  breakFirstConfirmed('break_first_confirmed', 'Break-first confirmed');
+  activeIncomplete('active_incomplete', 'Hari masih berjalan');
 
   const AttendancePolicySignal(this.storageValue, this.label);
 
@@ -149,8 +148,6 @@ enum AttendancePolicySignal {
         return AttendancePolicySignal.belumAbsenPulang;
       case 'activeincomplete':
         return AttendancePolicySignal.activeIncomplete;
-      case 'breakfirstconfirmed':
-        return AttendancePolicySignal.breakFirstConfirmed;
       default:
         return null;
     }

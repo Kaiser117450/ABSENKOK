@@ -23,6 +23,12 @@ import '../../services/sync_service.dart';
 
 enum _KioskState { idle, detecting, notFound, nfcError, offlineUnavailable }
 
+@visibleForTesting
+void triggerKioskIdleNfcCleanup(Future<void> Function()? cleanup) {
+  if (cleanup == null) return;
+  unawaited(cleanup());
+}
+
 class KioskIdleScreen extends ConsumerStatefulWidget {
   final bool debugOfflineUnavailable;
   final bool? debugNfcAvailable;
@@ -686,9 +692,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     _pendingRefreshTimer?.cancel();
     _nfcCheckTimer?.cancel();
     final cleanup = _nfcCleanup;
-    if (cleanup != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => cleanup());
-    }
+    _nfcCleanup = null;
+    triggerKioskIdleNfcCleanup(cleanup);
     super.dispose();
   }
 
