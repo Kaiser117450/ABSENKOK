@@ -237,6 +237,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   bool _exportingPdf = false;
   bool _exportingPayrollPdf = false;
   bool _exportingSpreadsheet = false;
+  SpreadsheetSortMode _spreadsheetSortMode = SpreadsheetSortMode.bermasalah;
   bool _hasLoaded = false;
 
   // Pagination
@@ -940,6 +941,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         endDate: _endDate,
         dataset: dataset,
         recapRows: _policyRecapRows,
+        sortMode: _spreadsheetSortMode,
       );
 
       await Share.shareXFiles(
@@ -1704,6 +1706,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
           _canExportPayrollSpreadsheet ? _exportPayrollSpreadsheet : null,
       payrollExportStatusMessage: _payrollExportStatusMessage,
       payrollExportStatusIsError: _payrollExportStatusIsError,
+      spreadsheetSortMode: _spreadsheetSortMode,
+      onSortModeChanged: (mode) => setState(() => _spreadsheetSortMode = mode),
     );
   }
 
@@ -1766,6 +1770,8 @@ class PolicyRecapTab extends StatelessWidget {
     this.payrollExportStatusMessage,
     this.payrollExportStatusIsError = false,
     this.emptyNoDataSubtext = 'Tidak ada hari recap pada rentang waktu ini.',
+    this.spreadsheetSortMode = SpreadsheetSortMode.bermasalah,
+    this.onSortModeChanged,
   });
 
   final bool isLoading;
@@ -1786,6 +1792,8 @@ class PolicyRecapTab extends StatelessWidget {
   final VoidCallback? onExportPayrollSpreadsheet;
   final String? payrollExportStatusMessage;
   final bool payrollExportStatusIsError;
+  final SpreadsheetSortMode spreadsheetSortMode;
+  final ValueChanged<SpreadsheetSortMode>? onSortModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1851,6 +1859,72 @@ class PolicyRecapTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       children: [
+        // ── Spreadsheet sort picker ───────────────────────────────
+        if (onSortModeChanged != null) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Urutkan Spreadsheet:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text('🔴 Bermasalah', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.bermasalah ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.bermasalah ? Colors.white : Colors.grey[800])),
+                        selected: spreadsheetSortMode == SpreadsheetSortMode.bermasalah,
+                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.bermasalah),
+                        selectedColor: const Color(0xFFDC2626),
+                        backgroundColor: Colors.grey[100],
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text('⏱️ Terlambat', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.terlambat ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.terlambat ? Colors.white : Colors.grey[800])),
+                        selected: spreadsheetSortMode == SpreadsheetSortMode.terlambat,
+                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.terlambat),
+                        selectedColor: const Color(0xFFDC2626),
+                        backgroundColor: Colors.grey[100],
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text('⏱️ Overtime', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.overtime ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.overtime ? Colors.white : Colors.grey[800])),
+                        selected: spreadsheetSortMode == SpreadsheetSortMode.overtime,
+                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.overtime),
+                        selectedColor: const Color(0xFFDC2626),
+                        backgroundColor: Colors.grey[100],
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: Text('✅ Aman', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.aman ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.aman ? Colors.white : Colors.grey[800])),
+                        selected: spreadsheetSortMode == SpreadsheetSortMode.aman,
+                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.aman),
+                        selectedColor: const Color(0xFF059669),
+                        backgroundColor: Colors.grey[100],
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         // ── Export buttons at top ──────────────────────────────────
         Row(
           children: [
