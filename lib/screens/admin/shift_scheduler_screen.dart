@@ -57,6 +57,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   DateTime _startDate = _getStartOfWeek(DateTime.now());
   DateTime? _selectedDay;
   ShiftTemplate? _template;
+  double _zoomScale = 1.0;
 
   List<String> get _availableBulkRoles {
     if (_dynamicRoles.isNotEmpty) return _dynamicRoles;
@@ -1324,10 +1325,9 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 selectedDay: _selectedDay,
               ),
               Expanded(
-                child: InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 3.0,
-                  constrained: false,
+                child: Transform.scale(
+                  scale: _zoomScale,
+                  alignment: Alignment.topLeft,
                   child: ScheduleTableView(
                     employees: _employees,
                     currentSchedule: _currentSchedule,
@@ -1368,6 +1368,24 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Zoom in FAB
+          FloatingActionButton.small(
+            heroTag: 'zoomin',
+            onPressed: () =>
+                setState(() => _zoomScale = (_zoomScale + 0.1).clamp(0.5, 2.0)),
+            backgroundColor: Colors.grey.shade600,
+            child: const Icon(Icons.zoom_in, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 4),
+          // Zoom out FAB
+          FloatingActionButton.small(
+            heroTag: 'zoomout',
+            onPressed: () =>
+                setState(() => _zoomScale = (_zoomScale - 0.1).clamp(0.5, 2.0)),
+            backgroundColor: Colors.grey.shade600,
+            child: const Icon(Icons.zoom_out, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 8),
           // Clear schedule FAB
           FloatingActionButton.small(
             heroTag: 'clear',
