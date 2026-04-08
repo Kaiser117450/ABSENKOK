@@ -232,6 +232,14 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       _pendingLogs = pendingLogs;
       _loadingActionState = false;
     });
+
+    // Overnight debug logging
+    if (resolvedContext != null) {
+      final serverLocal = resolvedContext.serverNowUtc.toLocal();
+      if (serverLocal.hour >= 17 || serverLocal.hour < 6) {
+        debugPrint('[KioskScan] Overnight window: ${serverLocal.hour}h, band=${resolvedContext.shiftBand}, last=${resolvedContext.lastAuthoritativeType}');
+      }
+    }
   }
 
   AttendanceType? _resolveLastType() {

@@ -13,6 +13,7 @@ import 'package:absensi_enakko_flutter/models/employee_contract.dart';
 import 'package:absensi_enakko_flutter/models/outlet_operating_mode.dart';
 import 'package:absensi_enakko_flutter/models/shift_band.dart';
 import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
+import 'package:absensi_enakko_flutter/services/shift_role_service.dart';
 import 'package:absensi_enakko_flutter/providers/app_provider.dart';
 import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_legend.dart';
 import 'package:absensi_enakko_flutter/screens/admin/widgets/schedule_summary_bar.dart';
@@ -41,6 +42,8 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   // Bulk assign state
   Set<String> _selectedEmployeeIds = {};
   bool _isBulkMode = false;
+  String? _bulkSelectedRole;
+  List<String> _dynamicRoles = [];
 
   // Data
   Map<String, Map<String, AttendanceType>> _sakitIzinMap = {};
@@ -55,16 +58,35 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
   DateTime? _selectedDay;
   ShiftTemplate? _template;
 
+  List<String> get _availableBulkRoles {
+    if (_dynamicRoles.isNotEmpty) return _dynamicRoles;
+    // Hardcoded fallback for offline
+    const baseRoles = ['Kasir', 'Assambler', 'Housekeeping', 'Checker', 'Ayam', 'Kitchen'];
+    if (_outletOperatingMode == OutletOperatingMode.twentyFourHour) {
+      return [...baseRoles, 'Kopi'];
+    }
+    return baseRoles;
+  }
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadRoles();
   }
 
   static DateTime _getStartOfWeek(DateTime date) {
     // Normalisasi ke Senin 00:00:00
     final d = DateTime(date.year, date.month, date.day);
     return d.subtract(Duration(days: d.weekday - 1));
+  }
+
+  Future<void> _loadRoles() async {
+    final modeStr = _outletOperatingMode == OutletOperatingMode.twentyFourHour
+        ? 'TWENTY_FOUR_HOUR'
+        : 'NORMAL';
+    final roles = await ShiftRoleService.getRoleNames(outletOperatingMode: modeStr);
+    if (mounted) setState(() => _dynamicRoles = roles);
   }
 
   Future<void> _loadData() async {
@@ -437,10 +459,11 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               e.date.month == day.month &&
               e.date.day == day.day);
 
-          _replaceEntryForDay(emp, day, _buildShiftForEmployee(emp, band));
+          _replaceEntryForDay(emp, day, _buildShiftForEmployee(emp, band), role: _bulkSelectedRole);
         }
       }
       _hasUnsavedChanges = true;
+      _bulkSelectedRole = null;
     });
 
     _showSuccess('${band.label} diterapkan ke ${selectedEmps.length} karyawan');
@@ -587,6 +610,36 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
               _buildReviewRow(
                 'Break-first',
                 _buildBulkBreakFirstSummary(band, selectedEmployees),
+              ),
+              const SizedBox(height: 12),
+              const Text('Role (Opsional)',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+              const SizedBox(height: 8),
+              StatefulBuilder(
+                builder: (sheetCtx, setSheetState) {
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Tidak ada'),
+                        selected: _bulkSelectedRole == null,
+                        onSelected: (_) {
+                          setSheetState(() {});
+                          setState(() => _bulkSelectedRole = null);
+                        },
+                      ),
+                      ..._availableBulkRoles.map((role) => ChoiceChip(
+                        label: Text(role),
+                        selected: _bulkSelectedRole == role,
+                        onSelected: (_) {
+                          setSheetState(() {});
+                          setState(() => _bulkSelectedRole = role);
+                        },
+                      )),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
               SizedBox(
@@ -1070,15 +1123,18 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
 
   void _clearSchedule() {
     if (_currentSchedule == null) return;
+    final bool isSelectiveDelete = _isBulkMode && _selectedEmployeeIds.isNotEmpty;
+    final int count = _selectedEmployeeIds.length;
     showDialog(
       context: context,
       useRootNavigator: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Semua Jadwal?'),
-        content: const Text(
-          'Semua jadwal minggu ini akan dihapus. '
-          'Anda masih perlu menyimpan untuk sync ke cloud.',
-        ),
+        title: Text(isSelectiveDelete
+            ? 'Hapus Jadwal $count Karyawan?'
+            : 'Hapus Semua Jadwal?'),
+        content: Text(isSelectiveDelete
+            ? 'Jadwal $count karyawan terpilih minggu ini akan dihapus. Anda masih perlu menyimpan untuk sync ke cloud.'
+            : 'Semua jadwal minggu ini akan dihapus. Anda masih perlu menyimpan untuk sync ke cloud.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -1089,13 +1145,21 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               setState(() {
-                _currentSchedule!.entries.clear();
+                if (isSelectiveDelete) {
+                  _currentSchedule!.entries.removeWhere(
+                      (e) => _selectedEmployeeIds.contains(e.employeeId));
+                  _selectedEmployeeIds.clear();
+                } else {
+                  _currentSchedule!.entries.clear();
+                }
                 _hasUnsavedChanges = true;
               });
-              _showSuccess('Jadwal dibersihkan');
+              _showSuccess(isSelectiveDelete
+                  ? 'Jadwal $count karyawan dihapus'
+                  : 'Jadwal dibersihkan');
             },
-            child: const Text('Hapus Semua',
-                style: TextStyle(color: Colors.white)),
+            child: Text(isSelectiveDelete ? 'Hapus Terpilih' : 'Hapus Semua',
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1260,39 +1324,44 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 selectedDay: _selectedDay,
               ),
               Expanded(
-                child: ScheduleTableView(
-                  employees: _employees,
-                  currentSchedule: _currentSchedule,
-                  startDate: _startDate,
-                  sakitIzinMap: _sakitIzinMap,
-                  timeOffMap: _timeOffMap,
-                  leaveBalance: _leaveBalance,
-                  isBulkMode: _isBulkMode,
-                  selectedEmployeeIds: _selectedEmployeeIds,
-                  onCellTap: (emp, date) => _showShiftPicker(emp, date),
-                  onEntryTap: _showAssignedEntryEditor,
-                  onTimeOffTap: (emp) => _showTimeOffDialog(emp),
-                  onToggleSelectAll: _toggleSelectAll,
-                  onToggleEmployee: (empId) {
-                    setState(() {
-                      if (_selectedEmployeeIds.contains(empId)) {
-                        _selectedEmployeeIds.remove(empId);
-                      } else {
-                        _selectedEmployeeIds.add(empId);
-                      }
-                    });
-                  },
-                  getSakitIzin: _getSakitIzin,
-                  getHasTimeOff: _hasTimeOff,
-                  selectedDay: _selectedDay,
-                  onDayHeaderTap: (date) {
-                    setState(() {
-                      _selectedDay = (_selectedDay != null &&
-                          _selectedDay!.year == date.year &&
-                          _selectedDay!.month == date.month &&
-                          _selectedDay!.day == date.day) ? null : date;
-                    });
-                  },
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 3.0,
+                  constrained: false,
+                  child: ScheduleTableView(
+                    employees: _employees,
+                    currentSchedule: _currentSchedule,
+                    startDate: _startDate,
+                    sakitIzinMap: _sakitIzinMap,
+                    timeOffMap: _timeOffMap,
+                    leaveBalance: _leaveBalance,
+                    isBulkMode: _isBulkMode,
+                    selectedEmployeeIds: _selectedEmployeeIds,
+                    onCellTap: (emp, date) => _showShiftPicker(emp, date),
+                    onEntryTap: _showAssignedEntryEditor,
+                    onTimeOffTap: (emp) => _showTimeOffDialog(emp),
+                    onToggleSelectAll: _toggleSelectAll,
+                    onToggleEmployee: (empId) {
+                      setState(() {
+                        if (_selectedEmployeeIds.contains(empId)) {
+                          _selectedEmployeeIds.remove(empId);
+                        } else {
+                          _selectedEmployeeIds.add(empId);
+                        }
+                      });
+                    },
+                    getSakitIzin: _getSakitIzin,
+                    getHasTimeOff: _hasTimeOff,
+                    selectedDay: _selectedDay,
+                    onDayHeaderTap: (date) {
+                      setState(() {
+                        _selectedDay = (_selectedDay != null &&
+                            _selectedDay!.year == date.year &&
+                            _selectedDay!.month == date.month &&
+                            _selectedDay!.day == date.day) ? null : date;
+                      });
+                    },
+                  ),
                 ),
               ),
             ]),
@@ -1401,6 +1470,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
         employee: emp,
         entry: entry,
         outletOperatingMode: _outletOperatingMode,
+        dynamicRoles: _dynamicRoles.isNotEmpty ? _dynamicRoles : null,
         onDelete: () {
           _removeEntry(entry.id);
           Navigator.pop(sheetContext);
@@ -1537,6 +1607,7 @@ class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
     required this.onDelete,
     required this.onSave,
     this.outletOperatingMode = OutletOperatingMode.normal,
+    this.dynamicRoles,
   });
 
   final Employee employee;
@@ -1544,6 +1615,7 @@ class ScheduleAssignedEntryEditorSheet extends StatefulWidget {
   final VoidCallback onDelete;
   final ValueChanged<ScheduleEntryEditorSelection> onSave;
   final OutletOperatingMode outletOperatingMode;
+  final List<String>? dynamicRoles;
 
   @override
   State<ScheduleAssignedEntryEditorSheet> createState() =>
@@ -1559,6 +1631,7 @@ class _ScheduleAssignedEntryEditorSheetState
     'Housekeeping',
     'Checker',
     'Ayam',
+    'Kitchen',
   ];
 
   late ShiftBand _selectedBand;
@@ -1566,6 +1639,10 @@ class _ScheduleAssignedEntryEditorSheetState
   String? _selectedRole;
 
   List<String> get _availableEditorRoles {
+    if (widget.dynamicRoles != null && widget.dynamicRoles!.isNotEmpty) {
+      return widget.dynamicRoles!;
+    }
+    // Hardcoded fallback for offline
     if (widget.outletOperatingMode == OutletOperatingMode.twentyFourHour) {
       return [..._baseRoles, 'Kopi'];
     }
