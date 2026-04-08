@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
+import 'package:syncfusion_officechart/officechart.dart';
 
 import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/models/attendance_policy_signal.dart';
@@ -79,6 +80,13 @@ class PayrollSpreadsheetExportService {
           dates: dates,
           row: sortedDataset.rows[rowIndex],
           recapRows: recapRows,
+        );
+      }
+
+      // Apply auto-filter to entire data range (header + all employee rows)
+      if (sortedDataset.rows.isNotEmpty) {
+        sheet.autoFilters.filterRange = sheet.getRangeByIndex(
+          1, 1, 1 + sortedDataset.rows.length, lastColumn,
         );
       }
 
@@ -390,6 +398,14 @@ class PayrollSpreadsheetExportService {
       sortMode: sortMode,
     );
 
+    // --- Section 4b: Charts (Bar + Pie) ---
+    currentRow = _writeCharts(
+      sheet,
+      row: currentRow,
+      dataset: dataset,
+      recapRows: recapRows,
+    );
+
     // --- Section 5: Top performers / issues ---
     final topAnchorRow = currentRow;
     _writeTopInsights(sheet, row: currentRow, dataset: dataset, recapRows: recapRows, sortMode: sortMode);
@@ -640,6 +656,9 @@ class PayrollSpreadsheetExportService {
     sectionTitle.rowHeight = 28;
     row++;
 
+    // Capture header row position for auto-filter
+    final headerRowIndex = row;
+
     const headers = <String>[
       'Karyawan',      // col 1
       'Kontrak',       // col 2
@@ -863,6 +882,14 @@ class PayrollSpreadsheetExportService {
     }
 
     row += 2; // skip blank row after cart
+
+    // Apply auto-filter to the per-employee summary table (header + data rows, exclude TOTAL)
+    if (sortedRows.isNotEmpty) {
+      sheet.autoFilters.filterRange = sheet.getRangeByIndex(
+        headerRowIndex, 1, headerRowIndex + sortedRows.length, 11,
+      );
+    }
+
     return row;
   }
 
@@ -948,6 +975,179 @@ class PayrollSpreadsheetExportService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Charts: Bar (masalah per karyawan) + Pie (proporsi masalah)
+  // ---------------------------------------------------------------------------
+
+  int _writeCharts(
+    xlsio.Worksheet sheet, {
+    required int row,
+    required PayrollMatrixDataset dataset,
+    required Iterable<AttendancePolicyRecapDay> recapRows,
+  }) {
+    // Section title
+    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 11);
+    sectionTitle.merge();
+    sectionTitle.setText('\uD83D\uDCCA  DIAGRAM ANALISIS');
+    sectionTitle.cellStyle.bold = true;
+    sectionTitle.cellStyle.fontSize = 11;
+    sectionTitle.cellStyle.fontColor = '#FFFFFF';
+    sectionTitle.cellStyle.backColor = '#7C3AED';
+    sectionTitle.cellStyle.hAlign = xlsio.HAlignType.left;
+    sectionTitle.rowHeight = 28;
+    row++;
+
+    // --- Bar Chart Data: Top 10 employees by total issues ---
+    final sortedByIssues = List<PayrollMatrixRow>.from(dataset.rows)
+      ..sort((a, b) {
+        final aTotal = a.lateCount + a.shortWorkCount + a.excessBreakCount + a.absenceCount;
+        final bTotal = b.lateCount + b.shortWorkCount + b.excessBreakCount + b.absenceCount;
+        return bTotal.compareTo(aTotal);
+      });
+
+    final barData = sortedByIssues
+        .where((r) => r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount > 0)
+        .take(math.min(10, sortedByIssues.length))
+        .toList();
+
+    if (barData.isEmpty) {
+      final emptyCell = sheet.getRangeByIndex(row, 1, row, 11);
+      emptyCell.merge();
+      emptyCell.setText('  (tidak ada data masalah untuk diagram)');
+      emptyCell.cellStyle.fontColor = '#9CA3AF';
+      emptyCell.cellStyle.italic = true;
+      emptyCell.cellStyle.fontSize = 9;
+      return row + 2;
+    }
+
+    // Write bar chart data block
+    final barDataStartRow = row;
+
+    // Headers
+    sheet.getRangeByIndex(row, 1).setText('Karyawan');
+    sheet.getRangeByIndex(row, 2).setText('Terlambat');
+    sheet.getRangeByIndex(row, 3).setText('Kurang Jam');
+    sheet.getRangeByIndex(row, 4).setText('Break Lebih');
+    sheet.getRangeByIndex(row, 5).setText('Tidak Hadir');
+
+    for (var col = 1; col <= 5; col++) {
+      final cell = sheet.getRangeByIndex(row, col);
+      cell.cellStyle.bold = true;
+      cell.cellStyle.fontSize = 8;
+      cell.cellStyle.fontColor = '#374151';
+      cell.cellStyle.backColor = '#F3F4F6';
+      cell.cellStyle.hAlign = xlsio.HAlignType.center;
+      cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      cell.cellStyle.borders.all.color = '#E5E7EB';
+    }
+    row++;
+
+    // Data rows
+    for (final r in barData) {
+      // Truncate long names for chart readability
+      final displayName = r.employeeName.length > 15
+          ? '${r.employeeName.substring(0, 15)}...'
+          : r.employeeName;
+      sheet.getRangeByIndex(row, 1).setText(displayName);
+      sheet.getRangeByIndex(row, 2).setNumber(r.lateCount.toDouble());
+      sheet.getRangeByIndex(row, 3).setNumber(r.shortWorkCount.toDouble());
+      sheet.getRangeByIndex(row, 4).setNumber(r.excessBreakCount.toDouble());
+      sheet.getRangeByIndex(row, 5).setNumber(r.absenceCount.toDouble());
+
+      for (var col = 1; col <= 5; col++) {
+        final cell = sheet.getRangeByIndex(row, col);
+        cell.cellStyle.fontSize = 8;
+        cell.cellStyle.fontColor = '#374151';
+        cell.cellStyle.hAlign = col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
+        cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+        cell.cellStyle.borders.all.color = '#E5E7EB';
+      }
+      row++;
+    }
+
+    final barDataEndRow = row - 1;
+
+    // --- Pie Chart Data: Proportions of total issues ---
+    row++; // blank row
+
+    final pieLabelRow = row;
+    final pieValueRow = row + 1;
+
+    var totalLate = 0;
+    var totalShort = 0;
+    var totalBreak = 0;
+    var totalAbsence = 0;
+    for (final r in dataset.rows) {
+      totalLate += r.lateCount;
+      totalShort += r.shortWorkCount;
+      totalBreak += r.excessBreakCount;
+      totalAbsence += r.absenceCount;
+    }
+
+    sheet.getRangeByIndex(pieLabelRow, 1).setText('Terlambat');
+    sheet.getRangeByIndex(pieLabelRow, 2).setText('Kurang Jam');
+    sheet.getRangeByIndex(pieLabelRow, 3).setText('Break Lebih');
+    sheet.getRangeByIndex(pieLabelRow, 4).setText('Tidak Hadir');
+    sheet.getRangeByIndex(pieValueRow, 1).setNumber(totalLate.toDouble());
+    sheet.getRangeByIndex(pieValueRow, 2).setNumber(totalShort.toDouble());
+    sheet.getRangeByIndex(pieValueRow, 3).setNumber(totalBreak.toDouble());
+    sheet.getRangeByIndex(pieValueRow, 4).setNumber(totalAbsence.toDouble());
+
+    for (var col = 1; col <= 4; col++) {
+      final labelCell = sheet.getRangeByIndex(pieLabelRow, col);
+      labelCell.cellStyle.bold = true;
+      labelCell.cellStyle.fontSize = 8;
+      labelCell.cellStyle.fontColor = '#374151';
+      labelCell.cellStyle.backColor = '#F3F4F6';
+      labelCell.cellStyle.hAlign = xlsio.HAlignType.center;
+      labelCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      labelCell.cellStyle.borders.all.color = '#E5E7EB';
+
+      final valCell = sheet.getRangeByIndex(pieValueRow, col);
+      valCell.cellStyle.fontSize = 9;
+      valCell.cellStyle.fontColor = '#111827';
+      valCell.cellStyle.hAlign = xlsio.HAlignType.center;
+      valCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      valCell.cellStyle.borders.all.color = '#E5E7EB';
+    }
+
+    row = pieValueRow + 1;
+
+    // --- Create Charts ---
+    try {
+      final charts = ChartCollection(sheet);
+
+      // Bar Chart: Masalah Per Karyawan (stacked bar)
+      final barChart = charts.add();
+      barChart.chartType = ExcelChartType.bar;
+      barChart.dataRange = sheet.getRangeByIndex(barDataStartRow, 1, barDataEndRow, 5);
+      barChart.isSeriesInRows = false;
+      barChart.chartTitle = 'Masalah Per Karyawan';
+      barChart.topRow = barDataStartRow;
+      barChart.leftColumn = 6;
+      barChart.bottomRow = barDataStartRow + 15;
+      barChart.rightColumn = 11;
+
+      // Pie Chart: Proporsi Masalah
+      final pieChart = charts.add();
+      pieChart.chartType = ExcelChartType.pie;
+      pieChart.dataRange = sheet.getRangeByIndex(pieLabelRow, 1, pieValueRow, 4);
+      pieChart.isSeriesInRows = false;
+      pieChart.chartTitle = 'Proporsi Masalah';
+      pieChart.topRow = barDataStartRow + 16;
+      pieChart.leftColumn = 6;
+      pieChart.bottomRow = barDataStartRow + 30;
+      pieChart.rightColumn = 11;
+
+      sheet.charts = charts;
+    } catch (_) {
+      // Chart creation may fail on some platforms — degrade gracefully
+    }
+
+    // Return row after charts area
+    return math.max(row, barDataStartRow + 31) + 1;
+  }
+
   void _writeTopInsights(
     xlsio.Worksheet sheet, {
     required int row,
@@ -1004,6 +1204,7 @@ class PayrollSpreadsheetExportService {
         bgColor: '#F0FDF4',
         fgColor: '#059669',
         borderColor: '#059669',
+        boldEntries: true,
       );
       row += 2 + managers.length;
     }
@@ -1115,6 +1316,7 @@ class PayrollSpreadsheetExportService {
     required String bgColor,
     required String fgColor,
     required String borderColor,
+    bool boldEntries = false,
   }) {
     final titleCell = sheet.getRangeByIndex(row, 1, row, 11);
     titleCell.merge();
@@ -1145,6 +1347,7 @@ class PayrollSpreadsheetExportService {
       cell.cellStyle.fontColor = '#374151';
       cell.cellStyle.fontSize = 9;
       cell.cellStyle.wrapText = true;
+      if (boldEntries) cell.cellStyle.bold = true;
       cell.rowHeight = 20;
       row++;
     }

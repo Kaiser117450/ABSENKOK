@@ -99,6 +99,7 @@ dependencies:
   # Crash reporting (Phase 28)
   sentry_flutter: ^9.14.0
   syncfusion_flutter_xlsio: ^29.2.11
+  syncfusion_officechart: ^29.2.11
 
 dev_dependencies:
   flutter_test:
