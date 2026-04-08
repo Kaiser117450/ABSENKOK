@@ -1325,67 +1325,78 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 selectedDay: _selectedDay,
               ),
               Expanded(
-                child: Transform.scale(
-                  scale: _zoomScale,
-                  alignment: Alignment.topLeft,
-                  child: ScheduleTableView(
-                    employees: _employees,
-                    currentSchedule: _currentSchedule,
-                    startDate: _startDate,
-                    sakitIzinMap: _sakitIzinMap,
-                    timeOffMap: _timeOffMap,
-                    leaveBalance: _leaveBalance,
-                    isBulkMode: _isBulkMode,
-                    selectedEmployeeIds: _selectedEmployeeIds,
-                    onCellTap: (emp, date) => _showShiftPicker(emp, date),
-                    onEntryTap: _showAssignedEntryEditor,
-                    onTimeOffTap: (emp) => _showTimeOffDialog(emp),
-                    onToggleSelectAll: _toggleSelectAll,
-                    onToggleEmployee: (empId) {
-                      setState(() {
-                        if (_selectedEmployeeIds.contains(empId)) {
-                          _selectedEmployeeIds.remove(empId);
-                        } else {
-                          _selectedEmployeeIds.add(empId);
-                        }
-                      });
-                    },
-                    getSakitIzin: _getSakitIzin,
-                    getHasTimeOff: _hasTimeOff,
-                    selectedDay: _selectedDay,
-                    onDayHeaderTap: (date) {
-                      setState(() {
-                        _selectedDay = (_selectedDay != null &&
-                            _selectedDay!.year == date.year &&
-                            _selectedDay!.month == date.month &&
-                            _selectedDay!.day == date.day) ? null : date;
-                      });
-                    },
-                  ),
+                child: ScheduleTableView(
+                  employees: _employees,
+                  currentSchedule: _currentSchedule,
+                  startDate: _startDate,
+                  sakitIzinMap: _sakitIzinMap,
+                  timeOffMap: _timeOffMap,
+                  leaveBalance: _leaveBalance,
+                  isBulkMode: _isBulkMode,
+                  selectedEmployeeIds: _selectedEmployeeIds,
+                  zoomScale: _zoomScale,
+                  onCellTap: (emp, date) => _showShiftPicker(emp, date),
+                  onEntryTap: _showAssignedEntryEditor,
+                  onTimeOffTap: (emp) => _showTimeOffDialog(emp),
+                  onToggleSelectAll: _toggleSelectAll,
+                  onToggleEmployee: (empId) {
+                    setState(() {
+                      if (_selectedEmployeeIds.contains(empId)) {
+                        _selectedEmployeeIds.remove(empId);
+                      } else {
+                        _selectedEmployeeIds.add(empId);
+                      }
+                    });
+                  },
+                  getSakitIzin: _getSakitIzin,
+                  getHasTimeOff: _hasTimeOff,
+                  selectedDay: _selectedDay,
+                  onDayHeaderTap: (date) {
+                    setState(() {
+                      _selectedDay = (_selectedDay != null &&
+                          _selectedDay!.year == date.year &&
+                          _selectedDay!.month == date.month &&
+                          _selectedDay!.day == date.day) ? null : date;
+                    });
+                  },
                 ),
               ),
             ]),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Zoom in FAB
-          FloatingActionButton.small(
-            heroTag: 'zoomin',
-            onPressed: () =>
-                setState(() => _zoomScale = (_zoomScale + 0.1).clamp(0.5, 2.0)),
-            backgroundColor: Colors.grey.shade600,
-            child: const Icon(Icons.zoom_in, color: Colors.white, size: 20),
+          // Zoom in mini button
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Material(
+              color: Colors.black54,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () =>
+                    setState(() => _zoomScale = (_zoomScale + 0.1).clamp(0.5, 2.0)),
+                child: const Icon(Icons.add, color: Colors.white, size: 18),
+              ),
+            ),
           ),
           const SizedBox(height: 4),
-          // Zoom out FAB
-          FloatingActionButton.small(
-            heroTag: 'zoomout',
-            onPressed: () =>
-                setState(() => _zoomScale = (_zoomScale - 0.1).clamp(0.5, 2.0)),
-            backgroundColor: Colors.grey.shade600,
-            child: const Icon(Icons.zoom_out, color: Colors.white, size: 20),
+          // Zoom out mini button
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Material(
+              color: Colors.black54,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () =>
+                    setState(() => _zoomScale = (_zoomScale - 0.1).clamp(0.5, 2.0)),
+                child: const Icon(Icons.remove, color: Colors.white, size: 18),
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           // Clear schedule FAB
           FloatingActionButton.small(
             heroTag: 'clear',

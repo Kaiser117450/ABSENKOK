@@ -34,6 +34,9 @@ class ScheduleTableView extends StatelessWidget {
   final AttendanceType? Function(String empId, DateTime date) getSakitIzin;
   final bool Function(String empId, DateTime date) getHasTimeOff;
 
+  /// Zoom multiplier for column widths and row heights (1.0 = default).
+  final double zoomScale;
+
   const ScheduleTableView({
     super.key,
     required this.employees,
@@ -53,6 +56,7 @@ class ScheduleTableView extends StatelessWidget {
     required this.getHasTimeOff,
     this.onDayHeaderTap,
     this.selectedDay,
+    this.zoomScale = 1.0,
   });
 
   @override
@@ -135,17 +139,17 @@ class ScheduleTableView extends StatelessWidget {
       },
       columnBuilder: (int index) {
         if (index == 0) {
-          // Employee name column — fixed 120px
-          return const TableSpan(extent: FixedTableSpanExtent(120));
+          // Employee name column — scaled from 120px base
+          return TableSpan(extent: FixedTableSpanExtent(120 * zoomScale));
         }
-        // Day columns — max of (75px fixed, 1/7 viewport fraction)
+        // Day columns — scaled from 92px base
         final dayIndex = index - 1;
         final date = days[dayIndex];
         final isToday = _isToday(date);
         return TableSpan(
-          extent: const MaxTableSpanExtent(
-            FixedTableSpanExtent(92),
-            FractionalTableSpanExtent(1 / 7),
+          extent: MaxTableSpanExtent(
+            FixedTableSpanExtent(92 * zoomScale),
+            const FractionalTableSpanExtent(1 / 7),
           ),
           backgroundDecoration: isToday
               ? TableSpanDecoration(color: Colors.amber.withValues(alpha: 0.08))
@@ -159,12 +163,12 @@ class ScheduleTableView extends StatelessWidget {
       },
       rowBuilder: (int index) {
         if (index == 0) {
-          // Header row — fixed 44px
-          return const TableSpan(extent: FixedTableSpanExtent(44));
+          // Header row — scaled from 44px base
+          return TableSpan(extent: FixedTableSpanExtent(44 * zoomScale));
         }
-        // Data rows — taller to allow the policy hint to wrap.
-        return const TableSpan(
-          extent: FixedTableSpanExtent(72),
+        // Data rows — scaled from 72px base
+        return TableSpan(
+          extent: FixedTableSpanExtent(72 * zoomScale),
           foregroundDecoration: TableSpanDecoration(
             border: TableSpanBorder(
               trailing: BorderSide(color: Color(0xFFE5E7EB), width: 0.5),
