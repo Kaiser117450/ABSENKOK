@@ -158,6 +158,23 @@ String buildPolicyRecapReasonCopy(AttendancePolicyRecapDay recap) {
       return 'Hadir tanpa jadwal; aturan kontrak tetap dipakai untuk menghitung jam kerja, istirahat, dan lembur.';
     }
 
+    // Non-working day statuses — show clear copy so tile is not mistaken for absence
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.libur ||
+        recap.attendanceStatus == AttendancePolicyStatus.libur) {
+      return 'Hari libur sesuai jadwal.';
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.sakit) {
+      final n = recap.notes?.trim();
+      return (n != null && n.isNotEmpty) ? 'Sakit: $n' : 'Karyawan izin sakit.';
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.izin) {
+      final n = recap.notes?.trim();
+      return (n != null && n.isNotEmpty) ? 'Izin: $n' : 'Karyawan izin.';
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.cuti) {
+      return 'Karyawan sedang cuti.';
+    }
+
     final strictNotes = recap.detailNotes
         .map((note) => note.trim())
         .where((note) => note.isNotEmpty)
@@ -2231,6 +2248,50 @@ class PolicyRecapTile extends StatelessWidget {
 
   List<Widget> _buildSignalBadges() {
     final badges = <Widget>[];
+
+    // Non-working day states: show one identifying badge and return early.
+    // Without this, libur/sakit/izin/cuti tiles appear blank (all "--") and
+    // look identical to absent employees.
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.libur ||
+        recap.attendanceStatus == AttendancePolicyStatus.libur) {
+      return [
+        _SignalBadge(
+          label: 'Libur',
+          bgColor: const Color(0xFFF3F4F6),
+          textColor: const Color(0xFF6B7280),
+        ),
+      ];
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.sakit ||
+        recap.attendanceStatus == AttendancePolicyStatus.sakit) {
+      return [
+        _SignalBadge(
+          label: 'Sakit',
+          bgColor: const Color(0xFFFEF3C7),
+          textColor: const Color(0xFF92400E),
+        ),
+      ];
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.izin ||
+        recap.attendanceStatus == AttendancePolicyStatus.izin) {
+      return [
+        _SignalBadge(
+          label: 'Izin',
+          bgColor: const Color(0xFFDBEAFE),
+          textColor: const Color(0xFF1E40AF),
+        ),
+      ];
+    }
+    if (recap.primaryStatus == AttendancePolicyPrimaryStatus.cuti ||
+        recap.attendanceStatus == AttendancePolicyStatus.cuti) {
+      return [
+        _SignalBadge(
+          label: 'Cuti',
+          bgColor: const Color(0xFFF3E8FF),
+          textColor: const Color(0xFF7C3AED),
+        ),
+      ];
+    }
 
     // Attendance status badges
     if (recap.attendanceStatus == AttendancePolicyStatus.tidakHadir ||

@@ -12,6 +12,7 @@ import '../../models/attendance_log.dart';
 import '../../models/employee.dart';
 import '../../models/kiosk_scan_context.dart';
 import '../../models/overlay_pill_state.dart';
+import '../../models/shift_band.dart';
 import '../../models/pending_log.dart';
 import '../../providers/app_provider.dart';
 import '../../services/badge_service.dart';
@@ -247,6 +248,63 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       return _pendingLogs.last.type;
     }
     return _authorityContext?.lastAuthoritativeType;
+  }
+
+  Future<bool> _showLiburWarningDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.event_busy_rounded, color: Color(0xFFF59E0B), size: 28),
+            SizedBox(width: 10),
+            Text(
+              'Hari Libur',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Jadwal hari ini adalah libur. Apakah kamu tetap ingin mencatat kehadiran?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF6B7280),
+              side: const BorderSide(color: Color(0xFFD1D5DB)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('Lanjutkan', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _handleMasukWithLiburCheck() async {
+    final isLibur = _authorityContext?.shiftBand == ShiftBand.libur;
+    if (isLibur) {
+      final confirmed = await _showLiburWarningDialog();
+      if (!confirmed) return;
+    }
+    await _submitAttendance(AttendanceType.masuk);
   }
 
   Future<void> _refreshPendingCount() async {
@@ -747,7 +805,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       case null:
         addButton(_AttendanceButton(
           type: AttendanceType.masuk,
-          onTap: () => _submitAttendance(AttendanceType.masuk),
+          onTap: () => _handleMasukWithLiburCheck(),
         ));
         break;
       case AttendanceType.masuk:
@@ -778,7 +836,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       case AttendanceType.izin:
         addButton(_AttendanceButton(
           type: AttendanceType.masuk,
-          onTap: () => _submitAttendance(AttendanceType.masuk),
+          onTap: () => _handleMasukWithLiburCheck(),
         ));
         break;
     }
