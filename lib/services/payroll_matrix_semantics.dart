@@ -116,7 +116,7 @@ class PayrollMatrixSemantics {
     AttendancePolicyPrimaryStatus.belumAbsenPulang:
         _PayrollCellPalette('#FEE2E2', '#B91C1C'),
     AttendancePolicyPrimaryStatus.activeIncomplete:
-        _PayrollCellPalette('#FEE2E2', '#B91C1C'),
+        _PayrollCellPalette('#DBEAFE', '#1E40AF'),
     AttendancePolicyPrimaryStatus.belumMasuk:
         _PayrollCellPalette('#F3F4F6', '#6B7280'),
     AttendancePolicyPrimaryStatus.sakit:
@@ -474,7 +474,7 @@ class PayrollMatrixSemantics {
     AttendancePolicyPrimaryStatus.hadirTanpaJadwal: 'Hadir tanpa jadwal',
     AttendancePolicyPrimaryStatus.belumAbsenPulang: 'Belum Absen Pulang',
     AttendancePolicyPrimaryStatus.belumMasuk: 'Belum Masuk',
-    AttendancePolicyPrimaryStatus.activeIncomplete: 'Belum Absen Pulang',
+    AttendancePolicyPrimaryStatus.activeIncomplete: 'Masih Bekerja',
   };
 
   static const Map<AttendancePolicyStatus, String> _explicitStatusLabels =

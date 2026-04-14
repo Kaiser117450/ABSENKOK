@@ -625,6 +625,14 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                       ChoiceChip(
                         label: const Text('Tidak ada'),
                         selected: _bulkSelectedRole == null,
+                        labelStyle: TextStyle(
+                          color: _bulkSelectedRole == null
+                              ? Colors.white
+                              : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         onSelected: (_) {
                           setSheetState(() {});
                           setState(() => _bulkSelectedRole = null);
@@ -633,6 +641,14 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                       ..._availableBulkRoles.map((role) => ChoiceChip(
                         label: Text(role),
                         selected: _bulkSelectedRole == role,
+                        labelStyle: TextStyle(
+                          color: _bulkSelectedRole == role
+                              ? Colors.white
+                              : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
                         onSelected: (_) {
                           setSheetState(() {});
                           setState(() => _bulkSelectedRole = role);
@@ -940,7 +956,7 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                     'Jum',
                     'Sab',
                     'Min'
-                  ][date.weekday % 7];
+                  ][date.weekday - 1];
                   final isSelected = selectedDate == date;
                   return ChoiceChip(
                     label: Text(

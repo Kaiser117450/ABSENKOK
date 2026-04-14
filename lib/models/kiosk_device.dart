@@ -27,6 +27,12 @@ class KioskDevice {
       lastHeartbeatAt != null &&
       DateTime.now().difference(lastHeartbeatAt!).inMinutes <= 30;
 
+  /// Device offline > 4 hari — otomatis di-archive saat load dashboard
+  bool get isStale =>
+      lastHeartbeatAt != null &&
+      !isOnline &&
+      DateTime.now().difference(lastHeartbeatAt!).inDays >= 4;
+
   String get displayName {
     final trimmedNickname = nickname?.trim();
     if (trimmedNickname != null && trimmedNickname.isNotEmpty) {

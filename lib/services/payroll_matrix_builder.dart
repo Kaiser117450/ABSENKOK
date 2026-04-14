@@ -23,6 +23,7 @@ PayrollMatrixDataset buildPayrollMatrix({
 
   final dates = _buildDateRange(start, end);
   final lookup = <String, AttendancePolicyRecapDay>{};
+  final managerIds = <String>{};
 
   for (final recap in recapRows) {
     final logicalDate = _dateOnly(recap.logicalDate);
@@ -30,6 +31,9 @@ PayrollMatrixDataset buildPayrollMatrix({
       continue;
     }
     lookup[_cellKey(recap.employeeId, logicalDate)] = recap;
+    if (recap.isManagerExempt) {
+      managerIds.add(recap.employeeId);
+    }
   }
 
   final activeEmployees = employees
@@ -69,6 +73,7 @@ PayrollMatrixDataset buildPayrollMatrix({
       excessBreakCount: summary.excessBreakCount,
       absenceCount: summary.absenceCount,
       overtimeCount: summary.overtimeCount,
+      isManagerExempt: managerIds.contains(employee.id),
     );
   }).toList(growable: false);
 

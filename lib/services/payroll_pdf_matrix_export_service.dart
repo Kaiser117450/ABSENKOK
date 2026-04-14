@@ -58,6 +58,7 @@ class PayrollPdfMatrixRowPreview {
   final String employeeRole;
   final List<PayrollPdfMatrixCellPreview> cells;
   final List<int> summaryValues;
+  final bool isManagerExempt;
 
   const PayrollPdfMatrixRowPreview({
     required this.employeeName,
@@ -65,6 +66,7 @@ class PayrollPdfMatrixRowPreview {
     required this.employeeRole,
     required this.cells,
     required this.summaryValues,
+    this.isManagerExempt = false,
   });
 
   PayrollPdfMatrixRowPreview slice({
@@ -77,6 +79,7 @@ class PayrollPdfMatrixRowPreview {
       employeeRole: employeeRole,
       cells: cells.sublist(start, end),
       summaryValues: summaryValues,
+      isManagerExempt: isManagerExempt,
     );
   }
 
@@ -297,6 +300,7 @@ class PayrollPdfMatrixExportService {
               growable: false,
             ),
             summaryValues: row.summaryValuesInOrder,
+            isManagerExempt: row.isManagerExempt,
           ),
         )
         .toList(growable: false);
@@ -1178,7 +1182,7 @@ class PayrollPdfMatrixExportService {
                 children: [
                   _buildIdentityCell(
                     row.employeeName,
-                    regular,
+                    row.isManagerExempt ? bold : regular,
                     align: pw.TextAlign.left,
                   ),
                   _buildIdentityCell(

@@ -20,6 +20,7 @@ class PayrollMatrixRow {
   final int excessBreakCount;
   final int absenceCount;
   final int overtimeCount;
+  final bool isManagerExempt;
 
   const PayrollMatrixRow({
     required this.employeeId,
@@ -32,6 +33,7 @@ class PayrollMatrixRow {
     required this.excessBreakCount,
     required this.absenceCount,
     required this.overtimeCount,
+    this.isManagerExempt = false,
   });
 
   List<int> get summaryValuesInOrder => <int>[

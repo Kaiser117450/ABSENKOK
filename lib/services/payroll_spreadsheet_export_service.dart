@@ -645,7 +645,7 @@ class PayrollSpreadsheetExportService {
     required Iterable<AttendancePolicyRecapDay> recapRows,
     required SpreadsheetSortMode sortMode,
   }) {
-    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 11);
+    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 12);
     sectionTitle.merge();
     sectionTitle.setText('📊  RINGKASAN PER KARYAWAN');
     sectionTitle.cellStyle.bold = true;
@@ -660,17 +660,18 @@ class PayrollSpreadsheetExportService {
     final headerRowIndex = row;
 
     const headers = <String>[
-      'Karyawan',      // col 1
-      'Kontrak',       // col 2
-      'Terlambat',     // col 3
-      'Avg Telat',     // col 4 (NEW)
-      'Kurang Jam',    // col 5
-      'Break Lebih',   // col 6
-      'Tidak Hadir',   // col 7
-      'Lembur',        // col 8
-      'Avg Lembur',    // col 9 (NEW)
-      'Avg Kurang',    // col 10
+      'Karyawan',        // col 1
+      'Kontrak',         // col 2
+      'Terlambat',       // col 3
+      'Avg Telat',       // col 4
+      'Kurang Jam',      // col 5
+      'Break Lebih',     // col 6
+      'Tidak Hadir',     // col 7
+      'Lembur',          // col 8
+      'Avg Lembur',      // col 9
+      'Avg Kurang',      // col 10
       'Avg Break Lebih', // col 11
+      'Masuk',           // col 12
     ];
 
     for (var col = 0; col < headers.length; col++) {
@@ -689,10 +690,16 @@ class PayrollSpreadsheetExportService {
 
     final employeeAverages = _calculateEmployeeAverages(recapRows);
 
-    // Build manager IDs set
+    // Build manager IDs set and masuk (attendance day) counts
     final managerIds = <String>{};
+    final masukCounts = <String, int>{};
     for (final recap in recapRows) {
       if (recap.isManagerExempt) managerIds.add(recap.employeeId);
+      // firstScanLocal is non-null when the employee had at least one scan
+      if (recap.firstScanLocal != null) {
+        masukCounts[recap.employeeId] =
+            (masukCounts[recap.employeeId] ?? 0) + 1;
+      }
     }
 
     // Sort: managers first, then by sortMode criteria
@@ -731,6 +738,7 @@ class PayrollSpreadsheetExportService {
     var sumBreak = 0;
     var sumAbsence = 0;
     var sumOvertime = 0;
+    var sumMasuk = 0;
 
     for (var i = 0; i < sortedRows.length; i++) {
       final r = sortedRows[i];
@@ -775,6 +783,8 @@ class PayrollSpreadsheetExportService {
       sumBreak += r.excessBreakCount;
       sumAbsence += r.absenceCount;
       sumOvertime += r.overtimeCount;
+      final masukCount = masukCounts[r.employeeId] ?? 0;
+      sumMasuk += masukCount;
 
       for (final v in countCells) {
         final cell = sheet.getRangeByIndex(row, v.col);
@@ -828,11 +838,24 @@ class PayrollSpreadsheetExportService {
       avgBreakCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
       avgBreakCell.cellStyle.borders.all.color = '#E5E7EB';
 
+      // Col 12: Masuk (attendance day count)
+      final masukCell = sheet.getRangeByIndex(row, 12);
+      masukCell.setNumber(masukCount.toDouble());
+      masukCell.cellStyle.backColor =
+          masukCount > 0 ? '#DCFCE7' : rowBgColor;
+      masukCell.cellStyle.fontColor =
+          masukCount > 0 ? '#166534' : '#9CA3AF';
+      masukCell.cellStyle.bold = masukCount > 0;
+      masukCell.cellStyle.hAlign = xlsio.HAlignType.center;
+      masukCell.cellStyle.vAlign = xlsio.VAlignType.center;
+      masukCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      masukCell.cellStyle.borders.all.color = '#E5E7EB';
+
       row++;
     }
 
     // --- Mini Cart: Totals Row ---
-    final cartStyle = sheet.getRangeByIndex(row, 1, row, 11);
+    final cartStyle = sheet.getRangeByIndex(row, 1, row, 12);
     cartStyle.rowHeight = 30;
 
     final cartLabel = sheet.getRangeByIndex(row, 1, row, 2);
@@ -854,6 +877,7 @@ class PayrollSpreadsheetExportService {
       (col: 6, value: sumBreak),
       (col: 7, value: sumAbsence),
       (col: 8, value: sumOvertime),
+      (col: 12, value: sumMasuk),
     ];
     for (final c in cartCounts) {
       final cell = sheet.getRangeByIndex(row, c.col);
@@ -870,6 +894,7 @@ class PayrollSpreadsheetExportService {
 
     // Empty cells for avg columns in cart (cols 4, 9, 10, 11)
     for (final col in <int>[4, 9, 10, 11]) {
+      // col 12 (Masuk) is in cartCounts above, not here
       final cell = sheet.getRangeByIndex(row, col);
       cell.setText('—');
       cell.cellStyle.bold = true;
@@ -886,7 +911,7 @@ class PayrollSpreadsheetExportService {
     // Apply auto-filter to the per-employee summary table (header + data rows, exclude TOTAL)
     if (sortedRows.isNotEmpty) {
       sheet.autoFilters.filterRange = sheet.getRangeByIndex(
-        headerRowIndex, 1, headerRowIndex + sortedRows.length, 11,
+        headerRowIndex, 1, headerRowIndex + sortedRows.length, 12,
       );
     }
 
@@ -1068,10 +1093,13 @@ class PayrollSpreadsheetExportService {
     final barDataEndRow = row - 1;
 
     // --- Pie Chart Data: Proportions of total issues ---
+    // Layout is VERTICAL (4 rows × 2 cols): col 1 = label, col 2 = value.
+    // Syncfusion pie charts require this layout with isSeriesInRows=false
+    // to produce a single series with 4 slices. A horizontal layout
+    // (2 rows × 4 cols) creates 4 separate series instead of 1 pie.
     row++; // blank row
 
-    final pieLabelRow = row;
-    final pieValueRow = row + 1;
+    final pieStartRow = row;
 
     var totalLate = 0;
     var totalShort = 0;
@@ -1084,17 +1112,12 @@ class PayrollSpreadsheetExportService {
       totalAbsence += r.absenceCount;
     }
 
-    sheet.getRangeByIndex(pieLabelRow, 1).setText('Terlambat');
-    sheet.getRangeByIndex(pieLabelRow, 2).setText('Kurang Jam');
-    sheet.getRangeByIndex(pieLabelRow, 3).setText('Break Lebih');
-    sheet.getRangeByIndex(pieLabelRow, 4).setText('Tidak Hadir');
-    sheet.getRangeByIndex(pieValueRow, 1).setNumber(totalLate.toDouble());
-    sheet.getRangeByIndex(pieValueRow, 2).setNumber(totalShort.toDouble());
-    sheet.getRangeByIndex(pieValueRow, 3).setNumber(totalBreak.toDouble());
-    sheet.getRangeByIndex(pieValueRow, 4).setNumber(totalAbsence.toDouble());
+    final pieCategories = <String>['Terlambat', 'Kurang Jam', 'Break Lebih', 'Tidak Hadir'];
+    final pieValues = <int>[totalLate, totalShort, totalBreak, totalAbsence];
 
-    for (var col = 1; col <= 4; col++) {
-      final labelCell = sheet.getRangeByIndex(pieLabelRow, col);
+    for (var i = 0; i < 4; i++) {
+      final labelCell = sheet.getRangeByIndex(pieStartRow + i, 1);
+      labelCell.setText(pieCategories[i]);
       labelCell.cellStyle.bold = true;
       labelCell.cellStyle.fontSize = 8;
       labelCell.cellStyle.fontColor = '#374151';
@@ -1103,7 +1126,8 @@ class PayrollSpreadsheetExportService {
       labelCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
       labelCell.cellStyle.borders.all.color = '#E5E7EB';
 
-      final valCell = sheet.getRangeByIndex(pieValueRow, col);
+      final valCell = sheet.getRangeByIndex(pieStartRow + i, 2);
+      valCell.setNumber(pieValues[i].toDouble());
       valCell.cellStyle.fontSize = 9;
       valCell.cellStyle.fontColor = '#111827';
       valCell.cellStyle.hAlign = xlsio.HAlignType.center;
@@ -1111,7 +1135,7 @@ class PayrollSpreadsheetExportService {
       valCell.cellStyle.borders.all.color = '#E5E7EB';
     }
 
-    row = pieValueRow + 1;
+    row = pieStartRow + 4;
 
     // --- Create Charts ---
     try {
@@ -1129,9 +1153,11 @@ class PayrollSpreadsheetExportService {
       barChart.rightColumn = 11;
 
       // Pie Chart: Proporsi Masalah
+      // dataRange spans 4 rows × 2 cols: col 1 = category labels, col 2 = values.
+      // isSeriesInRows=false means columns are series → 1 series with 4 slices.
       final pieChart = charts.add();
       pieChart.chartType = ExcelChartType.pie;
-      pieChart.dataRange = sheet.getRangeByIndex(pieLabelRow, 1, pieValueRow, 4);
+      pieChart.dataRange = sheet.getRangeByIndex(pieStartRow, 1, pieStartRow + 3, 2);
       pieChart.isSeriesInRows = false;
       pieChart.chartTitle = 'Proporsi Masalah';
       pieChart.topRow = barDataStartRow + 16;
@@ -1140,8 +1166,10 @@ class PayrollSpreadsheetExportService {
       pieChart.rightColumn = 11;
 
       sheet.charts = charts;
-    } catch (_) {
-      // Chart creation may fail on some platforms — degrade gracefully
+    } catch (e, st) {
+      // Chart creation may fail on some platforms — log for debugging
+      // ignore: avoid_print
+      print('[PayrollSpreadsheet] Chart creation failed: $e\n$st');
     }
 
     // Return row after charts area

@@ -5,7 +5,9 @@ import 'package:absensi_enakko_flutter/models/shift_band.dart';
 
 class SchedulePolicyService {
   static const int fulltimeRequiredWorkMinutes = 600;
-  static const int parttimeRequiredWorkMinutes = 540;
+  // Part-time: 8 jam kerja wajib
+  static const int parttimeRequiredWorkMinutes = 480;
+  // Break: fulltime & parttime-saat-lembur = 2j, parttime-normal = 1j
   static const int fulltimeBreakAllowanceMinutes = 120;
   static const int parttimeBreakAllowanceMinutes = 60;
 

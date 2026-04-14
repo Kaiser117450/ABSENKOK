@@ -1,4 +1,5 @@
 import 'package:absensi_enakko_flutter/models/attendance_policy_signal.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
 import 'package:absensi_enakko_flutter/models/shift_band.dart';
 
 enum AttendancePolicyStatus {
@@ -148,6 +149,7 @@ class AttendancePolicyRecapDay {
   final List<String> detailNotes;
   final bool isManagerExempt;
   final String? managerPosition;
+  final EmployeeContract? employmentContract;
   final bool logicalDayComplete;
   final String? incompleteReason;
   final int? netWorkMinutes;
@@ -179,6 +181,7 @@ class AttendancePolicyRecapDay {
     this.detailNotes = const [],
     this.isManagerExempt = false,
     this.managerPosition,
+    this.employmentContract,
     this.logicalDayComplete = true,
     this.incompleteReason,
     this.netWorkMinutes,
@@ -190,25 +193,48 @@ class AttendancePolicyRecapDay {
   });
 
   factory AttendancePolicyRecapDay.fromJson(Map<String, dynamic> json) {
-    final detailSignals = _readSignalList(json['detail_signals']);
+    final contract = EmployeeContract.tryParse(
+      json['employment_contract']?.toString(),
+    );
+    final isParttime = contract == EmployeeContract.parttime;
+
+    var detailSignals = _readSignalList(json['detail_signals']);
+    // Part-time employees have flexible start times — no lateness concept.
+    if (isParttime) {
+      detailSignals = detailSignals
+          .where((s) => s != AttendancePolicySignal.late)
+          .toList(growable: false);
+    }
+
     final detailNotes = _readStringList(json['detail_notes']);
-    final primaryStatus = AttendancePolicyPrimaryStatus.tryParse(
+    var primaryStatus = AttendancePolicyPrimaryStatus.tryParse(
             json['primary_status']?.toString()) ??
         _derivePrimaryStatus(json, detailSignals);
+    // If Supabase marked a part-time employee as late, demote to hadir.
+    if (isParttime && primaryStatus == AttendancePolicyPrimaryStatus.late) {
+      primaryStatus = AttendancePolicyPrimaryStatus.hadir;
+    }
+
     final primarySeverity = AttendancePolicySeverity.tryParse(
             json['primary_severity']?.toString()) ??
         _derivePrimarySeverity(primaryStatus);
-    final isLate = _readOptionalBool(json['is_late']) ??
-        detailSignals.contains(AttendancePolicySignal.late) ||
-            primaryStatus == AttendancePolicyPrimaryStatus.late;
+
+    final isLate = isParttime
+        ? false
+        : (_readOptionalBool(json['is_late']) ??
+            detailSignals.contains(AttendancePolicySignal.late) ||
+                primaryStatus == AttendancePolicyPrimaryStatus.late);
+
     final attendanceStatus = AttendancePolicyStatus.tryParse(
             json['attendance_status']?.toString()) ??
         _deriveAttendanceStatus(primaryStatus, detailSignals);
-    final lateKind = LateKind.tryParse(json['late_kind']?.toString()) ??
-        _deriveLateKind(
-          detailSignals: detailSignals,
-          primaryStatus: primaryStatus,
-        );
+    final lateKind = isParttime
+        ? LateKind.none
+        : (LateKind.tryParse(json['late_kind']?.toString()) ??
+            _deriveLateKind(
+              detailSignals: detailSignals,
+              primaryStatus: primaryStatus,
+            ));
     final fallbackNotes = detailNotes.isEmpty && json['notes'] != null
         ? <String>[json['notes'].toString()]
         : detailNotes;
@@ -237,6 +263,7 @@ class AttendancePolicyRecapDay {
           detailSignals.contains(AttendancePolicySignal.exemptManager) ||
               primaryStatus == AttendancePolicyPrimaryStatus.exemptManager,
       managerPosition: json['manager_position']?.toString(),
+      employmentContract: contract,
       logicalDayComplete: _readOptionalBool(json['logical_day_complete']) ??
           primaryStatus != AttendancePolicyPrimaryStatus.activeIncomplete,
       incompleteReason: json['incomplete_reason']?.toString(),

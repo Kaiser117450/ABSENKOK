@@ -292,7 +292,7 @@ class PdfService {
                         child: pw.Column(
                           children: [
                             pw.Text(
-                              days[date.weekday % 7],
+                              days[date.weekday - 1],
                               style: pw.TextStyle(
                                 fontWeight: pw.FontWeight.bold,
                                 font: ttfBold,

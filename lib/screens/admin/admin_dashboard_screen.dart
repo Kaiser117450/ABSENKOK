@@ -148,13 +148,32 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           );
         }
       }
+      // Auto-archive devices yang offline > 4 hari
+      await _autoArchiveStaleDevices(devices);
+      final activeDevices =
+          devices.where((d) => !d.isStale).toList();
       if (mounted) {
         setState(() {
-          _kioskDevices = devices;
+          _kioskDevices = activeDevices;
         });
       }
     } catch (e) {
       debugPrint('[Dashboard] Failed to load kiosk devices: $e');
+    }
+  }
+
+  Future<void> _autoArchiveStaleDevices(List<KioskDevice> devices) async {
+    final stale = devices.where((d) => d.isStale).toList();
+    if (stale.isEmpty) return;
+    for (final d in stale) {
+      try {
+        await SupabaseClientFactory.admin.rpc('archive_device', params: {
+          'p_device_id': d.id,
+        });
+        debugPrint('[Dashboard] Auto-archived stale device: ${d.displayName}');
+      } catch (e) {
+        debugPrint('[Dashboard] Failed to auto-archive ${d.id}: $e');
+      }
     }
   }
 
