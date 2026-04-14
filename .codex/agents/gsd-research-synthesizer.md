@@ -127,7 +127,9 @@ Identify gaps that couldn't be resolved and need attention during planning.
 
 ## Step 6: Write SUMMARY.md
 
-Use template: ./.codex/get-shit-done/templates/research-project/SUMMARY.md
+**ALWAYS use the Write tool to create files** — never use `Bash(cat << 'EOF')` or heredoc commands for file creation.
+
+Use template: C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/templates/research-project/SUMMARY.md
 
 Write to `.planning/research/SUMMARY.md`
 
@@ -136,7 +138,7 @@ Write to `.planning/research/SUMMARY.md`
 The 4 parallel researcher agents write files but do NOT commit. You commit everything together.
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: complete project research" --files .planning/research/
+node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/bin/gsd-tools.cjs" commit "docs: complete project research" --files .planning/research/
 ```
 
 ## Step 8: Return Summary
@@ -147,7 +149,7 @@ Return brief confirmation with key points for the orchestrator.
 
 <output_format>
 
-Use template: ./.codex/get-shit-done/templates/research-project/SUMMARY.md
+Use template: C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/templates/research-project/SUMMARY.md
 
 Key sections:
 - Executive Summary (2-3 paragraphs)

@@ -12,7 +12,7 @@ Default: `balanced` if not set or config missing.
 
 ## Lookup Table
 
-@./.codex/get-shit-done/references/model-profiles.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/references/model-profiles.md
 
 Look up the agent in the table for the resolved profile. Pass the model parameter to Task calls:
 
@@ -25,6 +25,8 @@ Task(
 ```
 
 **Note:** Opus-tier agents resolve to `"inherit"` (not `"opus"`). This causes the agent to use the parent session's model, avoiding conflicts with organization policies that may block specific opus versions.
+
+If `model_profile` is `"inherit"`, all agents resolve to `"inherit"` (useful for OpenCode `/model`).
 
 ## Usage
 

@@ -52,10 +52,10 @@ Use when `.planning/phases/` has accumulated directories from past milestones.
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/cleanup.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/cleanup.md
 </execution_context>
 
 <process>
-Follow the cleanup workflow at @./.codex/get-shit-done/workflows/cleanup.md.
+Follow the cleanup workflow at @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/cleanup.md.
 Identify completed milestones, show a dry-run summary, and archive on confirmation.
 </process>

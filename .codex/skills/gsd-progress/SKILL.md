@@ -52,10 +52,10 @@ Provides situational awareness before continuing work.
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/progress.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/progress.md
 </execution_context>
 
 <process>
-Execute the progress workflow from @./.codex/get-shit-done/workflows/progress.md end-to-end.
+Execute the progress workflow from @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/progress.md end-to-end.
 Preserve all routing logic (Routes A through F) and edge case handling.
 </process>

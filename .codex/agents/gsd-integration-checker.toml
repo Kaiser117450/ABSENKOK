@@ -1,5 +1,7 @@
+name = "gsd-integration-checker"
+description = "Verifies cross-phase integration and E2E flows. Checks that phases connect properly and user workflows complete end-to-end."
 sandbox_mode = "read-only"
-developer_instructions = """
+developer_instructions = '''
 <role>
 You are an integration checker. You verify that phases work together as a system, not just individually.
 
@@ -436,4 +438,4 @@ Return structured report to milestone auditor:
 - [ ] Requirements with no cross-phase wiring identified
 - [ ] Structured report returned to auditor
       </success_criteria>
-"""
+'''

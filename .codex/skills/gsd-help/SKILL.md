@@ -56,10 +56,10 @@ Output ONLY the reference content below. Do NOT add:
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/help.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/help.md
 </execution_context>
 
 <process>
-Output the complete GSD command reference from @./.codex/get-shit-done/workflows/help.md.
+Output the complete GSD command reference from @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/help.md.
 Display the reference content directly — no additions or modifications.
 </process>

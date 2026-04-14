@@ -57,7 +57,7 @@ Routes to the pause-work workflow which handles:
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/pause-work.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/pause-work.md
 </execution_context>
 
 <context>
@@ -65,7 +65,7 @@ State and phase progress are gathered in-workflow with targeted reads.
 </context>
 
 <process>
-**Follow the pause-work workflow** from `@./.codex/get-shit-done/workflows/pause-work.md`.
+**Follow the pause-work workflow** from `@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/pause-work.md`.
 
 The workflow handles all logic including:
 1. Phase directory detection

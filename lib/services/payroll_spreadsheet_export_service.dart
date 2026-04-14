@@ -189,12 +189,8 @@ class PayrollSpreadsheetExportService {
     identityRange.cellStyle.borders.all.color = '#E5E7EB';
     identityRange.cellStyle.vAlign = xlsio.VAlignType.center;
 
-    // Employee name with manager marker and bold styling
-    final employeeName = isManager ? '${row.employeeName} ★' : row.employeeName;
-    sheet.getRangeByIndex(excelRowIndex, 1).setText(employeeName);
-    if (isManager) {
-      sheet.getRangeByIndex(excelRowIndex, 1).cellStyle.bold = true;
-    }
+    // Employee name — no star/bold for managers in main sheet
+    sheet.getRangeByIndex(excelRowIndex, 1).setText(row.employeeName);
 
     // Contract with human-readable label
     sheet.getRangeByIndex(excelRowIndex, 2).setText(row.employmentContract.label);
@@ -208,11 +204,20 @@ class PayrollSpreadsheetExportService {
           ? row.cells[index]
           : PayrollMatrixDayCell.placeholder(dates[index]);
       final range = sheet.getRangeByIndex(excelRowIndex, index + 4);
-      // Use enriched export text with full labels + duration
-      range.setText(dayCell.enrichedExportText);
+      // Hadir with no issues → green box with checkmark
+      final isCleanHadir = dayCell.hasData &&
+          dayCell.secondaryTags.isEmpty &&
+          dayCell.primaryStatus == AttendancePolicyPrimaryStatus.hadir;
+      if (isCleanHadir) {
+        range.setText('✓ Hadir');
+        range.cellStyle.backColor = '#DCFCE7';
+        range.cellStyle.fontColor = '#166534';
+      } else {
+        range.setText(dayCell.enrichedExportText);
+        range.cellStyle.backColor = dayCell.fillColorHex;
+        range.cellStyle.fontColor = dayCell.textColorHex;
+      }
       range.cellStyle.wrapText = true;
-      range.cellStyle.backColor = dayCell.fillColorHex;
-      range.cellStyle.fontColor = dayCell.textColorHex;
       range.cellStyle.hAlign = xlsio.HAlignType.center;
       range.cellStyle.vAlign = xlsio.VAlignType.center;
       range.cellStyle.fontSize = 9;
@@ -369,6 +374,8 @@ class PayrollSpreadsheetExportService {
     sheet.getRangeByIndex(1, 9).columnWidth = 16;
     sheet.getRangeByIndex(1, 10).columnWidth = 16;
     sheet.getRangeByIndex(1, 11).columnWidth = 18;
+    sheet.getRangeByIndex(1, 12).columnWidth = 14;
+    sheet.getRangeByIndex(1, 13).columnWidth = 14;
 
     var currentRow = 1;
 
@@ -388,7 +395,15 @@ class PayrollSpreadsheetExportService {
     final statsAnchorRow = currentRow;
     currentRow = _writeOverallStats(sheet, row: currentRow, dataset: dataset);
 
-    // --- Section 4: Per-employee summary with mini cart ---
+    // --- Section 3b: Diagram Analisis (moved before employee summary for quick scan) ---
+    currentRow = _writeCharts(
+      sheet,
+      row: currentRow,
+      dataset: dataset,
+      recapRows: recapRows,
+    );
+
+    // --- Section 4: Per-employee summary (staff only) ---
     final empAnchorRow = currentRow;
     currentRow = _writeEmployeeSummaryTable(
       sheet,
@@ -398,8 +413,8 @@ class PayrollSpreadsheetExportService {
       sortMode: sortMode,
     );
 
-    // --- Section 4b: Charts (Bar + Pie) ---
-    currentRow = _writeCharts(
+    // --- Section 4b: Kepala Toko / Gerai summary (separate section) ---
+    currentRow = _writeManagerSummaryTable(
       sheet,
       row: currentRow,
       dataset: dataset,
@@ -645,7 +660,7 @@ class PayrollSpreadsheetExportService {
     required Iterable<AttendancePolicyRecapDay> recapRows,
     required SpreadsheetSortMode sortMode,
   }) {
-    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 12);
+    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 13);
     sectionTitle.merge();
     sectionTitle.setText('📊  RINGKASAN PER KARYAWAN');
     sectionTitle.cellStyle.bold = true;
@@ -672,6 +687,7 @@ class PayrollSpreadsheetExportService {
       'Avg Kurang',      // col 10
       'Avg Break Lebih', // col 11
       'Masuk',           // col 12
+      'Visualisasi',     // col 13
     ];
 
     for (var col = 0; col < headers.length; col++) {
@@ -732,6 +748,13 @@ class PayrollSpreadsheetExportService {
       }
     });
 
+    // Max issues for non-manager rows (used for bar scaling)
+    final maxIssues = sortedRows
+        .where((r) => !managerIds.contains(r.employeeId))
+        .map((r) => r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount)
+        .fold(0, (int prev, int v) => v > prev ? v : prev);
+    var rowCounter = 0; // tracks rendered non-manager rows for alternating colors
+
     // Totals accumulators for mini cart
     var sumLate = 0;
     var sumShort = 0;
@@ -742,21 +765,21 @@ class PayrollSpreadsheetExportService {
 
     for (var i = 0; i < sortedRows.length; i++) {
       final r = sortedRows[i];
+      if (managerIds.contains(r.employeeId)) continue; // managers in separate section below
       final averages = employeeAverages[r.employeeId] ??
           const (avgLate: 0.0, avgOvertime: 0.0, avgShort: 0.0, avgBreak: 0.0);
-      final isEvenRow = i % 2 == 0;
+      final isEvenRow = rowCounter % 2 == 0;
+      rowCounter++;
       final rowBgColor = isEvenRow ? '#FFFFFF' : '#F8FAFC';
-      final isManager = managerIds.contains(r.employeeId);
 
-      // Col 1: Karyawan (manager gets ⭐ prefix + bold)
+      // Col 1: Karyawan
       final nameCell = sheet.getRangeByIndex(row, 1);
-      nameCell.setText(isManager ? '⭐ ${r.employeeName}' : r.employeeName);
+      nameCell.setText(r.employeeName);
       nameCell.cellStyle.fontColor = '#111827';
       nameCell.cellStyle.backColor = rowBgColor;
       nameCell.cellStyle.vAlign = xlsio.VAlignType.center;
       nameCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
       nameCell.cellStyle.borders.all.color = '#E5E7EB';
-      if (isManager) nameCell.cellStyle.bold = true;
 
       // Col 2: Kontrak
       final contractCell = sheet.getRangeByIndex(row, 2);
@@ -851,11 +874,23 @@ class PayrollSpreadsheetExportService {
       masukCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
       masukCell.cellStyle.borders.all.color = '#E5E7EB';
 
+      // Col 13: Visualisasi (unicode bar chart per row)
+      final totalIssues = r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount;
+      final vizCell = sheet.getRangeByIndex(row, 13);
+      vizCell.setText(_buildUnicodeBar(totalIssues, maxIssues));
+      vizCell.cellStyle.fontColor = totalIssues > 0 ? '#B91C1C' : '#166534';
+      vizCell.cellStyle.backColor = rowBgColor;
+      vizCell.cellStyle.hAlign = xlsio.HAlignType.left;
+      vizCell.cellStyle.vAlign = xlsio.VAlignType.center;
+      vizCell.cellStyle.fontSize = 9;
+      vizCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      vizCell.cellStyle.borders.all.color = '#E5E7EB';
+
       row++;
     }
 
     // --- Mini Cart: Totals Row ---
-    final cartStyle = sheet.getRangeByIndex(row, 1, row, 12);
+    final cartStyle = sheet.getRangeByIndex(row, 1, row, 13);
     cartStyle.rowHeight = 30;
 
     final cartLabel = sheet.getRangeByIndex(row, 1, row, 2);
@@ -892,8 +927,8 @@ class PayrollSpreadsheetExportService {
       cell.cellStyle.borders.all.color = '#1E293B';
     }
 
-    // Empty cells for avg columns in cart (cols 4, 9, 10, 11)
-    for (final col in <int>[4, 9, 10, 11]) {
+    // Empty cells for avg/viz columns in cart (cols 4, 9, 10, 11, 13)
+    for (final col in <int>[4, 9, 10, 11, 13]) {
       // col 12 (Masuk) is in cartCounts above, not here
       final cell = sheet.getRangeByIndex(row, col);
       cell.setText('—');
@@ -909,9 +944,9 @@ class PayrollSpreadsheetExportService {
     row += 2; // skip blank row after cart
 
     // Apply auto-filter to the per-employee summary table (header + data rows, exclude TOTAL)
-    if (sortedRows.isNotEmpty) {
+    if (rowCounter > 0) {
       sheet.autoFilters.filterRange = sheet.getRangeByIndex(
-        headerRowIndex, 1, headerRowIndex + sortedRows.length, 12,
+        headerRowIndex, 1, headerRowIndex + rowCounter, 13,
       );
     }
 
@@ -1001,6 +1036,115 @@ class PayrollSpreadsheetExportService {
   }
 
   // ---------------------------------------------------------------------------
+  // Manager Summary: Kepala Toko / Gerai (separate from regular staff)
+  // ---------------------------------------------------------------------------
+
+  int _writeManagerSummaryTable(
+    xlsio.Worksheet sheet, {
+    required int row,
+    required PayrollMatrixDataset dataset,
+    required Iterable<AttendancePolicyRecapDay> recapRows,
+  }) {
+    // Build per-manager working hours from recapRows
+    final managerData = <String, ({String name, String contract, int masukDays, int totalNetMinutes})>{};
+    for (final recap in recapRows) {
+      if (!recap.isManagerExempt) continue;
+      if (recap.firstScanLocal == null) continue;
+      final workMins = recap.netWorkMinutes != null && recap.netWorkMinutes! > 0
+          ? recap.netWorkMinutes!
+          : () {
+              if (recap.lastPulangLocal != null) {
+                final raw = recap.lastPulangLocal!.difference(recap.firstScanLocal!).inMinutes;
+                final breaks = recap.totalBreakMinutes ?? 0;
+                return math.max(0, raw - breaks);
+              }
+              return 0;
+            }();
+      final existing = managerData[recap.employeeId];
+      managerData[recap.employeeId] = (
+        name: recap.employeeName,
+        contract: recap.employmentContract?.label ?? '-',
+        masukDays: (existing?.masukDays ?? 0) + 1,
+        totalNetMinutes: (existing?.totalNetMinutes ?? 0) + workMins,
+      );
+    }
+
+    if (managerData.isEmpty) return row;
+
+    // Section title
+    final sectionTitle = sheet.getRangeByIndex(row, 1, row, 5);
+    sectionTitle.merge();
+    sectionTitle.setText('👑  KEPALA TOKO / GERAI');
+    sectionTitle.cellStyle.bold = true;
+    sectionTitle.cellStyle.fontSize = 11;
+    sectionTitle.cellStyle.fontColor = '#FFFFFF';
+    sectionTitle.cellStyle.backColor = '#7C3AED';
+    sectionTitle.cellStyle.hAlign = xlsio.HAlignType.left;
+    sectionTitle.rowHeight = 28;
+    row++;
+
+    // Headers
+    const mgHeaders = <String>['Karyawan', 'Kontrak', 'Hari Masuk', 'Total Jam Kerja', 'Avg Jam/Hari'];
+    for (var col = 0; col < mgHeaders.length; col++) {
+      final cell = sheet.getRangeByIndex(row, col + 1);
+      cell.setText(mgHeaders[col]);
+      cell.cellStyle.bold = true;
+      cell.cellStyle.fontSize = 9;
+      cell.cellStyle.fontColor = '#111827';
+      cell.cellStyle.backColor = '#F5F3FF';
+      cell.cellStyle.hAlign = xlsio.HAlignType.center;
+      cell.cellStyle.vAlign = xlsio.VAlignType.center;
+      cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      cell.cellStyle.borders.all.color = '#DDD6FE';
+    }
+    row++;
+
+    var mgCounter = 0;
+    for (final entry in managerData.entries) {
+      final m = entry.value;
+      final avgMins = m.masukDays > 0 ? m.totalNetMinutes / m.masukDays : 0.0;
+      final bg = mgCounter % 2 == 0 ? '#FFFFFF' : '#F5F3FF';
+      mgCounter++;
+
+      sheet.getRangeByIndex(row, 1).setText(m.name);
+      sheet.getRangeByIndex(row, 2).setText(m.contract);
+      sheet.getRangeByIndex(row, 3).setNumber(m.masukDays.toDouble());
+      sheet.getRangeByIndex(row, 4).setText(_formatMinutesToDuration(m.totalNetMinutes.toDouble()));
+      sheet.getRangeByIndex(row, 5).setText(_formatMinutesToDuration(avgMins));
+
+      for (var col = 1; col <= 5; col++) {
+        final cell = sheet.getRangeByIndex(row, col);
+        cell.cellStyle.backColor = bg;
+        cell.cellStyle.fontColor = '#374151';
+        cell.cellStyle.vAlign = xlsio.VAlignType.center;
+        cell.cellStyle.hAlign = col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
+        cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+        cell.cellStyle.borders.all.color = '#DDD6FE';
+      }
+      row++;
+    }
+
+    // Note
+    final note = sheet.getRangeByIndex(row, 1, row, 5);
+    note.merge();
+    note.setText('ℹ Kepala toko dihitung dari scan masuk/pulang aktual. Tidak dikenai penalti jadwal.');
+    note.cellStyle.fontSize = 8;
+    note.cellStyle.fontColor = '#7C3AED';
+    note.cellStyle.italic = true;
+    note.cellStyle.backColor = '#F5F3FF';
+    note.rowHeight = 20;
+    row += 2;
+
+    return row;
+  }
+
+  static String _buildUnicodeBar(int value, int maxValue, {int width = 10}) {
+    if (maxValue <= 0 || value <= 0) return '░' * width;
+    final filled = (value / maxValue * width).round().clamp(0, width);
+    return '▓' * filled + '░' * (width - filled);
+  }
+
+  // ---------------------------------------------------------------------------
   // Charts: Bar (masalah per karyawan) + Pie (proporsi masalah)
   // ---------------------------------------------------------------------------
 
@@ -1031,6 +1175,7 @@ class PayrollSpreadsheetExportService {
       });
 
     final barData = sortedByIssues
+        .where((r) => !r.isManagerExempt)
         .where((r) => r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount > 0)
         .take(math.min(10, sortedByIssues.length))
         .toList();
@@ -1070,8 +1215,8 @@ class PayrollSpreadsheetExportService {
     // Data rows
     for (final r in barData) {
       // Truncate long names for chart readability
-      final displayName = r.employeeName.length > 15
-          ? '${r.employeeName.substring(0, 15)}...'
+      final displayName = r.employeeName.length > 20
+          ? '${r.employeeName.substring(0, 20)}...'
           : r.employeeName;
       sheet.getRangeByIndex(row, 1).setText(displayName);
       sheet.getRangeByIndex(row, 2).setNumber(r.lateCount.toDouble());

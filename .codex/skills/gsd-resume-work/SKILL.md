@@ -58,11 +58,11 @@ Routes to the resume-project workflow which handles:
   </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/resume-project.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/resume-project.md
 </execution_context>
 
 <process>
-**Follow the resume-project workflow** from `@./.codex/get-shit-done/workflows/resume-project.md`.
+**Follow the resume-project workflow** from `@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/resume-project.md`.
 
 The workflow handles all resumption logic including:
 

@@ -59,7 +59,7 @@ Routes to the add-todo workflow which handles:
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/add-todo.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/add-todo.md
 </execution_context>
 
 <context>
@@ -69,7 +69,7 @@ State is resolved in-workflow via `init todos` and targeted reads.
 </context>
 
 <process>
-**Follow the add-todo workflow** from `@./.codex/get-shit-done/workflows/add-todo.md`.
+**Follow the add-todo workflow** from `@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/add-todo.md`.
 
 The workflow handles all logic including:
 1. Directory ensuring

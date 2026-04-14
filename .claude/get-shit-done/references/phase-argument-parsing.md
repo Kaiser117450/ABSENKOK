@@ -45,8 +45,8 @@ fi
 Use `roadmap get-phase` to validate phase exists:
 
 ```bash
-PHASE_CHECK=$(node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
-if [ "$(printf '%s\n' "$PHASE_CHECK" | jq -r '.found')" = "false" ]; then
+PHASE_CHECK=$(node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick found)
+if [ "$PHASE_CHECK" = "false" ]; then
   echo "ERROR: Phase ${PHASE} not found in roadmap"
   exit 1
 fi

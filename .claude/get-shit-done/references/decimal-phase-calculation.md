@@ -32,9 +32,8 @@ With existing decimals:
 ## Extract Values
 
 ```bash
-DECIMAL_INFO=$(node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/bin/gsd-tools.cjs" phase next-decimal "${AFTER_PHASE}")
-DECIMAL_PHASE=$(printf '%s\n' "$DECIMAL_INFO" | jq -r '.next')
-BASE_PHASE=$(printf '%s\n' "$DECIMAL_INFO" | jq -r '.base_phase')
+DECIMAL_PHASE=$(node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/bin/gsd-tools.cjs" phase next-decimal "${AFTER_PHASE}" --pick next)
+BASE_PHASE=$(node "C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.claude/get-shit-done/bin/gsd-tools.cjs" phase next-decimal "${AFTER_PHASE}" --pick base_phase)
 ```
 
 Or with --raw flag:

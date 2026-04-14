@@ -55,8 +55,8 @@ Output: Milestone archived (roadmap + requirements), PROJECT.md evolved, git tag
 <execution_context>
 **Load these files NOW (before proceeding):**
 
-- @./.codex/get-shit-done/workflows/complete-milestone.md (main workflow)
-- @./.codex/get-shit-done/templates/milestone-archive.md (archive template)
+- @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/complete-milestone.md (main workflow)
+- @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/templates/milestone-archive.md (archive template)
   </execution_context>
 
 <context>

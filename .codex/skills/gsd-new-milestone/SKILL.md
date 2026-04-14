@@ -61,11 +61,11 @@ Brownfield equivalent of new-project. Project exists, PROJECT.md has history. Ga
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/new-milestone.md
-@./.codex/get-shit-done/references/questioning.md
-@./.codex/get-shit-done/references/ui-brand.md
-@./.codex/get-shit-done/templates/project.md
-@./.codex/get-shit-done/templates/requirements.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/new-milestone.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/references/questioning.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/references/ui-brand.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/templates/project.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/templates/requirements.md
 </execution_context>
 
 <context>
@@ -75,6 +75,6 @@ Project and milestone context files are resolved inside the workflow (`init new-
 </context>
 
 <process>
-Execute the new-milestone workflow from @./.codex/get-shit-done/workflows/new-milestone.md end-to-end.
+Execute the new-milestone workflow from @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/new-milestone.md end-to-end.
 Preserve all workflow gates (validation, questioning, research, requirements, roadmap approval, commits).
 </process>

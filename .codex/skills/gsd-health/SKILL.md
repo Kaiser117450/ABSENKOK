@@ -50,10 +50,10 @@ Validate `.planning/` directory integrity and report actionable issues. Checks f
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/health.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/health.md
 </execution_context>
 
 <process>
-Execute the health workflow from @./.codex/get-shit-done/workflows/health.md end-to-end.
+Execute the health workflow from @C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/health.md end-to-end.
 Parse --repair flag from arguments and pass to workflow.
 </process>

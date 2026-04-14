@@ -23,6 +23,7 @@ decisions:
   - EmployeeContract.parse strips hyphens then uppercases for alias normalization
   - Outlet model does not need copyWith (no admin edit surface yet)
   - SQL uses DO/EXCEPTION block for CREATE TYPE idempotency (Postgres has no CREATE TYPE IF NOT EXISTS)
+requirements-completed: [CONTRACT-01, CONTRACT-02]
 metrics:
   duration: 197s
   completed: 2026-03-26

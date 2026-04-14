@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -388,6 +389,18 @@ class PayrollPdfMatrixExportService {
       ),
     );
 
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) => _buildAnalysisPage(
+          preview: preview,
+          regular: regular,
+          bold: bold,
+        ),
+      ),
+    );
+
     for (var index = 0; index < preview.matrixPages.length; index++) {
       final page = preview.matrixPages[index];
       pdf.addPage(
@@ -451,8 +464,6 @@ class PayrollPdfMatrixExportService {
         _buildContractBreakdown(preview: preview, regular: regular, bold: bold),
         pw.SizedBox(height: 16),
         _buildAverageDeficitInsights(preview: preview, regular: regular, bold: bold),
-        pw.SizedBox(height: 16),
-        _buildTopInsightsSection(preview: preview, regular: regular, bold: bold),
         pw.SizedBox(height: 16),
         _buildKepalaGeraiSection(preview: preview, regular: regular, bold: bold),
         pw.SizedBox(height: 18),
@@ -963,6 +974,154 @@ class PayrollPdfMatrixExportService {
     );
   }
 
+  pw.Widget _buildAnalysisPage({
+    required PayrollPdfDocumentPreview preview,
+    required pw.Font regular,
+    required pw.Font bold,
+  }) {
+    // Deduplicate employees across matrix pages (same employee appears in each date-range page)
+    final seen = <String>{};
+    final employees = <Map<String, dynamic>>[];
+    for (final page in preview.matrixPages) {
+      for (final row in page.rows) {
+        if (seen.contains(row.employeeName)) continue;
+        seen.add(row.employeeName);
+        final late = row.summaryValues.length > 0 ? row.summaryValues[0] : 0;
+        final shortWork = row.summaryValues.length > 1 ? row.summaryValues[1] : 0;
+        final excessBreak = row.summaryValues.length > 2 ? row.summaryValues[2] : 0;
+        final absence = row.summaryValues.length > 3 ? row.summaryValues[3] : 0;
+        final total = late + shortWork + excessBreak + absence;
+        employees.add({
+          'name': row.isManagerExempt ? '★ ${row.employeeName}' : row.employeeName,
+          'contract': row.employmentContract,
+          'isManager': row.isManagerExempt,
+          'late': late, 'shortWork': shortWork, 'excessBreak': excessBreak,
+          'absence': absence, 'total': total,
+        });
+      }
+    }
+    employees.sort((a, b) => (b['total'] as int).compareTo(a['total'] as int));
+    final maxIssues = employees.isEmpty ? 1 : math.max(1, employees.first['total'] as int);
+    final cleanCount = employees.where((e) => e['total'] == 0).length;
+    final display = employees.take(20).toList();
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Page header
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('7C3AED'),
+            borderRadius: pw.BorderRadius.circular(8),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('ANALISIS MASALAH KARYAWAN',
+                  style: pw.TextStyle(font: bold, fontSize: 13, color: PdfColor.fromHex('FFFFFF'))),
+              pw.Text('${preview.outletName} · ${preview.periodLabel}',
+                  style: pw.TextStyle(font: regular, fontSize: 8, color: PdfColor.fromHex('DDD6FE'))),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        // Legend
+        pw.Row(children: [
+          _buildAnalysisLegend('Terlambat', 'F59E0B', regular),
+          pw.SizedBox(width: 10),
+          _buildAnalysisLegend('Kurang Jam', 'EF4444', regular),
+          pw.SizedBox(width: 10),
+          _buildAnalysisLegend('Break Lebih', 'DC2626', regular),
+          pw.SizedBox(width: 10),
+          _buildAnalysisLegend('Tidak Hadir', '991B1B', regular),
+          pw.Spacer(),
+          pw.Text('$cleanCount karyawan bersih ✓',
+              style: pw.TextStyle(font: bold, fontSize: 8, color: PdfColor.fromHex('059669'))),
+        ]),
+        pw.SizedBox(height: 10),
+        // Bar rows
+        ...display.map((emp) {
+          final total = emp['total'] as int;
+          final late = emp['late'] as int;
+          final sw = emp['shortWork'] as int;
+          final eb = emp['excessBreak'] as int;
+          final ab = emp['absence'] as int;
+          final name = (emp['name'] as String);
+          final displayName = name.length > 18 ? '${name.substring(0, 18)}…' : name;
+          final remaining = maxIssues - total;
+
+          final segments = <pw.Widget>[];
+          if (late > 0) segments.add(pw.Flexible(flex: late, child: pw.Container(color: PdfColor.fromHex('F59E0B'))));
+          if (sw > 0) segments.add(pw.Flexible(flex: sw, child: pw.Container(color: PdfColor.fromHex('EF4444'))));
+          if (eb > 0) segments.add(pw.Flexible(flex: eb, child: pw.Container(color: PdfColor.fromHex('DC2626'))));
+          if (ab > 0) segments.add(pw.Flexible(flex: ab, child: pw.Container(color: PdfColor.fromHex('991B1B'))));
+          if (remaining > 0) segments.add(pw.Flexible(flex: remaining, child: pw.Container(color: PdfColor.fromHex('F3F4F6'))));
+
+          return pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+              pw.SizedBox(
+                width: 110,
+                child: pw.Text(displayName,
+                    style: pw.TextStyle(
+                      font: (emp['isManager'] as bool) ? bold : regular,
+                      fontSize: 8,
+                      color: PdfColor.fromHex('374151'),
+                    )),
+              ),
+              pw.SizedBox(width: 4),
+              pw.Expanded(
+                child: pw.Container(
+                  height: 13,
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('F3F4F6'),
+                    borderRadius: pw.BorderRadius.circular(2),
+                  ),
+                  child: total == 0
+                      ? pw.Padding(
+                          padding: const pw.EdgeInsets.only(left: 6),
+                          child: pw.Align(
+                            alignment: pw.Alignment.centerLeft,
+                            child: pw.Text('Bersih ✓',
+                                style: pw.TextStyle(font: regular, fontSize: 7,
+                                    color: PdfColor.fromHex('059669'))),
+                          ),
+                        )
+                      : pw.Row(children: segments),
+                ),
+              ),
+              pw.SizedBox(width: 6),
+              pw.SizedBox(
+                width: 20,
+                child: pw.Text(total == 0 ? '—' : '$total',
+                    style: pw.TextStyle(
+                      font: bold, fontSize: 8,
+                      color: total == 0 ? PdfColor.fromHex('059669') : PdfColor.fromHex('B91C1C'),
+                    ),
+                    textAlign: pw.TextAlign.right),
+              ),
+            ]),
+          );
+        }),
+        pw.Spacer(),
+        pw.Text(
+          'Dibuat pada: ${_formatTimestamp(_nowProvider())}',
+          style: pw.TextStyle(font: regular, fontSize: 8, color: PdfColor.fromHex('9CA3AF')),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildAnalysisLegend(String label, String colorHex, pw.Font regular) {
+    return pw.Row(children: [
+      pw.Container(width: 10, height: 10,
+          decoration: pw.BoxDecoration(color: PdfColor.fromHex(colorHex), borderRadius: pw.BorderRadius.circular(2))),
+      pw.SizedBox(width: 4),
+      pw.Text(label, style: pw.TextStyle(font: regular, fontSize: 8, color: PdfColor.fromHex('374151'))),
+    ]);
+  }
+
   pw.Widget _buildKepalaGeraiSection({
     required PayrollPdfDocumentPreview preview,
     required pw.Font regular,
@@ -1022,7 +1181,7 @@ class PayrollPdfMatrixExportService {
           ...managerEmployees.map((manager) => pw.Padding(
             padding: const pw.EdgeInsets.only(bottom: 4),
             child: pw.Text(
-              '• ${manager['name']} (${manager['contract']}) - Hadir: ${manager['presentDays']} hari, Tidak hadir: ${manager['absentDays']} hari (tanpa penalti)',
+              '★ ${manager['name']} (${manager['contract']}) - Hadir: ${manager['presentDays']} hari, Tidak hadir: ${manager['absentDays']} hari (tanpa penalti)',
               style: pw.TextStyle(
                 font: regular,
                 fontSize: 8,
@@ -1181,7 +1340,7 @@ class PayrollPdfMatrixExportService {
               (row) => pw.TableRow(
                 children: [
                   _buildIdentityCell(
-                    row.employeeName,
+                    row.isManagerExempt ? '★ ${row.employeeName}' : row.employeeName,
                     row.isManagerExempt ? bold : regular,
                     align: pw.TextAlign.left,
                   ),

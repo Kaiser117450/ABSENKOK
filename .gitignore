@@ -74,3 +74,25 @@ vendor/
 coverage/
 .cache/
 tmp/
+.tmp/
+*.tmp.*
+
+# Binaries
+*.exe
+*.msi
+
+# Agent & planning artifacts (auto-generated)
+AGENTS.md
+**/AGENTS.md
+skills-lock.json
+
+# AI agent runtime state dirs
+.agent/
+.agents/
+.bg-shell/
+.gemini/
+.omc/
+.omx/
+
+# Stray test files
+test_pdf_compilation.dart

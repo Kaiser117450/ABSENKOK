@@ -54,7 +54,7 @@ Output: .planning/codebase/ folder with 7 structured documents about the codebas
 </objective>
 
 <execution_context>
-@./.codex/get-shit-done/workflows/map-codebase.md
+@C:/Users/HYPE R Series/Desktop/projekan/absensi apk/absensi_enakko_flutter/.codex/get-shit-done/workflows/map-codebase.md
 </execution_context>
 
 <context>
