@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +34,7 @@ class AdminEmployeesScreen extends ConsumerStatefulWidget {
 class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   List<Employee> _employees = [];
   List<Outlet> _outlets = [];
+  List<Employee> _archivedEmployees = [];
   bool _loading = true;
   String _searchQuery = '';
   String? _filterOutletId;
@@ -91,6 +94,16 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       }
       final empData = await empFilter.order('name');
 
+      // Karyawan arsip — dimuat sekali, dipakai in-memory untuk deteksi nama duplikat
+      var archFilter = SupabaseClientFactory.admin
+          .from('employees')
+          .select('*')
+          .eq('is_active', false);
+      if (isKepalaGerai && managedOutletId != null) {
+        archFilter = archFilter.eq('home_outlet_id', managedOutletId);
+      }
+      final archData = await archFilter.order('name');
+
       // Query outlet — kepala_gerai hanya load outletnya sendiri
       var outFilter = SupabaseClientFactory.admin
           .from('outlets')
@@ -107,6 +120,9 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       if (mounted) {
         setState(() {
           _employees = (empData as List)
+              .map((e) => Employee.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _archivedEmployees = (archData as List)
               .map((e) => Employee.fromJson(e as Map<String, dynamic>))
               .toList();
           _outlets = (outData as List)
@@ -149,6 +165,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       builder: (ctx) => _EmployeeSheet(
         employee: existing,
         outlets: _outlets,
+        archivedEmployees: _archivedEmployees,
         // Kepala gerai: saat tambah karyawan baru, auto-set ke outletnya
         forcedOutletId:
             appState.isKepalaGerai ? appState.managedOutletId : null,
@@ -300,6 +317,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
     final canImportCsv = ref.watch(appProvider).isAdmin;
     final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
+    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -333,27 +351,29 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                           value: '$noNfcCount',
                           color: AppColors.accent,
                         ),
-                        const SizedBox(width: 8),
-                        // Archive navigation button
-                        GestureDetector(
-                          onTap: () =>
-                              context.push('/admin/archived-employees'),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.textMuted.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: AppColors.textMuted.withValues(alpha: 0.2)),
-                            ),
-                            child: const Tooltip(
-                              message: 'Riwayat Karyawan',
-                              child: Icon(Icons.archive_outlined,
-                                  size: 16, color: AppColors.textSecondary),
+                        // Archive navigation button — hanya untuk admin penuh
+                        if (!isKepalaGerai) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () =>
+                                context.push('/admin/archived-employees'),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.textMuted.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: AppColors.textMuted.withValues(alpha: 0.2)),
+                              ),
+                              child: const Tooltip(
+                                message: 'Riwayat Karyawan',
+                                child: Icon(Icons.archive_outlined,
+                                    size: 16, color: AppColors.textSecondary),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                         if (canImportCsv) ...[
                           const SizedBox(width: 6),
                           // CSV Import navigation button
@@ -1276,6 +1296,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
   Future<void> Function()? _nfcCleanup;
   bool _isProcessing = false;
   bool _saving = false;
+  bool _restarting = false;
 
   @override
   void initState() {
@@ -1300,26 +1321,53 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
       (err) {
         _isProcessing = false;
         if (!mounted) return;
-        setState(() {
-          _errorMsg = 'Gagal membaca kartu. Coba lagi.';
-          _state = _NfcDialogState.error;
-        });
+        // A stale error from a session that was already superseded by
+        // a rapid Scan Ulang / Coba Lagi must never clobber the new scan.
+        if (_state == _NfcDialogState.scanning && !_restarting) {
+          setState(() {
+            _errorMsg = 'Gagal membaca kartu. Coba lagi.';
+            _state = _NfcDialogState.error;
+          });
+        }
       },
     );
   }
 
-  void _stopNfc() {
+  /// Tears down the native NFC session and WAITS for the native stop to
+  /// resolve before returning. Callers that restart immediately after
+  /// (Scan Ulang, Coba Lagi) MUST await this — otherwise start/stop race
+  /// at the native layer and the process force-closes on rapid retries.
+  Future<void> _stopNfc() async {
     _isProcessing = false;
     final cleanup = _nfcCleanup;
+    _nfcCleanup = null;
     if (cleanup != null) {
-      _nfcCleanup = null;
-      cleanup();
+      await cleanup();
     }
+  }
+
+  Future<void> _restartNfc() async {
+    if (_restarting) return;
+    _restarting = true;
+    await _stopNfc();
+    if (!mounted) {
+      _restarting = false;
+      return;
+    }
+    setState(() {
+      _scannedUid = null;
+      _errorMsg = null;
+    });
+    _startNfc();
+    _restarting = false;
   }
 
   @override
   void dispose() {
-    _stopNfc();
+    // dispose() cannot be awaited, but _stopNfc enqueues the stop through
+    // the service's serialization queue so the native session is still
+    // cleanly torn down even after the widget is gone.
+    unawaited(_stopNfc());
     super.dispose();
   }
 
@@ -1337,6 +1385,35 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
         widget.onAssigned();
         await Future<void>.delayed(const Duration(milliseconds: 1200));
         if (mounted) Navigator.of(context).pop();
+      }
+    } on PostgrestException catch (e) {
+      String msg = 'Gagal menyimpan ke database';
+      // 23505 = unique_violation: kartu sudah terdaftar ke karyawan lain
+      if (e.code == '23505') {
+        try {
+          final existing = await SupabaseClientFactory.admin
+              .from('employees')
+              .select('name, is_active')
+              .eq('nfc_uid', _scannedUid!)
+              .maybeSingle();
+          if (existing != null) {
+            final name = existing['name'] as String;
+            final isActive = existing['is_active'] as bool? ?? true;
+            msg = 'Kartu sudah terdaftar untuk: $name'
+                '${isActive ? '' : ' (non-aktif)'}';
+          } else {
+            msg = 'Kartu sudah terdaftar untuk karyawan lain';
+          }
+        } catch (_) {
+          msg = 'Kartu sudah terdaftar untuk karyawan lain';
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _errorMsg = msg;
+          _state = _NfcDialogState.error;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -1489,10 +1566,13 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
       case _NfcDialogState.scanning:
         return [
           TextButton(
-            onPressed: () {
-              _stopNfc();
-              Navigator.of(context).pop();
-            },
+            onPressed: _restarting
+                ? null
+                : () async {
+                    await _stopNfc();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
             child: const Text('Batal'),
           ),
         ];
@@ -1500,13 +1580,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
       case _NfcDialogState.waiting:
         return [
           TextButton(
-            onPressed: () {
-              _stopNfc();
-              setState(() {
-                _scannedUid = null;
-              });
-              _startNfc();
-            },
+            onPressed: _restarting ? null : _restartNfc,
             child: const Text('Scan Ulang'),
           ),
           ElevatedButton(
@@ -1530,17 +1604,17 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
       case _NfcDialogState.error:
         return [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: _restarting
+                ? null
+                : () async {
+                    await _stopNfc();
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                  },
             child: const Text('Tutup'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _stopNfc();
-              setState(() {
-                _errorMsg = null;
-              });
-              _startNfc();
-            },
+            onPressed: _restarting ? null : _restartNfc,
             child: const Text('Coba Lagi'),
           ),
         ];
@@ -1556,6 +1630,7 @@ class _EmployeeSheet extends StatefulWidget {
   final Employee? employee;
   final List<Outlet> outlets;
   final VoidCallback onSaved;
+  final List<Employee> archivedEmployees;
 
   /// Jika diisi, outlet dropdown akan di-lock ke nilai ini (untuk kepala_gerai)
   final String? forcedOutletId;
@@ -1565,6 +1640,7 @@ class _EmployeeSheet extends StatefulWidget {
     required this.outlets,
     required this.onSaved,
     this.forcedOutletId,
+    this.archivedEmployees = const [],
   });
 
   @override
@@ -1578,6 +1654,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late final TextEditingController _empCodeCtrl;
+  late final Map<String, Employee> _archivedByName;
+  Employee? _archivedMatch;
   String? _selectedOutletId;
   String? _selectedPosition;
   List<String> _customPositions = [];
@@ -1592,6 +1670,11 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     final emp = widget.employee;
     _nameCtrl = TextEditingController(text: emp?.name ?? '');
     _empCodeCtrl = TextEditingController(text: emp?.employeeCode ?? '');
+    // Lookup map O(1): lowercase name → archived employee (tidak ada DB call saat ketik)
+    _archivedByName = {
+      for (final e in widget.archivedEmployees)
+        e.name.toLowerCase().trim(): e,
+    };
     // forcedOutletId ALWAYS takes precedence for kepala_gerai
     _selectedOutletId = widget.forcedOutletId ?? emp?.homeOutletId ?? widget.outlets.firstOrNull?.id;
     _isActive = emp?.isActive ?? true;
@@ -1734,6 +1817,34 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     }
   }
 
+  // Cek nama terhadap arsip secara in-memory (O(1), tanpa DB call)
+  void _checkArchivedName(String value) {
+    if (widget.employee != null) return; // mode edit, skip
+    final match = _archivedByName[value.toLowerCase().trim()];
+    if (match != _archivedMatch) {
+      setState(() => _archivedMatch = match);
+    }
+  }
+
+  Future<void> _restoreEmployee(Employee archived) async {
+    setState(() => _saving = true);
+    try {
+      await SupabaseClientFactory.admin
+          .from('employees')
+          .update({'is_active': true, 'archived_at': null})
+          .eq('id', archived.id);
+      widget.onSaved();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = 'Gagal memulihkan karyawan';
+        });
+      }
+    }
+  }
+
   Future<void> _archiveEmployee() async {
     if (widget.employee == null) return;
 
@@ -1866,6 +1977,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                             labelText: 'Nama Lengkap',
                             prefixIcon: Icon(Icons.person_outline, size: 20),
                           ),
+                          onChanged: _checkArchivedName,
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
                               return 'Nama wajib diisi';
@@ -2067,6 +2179,73 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                         ],
                       ),
                     ),
+
+                  // Banner arsip — muncul jika nama cocok dengan karyawan yang diarsipkan
+                  if (widget.employee == null && _archivedMatch != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.archive_outlined,
+                                  size: 18, color: Color(0xFFD97706)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '"${_archivedMatch!.name}" ada di arsip',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF92400E),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Pulihkan karyawan ini daripada membuat data baru?',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : () {
+                                      final match = _archivedMatch;
+                                      if (match != null) _restoreEmployee(match);
+                                    },
+                              icon: const Icon(Icons.restore, size: 16),
+                              label: const Text('Pulihkan Karyawan Ini'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFD97706),
+                                side: const BorderSide(color: Color(0xFFF59E0B)),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 20),
 

@@ -1,9 +1,65 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager/platform_tags.dart';
 
 import '../core/constants.dart';
+
+/// Thin abstraction over the native NFC session so the race-sensitive
+/// lifecycle logic in [NfcService] can be exercised in tests without
+/// touching `nfc_manager` or a real tag. Tests override
+/// [NfcService.debugDriverOverride] to inject a fake.
+abstract class NfcSessionDriver {
+  Future<bool> isAvailable();
+
+  /// Start a native NFC session. [onDiscovered] is called once per delivered
+  /// discovery event with a lazy UID extractor — callers only pay the
+  /// extraction cost if they actually intend to process the tag.
+  Future<void> startSession({
+    required Future<void> Function(String? Function() extractUid) onDiscovered,
+    void Function(Object error)? onError,
+  });
+
+  Future<void> stopSession();
+}
+
+class _DefaultNfcSessionDriver implements NfcSessionDriver {
+  const _DefaultNfcSessionDriver();
+
+  @override
+  Future<bool> isAvailable() => NfcManager.instance.isAvailable();
+
+  @override
+  Future<void> startSession({
+    required Future<void> Function(String? Function() extractUid) onDiscovered,
+    void Function(Object error)? onError,
+  }) {
+    return NfcManager.instance.startSession(
+      onDiscovered: (NfcTag tag) async {
+        String? cached;
+        bool cachedSet = false;
+        String? extractor() {
+          if (!cachedSet) {
+            cached = NfcService.extractUid(tag);
+            cachedSet = true;
+          }
+          return cached;
+        }
+
+        await onDiscovered(extractor);
+      },
+      onError: onError == null
+          ? null
+          : (error) async {
+              onError(error);
+            },
+    );
+  }
+
+  @override
+  Future<void> stopSession() => NfcManager.instance.stopSession();
+}
 
 /// Universal NFC service that reads the hardware UID from ANY card type.
 ///
@@ -19,10 +75,31 @@ import '../core/constants.dart';
 class NfcService {
   static bool _isAvailable = false;
 
+  static const NfcSessionDriver _defaultDriver = _DefaultNfcSessionDriver();
+
+  /// Test-only hook. Production code must leave this null.
+  static NfcSessionDriver? debugDriverOverride;
+
+  static NfcSessionDriver get _driver =>
+      debugDriverOverride ?? _defaultDriver;
+
+  /// Serializes start/stop calls so that a cleanup fired by one listener
+  /// never overlaps with a subsequent start. Prevents the native platform
+  /// exception that causes a force-close when "Scan Ulang" / "Coba Lagi"
+  /// is tapped in quick succession.
+  static Future<void> _pendingOp = Future<void>.value();
+
+  static Future<void> _enqueue(Future<void> Function() task) {
+    final chained =
+        _pendingOp.catchError((Object _) {}).then((_) => task());
+    _pendingOp = chained.catchError((Object _) {});
+    return chained;
+  }
+
   /// Initialize NFC hardware. Returns true if NFC is supported and enabled.
   static Future<bool> init() async {
     try {
-      _isAvailable = await NfcManager.instance.isAvailable();
+      _isAvailable = await _driver.isAvailable();
       return _isAvailable;
     } catch (_) {
       return false;
@@ -73,7 +150,8 @@ class NfcService {
     // 5. MifareUltralight — cheap event tickets, some loyalty cards
     if (bytes == null) {
       final ultralight = MifareUltralight.from(tag);
-      if (ultralight?.identifier != null && ultralight!.identifier.isNotEmpty) {
+      if (ultralight?.identifier != null &&
+          ultralight!.identifier.isNotEmpty) {
         bytes = ultralight.identifier;
       }
     }
@@ -110,120 +188,138 @@ class NfcService {
   /// Starts a single persistent NFC session for the kiosk idle screen.
   ///
   /// Uses ONE startSession() call that stays active — onDiscovered fires
-  /// every time a card is presented. A [_processing] flag prevents double
+  /// every time a card is presented. A [processing] flag prevents double
   /// processing when Android delivers multiple discovery events for one tap.
   ///
-  /// Returns a cancel callback — call it to stop listening.
+  /// Returns an awaitable cancel callback — callers MUST await it before
+  /// starting another session to avoid overlapping native start/stop calls.
   static Future<void> Function() startListener(
     void Function(String uid) onTag,
     void Function(Object err)? onError,
   ) {
     bool active = true;
-    bool processing = false; // anti-double-scan guard
+    bool processing = false;
     DateTime? lastErrorTime;
 
-    NfcManager.instance
-        .startSession(
-      onDiscovered: (NfcTag tag) async {
-        // Ignore if already processing a tag or listener was stopped
-        if (!active || processing) return;
-        processing = true;
-        try {
-          final uid = extractUid(tag);
-          if (uid != null && uid.isNotEmpty) {
-            onTag(uid);
-          } else {
-            throw Exception('Tipe kartu NFC tidak didukung');
-          }
-        } catch (e, stack) {
-          // ignore: avoid_print
-          print('[NfcService] Error processing tag: $e\n$stack');
-          if (active) {
-            final now = DateTime.now();
-            if (lastErrorTime == null || now.difference(lastErrorTime!).inSeconds > 2) {
-              lastErrorTime = now;
-              onError?.call(e);
+    _enqueue(() async {
+      if (!active) return;
+      await _driver.startSession(
+        onDiscovered: (String? Function() extract) async {
+          if (!active || processing) return;
+          processing = true;
+          try {
+            final uid = extract();
+            if (uid != null && uid.isNotEmpty) {
+              if (active) onTag(uid);
+            } else {
+              throw Exception('Tipe kartu NFC tidak didukung');
             }
+          } catch (e) {
+            if (active) {
+              final now = DateTime.now();
+              if (lastErrorTime == null ||
+                  now.difference(lastErrorTime!).inSeconds > 2) {
+                lastErrorTime = now;
+                onError?.call(e);
+              }
+            }
+          } finally {
+            await Future<void>.delayed(
+              Duration(milliseconds: AppConstants.nfcDebounceMs),
+            );
+            processing = false;
           }
-        } finally {
-          // Debounce: wait before accepting next scan
-          await Future<void>.delayed(
-            Duration(milliseconds: AppConstants.nfcDebounceMs),
-          );
-          processing = false;
-        }
-      },
-      onError: (error) async {
-        // ignore: avoid_print
-        print('[NfcService] session error: $error');
-        if (active) {
+        },
+        onError: (error) {
+          if (!active) return;
           final now = DateTime.now();
-          if (lastErrorTime == null || now.difference(lastErrorTime!).inSeconds > 2) {
+          if (lastErrorTime == null ||
+              now.difference(lastErrorTime!).inSeconds > 2) {
             lastErrorTime = now;
             onError?.call(error);
           }
-        }
-      },
-    )
-        .catchError((Object e) {
+        },
+      );
+    }).catchError((Object e) {
       if (active) onError?.call(e);
     });
 
-    // Return cancel function
     return () async {
       active = false;
-      try {
-        await NfcManager.instance.stopSession();
-      } catch (_) {}
+      await _enqueue(() async {
+        try {
+          await _driver.stopSession();
+        } catch (_) {}
+      });
     };
   }
 
   /// Starts a one-shot NFC session for employee card registration.
   ///
   /// The first supported card stops the session before notifying the UI.
-  /// Duplicate discovery events from the same tap are ignored.
+  /// Duplicate discovery events from the same tap are ignored. On any
+  /// error (unsupported card, platform exception) the session is torn
+  /// down so the caller can cleanly restart with a fresh session.
   static Future<void> Function() startRegistrationListener(
     void Function(String uid) onTag,
     void Function(Object err)? onError,
   ) {
     bool active = true;
-    bool registered = false;
+    bool claimed = false; // first supported tap wins
+    bool terminated = false; // exactly one stop through the queue
 
-    NfcManager.instance
-        .startSession(
-      onDiscovered: (NfcTag tag) async {
-        if (!active || registered) return;
-        registered = true;
+    Future<void> drainStop() {
+      if (terminated) return Future<void>.value();
+      terminated = true;
+      return _enqueue(() async {
         try {
-          final uid = extractUid(tag);
-          if (uid != null && uid.isNotEmpty) {
-            try {
-              await NfcManager.instance.stopSession();
-            } catch (_) {}
-            if (active) onTag(uid);
-          } else {
-            registered = false;
-            throw Exception('Tipe kartu NFC tidak didukung');
+          await _driver.stopSession();
+        } catch (_) {}
+      });
+    }
+
+    _enqueue(() async {
+      if (!active) return;
+      await _driver.startSession(
+        onDiscovered: (String? Function() extract) async {
+          if (!active || claimed) return;
+          claimed = true;
+          String? uid;
+          Object? failure;
+          try {
+            uid = extract();
+            if (uid == null || uid.isEmpty) {
+              failure = Exception('Tipe kartu NFC tidak didukung');
+            }
+          } catch (e) {
+            failure = e;
           }
-        } catch (e) {
-          if (active && !registered) {
-            onError?.call(e);
+          await drainStop();
+          if (!active) return;
+          if (failure != null) {
+            claimed = false; // allow the next session (after restart) to succeed
+            onError?.call(failure);
+            return;
           }
-        }
-      },
-      onError: (error) async {
-        if (active) onError?.call(error);
-      },
-    )
-        .catchError((Object e) {
-      if (active) onError?.call(e);
+          onTag(uid!);
+        },
+        onError: (error) async {
+          if (!active || claimed) return;
+          claimed = true;
+          await drainStop();
+          if (!active) return;
+          claimed = false;
+          onError?.call(error);
+        },
+      );
+    }).catchError((Object e) {
+      if (!active) return;
+      onError?.call(e);
     });
 
     return () async {
       active = false;
-      try {
-        await NfcManager.instance.stopSession();
-      } catch (_) {}
+      await drainStop();
     };
   }
 
