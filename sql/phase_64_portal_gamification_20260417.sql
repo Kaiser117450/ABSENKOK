@@ -98,7 +98,7 @@ CREATE OR REPLACE FUNCTION get_portal_leaderboard(
 RETURNS TABLE (
   employee_id        uuid,
   employee_name      text,
-  position           text,
+  employee_position  text,
   outlet_id          uuid,
   outlet_name        text,
   photo_url          text,

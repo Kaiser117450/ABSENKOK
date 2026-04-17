@@ -71,7 +71,7 @@ export const DEFAULT_WEIGHTS: LeaderboardWeights = {
 interface LeaderboardRpcRow {
   employee_id: string;
   employee_name: string;
-  position: string | null;
+  employee_position: string | null;
   outlet_id: string | null;
   outlet_name: string | null;
   photo_url: string | null;
@@ -204,7 +204,7 @@ function normaliseRow(
   return {
     employeeId: row.employee_id,
     employeeName: row.employee_name,
-    position: row.position ?? null,
+    position: row.employee_position ?? null,
     outletId: row.outlet_id ?? null,
     outletName: row.outlet_name ?? null,
     photoUrl: row.photo_url ?? null,
