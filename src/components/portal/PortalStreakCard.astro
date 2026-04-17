@@ -1,0 +1,192 @@
+---
+/**
+ * PortalStreakCard — gamified attendance streak surface for the portal home.
+ *
+ * Presentational only. Consumes a `PortalStreakModel` produced by
+ * `src/lib/portal/streak.ts` (or `buildStreakModel` from the same module
+ * when the recap has already surfaced raw streak counts).
+ *
+ * Visual language shared with the kiosk streak celebration:
+ *   - Inline SVG flame with tier-based gradient (cold / warm / hot / blazing)
+ *   - Milestone progress bar toward next 7 / 30 / 90 threshold
+ *   - Personal-best chip when current streak equals longest and ≥ 3
+ *   - No emoji, no chart library, no client framework
+ *
+ * Accessibility:
+ *   - All animations gated behind `prefers-reduced-motion`.
+ *   - `role="status"` with a descriptive `aria-label` so screen readers
+ *     announce the streak count without reading the decorative flame.
+ */
+import type { PortalStreakModel, StreakTier } from '../../lib/portal/streak';
+import { STREAK_MILESTONES } from '../../lib/portal/streak';
+
+interface Props {
+  streak: PortalStreakModel;
+}
+
+const { streak } = Astro.props;
+
+// Tier → surface / gradient tokens. Kept here (not in the pure model) because
+// the tokens only make sense with Tailwind class names alongside.
+const TIER_SURFACE: Record<StreakTier, string> = {
+  cold: 'bg-slate-50 border-slate-200',
+  warm: 'bg-amber-50 border-amber-200',
+  hot: 'bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 border-orange-200',
+  blazing: 'bg-gradient-to-br from-orange-50 via-rose-50 to-fuchsia-50 border-rose-300',
+};
+
+const TIER_FLAME_STOPS: Record<StreakTier, { top: string; mid: string; bottom: string }> = {
+  cold: { top: '#93c5fd', mid: '#60a5fa', bottom: '#3b82f6' },
+  warm: { top: '#fde68a', mid: '#f59e0b', bottom: '#ea580c' },
+  hot: { top: '#fdba74', mid: '#f97316', bottom: '#dc2626' },
+  blazing: { top: '#fda4af', mid: '#e11d48', bottom: '#a21caf' },
+};
+
+const TIER_NUMBER: Record<StreakTier, string> = {
+  cold: 'text-slate-700',
+  warm: 'text-amber-700',
+  hot: 'text-orange-700',
+  blazing: 'text-rose-700',
+};
+
+const TIER_BAR_FG: Record<StreakTier, string> = {
+  cold: 'bg-slate-400',
+  warm: 'bg-amber-500',
+  hot: 'bg-orange-500',
+  blazing: 'bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-500',
+};
+
+// Previous milestone is the largest STREAK_MILESTONE strictly less than the
+// next milestone; when past all milestones we present a "maxed out" bar.
+const previousMilestone = streak.nextMilestone
+  ? [...STREAK_MILESTONES].reverse().find((m) => m < streak.nextMilestone!) ?? 0
+  : STREAK_MILESTONES[STREAK_MILESTONES.length - 1];
+
+const span = streak.nextMilestone !== null ? streak.nextMilestone - previousMilestone : 1;
+const progressed = streak.nextMilestone !== null
+  ? Math.max(0, streak.currentStreak - previousMilestone)
+  : span;
+const progressPct = Math.min(100, Math.round((progressed / span) * 100));
+
+const flameStops = TIER_FLAME_STOPS[streak.tier];
+const gradientId = `portal-flame-${streak.tier}`;
+
+const milestoneCopy =
+  streak.nextMilestone !== null
+    ? `${streak.daysToNextMilestone} hari lagi ke milestone ${streak.nextMilestone}`
+    : 'Semua milestone tercapai';
+
+const ariaLabel = `Streak kehadiran ${streak.currentStreak} hari berturut-turut, ${milestoneCopy}`;
+---
+
+{streak.visible && (
+  <section
+    class={`portal-streak-card relative overflow-hidden rounded-2xl border ${TIER_SURFACE[streak.tier]} px-4 py-4 sm:px-5 mb-6`}
+    role="status"
+    aria-label={ariaLabel}
+    data-tier={streak.tier}
+  >
+    <div class="flex items-start gap-4">
+      <!-- Animated flame -->
+      <div class="portal-flame-wrap relative shrink-0 w-14 h-16 sm:w-16 sm:h-20" aria-hidden="true">
+        <svg
+          class="portal-flame absolute inset-0 w-full h-full"
+          viewBox="0 0 64 80"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <radialGradient id={gradientId} cx="50%" cy="70%" r="60%">
+              <stop offset="0%" stop-color={flameStops.top} />
+              <stop offset="55%" stop-color={flameStops.mid} />
+              <stop offset="100%" stop-color={flameStops.bottom} />
+            </radialGradient>
+          </defs>
+          <!-- Outer flame silhouette -->
+          <path
+            d="M32 4c2 8 6 12 11 17 6 7 10 13 10 22a21 21 0 1 1-42 0c0-6 2-11 7-16 1 3 3 6 6 8-1-6 0-11 3-16 3-5 5-9 5-15Z"
+            fill={`url(#${gradientId})`}
+          />
+          <!-- Inner highlight flame -->
+          <path
+            d="M32 34c3 4 5 7 7 11a10 10 0 1 1-19 5c0-3 1-5 3-8 1 2 2 3 3 4 0-3 0-6 2-8 1-2 3-3 4-4Z"
+            fill="#ffffff"
+            fill-opacity="0.45"
+          />
+        </svg>
+      </div>
+
+      <div class="min-w-0 flex-1">
+        <!-- Streak count + tier label -->
+        <div class="flex items-baseline gap-2 flex-wrap">
+          <span class={`text-3xl sm:text-4xl font-black tabular-nums leading-none ${TIER_NUMBER[streak.tier]}`}>
+            {streak.currentStreak}
+          </span>
+          <span class="text-sm font-semibold text-gray-700">
+            hari berturut-turut
+          </span>
+          {streak.atPersonalBest && (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-rose-500/10 text-rose-700 ring-1 ring-rose-300">
+              Rekor Baru
+            </span>
+          )}
+        </div>
+
+        <!-- Subline: longest streak + milestone hint -->
+        <p class="mt-1 text-xs text-gray-600">
+          {!streak.atPersonalBest && streak.longestStreak > 0 && (
+            <span>Rekor terbaik {streak.longestStreak} hari</span>
+          )}
+          {!streak.atPersonalBest && streak.longestStreak > 0 && ' · '}
+          <span>{milestoneCopy}</span>
+        </p>
+
+        <!-- Milestone progress bar -->
+        <div class="mt-3">
+          <div class="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+            <span>{previousMilestone}</span>
+            <span>{streak.nextMilestone ?? STREAK_MILESTONES[STREAK_MILESTONES.length - 1]}</span>
+          </div>
+          <div
+            class="h-2 rounded-full bg-white/70 border border-white/60 overflow-hidden"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPct}
+            aria-label={`Progres milestone: ${progressPct}%`}
+          >
+            <div
+              class={`h-full ${TIER_BAR_FG[streak.tier]} transition-[width] duration-500 ease-out`}
+              style={`width: ${progressPct}%`}
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  /* Subtle flicker/float for the flame — only when the user allows motion. */
+  .portal-flame {
+    transform-origin: 50% 80%;
+    animation: portal-flicker 2.4s ease-in-out infinite;
+    filter: drop-shadow(0 2px 8px rgba(234, 88, 12, 0.25));
+  }
+  .portal-streak-card[data-tier="blazing"] .portal-flame {
+    filter: drop-shadow(0 2px 12px rgba(225, 29, 72, 0.35));
+  }
+  .portal-streak-card[data-tier="cold"] .portal-flame {
+    filter: drop-shadow(0 1px 4px rgba(59, 130, 246, 0.2));
+  }
+  @keyframes portal-flicker {
+    0%, 100% { transform: scale(1, 1) translateY(0); }
+    25%      { transform: scale(1.04, 0.97) translateY(-1px); }
+    50%      { transform: scale(0.98, 1.03) translateY(1px); }
+    75%      { transform: scale(1.03, 0.98) translateY(-1px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .portal-flame {
+      animation: none;
+    }
+  }
+</style>

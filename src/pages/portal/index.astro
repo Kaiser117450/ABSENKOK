@@ -4,7 +4,12 @@ export const prerender = false;
 import PortalLayout from '../../layouts/PortalLayout.astro';
 import PortalScheduleSection from '../../components/portal/PortalScheduleSection.astro';
 import PortalStatePanel from '../../components/portal/PortalStatePanel.astro';
+import PortalCurrentStatusCard from '../../components/portal/PortalCurrentStatusCard.astro';
+import PortalStreakCard from '../../components/portal/PortalStreakCard.astro';
 import { loadPortalHome } from '../../lib/portal/home';
+import { loadPortalAttendanceRecap } from '../../lib/portal/attendance-recap';
+import { derivePortalHomeStatus } from '../../lib/portal/home-status';
+import { buildStreakModel } from '../../lib/portal/streak';
 
 // Load page state once — all branching is on state.kind below.
 const state = await loadPortalHome(Astro);
@@ -15,15 +20,54 @@ if (state.kind === 'unauthenticated') {
   return Astro.redirect('/portal/login');
 }
 
+// When the schedule path resolved (ready/empty), also load the recap so we
+// can render the live status card. The recap loader resolves the same
+// employee identity — this is one additional RPC, not a duplicate auth round-trip.
+const recapResult =
+  state.kind === 'ready' || state.kind === 'empty'
+    ? await loadPortalAttendanceRecap(Astro)
+    : null;
+
+const homeStatus = recapResult && recapResult.ok ? derivePortalHomeStatus(recapResult.recap) : null;
+
+// Streak model — reuse recap.streak (already loaded) so we don't issue a
+// second RPC. The recap loader fetches employee_streaks via RLS policy;
+// we just fold it into the presentation-ready model here.
+const streakModel =
+  recapResult && recapResult.ok
+    ? buildStreakModel(recapResult.recap.employee, {
+        current_streak: recapResult.recap.streak.currentStreak,
+        longest_streak: recapResult.recap.streak.longestStreak,
+        last_masuk_date: recapResult.recap.streak.lastMasukDate,
+      })
+    : null;
 ---
 
 {state.kind === 'ready' && (
   <PortalLayout title="Beranda" employee={state.schedule.employee} activeSection="home">
     <!-- Greeting -->
-    <div class="mb-6">
+    <div class="mb-4">
       <p class="text-sm text-gray-500">Selamat datang,</p>
       <h1 class="text-2xl font-bold text-gray-900">{state.schedule.employee.employee_name}</h1>
+      {state.schedule.employee.position && (
+        <p class="mt-0.5 text-sm text-gray-600">
+          {state.schedule.employee.position}
+          {state.schedule.employee.home_outlet_name && (
+            <span class="text-gray-400"> · {state.schedule.employee.home_outlet_name}</span>
+          )}
+        </p>
+      )}
     </div>
+
+    <!-- Live status card — realtime working/break timer, no polling -->
+    {homeStatus && (
+      <PortalCurrentStatusCard status={homeStatus} />
+    )}
+
+    <!-- Streak gamification — visible only when currentStreak >= 2 -->
+    {streakModel && streakModel.visible && (
+      <PortalStreakCard streak={streakModel} />
+    )}
 
     <!-- Attendance recap CTA — compact entry card below greeting -->
     <a

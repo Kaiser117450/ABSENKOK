@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import type { PortalEmployee } from '../lib/portal/employee';
 
-type ActiveSection = 'home' | 'attendance';
+type ActiveSection = 'home' | 'attendance' | 'leaderboard';
 
 interface Props {
   title: string;
@@ -20,6 +20,15 @@ function initials(name: string): string {
     .join('')
     .toUpperCase();
 }
+
+function buildSubline(position: string | null, outletName: string | null): string {
+  const parts: string[] = [];
+  if (position && position.trim().length > 0) parts.push(position.trim());
+  if (outletName && outletName.trim().length > 0) parts.push(outletName.trim());
+  return parts.join(' · ');
+}
+
+const identitySubline = buildSubline(employee.position, employee.home_outlet_name);
 ---
 
 <!doctype html>
@@ -64,10 +73,17 @@ function initials(name: string): string {
               initials(employee.employee_name)
             )}
           </div>
-          <!-- Name (hidden on small phones) -->
-          <span class="hidden sm:block text-sm font-medium text-gray-700 max-w-[140px] truncate">
-            {employee.employee_name}
-          </span>
+          <!-- Name + position/outlet subline (hidden on very small phones) -->
+          <div class="hidden sm:flex flex-col leading-tight min-w-0">
+            <span class="text-sm font-medium text-gray-700 max-w-[180px] truncate">
+              {employee.employee_name}
+            </span>
+            {identitySubline && (
+              <span class="text-[11px] text-gray-500 max-w-[180px] truncate" title={identitySubline}>
+                {identitySubline}
+              </span>
+            )}
+          </div>
           <!-- Logout — form submit with pending feedback, no JS required -->
           <form
             method="POST"
@@ -86,7 +102,7 @@ function initials(name: string): string {
         </div>
       </div>
 
-      <!-- Shell nav — Beranda and Kehadiran destinations -->
+      <!-- Shell nav — Beranda, Kehadiran, Peringkat destinations -->
       <nav
         class="flex items-center gap-0 border-t border-gray-100"
         aria-label="Navigasi portal"
@@ -104,6 +120,13 @@ function initials(name: string): string {
           aria-current={activeSection === 'attendance' ? 'page' : undefined}
         >
           Kehadiran
+        </a>
+        <a
+          href="/portal/leaderboard"
+          class={`flex-1 text-center py-2 text-xs font-semibold tracking-wide transition border-b-2 ${activeSection === 'leaderboard' ? 'border-[#E91E8C] text-[#E91E8C]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+          aria-current={activeSection === 'leaderboard' ? 'page' : undefined}
+        >
+          Peringkat
         </a>
       </nav>
 

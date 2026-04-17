@@ -1,0 +1,229 @@
+---
+/**
+ * PortalLeaderboardTable — cross-outlet ranking surface for the portal.
+ *
+ * Presentational only. Consumes a `PortalLeaderboardModel` produced by
+ * `src/lib/portal/leaderboard.ts`. Renders a phone-first vertical list
+ * (cards) that upgrades to a grid on wider screens.
+ *
+ * Highlights:
+ *   - Rank badges with medal colours for top 3.
+ *   - Employee identity: photo/initials, name, position · outlet.
+ *   - Sparkline of the scoring window.
+ *   - Score + contributing metric chips (hadir / late / short-work / etc.).
+ *   - Viewer's own row is visually pinned (ring + "Anda" label) even when
+ *     deep down the list.
+ */
+import type { PortalLeaderboardModel, PortalLeaderboardEntry } from '../../lib/portal/leaderboard';
+import PortalSparkline from './PortalSparkline.astro';
+
+interface Props {
+  model: PortalLeaderboardModel;
+}
+
+const { model } = Astro.props;
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
+
+function rankBadgeClasses(rank: number): string {
+  if (rank === 1) return 'bg-gradient-to-br from-yellow-300 to-amber-500 text-white ring-2 ring-amber-200';
+  if (rank === 2) return 'bg-gradient-to-br from-slate-200 to-slate-400 text-white ring-2 ring-slate-100';
+  if (rank === 3) return 'bg-gradient-to-br from-orange-300 to-orange-600 text-white ring-2 ring-orange-100';
+  return 'bg-gray-100 text-gray-700';
+}
+
+function subline(entry: PortalLeaderboardEntry): string {
+  const parts: string[] = [];
+  if (entry.position) parts.push(entry.position);
+  if (entry.outletName) parts.push(entry.outletName);
+  return parts.join(' · ');
+}
+
+const topCutoff = 10;
+const topEntries = model.entries.slice(0, topCutoff);
+const selfOutsideTop =
+  model.selfEntry && model.selfEntry.rank > topCutoff ? model.selfEntry : null;
+---
+
+<section aria-label="Peringkat kehadiran lintas outlet">
+  <!-- Header + window context -->
+  <header class="mb-3">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+      Peringkat {model.windowDays} Hari Terakhir
+    </h2>
+    <p class="text-xs text-gray-500 mt-0.5">
+      Skor transparan: kehadiran bagus menambah poin, keterlambatan dan hari tidak hadir menguranginya.
+    </p>
+  </header>
+
+  {model.entries.length === 0 && (
+    <div class="rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+      Belum ada data peringkat untuk periode ini.
+    </div>
+  )}
+
+  {model.entries.length > 0 && (
+    <ol class="flex flex-col gap-2" role="list">
+      {topEntries.map((entry) => (
+        <li
+          class={`relative flex items-center gap-3 rounded-2xl border px-3 py-3 sm:px-4 ${entry.isSelf ? 'bg-[#E91E8C]/5 border-[#E91E8C]/40 ring-2 ring-[#E91E8C]/30' : 'bg-white border-gray-200'}`}
+        >
+          <!-- Rank badge -->
+          <span
+            class={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold tabular-nums ${rankBadgeClasses(entry.rank)}`}
+            aria-label={`Peringkat ${entry.rank}`}
+          >
+            {entry.rank}
+          </span>
+
+          <!-- Avatar -->
+          <div
+            class="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#E91E8C]/10 flex items-center justify-center text-[#E91E8C] text-xs font-semibold overflow-hidden"
+            aria-hidden="true"
+          >
+            {entry.photoUrl ? (
+              <img src={entry.photoUrl} alt={entry.employeeName} class="w-full h-full object-cover" />
+            ) : (
+              initials(entry.employeeName)
+            )}
+          </div>
+
+          <!-- Identity + sparkline -->
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-semibold text-gray-900 truncate max-w-full sm:max-w-[240px]">
+                {entry.employeeName}
+              </p>
+              {entry.isSelf && (
+                <span class="inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-bold bg-[#E91E8C] text-white">
+                  Anda
+                </span>
+              )}
+            </div>
+            <p class="text-[11px] text-gray-500 truncate" title={subline(entry)}>
+              {subline(entry) || '—'}
+            </p>
+            <!-- Metrics row: sparkline + inline chips -->
+            <div class="flex items-center gap-2 flex-wrap mt-1.5">
+              <PortalSparkline statuses={entry.sparkline} />
+              <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-emerald-700">
+                <span class="tabular-nums">{entry.hadirCount}</span>h
+              </span>
+              {entry.lateCount > 0 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-700">
+                  <span class="tabular-nums">{entry.lateCount}</span>tl
+                </span>
+              )}
+              {entry.shortWorkCount > 0 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-orange-700">
+                  <span class="tabular-nums">{entry.shortWorkCount}</span>kr
+                </span>
+              )}
+              {entry.excessBreakCount > 0 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-fuchsia-700">
+                  <span class="tabular-nums">{entry.excessBreakCount}</span>br
+                </span>
+              )}
+              {entry.belumPulangCount > 0 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-800">
+                  <span class="tabular-nums">{entry.belumPulangCount}</span>bp
+                </span>
+              )}
+              {entry.tidakHadirCount > 0 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-red-700">
+                  <span class="tabular-nums">{entry.tidakHadirCount}</span>th
+                </span>
+              )}
+              {entry.currentStreak >= 2 && (
+                <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-rose-700">
+                  <span class="tabular-nums">{entry.currentStreak}</span>s
+                </span>
+              )}
+            </div>
+          </div>
+
+          <!-- Score column -->
+          <div class="shrink-0 text-right">
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Skor</p>
+            <p class="text-lg sm:text-xl font-black tabular-nums text-gray-900">
+              {entry.score.toFixed(1)}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  )}
+
+  <!-- Self-pinned row when outside top N -->
+  {selfOutsideTop && (
+    <div class="mt-3">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+        Posisi Anda
+      </p>
+      <div class="relative flex items-center gap-3 rounded-2xl border px-3 py-3 sm:px-4 bg-[#E91E8C]/5 border-[#E91E8C]/40 ring-2 ring-[#E91E8C]/30">
+        <span
+          class={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold tabular-nums ${rankBadgeClasses(selfOutsideTop.rank)}`}
+          aria-label={`Peringkat ${selfOutsideTop.rank}`}
+        >
+          {selfOutsideTop.rank}
+        </span>
+        <div
+          class="shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#E91E8C]/10 flex items-center justify-center text-[#E91E8C] text-xs font-semibold overflow-hidden"
+          aria-hidden="true"
+        >
+          {selfOutsideTop.photoUrl ? (
+            <img src={selfOutsideTop.photoUrl} alt={selfOutsideTop.employeeName} class="w-full h-full object-cover" />
+          ) : (
+            initials(selfOutsideTop.employeeName)
+          )}
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm font-semibold text-gray-900 truncate max-w-full sm:max-w-[240px]">
+              {selfOutsideTop.employeeName}
+            </p>
+            <span class="inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-bold bg-[#E91E8C] text-white">
+              Anda
+            </span>
+          </div>
+          <p class="text-[11px] text-gray-500 truncate" title={subline(selfOutsideTop)}>
+            {subline(selfOutsideTop) || '—'}
+          </p>
+          <div class="flex items-center gap-2 flex-wrap mt-1.5">
+            <PortalSparkline statuses={selfOutsideTop.sparkline} />
+          </div>
+        </div>
+        <div class="shrink-0 text-right">
+          <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Skor</p>
+          <p class="text-lg sm:text-xl font-black tabular-nums text-gray-900">
+            {selfOutsideTop.score.toFixed(1)}
+          </p>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- Legend -->
+  <details class="mt-4 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+    <summary class="cursor-pointer font-semibold text-gray-700">
+      Cara skor dihitung
+    </summary>
+    <ul class="mt-2 space-y-1 pl-4 list-disc">
+      <li>+{model.weights.streak} × hari streak (maks dihitung {30} hari)</li>
+      <li>+{model.weights.hadir} × hari hadir</li>
+      <li>{model.weights.late} × hari terlambat</li>
+      <li>{model.weights.shortWork} × hari pulang terlalu cepat (&gt;1 jam)</li>
+      <li>{model.weights.excessBreak} × hari istirahat &gt; 90 menit</li>
+      <li>{model.weights.belumPulang} × hari lupa pulang</li>
+      <li>{model.weights.tidakHadir} × hari tidak hadir tanpa izin</li>
+      <li class="text-gray-500">Sakit dan izin tidak mengurangi skor.</li>
+    </ul>
+  </details>
+</section>

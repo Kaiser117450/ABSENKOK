@@ -1,0 +1,66 @@
+---
+/**
+ * PortalSparkline — inline SVG 14-day attendance trace.
+ *
+ * Renders one small rounded rectangle per day, colour-coded by the shared
+ * portal attendance taxonomy. No chart library, no client script.
+ *
+ * Order: oldest → newest (left → right). Missing days render as neutral
+ * placeholders so the sparkline always has a fixed width.
+ */
+import type { AttendanceStatus } from '../../lib/portal/attendance-recap';
+
+interface Props {
+  /** Array of statuses, oldest → newest. null = no data for that day. */
+  statuses: (AttendanceStatus | null)[];
+  /** Visual height in pixels. Width scales with length × cell. */
+  height?: number;
+  /** Width of each cell in pixels. */
+  cell?: number;
+  /** Gap between cells. */
+  gap?: number;
+}
+
+const { statuses, height = 22, cell = 6, gap = 2 } = Astro.props;
+
+const STATUS_FILL: Record<string, string> = {
+  hadir: '#10b981',         // emerald-500
+  sakit: '#f97316',         // orange-500
+  izin: '#0ea5e9',          // sky-500
+  libur: '#cbd5e1',         // slate-300
+  belum_pulang: '#f59e0b',  // amber-500
+  tidak_hadir: '#ef4444',   // red-500
+  sedang_bekerja: '#ec4899',// pink-500
+  belum_masuk: '#e5e7eb',   // gray-200
+};
+
+const EMPTY_FILL = '#f1f5f9'; // slate-100
+
+const totalCells = Math.max(1, statuses.length);
+const width = totalCells * cell + Math.max(0, totalCells - 1) * gap;
+---
+
+<svg
+  width={width}
+  height={height}
+  viewBox={`0 0 ${width} ${height}`}
+  role="img"
+  aria-label={`Riwayat kehadiran ${totalCells} hari`}
+  xmlns="http://www.w3.org/2000/svg"
+>
+  {statuses.map((status, i) => {
+    const x = i * (cell + gap);
+    const fill = status && STATUS_FILL[status] ? STATUS_FILL[status] : EMPTY_FILL;
+    return (
+      <rect
+        x={x}
+        y={2}
+        width={cell}
+        height={height - 4}
+        rx={1.5}
+        ry={1.5}
+        fill={fill}
+      />
+    );
+  })}
+</svg>
