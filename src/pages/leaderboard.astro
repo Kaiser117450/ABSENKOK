@@ -4,9 +4,53 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { loadSiteLeaderboard } from '../lib/leaderboard';
+import {
+  defaultLeaderboardSortDirection,
+  loadSiteLeaderboard,
+  parseLeaderboardSortDirection,
+  parseLeaderboardSortKey,
+  sortLeaderboardEntries,
+  type LeaderboardSortDirection,
+  type LeaderboardSortKey,
+} from '../lib/leaderboard';
 
 const state = await loadSiteLeaderboard();
+
+const sortOptions: Array<{
+  key: LeaderboardSortKey;
+  label: string;
+}> = [
+  { key: 'score', label: 'Skor' },
+  { key: 'streak', label: 'Streak' },
+  { key: 'safe', label: 'Hari aman' },
+  { key: 'issues', label: 'Hari bermasalah' },
+  { key: 'late', label: 'Terlambat' },
+  { key: 'absence', label: 'Tidak hadir' },
+  { key: 'shortWork', label: 'Kurang jam' },
+  { key: 'excessBreak', label: 'Istirahat berlebih' },
+  { key: 'unresolved', label: 'Belum pulang' },
+  { key: 'overtime', label: 'Lembur' },
+  { key: 'measuredDays', label: 'Hari terukur' },
+  { key: 'name', label: 'Nama' },
+  { key: 'outlet', label: 'Cabang' },
+];
+
+const activeSortKey = parseLeaderboardSortKey(Astro.url.searchParams.get('sort'));
+const requestedDirection = parseLeaderboardSortDirection(
+  Astro.url.searchParams.get('dir'),
+);
+const activeDirection =
+  Astro.url.searchParams.has('dir')
+    ? requestedDirection
+    : defaultLeaderboardSortDirection(activeSortKey);
+
+const sortedEntries = state.ok
+  ? sortLeaderboardEntries(
+      state.leaderboard.entries,
+      activeSortKey,
+      activeDirection,
+    )
+  : [];
 
 function segmentWidth(value: number, total: number) {
   return `${(value / Math.max(total, 1)) * 100}%`;
@@ -23,6 +67,39 @@ function scoreToneClass(tone: string) {
 function smallFlameId(rank: number) {
   return `flameGradientSmall-${rank}`;
 }
+
+function buildSortHref(sortKey: LeaderboardSortKey) {
+  const params = new URLSearchParams(Astro.url.searchParams);
+  const nextDirection =
+    activeSortKey === sortKey
+      ? activeDirection === 'desc'
+        ? 'asc'
+        : 'desc'
+      : defaultLeaderboardSortDirection(sortKey);
+  params.set('sort', sortKey);
+  params.set('dir', nextDirection);
+  return `/leaderboard?${params.toString()}`;
+}
+
+function sortDirectionLabel(direction: LeaderboardSortDirection) {
+  return direction === 'desc' ? 'menurun' : 'menaik';
+}
+
+function sortIndicator(sortKey: LeaderboardSortKey) {
+  if (sortKey !== activeSortKey) return '';
+  return activeDirection === 'desc' ? ' ↓' : ' ↑';
+}
+
+function issueRate(issueDays: number, measuredDays: number) {
+  if (measuredDays <= 0) return '0%';
+  return `${Math.round((issueDays / measuredDays) * 100)}%`;
+}
+
+function sourceLabel(source: 'public_rpc' | 'admin_fallback') {
+  return source === 'public_rpc'
+    ? 'Menggunakan read model publik'
+    : 'Menggunakan fallback server-side';
+}
 ---
 
 <BaseLayout
@@ -35,22 +112,23 @@ function smallFlameId(rank: number) {
     <section class="mx-auto max-w-7xl px-6 pb-8 pt-10 md:pb-12 md:pt-14">
       <div class="rounded-[2rem] border border-brand-border bg-white/92 px-6 py-7 shadow-[0_24px_70px_-40px_rgba(56,66,89,0.4)] backdrop-blur-sm md:px-8 md:py-9">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div class="max-w-3xl">
+          <div class="max-w-4xl">
             <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-pink">
               Leaderboard
             </p>
             <h1 class="mt-3 text-3xl font-black tracking-tight text-brand-navy md:text-5xl">
-              Penilaian karyawan lintas cabang dalam satu papan peringkat.
+              Peringkat karyawan yang lebih gampang dibaca, diurutkan, dan diaudit.
             </h1>
-            <p class="mt-4 max-w-2xl text-sm leading-7 text-brand-text-secondary md:text-base">
-              Skor diringkas dari konsistensi hadir, streak aktif, hari aman, keterlambatan,
-              kurang jam kerja, istirahat berlebih, overtime, dan hari yang masih perlu
-              tindak lanjut.
+            <p class="mt-4 max-w-3xl text-sm leading-7 text-brand-text-secondary md:text-base">
+              Posisi utama tetap dihitung dari skor disiplin, tetapi tabel di bawah
+              bisa diurutkan ulang berdasarkan streak, hari aman, hari bermasalah,
+              keterlambatan, ketidakhadiran, kurang jam kerja, istirahat berlebih,
+              belum pulang, lembur, nama, atau cabang.
             </p>
           </div>
 
           {state.ok && (
-            <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
+            <div class="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
               <div class="rounded-2xl border border-brand-border bg-brand-surface px-4 py-3">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
                   Periode aktif
@@ -62,13 +140,13 @@ function smallFlameId(rank: number) {
               </div>
               <div class="rounded-2xl border border-brand-border bg-brand-surface px-4 py-3">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
-                  Karyawan dinilai
+                  Sumber data
                 </p>
                 <p class="mt-2 text-lg font-bold text-brand-navy">
-                  {state.leaderboard.summary.ratedEmployeeCount}/{state.leaderboard.summary.employeeCount}
+                  {sourceLabel(state.leaderboard.source)}
                 </p>
                 <p class="mt-1 text-xs text-brand-text-secondary">
-                  Hanya yang punya data bulan berjalan dihitung penuh.
+                  {state.leaderboard.summary.ratedEmployeeCount}/{state.leaderboard.summary.employeeCount} karyawan terukur.
                 </p>
               </div>
             </div>
@@ -88,7 +166,7 @@ function smallFlameId(rank: number) {
               {state.leaderboard.summary.averageScore}
             </p>
             <p class="mt-2 text-sm text-brand-text-secondary">
-              Menunjukkan stabilitas performa bulan ini.
+              Rata-rata nilai disiplin bulan berjalan.
             </p>
           </div>
           <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
@@ -99,7 +177,7 @@ function smallFlameId(rank: number) {
               {state.leaderboard.summary.topScore}
             </p>
             <p class="mt-2 text-sm text-brand-text-secondary">
-              Posisi puncak bulan ini.
+              Puncak performa yang tercatat bulan ini.
             </p>
           </div>
           <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
@@ -125,7 +203,7 @@ function smallFlameId(rank: number) {
                   {state.leaderboard.summary.bestStreak}
                 </p>
                 <p class="text-sm text-brand-text-secondary">
-                  Hari streak aktif terpanjang di leaderboard.
+                  Hari streak aktif terpanjang.
                 </p>
               </div>
             </div>
@@ -138,31 +216,51 @@ function smallFlameId(rank: number) {
               {state.leaderboard.summary.totalIssueDays}
             </p>
             <p class="mt-2 text-sm text-brand-text-secondary">
-              Akumulasi hari dengan sinyal yang perlu perhatian.
+              Akumulasi sinyal yang masih perlu perhatian.
             </p>
           </div>
         </div>
 
         <div class="mt-8 rounded-[2rem] border border-brand-border bg-white p-5 shadow-[0_24px_70px_-48px_rgba(56,66,89,0.35)] md:p-7">
-          <div class="flex flex-col gap-4 border-b border-brand-border pb-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h2 class="text-2xl font-black tracking-tight text-brand-navy">
-                Peringkat bulan berjalan
-              </h2>
-              <p class="mt-2 max-w-3xl text-sm leading-7 text-brand-text-secondary">
-                Mini chart pada setiap kartu menunjukkan proporsi hari aman, hari bermasalah,
-                hari netral, dan hari overtime-only untuk karyawan tersebut.
-              </p>
+          <div class="border-b border-brand-border pb-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 class="text-2xl font-black tracking-tight text-brand-navy">
+                  Urutkan leaderboard sesuai fokus analisis
+                </h2>
+                <p class="mt-2 max-w-3xl text-sm leading-7 text-brand-text-secondary">
+                  Posisi tetap menunjukkan rank skor asli. Urutan tampilan di bawah bisa
+                  diubah untuk membaca siapa yang paling tinggi nilainya, siapa yang
+                  paling sering terlambat, atau siapa yang paling stabil hari amannya.
+                </p>
+              </div>
+              <div class="rounded-2xl border border-brand-border bg-brand-surface px-4 py-3 text-sm text-brand-text-secondary">
+                <span class="font-semibold text-brand-navy">Sort aktif:</span>
+                {' '}
+                {sortOptions.find((option) => option.key === activeSortKey)?.label}
+                {' '}
+                <span class="lowercase">{sortDirectionLabel(activeDirection)}</span>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-3 text-xs font-medium text-brand-text-secondary">
-              <span class="legend-chip"><span class="legend-swatch bg-emerald-400"></span>Hari aman</span>
-              <span class="legend-chip"><span class="legend-swatch bg-rose-500"></span>Hari bermasalah</span>
-              <span class="legend-chip"><span class="legend-swatch bg-sky-400"></span>Overtime-only</span>
-              <span class="legend-chip"><span class="legend-swatch bg-slate-300"></span>Hari netral</span>
+
+            <div class="mt-5 overflow-x-auto">
+              <div class="flex min-w-max gap-2">
+                {sortOptions.map((option) => {
+                  const isActive = option.key === activeSortKey;
+                  return (
+                    <a
+                      href={buildSortHref(option.key)}
+                      class={`sort-chip ${isActive ? 'sort-chip-active' : ''}`}
+                    >
+                      {option.label}{sortIndicator(option.key)}
+                    </a>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {state.leaderboard.entries.length === 0 ? (
+          {sortedEntries.length === 0 ? (
             <div class="rounded-3xl border border-dashed border-brand-border bg-brand-surface px-6 py-10 text-center">
               <h3 class="text-xl font-bold text-brand-navy">Belum ada data leaderboard</h3>
               <p class="mt-3 text-sm leading-7 text-brand-text-secondary">
@@ -170,20 +268,42 @@ function smallFlameId(rank: number) {
               </p>
             </div>
           ) : (
-            <div class="mt-6 space-y-4">
-              {state.leaderboard.entries.map((entry) => (
-                  <article class={`leaderboard-row ${entry.rank <= 3 ? 'leaderboard-row-top' : ''}`}>
-                    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                      <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-start gap-4">
-                          <div class={`rank-badge ${entry.rank <= 3 ? 'rank-badge-top' : ''}`}>
-                            #{entry.rank}
+            <>
+              <div class="mt-6 hidden overflow-x-auto xl:block">
+                <table class="min-w-[1480px] table-fixed border-separate border-spacing-y-3">
+                  <thead>
+                    <tr>
+                      <th class="table-head w-[90px]">Posisi</th>
+                      <th class="table-head w-[280px]">Karyawan</th>
+                      <th class="table-head w-[180px]">Cabang</th>
+                      <th class="table-head w-[110px] text-right">Skor</th>
+                      <th class="table-head w-[110px] text-right">Streak</th>
+                      <th class="table-head w-[110px] text-right">Aman</th>
+                      <th class="table-head w-[120px] text-right">Masalah</th>
+                      <th class="table-head w-[100px] text-right">Telat</th>
+                      <th class="table-head w-[120px] text-right">Tidak hadir</th>
+                      <th class="table-head w-[120px] text-right">Kurang jam</th>
+                      <th class="table-head w-[140px] text-right">Istirahat lebih</th>
+                      <th class="table-head w-[130px] text-right">Belum pulang</th>
+                      <th class="table-head w-[110px] text-right">Lembur</th>
+                      <th class="table-head w-[110px] text-right">Hari ukur</th>
+                      <th class="table-head w-[320px]">Insight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedEntries.map((entry) => (
+                      <tr class="table-row">
+                        <td class="table-cell">
+                          <div class="flex items-center gap-3">
+                            <span class={`rank-badge rank-badge-inline ${entry.rank <= 3 ? 'rank-badge-top' : ''}`}>
+                              #{entry.rank}
+                            </span>
                           </div>
-                          <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                              <h3 class="truncate text-xl font-black tracking-tight text-brand-navy">
-                                {entry.employeeName}
-                              </h3>
+                        </td>
+                        <td class="table-cell">
+                          <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                              <span class="font-bold text-brand-navy">{entry.employeeName}</span>
                               {entry.currentStreak > 0 && (
                                 <span class="streak-pill">
                                   <span class="flame-shell flame-shell-sm" aria-hidden="true">
@@ -199,66 +319,117 @@ function smallFlameId(rank: number) {
                                       </defs>
                                     </svg>
                                   </span>
-                                  {entry.currentStreak} hari streak
+                                  {entry.currentStreak}
                                 </span>
                               )}
                             </div>
-                            <p class="mt-2 text-sm font-medium text-brand-text-secondary">
+                            <div class="text-sm text-brand-text-secondary">
+                              {entry.position ?? 'Tanpa jabatan'}
+                            </div>
+                            <div class="mini-chart-track" aria-hidden="true">
+                              <span class="mini-chart-segment bg-emerald-400" style={`width:${segmentWidth(entry.safeDays, entry.measuredDays)}`}></span>
+                              <span class="mini-chart-segment bg-rose-500" style={`width:${segmentWidth(entry.issueDays, entry.measuredDays)}`}></span>
+                              <span class="mini-chart-segment bg-sky-400" style={`width:${segmentWidth(entry.overtimeOnlyDays, entry.measuredDays)}`}></span>
+                              <span class="mini-chart-segment bg-slate-300" style={`width:${segmentWidth(entry.neutralDays, entry.measuredDays)}`}></span>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="table-cell text-sm text-brand-text-secondary">
+                          {entry.homeOutletName ?? 'Tanpa cabang'}
+                        </td>
+                        <td class="table-cell text-right">
+                          <span class={`score-chip ${scoreToneClass(entry.scoreTone)}`}>
+                            {entry.score}
+                          </span>
+                        </td>
+                        <td class="table-cell table-number">{entry.currentStreak}</td>
+                        <td class="table-cell table-number">{entry.safeDays}</td>
+                        <td class="table-cell table-number">
+                          {entry.issueDays}
+                          <span class="table-subnumber">{issueRate(entry.issueDays, entry.measuredDays)}</span>
+                        </td>
+                        <td class="table-cell table-number">{entry.lateCount}</td>
+                        <td class="table-cell table-number">{entry.absenceCount}</td>
+                        <td class="table-cell table-number">{entry.shortWorkCount}</td>
+                        <td class="table-cell table-number">{entry.excessBreakCount}</td>
+                        <td class="table-cell table-number">{entry.unresolvedCount}</td>
+                        <td class="table-cell table-number">{entry.overtimeCount}</td>
+                        <td class="table-cell table-number">{entry.measuredDays}</td>
+                        <td class="table-cell text-sm leading-6 text-brand-text-secondary">
+                          {entry.insight}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-6 space-y-4 xl:hidden">
+                {sortedEntries.map((entry) => (
+                  <article class="leaderboard-card-mobile">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-3">
+                          <span class={`rank-badge rank-badge-inline ${entry.rank <= 3 ? 'rank-badge-top' : ''}`}>
+                            #{entry.rank}
+                          </span>
+                          <div class="min-w-0">
+                            <h3 class="truncate text-lg font-black text-brand-navy">
+                              {entry.employeeName}
+                            </h3>
+                            <p class="truncate text-sm text-brand-text-secondary">
                               {entry.position ?? 'Tanpa jabatan'}
                               {entry.homeOutletName && <span> · {entry.homeOutletName}</span>}
                             </p>
-                            <p class="mt-3 max-w-3xl text-sm leading-7 text-brand-text-secondary">
-                              {entry.insight}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div class="mt-5">
-                          <div class="mini-chart-track" aria-hidden="true">
-                            <span class="mini-chart-segment bg-emerald-400" style={`width:${segmentWidth(entry.safeDays, entry.measuredDays)}`}></span>
-                            <span class="mini-chart-segment bg-rose-500" style={`width:${segmentWidth(entry.issueDays, entry.measuredDays)}`}></span>
-                            <span class="mini-chart-segment bg-sky-400" style={`width:${segmentWidth(entry.overtimeOnlyDays, entry.measuredDays)}`}></span>
-                            <span class="mini-chart-segment bg-slate-300" style={`width:${segmentWidth(entry.neutralDays, entry.measuredDays)}`}></span>
-                          </div>
-                          <div class="mt-3 grid gap-2 text-sm text-brand-text-secondary sm:grid-cols-2 xl:grid-cols-4">
-                            <div class="metric-tile">
-                              <span class="metric-label">Hari aman</span>
-                              <strong class="metric-value">{entry.safeDays}</strong>
-                            </div>
-                            <div class="metric-tile">
-                              <span class="metric-label">Hari bermasalah</span>
-                              <strong class="metric-value">{entry.issueDays}</strong>
-                            </div>
-                            <div class="metric-tile">
-                              <span class="metric-label">Overtime-only</span>
-                              <strong class="metric-value">{entry.overtimeOnlyDays}</strong>
-                            </div>
-                            <div class="metric-tile">
-                              <span class="metric-label">Hari terukur</span>
-                              <strong class="metric-value">{entry.measuredDays}</strong>
-                            </div>
                           </div>
                         </div>
                       </div>
-
-                      <aside class="score-panel">
-                        <div class={`score-badge ${scoreToneClass(entry.scoreTone)}`}>
-                          <span class="score-number">{entry.score}</span>
-                          <span class="score-label">{entry.scoreLabel}</span>
-                        </div>
-                        <dl class="mt-4 grid grid-cols-2 gap-2 text-left text-sm text-brand-text-secondary">
-                          <div class="detail-chip"><dt>Terlambat</dt><dd>{entry.lateCount}</dd></div>
-                          <div class="detail-chip"><dt>Tidak hadir</dt><dd>{entry.absenceCount}</dd></div>
-                          <div class="detail-chip"><dt>Kurang jam</dt><dd>{entry.shortWorkCount}</dd></div>
-                          <div class="detail-chip"><dt>Istirahat lebih</dt><dd>{entry.excessBreakCount}</dd></div>
-                          <div class="detail-chip"><dt>Overtime</dt><dd>{entry.overtimeCount}</dd></div>
-                          <div class="detail-chip"><dt>Belum pulang</dt><dd>{entry.unresolvedCount}</dd></div>
-                        </dl>
-                      </aside>
+                      <div class={`score-chip ${scoreToneClass(entry.scoreTone)}`}>
+                        {entry.score}
+                      </div>
                     </div>
+
+                    <div class="mt-4 mini-chart-track" aria-hidden="true">
+                      <span class="mini-chart-segment bg-emerald-400" style={`width:${segmentWidth(entry.safeDays, entry.measuredDays)}`}></span>
+                      <span class="mini-chart-segment bg-rose-500" style={`width:${segmentWidth(entry.issueDays, entry.measuredDays)}`}></span>
+                      <span class="mini-chart-segment bg-sky-400" style={`width:${segmentWidth(entry.overtimeOnlyDays, entry.measuredDays)}`}></span>
+                      <span class="mini-chart-segment bg-slate-300" style={`width:${segmentWidth(entry.neutralDays, entry.measuredDays)}`}></span>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <div class="metric-tile">
+                        <span class="metric-label">Streak</span>
+                        <strong class="metric-value">{entry.currentStreak}</strong>
+                      </div>
+                      <div class="metric-tile">
+                        <span class="metric-label">Aman</span>
+                        <strong class="metric-value">{entry.safeDays}</strong>
+                      </div>
+                      <div class="metric-tile">
+                        <span class="metric-label">Masalah</span>
+                        <strong class="metric-value">{entry.issueDays}</strong>
+                      </div>
+                      <div class="metric-tile">
+                        <span class="metric-label">Telat</span>
+                        <strong class="metric-value">{entry.lateCount}</strong>
+                      </div>
+                      <div class="metric-tile">
+                        <span class="metric-label">Absen</span>
+                        <strong class="metric-value">{entry.absenceCount}</strong>
+                      </div>
+                      <div class="metric-tile">
+                        <span class="metric-label">Belum pulang</span>
+                        <strong class="metric-value">{entry.unresolvedCount}</strong>
+                      </div>
+                    </div>
+
+                    <p class="mt-4 text-sm leading-7 text-brand-text-secondary">
+                      {entry.insight}
+                    </p>
                   </article>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -291,36 +462,89 @@ function smallFlameId(rank: number) {
 </BaseLayout>
 
 <style>
-  .leaderboard-row {
+  .sort-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     border: 1px solid var(--color-brand-border);
-    border-radius: 1.75rem;
+    border-radius: 999px;
+    padding: 0.65rem 0.9rem;
+    background: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-brand-text-secondary);
+    transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+  }
+
+  .sort-chip:hover {
+    border-color: color-mix(in srgb, var(--color-brand-pink) 35%, var(--color-brand-border));
+    color: var(--color-brand-pink);
+  }
+
+  .sort-chip-active {
+    border-color: color-mix(in srgb, var(--color-brand-pink) 50%, var(--color-brand-border));
+    background: color-mix(in srgb, var(--color-brand-pink) 9%, white);
+    color: var(--color-brand-pink-dark);
+  }
+
+  .table-head {
+    padding: 0 0.85rem 0.75rem;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand-text-muted);
+  }
+
+  .table-row {
+    background:
+      radial-gradient(circle at top right, rgba(247, 56, 89, 0.08), transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 250, 245, 0.88));
+    box-shadow: 0 20px 55px -45px rgba(56, 66, 89, 0.5);
+  }
+
+  .table-cell {
+    border-top: 1px solid var(--color-brand-border);
+    border-bottom: 1px solid var(--color-brand-border);
+    padding: 1rem 0.85rem;
+    vertical-align: top;
+    background: transparent;
+  }
+
+  .table-cell:first-child {
+    border-left: 1px solid var(--color-brand-border);
+    border-radius: 1.4rem 0 0 1.4rem;
+  }
+
+  .table-cell:last-child {
+    border-right: 1px solid var(--color-brand-border);
+    border-radius: 0 1.4rem 1.4rem 0;
+  }
+
+  .table-number {
+    text-align: right;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-brand-navy);
+  }
+
+  .table-subnumber {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-brand-text-muted);
+  }
+
+  .leaderboard-card-mobile {
+    border: 1px solid var(--color-brand-border);
+    border-radius: 1.6rem;
     background:
       radial-gradient(circle at top right, rgba(247, 56, 89, 0.08), transparent 32%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 250, 245, 0.9));
-    padding: 1.25rem;
+    padding: 1.1rem;
     box-shadow: 0 20px 55px -45px rgba(56, 66, 89, 0.55);
-  }
-
-  .leaderboard-row-top {
-    border-color: color-mix(in srgb, var(--color-brand-pink) 28%, white);
-    box-shadow: 0 24px 60px -42px rgba(247, 56, 89, 0.45);
-  }
-
-  .legend-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    border: 1px solid var(--color-brand-border);
-    border-radius: 999px;
-    padding: 0.45rem 0.7rem;
-    background: rgba(255, 255, 255, 0.9);
-  }
-
-  .legend-swatch {
-    width: 0.65rem;
-    height: 0.65rem;
-    border-radius: 999px;
-    display: inline-block;
   }
 
   .rank-badge {
@@ -335,6 +559,14 @@ function smallFlameId(rank: number) {
     font-size: 1.05rem;
     font-weight: 900;
     letter-spacing: -0.03em;
+  }
+
+  .rank-badge-inline {
+    min-width: 3.1rem;
+    width: 3.1rem;
+    height: 3.1rem;
+    font-size: 0.9rem;
+    flex-shrink: 0;
   }
 
   .rank-badge-top {
@@ -377,21 +609,15 @@ function smallFlameId(rank: number) {
     color: var(--color-brand-navy);
   }
 
-  .score-panel {
-    width: 100%;
-    max-width: 21rem;
-    border: 1px solid var(--color-brand-border);
-    border-radius: 1.5rem;
-    background: rgba(255, 255, 255, 0.84);
-    padding: 1rem;
-  }
-
-  .score-badge {
-    border-radius: 1.25rem;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  .score-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 5rem;
+    border-radius: 999px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.92rem;
+    font-weight: 900;
     color: white;
   }
 
@@ -415,52 +641,15 @@ function smallFlameId(rank: number) {
     background: linear-gradient(135deg, #6b7280, #94a3b8);
   }
 
-  .score-number {
-    font-size: 2.25rem;
-    line-height: 1;
-    font-weight: 900;
-    letter-spacing: -0.05em;
-  }
-
-  .score-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-  }
-
-  .detail-chip {
-    border: 1px solid var(--color-brand-border);
-    border-radius: 1rem;
-    padding: 0.65rem 0.75rem;
-    background: rgba(240, 250, 245, 0.72);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .detail-chip dt {
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--color-brand-text-muted);
-  }
-
-  .detail-chip dd {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 800;
-    color: var(--color-brand-navy);
-  }
-
   .streak-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
     border-radius: 999px;
-    padding: 0.45rem 0.8rem;
+    padding: 0.35rem 0.65rem;
     background: rgba(255, 138, 61, 0.12);
     color: #b24712;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     font-weight: 800;
   }
 
@@ -475,8 +664,8 @@ function smallFlameId(rank: number) {
   }
 
   .flame-shell-sm {
-    width: 1.35rem;
-    height: 1.35rem;
+    width: 1.2rem;
+    height: 1.2rem;
   }
 
   .flame-icon {
@@ -487,8 +676,8 @@ function smallFlameId(rank: number) {
   }
 
   .flame-shell-sm .flame-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 0.95rem;
+    height: 0.95rem;
   }
 
   @keyframes flame-flicker {
@@ -503,12 +692,6 @@ function smallFlameId(rank: number) {
     60% {
       transform: rotate(-1deg) scale(0.95);
       filter: drop-shadow(0 0 5px rgba(255, 138, 61, 0.22));
-    }
-  }
-
-  @media (max-width: 1279px) {
-    .score-panel {
-      max-width: none;
     }
   }
 
