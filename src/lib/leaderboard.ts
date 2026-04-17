@@ -6,6 +6,23 @@ import { createSupabasePublicClient } from './supabase/public';
 type LeaderboardSource = 'public_rpc' | 'admin_fallback';
 type ScoreTone = 'excellent' | 'steady' | 'warning' | 'critical' | 'unrated';
 
+export type LeaderboardSortKey =
+  | 'score'
+  | 'streak'
+  | 'safe'
+  | 'issues'
+  | 'late'
+  | 'absence'
+  | 'shortWork'
+  | 'excessBreak'
+  | 'unresolved'
+  | 'overtime'
+  | 'measuredDays'
+  | 'name'
+  | 'outlet';
+
+export type LeaderboardSortDirection = 'asc' | 'desc';
+
 interface SiteLeaderboardRpcRow {
   employee_id: string;
   employee_name: string;
@@ -99,6 +116,55 @@ export interface SiteLeaderboardModel {
 export type SiteLeaderboardState =
   | { ok: true; leaderboard: SiteLeaderboardModel }
   | { ok: false; title: string; message: string };
+
+export function parseLeaderboardSortKey(value: string | null | undefined): LeaderboardSortKey {
+  switch (value) {
+    case 'streak':
+    case 'safe':
+    case 'issues':
+    case 'late':
+    case 'absence':
+    case 'shortWork':
+    case 'excessBreak':
+    case 'unresolved':
+    case 'overtime':
+    case 'measuredDays':
+    case 'name':
+    case 'outlet':
+      return value;
+    default:
+      return 'score';
+  }
+}
+
+export function parseLeaderboardSortDirection(
+  value: string | null | undefined,
+): LeaderboardSortDirection {
+  return value === 'asc' ? 'asc' : 'desc';
+}
+
+export function defaultLeaderboardSortDirection(
+  sortKey: LeaderboardSortKey,
+): LeaderboardSortDirection {
+  return sortKey === 'name' || sortKey === 'outlet' ? 'asc' : 'desc';
+}
+
+export function sortLeaderboardEntries(
+  entries: LeaderboardEntry[],
+  sortKey: LeaderboardSortKey,
+  direction: LeaderboardSortDirection,
+) {
+  const multiplier = direction === 'asc' ? 1 : -1;
+  const sorted = [...entries];
+
+  sorted.sort((left, right) => {
+    const primary = compareSortValue(left, right, sortKey) * multiplier;
+    if (primary !== 0) return primary;
+    return compareLeaderboardEntries(left, right);
+  });
+
+  return sorted;
+}
 
 export async function loadSiteLeaderboard(): Promise<SiteLeaderboardState> {
   const referenceDate = getPortalReferenceDate();
@@ -476,6 +542,43 @@ function compareLeaderboardEntries(left: LeaderboardEntry, right: LeaderboardEnt
   if (right.safeDays !== left.safeDays) return right.safeDays - left.safeDays;
   if (right.measuredDays !== left.measuredDays) return right.measuredDays - left.measuredDays;
   return left.employeeName.localeCompare(right.employeeName, 'id-ID');
+}
+
+function compareSortValue(
+  left: LeaderboardEntry,
+  right: LeaderboardEntry,
+  sortKey: LeaderboardSortKey,
+) {
+  switch (sortKey) {
+    case 'score':
+      return left.score - right.score;
+    case 'streak':
+      return left.currentStreak - right.currentStreak;
+    case 'safe':
+      return left.safeDays - right.safeDays;
+    case 'issues':
+      return left.issueDays - right.issueDays;
+    case 'late':
+      return left.lateCount - right.lateCount;
+    case 'absence':
+      return left.absenceCount - right.absenceCount;
+    case 'shortWork':
+      return left.shortWorkCount - right.shortWorkCount;
+    case 'excessBreak':
+      return left.excessBreakCount - right.excessBreakCount;
+    case 'unresolved':
+      return left.unresolvedCount - right.unresolvedCount;
+    case 'overtime':
+      return left.overtimeCount - right.overtimeCount;
+    case 'measuredDays':
+      return left.measuredDays - right.measuredDays;
+    case 'name':
+      return left.employeeName.localeCompare(right.employeeName, 'id-ID');
+    case 'outlet':
+      return (left.homeOutletName ?? '').localeCompare(right.homeOutletName ?? '', 'id-ID');
+    default:
+      return 0;
+  }
 }
 
 function buildLeaderboardErrorMessage(publicError: unknown, adminError: unknown) {
