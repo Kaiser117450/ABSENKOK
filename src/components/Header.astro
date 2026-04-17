@@ -3,6 +3,9 @@
 import { Image } from 'astro:assets';
 import { Menu, X, Download } from '@lucide/astro';
 import absenkokLogo from '../assets/images/ABSENKOK.png';
+
+const isLeaderboardPage = Astro.url.pathname === '/leaderboard';
+const homeAnchor = (hash: string) => (isLeaderboardPage ? `/${hash}` : hash);
 ---
 
 <header id="main-header" class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border transition-shadow duration-300">
@@ -23,22 +26,27 @@ import absenkokLogo from '../assets/images/ABSENKOK.png';
     <!-- Desktop Nav Links -->
     <ul class="hidden md:flex items-center gap-8">
       <li>
-        <a href="#fitur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href="/leaderboard" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+          Leaderboard
+        </a>
+      </li>
+      <li>
+        <a href={homeAnchor('#fitur')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Fitur
         </a>
       </li>
       <li>
-        <a href="#cara-kerja" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href={homeAnchor('#cara-kerja')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Cara Kerja
         </a>
       </li>
       <li>
-        <a href="#arsitektur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href={homeAnchor('#arsitektur')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Arsitektur
         </a>
       </li>
       <li>
-        <a href="#download" class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2 hover:bg-brand-pink-dark transition-colors duration-300 shadow-sm hover:shadow-md">
+        <a href={homeAnchor('#download')} class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2 hover:bg-brand-pink-dark transition-colors duration-300 shadow-sm hover:shadow-md">
           <Download size={16} />
           Download
         </a>
@@ -63,17 +71,20 @@ import absenkokLogo from '../assets/images/ABSENKOK.png';
     class="md:hidden hidden bg-white border-t border-brand-border"
   >
     <div class="px-6 py-5 space-y-1">
-      <a href="#fitur" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+      <a href="/leaderboard" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+        Leaderboard
+      </a>
+      <a href={homeAnchor('#fitur')} class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
         Fitur
       </a>
-      <a href="#cara-kerja" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+      <a href={homeAnchor('#cara-kerja')} class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
         Cara Kerja
       </a>
-      <a href="#arsitektur" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
+      <a href={homeAnchor('#arsitektur')} class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
         Arsitektur
       </a>
       <div class="pt-3">
-        <a href="#download" class="mobile-link inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2.5 hover:bg-brand-pink-dark transition-colors duration-300">
+        <a href={homeAnchor('#download')} class="mobile-link inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2.5 hover:bg-brand-pink-dark transition-colors duration-300">
           <Download size={16} />
           Download APK
         </a>

@@ -1,0 +1,520 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { loadSiteLeaderboard } from '../lib/leaderboard';
+
+const state = await loadSiteLeaderboard();
+
+function segmentWidth(value: number, total: number) {
+  return `${(value / Math.max(total, 1)) * 100}%`;
+}
+
+function scoreToneClass(tone: string) {
+  if (tone === 'excellent') return 'score-excellent';
+  if (tone === 'steady') return 'score-steady';
+  if (tone === 'warning') return 'score-warning';
+  if (tone === 'critical') return 'score-critical';
+  return 'score-unrated';
+}
+
+function smallFlameId(rank: number) {
+  return `flameGradientSmall-${rank}`;
+}
+---
+
+<BaseLayout
+  title="Leaderboard Karyawan — ABSENKOK"
+  description="Peringkat karyawan lintas cabang berdasarkan konsistensi hadir, streak, dan sinyal operasional bulan berjalan."
+>
+  <Header />
+
+  <main class="bg-linear-to-b from-brand-surface via-white to-white">
+    <section class="mx-auto max-w-7xl px-6 pb-8 pt-10 md:pb-12 md:pt-14">
+      <div class="rounded-[2rem] border border-brand-border bg-white/92 px-6 py-7 shadow-[0_24px_70px_-40px_rgba(56,66,89,0.4)] backdrop-blur-sm md:px-8 md:py-9">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-3xl">
+            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-pink">
+              Leaderboard
+            </p>
+            <h1 class="mt-3 text-3xl font-black tracking-tight text-brand-navy md:text-5xl">
+              Penilaian karyawan lintas cabang dalam satu papan peringkat.
+            </h1>
+            <p class="mt-4 max-w-2xl text-sm leading-7 text-brand-text-secondary md:text-base">
+              Skor diringkas dari konsistensi hadir, streak aktif, hari aman, keterlambatan,
+              kurang jam kerja, istirahat berlebih, overtime, dan hari yang masih perlu
+              tindak lanjut.
+            </p>
+          </div>
+
+          {state.ok && (
+            <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
+              <div class="rounded-2xl border border-brand-border bg-brand-surface px-4 py-3">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+                  Periode aktif
+                </p>
+                <p class="mt-2 text-lg font-bold text-brand-navy">{state.leaderboard.monthLabel}</p>
+                <p class="mt-1 text-xs text-brand-text-secondary">
+                  Update hingga {state.leaderboard.referenceDate}
+                </p>
+              </div>
+              <div class="rounded-2xl border border-brand-border bg-brand-surface px-4 py-3">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+                  Karyawan dinilai
+                </p>
+                <p class="mt-2 text-lg font-bold text-brand-navy">
+                  {state.leaderboard.summary.ratedEmployeeCount}/{state.leaderboard.summary.employeeCount}
+                </p>
+                <p class="mt-1 text-xs text-brand-text-secondary">
+                  Hanya yang punya data bulan berjalan dihitung penuh.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+
+    {state.ok ? (
+      <section class="mx-auto max-w-7xl px-6 pb-16">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+              Skor rata-rata
+            </p>
+            <p class="mt-3 text-4xl font-black text-brand-navy">
+              {state.leaderboard.summary.averageScore}
+            </p>
+            <p class="mt-2 text-sm text-brand-text-secondary">
+              Menunjukkan stabilitas performa bulan ini.
+            </p>
+          </div>
+          <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+              Skor tertinggi
+            </p>
+            <p class="mt-3 text-4xl font-black text-brand-navy">
+              {state.leaderboard.summary.topScore}
+            </p>
+            <p class="mt-2 text-sm text-brand-text-secondary">
+              Posisi puncak bulan ini.
+            </p>
+          </div>
+          <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+              Streak terbaik
+            </p>
+            <div class="mt-3 flex items-center gap-3">
+              <div class="flame-shell" aria-hidden="true">
+                <svg class="flame-icon" viewBox="0 0 48 48" fill="none">
+                  <path d="M24 4c2 8-3 11-3 16 0 2 1 4 3 5 1-5 9-8 9-16 6 6 9 12 9 20 0 10-7 17-18 17S6 39 6 29c0-8 4-14 10-20-1 6 1 10 4 12 0-6 4-9 4-17Z" fill="url(#flameGradient)" />
+                  <path d="M24 20c4 4 6 7 6 11 0 4-3 7-6 7s-6-3-6-7c0-3 2-5 6-11Z" fill="#fff5d6" opacity="0.92" />
+                  <defs>
+                    <linearGradient id="flameGradient" x1="24" y1="4" x2="24" y2="46" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#ff8a3d" />
+                      <stop offset="0.52" stop-color="#f73859" />
+                      <stop offset="1" stop-color="#ae1634" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <div>
+                <p class="text-4xl font-black text-brand-navy">
+                  {state.leaderboard.summary.bestStreak}
+                </p>
+                <p class="text-sm text-brand-text-secondary">
+                  Hari streak aktif terpanjang di leaderboard.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-[1.75rem] border border-brand-border bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-text-muted">
+              Hari bermasalah
+            </p>
+            <p class="mt-3 text-4xl font-black text-brand-navy">
+              {state.leaderboard.summary.totalIssueDays}
+            </p>
+            <p class="mt-2 text-sm text-brand-text-secondary">
+              Akumulasi hari dengan sinyal yang perlu perhatian.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-8 rounded-[2rem] border border-brand-border bg-white p-5 shadow-[0_24px_70px_-48px_rgba(56,66,89,0.35)] md:p-7">
+          <div class="flex flex-col gap-4 border-b border-brand-border pb-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 class="text-2xl font-black tracking-tight text-brand-navy">
+                Peringkat bulan berjalan
+              </h2>
+              <p class="mt-2 max-w-3xl text-sm leading-7 text-brand-text-secondary">
+                Mini chart pada setiap kartu menunjukkan proporsi hari aman, hari bermasalah,
+                hari netral, dan hari overtime-only untuk karyawan tersebut.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-3 text-xs font-medium text-brand-text-secondary">
+              <span class="legend-chip"><span class="legend-swatch bg-emerald-400"></span>Hari aman</span>
+              <span class="legend-chip"><span class="legend-swatch bg-rose-500"></span>Hari bermasalah</span>
+              <span class="legend-chip"><span class="legend-swatch bg-sky-400"></span>Overtime-only</span>
+              <span class="legend-chip"><span class="legend-swatch bg-slate-300"></span>Hari netral</span>
+            </div>
+          </div>
+
+          {state.leaderboard.entries.length === 0 ? (
+            <div class="rounded-3xl border border-dashed border-brand-border bg-brand-surface px-6 py-10 text-center">
+              <h3 class="text-xl font-bold text-brand-navy">Belum ada data leaderboard</h3>
+              <p class="mt-3 text-sm leading-7 text-brand-text-secondary">
+                Data akan muncul setelah rekap bulan berjalan tersedia untuk minimal satu karyawan.
+              </p>
+            </div>
+          ) : (
+            <div class="mt-6 space-y-4">
+              {state.leaderboard.entries.map((entry) => (
+                  <article class={`leaderboard-row ${entry.rank <= 3 ? 'leaderboard-row-top' : ''}`}>
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                      <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-start gap-4">
+                          <div class={`rank-badge ${entry.rank <= 3 ? 'rank-badge-top' : ''}`}>
+                            #{entry.rank}
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                              <h3 class="truncate text-xl font-black tracking-tight text-brand-navy">
+                                {entry.employeeName}
+                              </h3>
+                              {entry.currentStreak > 0 && (
+                                <span class="streak-pill">
+                                  <span class="flame-shell flame-shell-sm" aria-hidden="true">
+                                    <svg class="flame-icon" viewBox="0 0 48 48" fill="none">
+                                      <path d="M24 4c2 8-3 11-3 16 0 2 1 4 3 5 1-5 9-8 9-16 6 6 9 12 9 20 0 10-7 17-18 17S6 39 6 29c0-8 4-14 10-20-1 6 1 10 4 12 0-6 4-9 4-17Z" fill={`url(#${smallFlameId(entry.rank)})`} />
+                                      <path d="M24 20c4 4 6 7 6 11 0 4-3 7-6 7s-6-3-6-7c0-3 2-5 6-11Z" fill="#fff5d6" opacity="0.92" />
+                                      <defs>
+                                        <linearGradient id={smallFlameId(entry.rank)} x1="24" y1="4" x2="24" y2="46" gradientUnits="userSpaceOnUse">
+                                          <stop stop-color="#ff8a3d" />
+                                          <stop offset="0.52" stop-color="#f73859" />
+                                          <stop offset="1" stop-color="#ae1634" />
+                                        </linearGradient>
+                                      </defs>
+                                    </svg>
+                                  </span>
+                                  {entry.currentStreak} hari streak
+                                </span>
+                              )}
+                            </div>
+                            <p class="mt-2 text-sm font-medium text-brand-text-secondary">
+                              {entry.position ?? 'Tanpa jabatan'}
+                              {entry.homeOutletName && <span> · {entry.homeOutletName}</span>}
+                            </p>
+                            <p class="mt-3 max-w-3xl text-sm leading-7 text-brand-text-secondary">
+                              {entry.insight}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="mt-5">
+                          <div class="mini-chart-track" aria-hidden="true">
+                            <span class="mini-chart-segment bg-emerald-400" style={`width:${segmentWidth(entry.safeDays, entry.measuredDays)}`}></span>
+                            <span class="mini-chart-segment bg-rose-500" style={`width:${segmentWidth(entry.issueDays, entry.measuredDays)}`}></span>
+                            <span class="mini-chart-segment bg-sky-400" style={`width:${segmentWidth(entry.overtimeOnlyDays, entry.measuredDays)}`}></span>
+                            <span class="mini-chart-segment bg-slate-300" style={`width:${segmentWidth(entry.neutralDays, entry.measuredDays)}`}></span>
+                          </div>
+                          <div class="mt-3 grid gap-2 text-sm text-brand-text-secondary sm:grid-cols-2 xl:grid-cols-4">
+                            <div class="metric-tile">
+                              <span class="metric-label">Hari aman</span>
+                              <strong class="metric-value">{entry.safeDays}</strong>
+                            </div>
+                            <div class="metric-tile">
+                              <span class="metric-label">Hari bermasalah</span>
+                              <strong class="metric-value">{entry.issueDays}</strong>
+                            </div>
+                            <div class="metric-tile">
+                              <span class="metric-label">Overtime-only</span>
+                              <strong class="metric-value">{entry.overtimeOnlyDays}</strong>
+                            </div>
+                            <div class="metric-tile">
+                              <span class="metric-label">Hari terukur</span>
+                              <strong class="metric-value">{entry.measuredDays}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <aside class="score-panel">
+                        <div class={`score-badge ${scoreToneClass(entry.scoreTone)}`}>
+                          <span class="score-number">{entry.score}</span>
+                          <span class="score-label">{entry.scoreLabel}</span>
+                        </div>
+                        <dl class="mt-4 grid grid-cols-2 gap-2 text-left text-sm text-brand-text-secondary">
+                          <div class="detail-chip"><dt>Terlambat</dt><dd>{entry.lateCount}</dd></div>
+                          <div class="detail-chip"><dt>Tidak hadir</dt><dd>{entry.absenceCount}</dd></div>
+                          <div class="detail-chip"><dt>Kurang jam</dt><dd>{entry.shortWorkCount}</dd></div>
+                          <div class="detail-chip"><dt>Istirahat lebih</dt><dd>{entry.excessBreakCount}</dd></div>
+                          <div class="detail-chip"><dt>Overtime</dt><dd>{entry.overtimeCount}</dd></div>
+                          <div class="detail-chip"><dt>Belum pulang</dt><dd>{entry.unresolvedCount}</dd></div>
+                        </dl>
+                      </aside>
+                    </div>
+                  </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    ) : (
+      <section class="mx-auto max-w-4xl px-6 pb-16">
+        <div class="rounded-[2rem] border border-rose-200 bg-white px-6 py-8 shadow-sm">
+          <p class="text-sm font-semibold uppercase tracking-[0.18em] text-rose-500">
+            Leaderboard error
+          </p>
+          <h2 class="mt-3 text-2xl font-black tracking-tight text-brand-navy">
+            {state.title}
+          </h2>
+          <p class="mt-4 text-sm leading-7 text-brand-text-secondary">
+            {state.message}
+          </p>
+          <div class="mt-6">
+            <a
+              href="/leaderboard"
+              class="inline-flex items-center gap-2 rounded-full bg-brand-pink px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-pink-dark"
+            >
+              Muat ulang leaderboard
+            </a>
+          </div>
+        </div>
+      </section>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .leaderboard-row {
+    border: 1px solid var(--color-brand-border);
+    border-radius: 1.75rem;
+    background:
+      radial-gradient(circle at top right, rgba(247, 56, 89, 0.08), transparent 32%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 250, 245, 0.9));
+    padding: 1.25rem;
+    box-shadow: 0 20px 55px -45px rgba(56, 66, 89, 0.55);
+  }
+
+  .leaderboard-row-top {
+    border-color: color-mix(in srgb, var(--color-brand-pink) 28%, white);
+    box-shadow: 0 24px 60px -42px rgba(247, 56, 89, 0.45);
+  }
+
+  .legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid var(--color-brand-border);
+    border-radius: 999px;
+    padding: 0.45rem 0.7rem;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .legend-swatch {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    display: inline-block;
+  }
+
+  .rank-badge {
+    min-width: 4rem;
+    height: 4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.25rem;
+    background: rgba(56, 66, 89, 0.06);
+    color: var(--color-brand-navy);
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .rank-badge-top {
+    background: linear-gradient(135deg, rgba(247, 56, 89, 0.12), rgba(122, 199, 196, 0.26));
+  }
+
+  .mini-chart-track {
+    display: flex;
+    overflow: hidden;
+    height: 0.9rem;
+    border-radius: 999px;
+    background: rgba(209, 232, 223, 0.7);
+    box-shadow: inset 0 1px 3px rgba(56, 66, 89, 0.12);
+  }
+
+  .mini-chart-segment {
+    height: 100%;
+  }
+
+  .metric-tile {
+    border: 1px solid rgba(209, 232, 223, 0.9);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 0.8rem 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .metric-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand-text-muted);
+  }
+
+  .metric-value {
+    font-size: 1rem;
+    color: var(--color-brand-navy);
+  }
+
+  .score-panel {
+    width: 100%;
+    max-width: 21rem;
+    border: 1px solid var(--color-brand-border);
+    border-radius: 1.5rem;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 1rem;
+  }
+
+  .score-badge {
+    border-radius: 1.25rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    color: white;
+  }
+
+  .score-excellent {
+    background: linear-gradient(135deg, #0f9b6c, #26c281);
+  }
+
+  .score-steady {
+    background: linear-gradient(135deg, #3a6ea5, #4d95d9);
+  }
+
+  .score-warning {
+    background: linear-gradient(135deg, #c86e11, #f59e0b);
+  }
+
+  .score-critical {
+    background: linear-gradient(135deg, #b4233c, #f73859);
+  }
+
+  .score-unrated {
+    background: linear-gradient(135deg, #6b7280, #94a3b8);
+  }
+
+  .score-number {
+    font-size: 2.25rem;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+  }
+
+  .score-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .detail-chip {
+    border: 1px solid var(--color-brand-border);
+    border-radius: 1rem;
+    padding: 0.65rem 0.75rem;
+    background: rgba(240, 250, 245, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .detail-chip dt {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-brand-text-muted);
+  }
+
+  .detail-chip dd {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-brand-navy);
+  }
+
+  .streak-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    background: rgba(255, 138, 61, 0.12);
+    color: #b24712;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .flame-shell {
+    width: 2.8rem;
+    height: 2.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 55%, rgba(255, 138, 61, 0.16), rgba(247, 56, 89, 0.08));
+  }
+
+  .flame-shell-sm {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .flame-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+    animation: flame-flicker 2.2s ease-in-out infinite;
+    transform-origin: 50% 80%;
+  }
+
+  .flame-shell-sm .flame-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  @keyframes flame-flicker {
+    0%, 100% {
+      transform: rotate(-3deg) scale(0.98);
+      filter: drop-shadow(0 0 0 rgba(247, 56, 89, 0.18));
+    }
+    30% {
+      transform: rotate(2deg) scale(1.04);
+      filter: drop-shadow(0 0 8px rgba(247, 56, 89, 0.2));
+    }
+    60% {
+      transform: rotate(-1deg) scale(0.95);
+      filter: drop-shadow(0 0 5px rgba(255, 138, 61, 0.22));
+    }
+  }
+
+  @media (max-width: 1279px) {
+    .score-panel {
+      max-width: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flame-icon {
+      animation: none;
+    }
+  }
+</style>
