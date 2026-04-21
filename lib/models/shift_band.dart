@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 enum ShiftBand {
   pagi('PAGI', 'Pagi', 7, 0),
   siang('SIANG', 'Siang', 10, 0),
-  sore('SORE', 'Sore', 15, 0),
+  sore('SORE', 'Sore', 13, 0),
+  malam('MALAM', 'Malam', 15, 0),
   libur('LIBUR', 'Libur', null, null);
 
   const ShiftBand(
@@ -53,6 +54,9 @@ enum ShiftBand {
       case 'SORE':
       case 'EVENING':
         return ShiftBand.sore;
+      case 'MALAM':
+      case 'NIGHT':
+        return ShiftBand.malam;
       case 'LIBUR':
       case 'OFF':
       case 'DAYOFF':

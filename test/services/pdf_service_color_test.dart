@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:absensi_enakko_flutter/services/pdf_service.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
 import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
 import 'package:absensi_enakko_flutter/models/shift_band.dart';
 import 'package:flutter/material.dart';
@@ -153,18 +154,28 @@ void main() {
 
   group('PdfService._getMostCommonRole — Role detection for schedule PDF', () {
     // Helper to create a shift slot for testing
-    ShiftSlot _createTestShift() => ShiftSlot(
+    ShiftSlot createTestShift() => ShiftSlot(
           name: 'Pagi',
           band: ShiftBand.pagi,
-          startTime: const TimeOfDay(hour: 9, minute: 0),
-          endTime: const TimeOfDay(hour: 17, minute: 0),
+          startTime: const TimeOfDay(hour: 7, minute: 0),
+          endTime: const TimeOfDay(hour: 19, minute: 0),
           color: Colors.blue,
-          requiredWorkMinutes: 480,
-          lateCutoffHour: 9,
-          lateCutoffMinute: 30,
-          breakFirstDeadlineHour: 12,
+          requiredWorkMinutes: 600,
+          lateCutoffHour: 7,
+          lateCutoffMinute: 0,
+          breakFirstDeadlineHour: 9,
           breakFirstDeadlineMinute: 0,
         );
+
+    test('builds estimated window from contract and shift span', () {
+      final shift = ShiftSlot.sore(contract: EmployeeContract.parttime);
+      final label = PdfService.estimatedScheduleWindowForTest(
+        shift: shift,
+        contract: EmployeeContract.parttime,
+      );
+
+      expect(label, '13:00-22:00');
+    });
 
     test('returns null for empty entries', () {
       final result = PdfService.getMostCommonRoleForTest([]);
@@ -179,7 +190,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: null,
         ),
         ScheduleEntry(
@@ -188,7 +199,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: '',
         ),
       ];
@@ -205,7 +216,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
         ScheduleEntry(
@@ -214,7 +225,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
       ];
@@ -231,7 +242,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
         ScheduleEntry(
@@ -240,7 +251,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
         ScheduleEntry(
@@ -249,7 +260,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Manager',
         ),
       ];
@@ -266,7 +277,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
         ScheduleEntry(
@@ -275,7 +286,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Manager',
         ),
       ];
@@ -293,7 +304,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
         ScheduleEntry(
@@ -302,7 +313,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: null,
         ),
         ScheduleEntry(
@@ -311,7 +322,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: '',
         ),
         ScheduleEntry(
@@ -320,7 +331,7 @@ void main() {
           employeeId: 'emp1',
           displayName: 'John',
           isCustomName: false,
-          shift: _createTestShift(),
+          shift: createTestShift(),
           role: 'Kasir',
         ),
       ];

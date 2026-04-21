@@ -245,7 +245,10 @@ class AttendancePolicyRecapDay {
       employeeName: _readRequiredString(json['employee_name'], 'employee_name'),
       outletId: _readRequiredString(json['outlet_id'], 'outlet_id'),
       outletName: _readRequiredString(json['outlet_name'], 'outlet_name'),
-      shiftBand: ShiftBand.tryParse(json['shift_band']?.toString()),
+      shiftBand: _readShiftBand(
+        rawBand: json['shift_band']?.toString(),
+        lateCutoffLocal: json['late_cutoff_local']?.toString(),
+      ),
       requiredWorkMinutes: _readInt(json['required_work_minutes']),
       lateCutoffLocal: json['late_cutoff_local']?.toString(),
       attendanceStatus: attendanceStatus,
@@ -466,6 +469,46 @@ class AttendancePolicyRecapDay {
     if (raw is int) return raw;
     if (raw is num) return raw.toInt();
     return int.tryParse(raw.toString());
+  }
+
+  static ShiftBand? _readShiftBand({
+    required String? rawBand,
+    required String? lateCutoffLocal,
+  }) {
+    final parsedBand = ShiftBand.tryParse(rawBand);
+    final inferredFromCutoff = _inferShiftBandFromLateCutoff(lateCutoffLocal);
+
+    if (parsedBand == ShiftBand.sore && inferredFromCutoff == ShiftBand.malam) {
+      return ShiftBand.malam;
+    }
+
+    return parsedBand ?? inferredFromCutoff;
+  }
+
+  static ShiftBand? _inferShiftBandFromLateCutoff(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    final parts = raw.trim().split(':');
+    final hour = parts.isEmpty ? null : int.tryParse(parts.first);
+    if (hour == null) {
+      return null;
+    }
+
+    if (hour >= 15) {
+      return ShiftBand.malam;
+    }
+    if (hour >= 13) {
+      return ShiftBand.sore;
+    }
+    if (hour >= 10) {
+      return ShiftBand.siang;
+    }
+    if (hour >= 7) {
+      return ShiftBand.pagi;
+    }
+    return null;
   }
 
   static bool? _readOptionalBool(Object? raw) {

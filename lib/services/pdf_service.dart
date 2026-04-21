@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -9,7 +10,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
 import '../models/employee.dart';
+import '../models/employee_contract.dart';
+import '../models/shift_band.dart';
 import '../models/shift_schedule.dart';
+import 'schedule_policy_service.dart';
 
 class AttendancePerScanPdfRow {
   final String nama;
@@ -160,6 +164,9 @@ class PdfService {
     final days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     final daysCount =
         schedule.endDate.difference(schedule.startDate).inDays + 1;
+    final employeesById = <String, Employee>{
+      for (final employee in employees) employee.id: employee,
+    };
 
     // Scale day column width based on count — narrower when many days
     final double dayColWidth = daysCount <= 7
@@ -246,6 +253,8 @@ class PdfService {
                 pw.SizedBox(width: 12),
                 _buildLegendChip('Sore', PdfColor.fromHex('F97316'), ttf),
                 pw.SizedBox(width: 12),
+                _buildLegendChip('Malam', PdfColor.fromHex('4338CA'), ttf),
+                pw.SizedBox(width: 12),
                 _buildLegendChip('Libur', PdfColor.fromHex('DC2626'), ttf),
                 pw.SizedBox(width: 12),
                 _buildLegendChip('Sakit', PdfColor.fromHex('991B1B'), ttf),
@@ -263,7 +272,8 @@ class PdfService {
                 width: 0.5,
               ),
               columnWidths: {
-                0: const pw.FlexColumnWidth(2.5), // Employee name — flex to fill remaining space
+                0: const pw.FlexColumnWidth(
+                    2.5), // Employee name — flex to fill remaining space
                 for (int i = 1; i <= daysCount; i++)
                   i: pw.FixedColumnWidth(dayColWidth),
               },
@@ -363,7 +373,12 @@ class PdfService {
 
                         final entry = entries.first;
                         final shiftColors =
-                            _getShiftColors(entry.shift.name, entry.status);
+                            _getShiftColors(entry.shift.band, entry.status);
+                        final windowLabel = _estimatedScheduleWindowLabel(
+                          shift: entry.shift,
+                          contract: employeesById[entry.employeeId]
+                              ?.employmentContract,
+                        );
 
                         return pw.Container(
                           padding: const pw.EdgeInsets.all(4),
@@ -389,6 +404,16 @@ class PdfService {
                                     style: pw.TextStyle(
                                       font: ttf,
                                       fontSize: 6,
+                                      color: shiftColors.text,
+                                    ),
+                                    textAlign: pw.TextAlign.center,
+                                  ),
+                                if (windowLabel != null)
+                                  pw.Text(
+                                    windowLabel,
+                                    style: pw.TextStyle(
+                                      font: ttf,
+                                      fontSize: 5.5,
                                       color: shiftColors.text,
                                     ),
                                     textAlign: pw.TextAlign.center,
@@ -982,7 +1007,7 @@ class PdfService {
   }
 
   static ({PdfColor background, PdfColor text}) _getShiftColors(
-      String shiftName, ScheduleStatus? status) {
+      ShiftBand band, ScheduleStatus? status) {
     // Priority: Sakit/Izin status
     if (status == ScheduleStatus.sakit) {
       return (
@@ -996,33 +1021,33 @@ class PdfService {
         text: PdfColor.fromHex('1E3A8A')
       );
     }
-
-    final name = shiftName.toLowerCase();
-    if (name.contains('pagi')) {
-      return (
-        background: PdfColor.fromHex('DBEAFE'),
-        text: PdfColor.fromHex('1E40AF')
-      );
-    } else if (name.contains('siang')) {
-      return (
-        background: PdfColor.fromHex('FEF3C7'),
-        text: PdfColor.fromHex('92400E')
-      );
-    } else if (name.contains('sore')) {
-      return (
-        background: PdfColor.fromHex('FFEDD5'),
-        text: PdfColor.fromHex('C2410C')
-      );
-    } else if (name.contains('libur')) {
-      return (
-        background: PdfColor.fromHex('FEE2E2'),
-        text: PdfColor.fromHex('991B1B')
-      );
+    switch (band) {
+      case ShiftBand.pagi:
+        return (
+          background: PdfColor.fromHex('DBEAFE'),
+          text: PdfColor.fromHex('1E40AF')
+        );
+      case ShiftBand.siang:
+        return (
+          background: PdfColor.fromHex('FEF3C7'),
+          text: PdfColor.fromHex('92400E')
+        );
+      case ShiftBand.sore:
+        return (
+          background: PdfColor.fromHex('FFEDD5'),
+          text: PdfColor.fromHex('C2410C')
+        );
+      case ShiftBand.malam:
+        return (
+          background: PdfColor.fromHex('E0E7FF'),
+          text: PdfColor.fromHex('4338CA')
+        );
+      case ShiftBand.libur:
+        return (
+          background: PdfColor.fromHex('FEE2E2'),
+          text: PdfColor.fromHex('991B1B')
+        );
     }
-    return (
-      background: PdfColor.fromHex('F3F4F6'),
-      text: PdfColor.fromHex('374151')
-    );
   }
 
   static String _getShiftLabel(ScheduleEntry entry) {
@@ -1033,12 +1058,40 @@ class PdfService {
       return entry.displayName.toUpperCase();
     }
 
-    final name = entry.shift.name.toLowerCase();
-    if (name.contains('pagi')) return 'Pagi';
-    if (name.contains('siang')) return 'Siang';
-    if (name.contains('sore')) return 'Sore';
-    if (name.contains('libur')) return 'Libur';
-    return entry.shift.name.substring(0, 1).toUpperCase();
+    switch (entry.shift.band) {
+      case ShiftBand.pagi:
+        return 'Pagi';
+      case ShiftBand.siang:
+        return 'Siang';
+      case ShiftBand.sore:
+        return 'Sore';
+      case ShiftBand.malam:
+        return 'Malam';
+      case ShiftBand.libur:
+        return 'Libur';
+    }
+  }
+
+  static String? _estimatedScheduleWindowLabel({
+    required ShiftSlot shift,
+    required EmployeeContract? contract,
+  }) {
+    if (contract == null || shift.band.isDayOff) {
+      return null;
+    }
+
+    final endTime = SchedulePolicyService.estimatedShiftEnd(
+      startTime: shift.startTime,
+      contract: contract,
+      requiredWorkMinutes: shift.requiredWorkMinutes,
+    );
+    return '${_formatTimeOfDay(shift.startTime)}-${_formatTimeOfDay(endTime)}';
+  }
+
+  static String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   /// Find the most common role for an employee across schedule entries
@@ -1081,4 +1134,11 @@ class PdfService {
   @visibleForTesting
   static String? getMostCommonRoleForTest(List<ScheduleEntry> entries) =>
       _getMostCommonRole(entries);
+
+  @visibleForTesting
+  static String? estimatedScheduleWindowForTest({
+    required ShiftSlot shift,
+    required EmployeeContract? contract,
+  }) =>
+      _estimatedScheduleWindowLabel(shift: shift, contract: contract);
 }

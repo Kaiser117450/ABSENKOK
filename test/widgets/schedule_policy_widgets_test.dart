@@ -52,12 +52,15 @@ void main() {
       expect(find.text('Aturan Jadwal Minggu Ini'), findsOneWidget);
       expect(
         find.text(
-          'Band dan jam wajib menjadi acuan utama. Jam lama hanya tampil sebagai petunjuk kecil bila masih dibutuhkan.',
+          'Shift dan jam wajib menjadi acuan utama. Jam lama hanya tampil sebagai petunjuk kecil bila masih dibutuhkan.',
         ),
         findsOneWidget,
       );
-      expect(find.text('Pagi 07:00\nSiang 10:00\nSore 15:00'), findsOneWidget);
-      expect(find.text('FULLTIME 10j\nPARTTIME 9j'), findsOneWidget);
+      expect(
+        find.text('Pagi 07:00\nSiang 10:00\nSore 13:00\nMalam 15:00 (24 jam)'),
+        findsOneWidget,
+      );
+      expect(find.text('FULLTIME 10j\nPARTTIME 8j'), findsOneWidget);
     });
 
     testWidgets('collapses into a compact summary state', (tester) async {
@@ -76,7 +79,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Pagi 07:00\nSiang 10:00\nSore 15:00'), findsNothing);
+      expect(
+        find.text('Pagi 07:00\nSiang 10:00\nSore 13:00\nMalam 15:00 (24 jam)'),
+        findsNothing,
+      );
     });
 
     testWidgets('dismisses the card for the current screen session',

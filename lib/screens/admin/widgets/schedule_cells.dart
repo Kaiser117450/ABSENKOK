@@ -69,7 +69,8 @@ TableViewCell buildHeaderCell({
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFEFF6FF) : null,
           border: isSelected
-              ? const Border(bottom: BorderSide(color: Color(0xFF3B82F6), width: 2))
+              ? const Border(
+                  bottom: BorderSide(color: Color(0xFF3B82F6), width: 2))
               : null,
         ),
         child: Column(
@@ -296,6 +297,11 @@ TableViewCell buildShiftCell({
     ShiftBand.sore => (
         const Color(0xFFFFEDD5),
         const Color(0xFFC2410C),
+        Icons.wb_twilight,
+      ),
+    ShiftBand.malam => (
+        const Color(0xFFE0E7FF),
+        const Color(0xFF4338CA),
         Icons.nights_stay,
       ),
     ShiftBand.libur => (

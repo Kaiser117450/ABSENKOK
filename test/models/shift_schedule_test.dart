@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:absensi_enakko_flutter/models/shift_band.dart';
 import 'package:absensi_enakko_flutter/models/shift_schedule.dart';
 import 'package:absensi_enakko_flutter/models/employee.dart';
 
@@ -40,22 +41,29 @@ void main() {
     test('pagi shift has correct name and time range', () {
       final pagi = ShiftSlot.pagi();
       expect(pagi.name, 'Pagi');
-      expect(pagi.startTime, const TimeOfDay(hour: 9, minute: 0));
-      expect(pagi.endTime, const TimeOfDay(hour: 17, minute: 0));
+      expect(pagi.startTime, const TimeOfDay(hour: 7, minute: 0));
+      expect(pagi.endTime, const TimeOfDay(hour: 19, minute: 0));
     });
 
     test('siang shift has correct name and time range', () {
       final siang = ShiftSlot.siang();
       expect(siang.name, 'Siang');
-      expect(siang.startTime, const TimeOfDay(hour: 12, minute: 0));
-      expect(siang.endTime, const TimeOfDay(hour: 20, minute: 0));
+      expect(siang.startTime, const TimeOfDay(hour: 10, minute: 0));
+      expect(siang.endTime, const TimeOfDay(hour: 22, minute: 0));
     });
 
     test('sore shift has correct name and time range', () {
       final sore = ShiftSlot.sore();
       expect(sore.name, 'Sore');
-      expect(sore.startTime, const TimeOfDay(hour: 14, minute: 0));
-      expect(sore.endTime, const TimeOfDay(hour: 22, minute: 0));
+      expect(sore.startTime, const TimeOfDay(hour: 13, minute: 0));
+      expect(sore.endTime, const TimeOfDay(hour: 1, minute: 0));
+    });
+
+    test('malam shift has correct name and time range', () {
+      final malam = ShiftSlot.malam();
+      expect(malam.name, 'Malam');
+      expect(malam.startTime, const TimeOfDay(hour: 15, minute: 0));
+      expect(malam.endTime, const TimeOfDay(hour: 3, minute: 0));
     });
 
     test('libur shift has name Libur and zero times', () {
@@ -195,6 +203,14 @@ void main() {
   });
 
   group('OutletSchedule', () {
+    test('24 hour template includes malam slot', () {
+      final template = ShiftTemplate.twentyFourHour('outlet-24');
+      expect(
+        template.slots.map((slot) => slot.band).toList(),
+        [ShiftBand.pagi, ShiftBand.siang, ShiftBand.sore, ShiftBand.malam],
+      );
+    });
+
     test('isDraft returns true when syncedAt is null', () {
       final schedule = _makeSchedule(syncedAt: null);
       expect(schedule.isDraft, true);
@@ -294,7 +310,8 @@ void main() {
       expect(parsed.day, 4);
     });
 
-    test('round-trip: DateTime → split(T)[0] → parse matches original date', () {
+    test('round-trip: DateTime → split(T)[0] → parse matches original date',
+        () {
       final original = DateTime(2024, 12, 31, 23, 59, 59);
       final normalized = original.toIso8601String().split('T')[0];
       final parsed = DateTime.parse(normalized);

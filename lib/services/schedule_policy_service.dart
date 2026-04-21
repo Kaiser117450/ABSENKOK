@@ -24,6 +24,20 @@ class SchedulePolicyService {
     return band.lateCutoff;
   }
 
+  static TimeOfDay? breakFirstDeadline({
+    required ShiftBand band,
+    required EmployeeContract contract,
+  }) {
+    final cutoff = lateCutoff(band);
+    if (cutoff == null) {
+      return null;
+    }
+
+    return _timeOfDayFromMinutes(
+      _minutesOfDay(cutoff) + payrollBreakAllowanceMinutes(contract: contract),
+    );
+  }
+
   static int payrollBreakAllowanceMinutes({
     required EmployeeContract contract,
     bool isOvertime = false,
@@ -66,6 +80,32 @@ class SchedulePolicyService {
     );
 
     return scannedAtMinute.isAfter(cutoffAtMinute);
+  }
+
+  static int scheduledSpanMinutes({
+    required EmployeeContract contract,
+    required int requiredWorkMinutes,
+  }) {
+    final defaultMinutes = defaultRequiredWorkMinutes(contract);
+    return requiredWorkMinutes +
+        payrollBreakAllowanceMinutes(
+          contract: contract,
+          isOvertime: requiredWorkMinutes > defaultMinutes,
+        );
+  }
+
+  static TimeOfDay estimatedShiftEnd({
+    required TimeOfDay startTime,
+    required EmployeeContract contract,
+    required int requiredWorkMinutes,
+  }) {
+    return _timeOfDayFromMinutes(
+      _minutesOfDay(startTime) +
+          scheduledSpanMinutes(
+            contract: contract,
+            requiredWorkMinutes: requiredWorkMinutes,
+          ),
+    );
   }
 
   static int _minutesOfDay(TimeOfDay time) => time.hour * 60 + time.minute;
