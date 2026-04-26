@@ -89,13 +89,6 @@ class SchedulePolicySummaryCard extends StatelessWidget {
               label: 'Jam wajib default',
               value: 'FULLTIME 10j\nPARTTIME 8j',
             ),
-            SizedBox(height: 10),
-            _SchedulePolicySummaryRow(
-              label: 'Break-first',
-              value:
-                  'FULLTIME sampai 09:00 / 12:00 / 15:00 / 17:00\nPARTTIME sampai 08:00 / 11:00 / 14:00 / 16:00',
-            ),
-            SizedBox(height: 10),
             _SchedulePolicySummaryRow(
               label: 'Auto-generate',
               value:

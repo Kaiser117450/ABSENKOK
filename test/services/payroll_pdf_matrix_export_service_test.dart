@@ -29,7 +29,7 @@ void main() {
     });
 
     test(
-        'builds a payroll-first PDF preview and file with locked summary order, legend tags, overnight fixture, fallback fixture, and forbidden-field exclusion',
+        'builds an insight-only PDF preview and file with locked summary order, legend tags, overnight fixture, fallback fixture, and forbidden-field exclusion',
         () async {
       final context = _buildParityPdfContext(recapDatasetService);
       final service = PayrollPdfMatrixExportService(
@@ -43,11 +43,9 @@ void main() {
         outletName: context.bundle.outletName,
         startDate: context.bundle.startDate,
         endDate: context.bundle.endDate,
-        isCompatibilityMode: context.isCompatibilityMode,
       );
 
-      expect(preview.title, 'Rekap Payroll PDF');
-      expect(preview.compatibilityTitle, 'Mode kompatibilitas aktif');
+      expect(preview.title, 'Insight Payroll PDF');
       expect(
         preview.summaryMetrics
             .map((metric) => metric.label)
@@ -127,7 +125,6 @@ void main() {
       expect(latePreviewCell.secondaryTags, contains('TLT'));
       expect(overtimePreviewCell.secondaryTags, contains('OT'));
       expect(absencePreviewCell.secondaryTags, contains('ABS'));
-      expect(fallbackPreviewCell.primaryLabel, 'Hadir tanpa jadwal');
       expect(
         preview.matrixPages.expand((page) => page.rows).isNotEmpty,
         isTrue,
@@ -148,7 +145,6 @@ void main() {
         outletName: context.bundle.outletName,
         startDate: context.bundle.startDate,
         endDate: context.bundle.endDate,
-        isCompatibilityMode: context.isCompatibilityMode,
       );
 
       expect(await file.exists(), isTrue);
@@ -209,7 +205,6 @@ _ParityPdfContext _buildParityPdfContext(
     bundle: bundle,
     dataset: dataset,
     employeeNamesById: employeeNamesById,
-    isCompatibilityMode: recapDataset.isCompatibilityMode,
     summaryValues: summaryValues,
   );
 }
@@ -219,14 +214,12 @@ class _ParityPdfContext {
     required this.bundle,
     required this.dataset,
     required this.employeeNamesById,
-    required this.isCompatibilityMode,
     required this.summaryValues,
   });
 
   final ReportExportParityFixtureBundle bundle;
   final PayrollMatrixDataset dataset;
   final Map<String, String> employeeNamesById;
-  final bool isCompatibilityMode;
   final List<int> summaryValues;
 
   String employeeNameFor(String employeeId) => employeeNamesById[employeeId]!;

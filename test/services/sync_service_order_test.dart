@@ -51,8 +51,7 @@ class _FakeKioskScanAuthorityService extends KioskScanAuthorityService {
 
 void main() {
   group('SyncService queue replay order', () {
-    test(
-        'queued rows replay in ascending queueOrder and keep break_first intent',
+    test('queued rows replay in ascending queueOrder and keep scan intent',
         () async {
       final fakeAuthority = _FakeKioskScanAuthorityService();
       final synced = <String>[];
@@ -64,7 +63,6 @@ void main() {
           _pendingLog(
             localId: 'queue-1',
             queueOrder: 1,
-            initialScanIntent: InitialScanIntent.breakFirst,
           ),
           _pendingLog(localId: 'queue-2', queueOrder: 2),
         ],
@@ -84,7 +82,7 @@ void main() {
       );
       expect(
         fakeAuthority.requests.first.initialScanIntent.value,
-        'break_first',
+        'none',
       );
     });
 

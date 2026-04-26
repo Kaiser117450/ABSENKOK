@@ -31,8 +31,6 @@ void main() {
       expect(slot.requiredWorkMinutes, 600);
       expect(slot.lateCutoffHour, 7);
       expect(slot.lateCutoffMinute, 0);
-      expect(slot.breakFirstDeadlineHour, 9);
-      expect(slot.breakFirstDeadlineMinute, 0);
       expect(slot.startTime, const TimeOfDay(hour: 7, minute: 0));
       expect(slot.endTime, const TimeOfDay(hour: 19, minute: 0));
     });
@@ -49,10 +47,10 @@ void main() {
 
       expect(slot.band, ShiftBand.malam);
       expect(slot.lateCutoffHour, 15);
-      expect(slot.breakFirstDeadlineHour, 17);
     });
 
-    test('round-trips new JSON policy keys while keeping legacy keys', () {
+    test('round-trips schedule policy keys and ignores break-first legacy keys',
+        () {
       final slot = ShiftSlot.fromJson(const {
         'name': 'Siang',
         'band': 'SIANG',
@@ -74,13 +72,13 @@ void main() {
       expect(json['band'], 'SIANG');
       expect(json['required_work_minutes'], 540);
       expect(json['late_cutoff_hour'], 10);
-      expect(json['break_first_deadline_hour'], 11);
+      expect(json.containsKey('break_first_deadline_hour'), isFalse);
+      expect(json.containsKey('break_first_deadline_minute'), isFalse);
       expect(json['start_hour'], 10);
       expect(json['end_hour'], 21);
       expect(restored.band, ShiftBand.siang);
       expect(restored.requiredWorkMinutes, 540);
       expect(restored.lateCutoffHour, 10);
-      expect(restored.breakFirstDeadlineHour, 11);
     });
   });
 
@@ -120,21 +118,7 @@ void main() {
       );
     });
 
-    test('calculates break-first deadline and minute-precision lateness', () {
-      expect(
-        SchedulePolicyService.breakFirstDeadline(
-          band: ShiftBand.pagi,
-          contract: EmployeeContract.fulltime,
-        ),
-        const TimeOfDay(hour: 9, minute: 0),
-      );
-      expect(
-        SchedulePolicyService.breakFirstDeadline(
-          band: ShiftBand.sore,
-          contract: EmployeeContract.parttime,
-        ),
-        const TimeOfDay(hour: 14, minute: 0),
-      );
+    test('calculates minute-precision lateness', () {
       expect(
         SchedulePolicyService.isLate(
           logicalDate: DateTime(2026, 3, 26),

@@ -33,7 +33,8 @@ void main() {
             PayrollEvidenceSource.spreadsheet:
                 snapshot(PayrollEvidenceSource.spreadsheet),
             PayrollEvidenceSource.pdf: snapshot(PayrollEvidenceSource.pdf),
-            PayrollEvidenceSource.portal: snapshot(PayrollEvidenceSource.portal),
+            PayrollEvidenceSource.portal:
+                snapshot(PayrollEvidenceSource.portal),
           },
       blockerReason: blockerReason,
     );
@@ -46,7 +47,7 @@ void main() {
   }
 
   group('buildPayrollRolloutAcceptanceSummary', () {
-    test('includes all seven required scenario IDs in locked order', () {
+    test('includes all six required scenario IDs in locked order', () {
       final summary = buildPayrollRolloutAcceptanceSummary(
         reviews: allScenarioReviews(),
         databaseReviewConfirmed: true,
@@ -56,7 +57,7 @@ void main() {
         summary.scenarios.map((scenario) => scenario.scenarioId).toList(),
         requiredPayrollRolloutScenarioIds,
       );
-      expect(summary.passedCount, 7);
+      expect(summary.passedCount, 6);
       expect(summary.pendingCount, 0);
       expect(summary.blockedCount, 0);
       expect(summary.canMarkPayrollReady, isTrue);
@@ -83,13 +84,14 @@ void main() {
       expect(summary.pendingCount, 1);
       expect(summary.blockedCount, 0);
       expect(summary.disabledReason, contains('pending'));
-      expect(summary.scenarios.first.status, PayrollRolloutScenarioStatus.pending);
+      expect(
+          summary.scenarios.first.status, PayrollRolloutScenarioStatus.pending);
     });
 
     test('blocked parity rows force blocked readiness', () {
       final reviews = allScenarioReviews();
       reviews[5] = reviewFor(
-        PayrollRolloutScenarioId.breakFirst,
+        PayrollRolloutScenarioId.noShow,
         evidenceBySource: <PayrollEvidenceSource, PayrollEvidenceSnapshot>{
           PayrollEvidenceSource.admin: snapshot(PayrollEvidenceSource.admin),
           PayrollEvidenceSource.spreadsheet:
@@ -115,7 +117,7 @@ void main() {
       expect(summary.blockedParityRows, hasLength(1));
       expect(
         summary.blockedParityRows.single.scenarioId,
-        PayrollRolloutScenarioId.breakFirst,
+        PayrollRolloutScenarioId.noShow,
       );
       expect(summary.disabledReason, contains('blocked'));
     });
@@ -126,7 +128,7 @@ void main() {
         databaseReviewConfirmed: false,
       );
 
-      expect(summary.passedCount, 7);
+      expect(summary.passedCount, 6);
       expect(summary.pendingCount, 0);
       expect(summary.blockedCount, 0);
       expect(summary.canMarkPayrollReady, isFalse);

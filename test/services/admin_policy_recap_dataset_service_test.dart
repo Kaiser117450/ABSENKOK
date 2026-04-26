@@ -61,14 +61,11 @@ void main() {
       requiredWorkMinutes:
           employee.employmentContract == EmployeeContract.parttime ? 540 : 600,
       lateCutoffLocal: '07:00',
-      breakFirstDeadlineLocal: '09:00',
       attendanceStatus: attendanceStatus,
       lateKind: detailSignals.contains(AttendancePolicySignal.late)
           ? LateKind.normal
           : LateKind.none,
       isLate: detailSignals.contains(AttendancePolicySignal.late),
-      breakFirstEligible: false,
-      breakFirstConfirmed: false,
       firstScanLocal: DateTime(2026, 3, 25, 7, 0),
       firstBreakLocal: null,
       lastPulangLocal: DateTime(2026, 3, 25, 17, 0),
@@ -123,7 +120,7 @@ void main() {
       expect(result.strictRows, isEmpty);
       expect(result.fallbackRows, hasLength(1));
       expect(result.mergedRows, hasLength(1));
-      expect(result.isCompatibilityMode, isTrue);
+      expect(result.fallbackRows, isNotEmpty);
 
       final fallbackRow = result.fallbackRows.single;
       expect(fallbackRow.employeeId, ayu.id);
@@ -133,10 +130,10 @@ void main() {
         AttendancePolicyStatus.hadirTanpaJadwal,
       );
       expect(fallbackRow.lateCutoffLocal, isNull);
-      expect(fallbackRow.breakFirstDeadlineLocal, isNull);
     });
 
-    test('keeps strict rows on duplicate keys and adds only missing fallback keys',
+    test(
+        'keeps strict rows on duplicate keys and adds only missing fallback keys',
         () {
       final ayu = buildEmployee(
         id: 'emp-01',
@@ -196,7 +193,7 @@ void main() {
       expect(result.strictRows, hasLength(1));
       expect(result.fallbackRows, hasLength(1));
       expect(result.mergedRows, hasLength(2));
-      expect(result.isCompatibilityMode, isTrue);
+      expect(result.fallbackRows, isNotEmpty);
 
       expect(
         result.mergedRows.map((row) => row.employeeName).toList(),
@@ -211,7 +208,8 @@ void main() {
       expect(result.mergedRows.last.employeeId, budi.id);
     });
 
-    test('keeps overnight twenty-four-hour fallback rows on the prior logical date',
+    test(
+        'keeps overnight twenty-four-hour fallback rows on the prior logical date',
         () {
       final ayu = buildEmployee(
         id: 'emp-01',
@@ -265,7 +263,9 @@ void main() {
 
       expect(result.mergedRows, hasLength(2));
       expect(
-        result.mergedRows.where((row) => row.employeeId == citra.id).single
+        result.mergedRows
+            .where((row) => row.employeeId == citra.id)
+            .single
             .logicalDate,
         DateTime(2026, 3, 25),
       );
@@ -276,7 +276,7 @@ void main() {
       );
     });
 
-    test('stays out of compatibility mode when fallback rows are not injected',
+    test('does not inject fallback rows when strict rows already cover logs',
         () {
       final ayu = buildEmployee(
         id: 'emp-01',
@@ -314,11 +314,9 @@ void main() {
       expect(result.strictRows, hasLength(1));
       expect(result.fallbackRows, isEmpty);
       expect(result.mergedRows, hasLength(1));
-      expect(result.isCompatibilityMode, isFalse);
       expect(result.mergedRows.single.primaryStatus,
           AttendancePolicyPrimaryStatus.hadir);
       expect(result.mergedRows.single.lateCutoffLocal, '07:00');
-      expect(result.mergedRows.single.breakFirstDeadlineLocal, '09:00');
     });
   });
 }

@@ -54,12 +54,9 @@ void main() {
       shiftBand: null,
       requiredWorkMinutes: 540,
       lateCutoffLocal: null,
-      breakFirstDeadlineLocal: null,
       attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
       lateKind: LateKind.none,
       isLate: false,
-      breakFirstEligible: false,
-      breakFirstConfirmed: false,
       firstScanLocal: DateTime(2026, 3, 25, 7, 0),
       firstBreakLocal: null,
       lastPulangLocal: DateTime(2026, 3, 25, 17, 0),
@@ -139,8 +136,8 @@ void main() {
           rows.firstWhere((row) => row.employeeId == parttime.id);
 
       expect(fulltimeRow.requiredWorkMinutes, 600);
-      expect(parttimeRow.requiredWorkMinutes, 540);
-      expect(parttimeRow.overtimeMinutes, 60);
+      expect(parttimeRow.requiredWorkMinutes, 480);
+      expect(parttimeRow.overtimeMinutes, 120);
       expect(fulltimeRow.overtimeMinutes, 0);
     });
 
@@ -190,7 +187,7 @@ void main() {
           )
           .single;
 
-      expect(row.overtimeMinutes, 60);
+      expect(row.overtimeMinutes, 120);
       expect(row.totalBreakMinutes, 120);
       expect(row.excessBreakMinutes, 0);
     });
@@ -287,7 +284,6 @@ void main() {
           .single;
 
       expect(row.lateCutoffLocal, isNull);
-      expect(row.breakFirstDeadlineLocal, isNull);
       expect(row.isLate, isFalse);
       expect(row.lateKind, LateKind.none);
       expect(row.detailSignals, isNot(contains(AttendancePolicySignal.late)));

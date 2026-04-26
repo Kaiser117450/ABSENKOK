@@ -57,7 +57,6 @@ void main() {
       expect(find.text('Lembur'), findsOneWidget);
       expect(find.text('Outlet 24 jam'), findsOneWidget);
       expect(find.text('Outlet normal'), findsOneWidget);
-      expect(find.text('Break-first'), findsOneWidget);
       expect(find.text('No-show'), findsOneWidget);
       expect(find.text('Admin'), findsOneWidget);
       expect(find.text('Spreadsheet'), findsOneWidget);

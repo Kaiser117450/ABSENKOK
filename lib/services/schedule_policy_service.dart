@@ -24,20 +24,6 @@ class SchedulePolicyService {
     return band.lateCutoff;
   }
 
-  static TimeOfDay? breakFirstDeadline({
-    required ShiftBand band,
-    required EmployeeContract contract,
-  }) {
-    final cutoff = lateCutoff(band);
-    if (cutoff == null) {
-      return null;
-    }
-
-    return _timeOfDayFromMinutes(
-      _minutesOfDay(cutoff) + payrollBreakAllowanceMinutes(contract: contract),
-    );
-  }
-
   static int payrollBreakAllowanceMinutes({
     required EmployeeContract contract,
     bool isOvertime = false,

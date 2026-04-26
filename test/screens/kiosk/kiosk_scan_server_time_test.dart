@@ -23,7 +23,6 @@ void main() {
 
   KioskScanContext buildContext({
     AttendanceType? lastType,
-    bool breakFirstEligible = false,
   }) {
     return KioskScanContext(
       serverNowUtc: DateTime.utc(2026, 3, 27, 0, 2),
@@ -33,8 +32,6 @@ void main() {
       shiftBand: ShiftBand.pagi,
       employmentContract: EmployeeContract.fulltime,
       lateCutoffLocal: '08:00',
-      breakFirstDeadlineLocal: '09:00',
-      breakFirstEligible: breakFirstEligible,
     );
   }
 
@@ -84,33 +81,19 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('shows ISTIRAHAT DULU when first scan is eligible',
-      (tester) async {
+  testWidgets('does not show ISTIRAHAT DULU on first scan', (tester) async {
     await pumpScanScreen(
       tester,
       actionState: KioskScanActionDebugState(
-        context: buildContext(breakFirstEligible: true),
+        context: buildContext(),
       ),
     );
 
     expect(find.text('MASUK'), findsOneWidget);
-    expect(find.text('ISTIRAHAT DULU'), findsOneWidget);
-  });
-
-  testWidgets('hides ISTIRAHAT DULU when first scan is not eligible', (
-    tester,
-  ) async {
-    await pumpScanScreen(
-      tester,
-      actionState: KioskScanActionDebugState(
-        context: buildContext(breakFirstEligible: false),
-      ),
-    );
-
     expect(find.text('ISTIRAHAT DULU'), findsNothing);
   });
 
-  testWidgets('queued break-first pending log changes next action to selesai', (
+  testWidgets('queued break pending log changes next action to selesai', (
     tester,
   ) async {
     await pumpScanScreen(
@@ -120,7 +103,6 @@ void main() {
         pendingLogs: [
           buildPendingLog(
             type: AttendanceType.breakTime,
-            initialIntent: InitialScanIntent.breakFirst,
           ),
         ],
       ),
@@ -130,41 +112,7 @@ void main() {
     expect(find.text('ISTIRAHAT DULU'), findsNothing);
   });
 
-  testWidgets('break-first dialog shows locked copy and confirms submit', (
-    tester,
-  ) async {
-    var submitted = false;
-
-    await pumpScanScreen(
-      tester,
-      actionState: KioskScanActionDebugState(
-        context: buildContext(breakFirstEligible: true),
-      ),
-      submitHandler: (_, initialIntent) {
-        submitted = initialIntent == InitialScanIntent.breakFirst;
-      },
-    );
-
-    await tester.tap(find.text('ISTIRAHAT DULU'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Mulai dengan istirahat?'), findsOneWidget);
-    expect(
-      find.text(
-        'Scan ini akan dicatat sebagai istirahat lebih dulu. Setelah selesai, tap Selesai Istirahat.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Simpan Istirahat Dulu'), findsOneWidget);
-    expect(find.text('Kembali ke Pilihan Scan'), findsOneWidget);
-
-    await tester.tap(find.text('Simpan Istirahat Dulu'));
-    await tester.pumpAndSettle();
-
-    expect(submitted, isTrue);
-  });
-
-  testWidgets('live success shows WITA time and break-first helper', (
+  testWidgets('live success shows WITA time for break scan', (
     tester,
   ) async {
     await pumpScanScreen(
@@ -173,14 +121,13 @@ void main() {
         submittedType: AttendanceType.breakTime,
         authorityState: KioskScanAuthorityState.liveConfirmed,
         scannedAtWitaLabel: '07:02 WITA',
-        initialScanIntent: InitialScanIntent.breakFirst,
       ),
     );
 
     expect(find.text('Berhasil!'), findsOneWidget);
     expect(find.text('Waktu WITA tercatat'), findsOneWidget);
     expect(find.text('07:02 WITA'), findsOneWidget);
-    expect(find.text('Berikutnya tap Selesai Istirahat.'), findsOneWidget);
+    expect(find.text('Berikutnya tap Selesai Istirahat.'), findsNothing);
   });
 
   testWidgets('queued success shows pending copy without WITA claim', (

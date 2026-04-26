@@ -35,8 +35,6 @@ void main() {
       expect(context.shiftBand, ShiftBand.siang);
       expect(context.employmentContract, EmployeeContract.parttime);
       expect(context.lateCutoffLocal, '10:00');
-      expect(context.breakFirstDeadlineLocal, '11:00');
-      expect(context.breakFirstEligible, isTrue);
     });
 
     test('maps record results with authority state and review flags', () {
@@ -57,7 +55,7 @@ void main() {
       expect(result.scannedAtUtc, DateTime.parse('2026-03-27T03:05:00Z'));
       expect(result.scannedAtWitaLabel, '11:05 WITA');
       expect(result.recordedType, AttendanceType.masuk);
-      expect(result.initialScanIntent, InitialScanIntent.breakFirst);
+      expect(result.initialScanIntent, InitialScanIntent.none);
       expect(result.requiresAdminReview, isTrue);
     });
 

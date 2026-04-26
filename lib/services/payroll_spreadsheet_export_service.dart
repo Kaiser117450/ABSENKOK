@@ -70,30 +70,38 @@ class PayrollSpreadsheetExportService {
       _configureSheetLayout(sheet, lastColumn: lastColumn);
       _writeHeaders(sheet, dates: dates);
 
-      // Build dataset with manager sorting
-      final sortedDataset = _sortDatasetWithManagersFirst(dataset, recapRows);
+      final staffDataset = _staffDataset(dataset, recapRows);
 
-      for (var rowIndex = 0; rowIndex < sortedDataset.rows.length; rowIndex++) {
+      for (var rowIndex = 0; rowIndex < staffDataset.rows.length; rowIndex++) {
         _writeEmployeeRow(
           sheet,
           excelRowIndex: rowIndex + 2,
           dates: dates,
-          row: sortedDataset.rows[rowIndex],
+          row: staffDataset.rows[rowIndex],
           recapRows: recapRows,
         );
       }
 
       // Apply auto-filter to entire data range (header + all employee rows)
-      if (sortedDataset.rows.isNotEmpty) {
+      if (staffDataset.rows.isNotEmpty) {
         sheet.autoFilters.filterRange = sheet.getRangeByIndex(
-          1, 1, 1 + sortedDataset.rows.length, lastColumn,
+          1,
+          1,
+          1 + staffDataset.rows.length,
+          lastColumn,
         );
       }
 
-      // Build Sheet 2: Insight Payroll (Area Manager dashboard)
+      _buildManagerSheet(
+        workbook,
+        dataset: dataset,
+        dates: dates,
+        recapRows: recapRows,
+      );
+
       _buildInsightSheet(
         workbook,
-        dataset: sortedDataset,
+        dataset: dataset,
         outletName: outletName,
         startDate: normalizedStart,
         endDate: normalizedEnd,
@@ -126,7 +134,9 @@ class PayrollSpreadsheetExportService {
 
     for (var column = 4; column <= lastColumn; column++) {
       sheet.getRangeByIndex(1, column).columnWidth =
-          column <= lastColumn - PayrollMatrixRow.summaryLabels.length ? 20 : 14;
+          column <= lastColumn - PayrollMatrixRow.summaryLabels.length
+              ? 20
+              : 14;
     }
 
     sheet.getRangeByIndex(1, 1, 1, lastColumn).rowHeight = 30;
@@ -138,12 +148,14 @@ class PayrollSpreadsheetExportService {
     xlsio.Worksheet sheet, {
     required List<DateTime> dates,
   }) {
-    final headerStyle = sheet.getRangeByIndex(
-      1,
-      1,
-      1,
-      3 + dates.length + PayrollMatrixRow.summaryLabels.length,
-    ).cellStyle;
+    final headerStyle = sheet
+        .getRangeByIndex(
+          1,
+          1,
+          1,
+          3 + dates.length + PayrollMatrixRow.summaryLabels.length,
+        )
+        .cellStyle;
     headerStyle.backColor = '#F9FAFB';
     headerStyle.fontColor = '#111827';
     headerStyle.bold = true;
@@ -162,7 +174,9 @@ class PayrollSpreadsheetExportService {
       range.setText(_formatDateHeader(dates[index]));
     }
 
-    for (var index = 0; index < PayrollMatrixRow.summaryLabels.length; index++) {
+    for (var index = 0;
+        index < PayrollMatrixRow.summaryLabels.length;
+        index++) {
       final range = sheet.getRangeByIndex(1, dates.length + 4 + index);
       range.setText(PayrollMatrixRow.summaryLabels[index]);
     }
@@ -175,41 +189,33 @@ class PayrollSpreadsheetExportService {
     required PayrollMatrixRow row,
     required Iterable<AttendancePolicyRecapDay> recapRows,
   }) {
-    // Check if employee is a manager
-    final isManager = recapRows.any((recap) =>
-        recap.employeeId == row.employeeId && recap.isManagerExempt);
-
     // Taller rows for enriched descriptions with duration info
     sheet.getRangeByIndex(excelRowIndex, 1, excelRowIndex, 3).rowHeight = 40;
 
-    final identityRange = sheet.getRangeByIndex(excelRowIndex, 1, excelRowIndex, 3);
+    final identityRange =
+        sheet.getRangeByIndex(excelRowIndex, 1, excelRowIndex, 3);
     identityRange.cellStyle.backColor = '#FFFFFF';
     identityRange.cellStyle.fontColor = '#111827';
     identityRange.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
     identityRange.cellStyle.borders.all.color = '#E5E7EB';
     identityRange.cellStyle.vAlign = xlsio.VAlignType.center;
 
-    // Employee name — no star/bold for managers in main sheet
     sheet.getRangeByIndex(excelRowIndex, 1).setText(row.employeeName);
 
     // Contract with human-readable label
-    sheet.getRangeByIndex(excelRowIndex, 2).setText(row.employmentContract.label);
+    sheet
+        .getRangeByIndex(excelRowIndex, 2)
+        .setText(row.employmentContract.label);
 
     sheet.getRangeByIndex(excelRowIndex, 3).setText(
-      row.employeeRole.isNotEmpty ? row.employeeRole : '-',
-    );
+          row.employeeRole.isNotEmpty ? row.employeeRole : '-',
+        );
 
     for (var index = 0; index < dates.length; index++) {
-      final dayCell = index < row.cells.length
-          ? row.cells[index]
-          : PayrollMatrixDayCell.placeholder(dates[index]);
+      final dayCell = _cellForDate(row, dates[index]);
       final range = sheet.getRangeByIndex(excelRowIndex, index + 4);
-      // Hadir with no issues → green box with checkmark
-      final isCleanHadir = dayCell.hasData &&
-          dayCell.secondaryTags.isEmpty &&
-          dayCell.primaryStatus == AttendancePolicyPrimaryStatus.hadir;
-      if (isCleanHadir) {
-        range.setText('✓ Hadir');
+      if (_isAttendedPayrollCell(dayCell)) {
+        range.setText(_attendedPayrollText(dayCell));
         range.cellStyle.backColor = '#DCFCE7';
         range.cellStyle.fontColor = '#166534';
       } else {
@@ -241,20 +247,158 @@ class PayrollSpreadsheetExportService {
     }
   }
 
+  void _buildManagerSheet(
+    xlsio.Workbook workbook, {
+    required PayrollMatrixDataset dataset,
+    required List<DateTime> dates,
+    required Iterable<AttendancePolicyRecapDay> recapRows,
+  }) {
+    final managerIds = <String>{
+      for (final recap in recapRows)
+        if (recap.isManagerExempt) recap.employeeId,
+    };
+    final managers = dataset.rows
+        .where(
+            (row) => row.isManagerExempt || managerIds.contains(row.employeeId))
+        .toList(growable: false);
+    if (managers.isEmpty) return;
+
+    final sheet = workbook.worksheets.addWithName('Kepala Gerai');
+    sheet.showGridlines = false;
+
+    final lastColumn = 2 + dates.length + 3;
+    sheet.getRangeByName('A1').columnWidth = 28;
+    sheet.getRangeByName('B1').columnWidth = 14;
+    for (var column = 3; column <= lastColumn; column++) {
+      sheet.getRangeByIndex(1, column).columnWidth =
+          column < 3 + dates.length ? 20 : 16;
+    }
+    sheet.getRangeByIndex(1, 1, 1, lastColumn).rowHeight = 34;
+    sheet.getRangeByName('C2').freezePanes();
+
+    final header = sheet.getRangeByIndex(1, 1, 1, lastColumn);
+    header.cellStyle.backColor = '#F5F3FF';
+    header.cellStyle.fontColor = '#4C1D95';
+    header.cellStyle.bold = true;
+    header.cellStyle.hAlign = xlsio.HAlignType.center;
+    header.cellStyle.vAlign = xlsio.VAlignType.center;
+    header.cellStyle.wrapText = true;
+    header.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+    header.cellStyle.borders.all.color = '#DDD6FE';
+
+    sheet.getRangeByName('A1').setText('★ Kepala Gerai');
+    sheet.getRangeByName('B1').setText('Kontrak');
+    for (var index = 0; index < dates.length; index++) {
+      sheet
+          .getRangeByIndex(1, index + 3)
+          .setText(_formatDateHeader(dates[index]));
+    }
+    final summaryStart = dates.length + 3;
+    sheet.getRangeByIndex(1, summaryStart).setText('Masuk');
+    sheet.getRangeByIndex(1, summaryStart + 1).setText('Jam Kerja');
+    sheet.getRangeByIndex(1, summaryStart + 2).setText('Istirahat');
+
+    final recapByEmployeeDate = <String, AttendancePolicyRecapDay>{
+      for (final recap in recapRows)
+        '${recap.employeeId}|${_formatDateToken(_dateOnly(recap.logicalDate))}':
+            recap,
+    };
+
+    for (var rowIndex = 0; rowIndex < managers.length; rowIndex++) {
+      final excelRow = rowIndex + 2;
+      final manager = managers[rowIndex];
+      sheet.getRangeByIndex(excelRow, 1, excelRow, lastColumn).rowHeight = 48;
+
+      final nameCell = sheet.getRangeByIndex(excelRow, 1);
+      nameCell.setText('★ ${manager.employeeName}');
+      nameCell.cellStyle.bold = true;
+      nameCell.cellStyle.fontColor = '#4C1D95';
+      nameCell.cellStyle.backColor = '#FFFFFF';
+      nameCell.cellStyle.vAlign = xlsio.VAlignType.center;
+      nameCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      nameCell.cellStyle.borders.all.color = '#DDD6FE';
+
+      final contractCell = sheet.getRangeByIndex(excelRow, 2);
+      contractCell.setText(manager.employmentContract.label);
+      contractCell.cellStyle.fontColor = '#6B7280';
+      contractCell.cellStyle.backColor = '#FFFFFF';
+      contractCell.cellStyle.hAlign = xlsio.HAlignType.center;
+      contractCell.cellStyle.vAlign = xlsio.VAlignType.center;
+      contractCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      contractCell.cellStyle.borders.all.color = '#DDD6FE';
+
+      var masukDays = 0;
+      var totalWorkMinutes = 0;
+      var totalBreakMinutes = 0;
+
+      for (var index = 0; index < dates.length; index++) {
+        final date = dates[index];
+        final recap = recapByEmployeeDate[
+            '${manager.employeeId}|${_formatDateToken(_dateOnly(date))}'];
+        final range = sheet.getRangeByIndex(excelRow, index + 3);
+        final hasScan = recap?.firstScanLocal != null;
+        if (hasScan) {
+          final workMinutes = recap?.netWorkMinutes ?? 0;
+          final breakMinutes = recap?.totalBreakMinutes ?? 0;
+          masukDays++;
+          totalWorkMinutes += math.max(0, workMinutes);
+          totalBreakMinutes += math.max(0, breakMinutes);
+          range.setText(
+            '✓ Masuk\nKerja ${_formatMinutesToDuration(workMinutes.toDouble())}\nIstirahat ${_formatMinutesToDuration(breakMinutes.toDouble())}',
+          );
+          range.cellStyle.backColor = '#DCFCE7';
+          range.cellStyle.fontColor = '#166534';
+          range.cellStyle.bold = true;
+        } else {
+          range.setText('-');
+          range.cellStyle.backColor = '#FFFFFF';
+          range.cellStyle.fontColor = '#9CA3AF';
+        }
+        range.cellStyle.wrapText = true;
+        range.cellStyle.hAlign = xlsio.HAlignType.center;
+        range.cellStyle.vAlign = xlsio.VAlignType.center;
+        range.cellStyle.fontSize = 8;
+        range.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+        range.cellStyle.borders.all.color = '#DDD6FE';
+      }
+
+      final summaryValues = <String>[
+        '$masukDays',
+        _formatMinutesToDuration(totalWorkMinutes.toDouble()),
+        _formatMinutesToDuration(totalBreakMinutes.toDouble()),
+      ];
+      for (var index = 0; index < summaryValues.length; index++) {
+        final range = sheet.getRangeByIndex(excelRow, summaryStart + index);
+        range.setText(summaryValues[index]);
+        range.cellStyle.backColor = '#F5F3FF';
+        range.cellStyle.fontColor = '#4C1D95';
+        range.cellStyle.bold = true;
+        range.cellStyle.hAlign = xlsio.HAlignType.center;
+        range.cellStyle.vAlign = xlsio.VAlignType.center;
+        range.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+        range.cellStyle.borders.all.color = '#DDD6FE';
+      }
+    }
+
+    sheet.autoFilters.filterRange =
+        sheet.getRangeByIndex(1, 1, managers.length + 1, lastColumn);
+  }
+
   List<DateTime> _resolveDates({
     required PayrollMatrixDataset dataset,
     required DateTime startDate,
     required DateTime endDate,
   }) {
     if (dataset.dates.isNotEmpty) {
-      return dataset.dates.map(_dateOnly).toList(growable: false);
+      return dataset.dates.map(_dateOnly).toList(growable: false)
+        ..sort((left, right) => right.compareTo(left));
     }
 
     final dates = <DateTime>[];
-    var cursor = startDate;
-    while (!cursor.isAfter(endDate)) {
+    var cursor = endDate;
+    while (!cursor.isBefore(startDate)) {
       dates.add(cursor);
-      cursor = cursor.add(const Duration(days: 1));
+      cursor = cursor.subtract(const Duration(days: 1));
     }
     return dates;
   }
@@ -316,11 +460,10 @@ class PayrollSpreadsheetExportService {
     return DateTime(date.year, date.month, date.day);
   }
 
-  PayrollMatrixDataset _sortDatasetWithManagersFirst(
+  PayrollMatrixDataset _staffDataset(
     PayrollMatrixDataset dataset,
     Iterable<AttendancePolicyRecapDay> recapRows,
   ) {
-    // Create a map of employee IDs to check if they're managers
     final managerIds = <String>{};
     for (final recap in recapRows) {
       if (recap.isManagerExempt) {
@@ -328,23 +471,59 @@ class PayrollSpreadsheetExportService {
       }
     }
 
-    // Sort rows with managers first
-    final sortedRows = List<PayrollMatrixRow>.from(dataset.rows)
-      ..sort((a, b) {
-        final aIsManager = managerIds.contains(a.employeeId);
-        final bIsManager = managerIds.contains(b.employeeId);
-
-        if (aIsManager && !bIsManager) return -1;
-        if (!aIsManager && bIsManager) return 1;
-
-        // Both are managers or both are not managers - maintain original order
-        return 0;
-      });
+    final staffRows = dataset.rows
+        .where((row) => !row.isManagerExempt)
+        .where((row) => !managerIds.contains(row.employeeId))
+        .toList(growable: false);
 
     return PayrollMatrixDataset(
       dates: dataset.dates,
-      rows: sortedRows,
+      rows: staffRows,
     );
+  }
+
+  PayrollMatrixDayCell _cellForDate(PayrollMatrixRow row, DateTime date) {
+    final normalizedDate = _dateOnly(date);
+    for (final cell in row.cells) {
+      if (_dateOnly(cell.date) == normalizedDate) {
+        return cell;
+      }
+    }
+    return PayrollMatrixDayCell.placeholder(normalizedDate);
+  }
+
+  bool _isAttendedPayrollCell(PayrollMatrixDayCell cell) {
+    if (!cell.hasData) return false;
+    switch (cell.primaryStatus) {
+      case AttendancePolicyPrimaryStatus.hadir:
+      case AttendancePolicyPrimaryStatus.hadirTanpaJadwal:
+      case AttendancePolicyPrimaryStatus.late:
+      case AttendancePolicyPrimaryStatus.shortWork:
+      case AttendancePolicyPrimaryStatus.excessBreak:
+      case AttendancePolicyPrimaryStatus.overtime:
+      case AttendancePolicyPrimaryStatus.exemptManager:
+        return true;
+      case AttendancePolicyPrimaryStatus.absence:
+      case AttendancePolicyPrimaryStatus.belumAbsenPulang:
+      case AttendancePolicyPrimaryStatus.activeIncomplete:
+      case AttendancePolicyPrimaryStatus.belumMasuk:
+      case AttendancePolicyPrimaryStatus.sakit:
+      case AttendancePolicyPrimaryStatus.izin:
+      case AttendancePolicyPrimaryStatus.cuti:
+      case AttendancePolicyPrimaryStatus.libur:
+      case null:
+        return false;
+    }
+  }
+
+  String _attendedPayrollText(PayrollMatrixDayCell cell) {
+    final details = cell.secondaryDescriptions
+        .where((description) => description != 'Manager Exempt')
+        .toList(growable: false);
+    if (details.isEmpty) {
+      return '✓ Absen';
+    }
+    return '✓ Absen\n${details.join(' | ')}';
   }
 
   // ---------------------------------------------------------------------------
@@ -423,10 +602,15 @@ class PayrollSpreadsheetExportService {
 
     // --- Section 5: Top performers / issues ---
     final topAnchorRow = currentRow;
-    _writeTopInsights(sheet, row: currentRow, dataset: dataset, recapRows: recapRows, sortMode: sortMode);
+    _writeTopInsights(sheet,
+        row: currentRow,
+        dataset: dataset,
+        recapRows: recapRows,
+        sortMode: sortMode);
 
     // Write hyperlink targets back into nav buttons
-    _applyNavigationHyperlinks(sheet, statsRow: statsAnchorRow, empRow: empAnchorRow, topRow: topAnchorRow);
+    _applyNavigationHyperlinks(sheet,
+        statsRow: statsAnchorRow, empRow: empAnchorRow, topRow: topAnchorRow);
 
     // Freeze: keep header + nav always visible
     sheet.getRangeByIndex(6, 1).freezePanes();
@@ -588,8 +772,7 @@ class PayrollSpreadsheetExportService {
         if (cell.hasData && cell.primaryStatus != null) {
           final isAbsent = cell.primaryStatus ==
                   AttendancePolicyPrimaryStatus.absence ||
-              cell.primaryStatus ==
-                  AttendancePolicyPrimaryStatus.belumMasuk;
+              cell.primaryStatus == AttendancePolicyPrimaryStatus.belumMasuk;
           if (!isAbsent) totalHadirDays++;
         }
       }
@@ -600,7 +783,8 @@ class PayrollSpreadsheetExportService {
         possibleDays > 0 ? (totalHadirDays / possibleDays * 100) : 0.0;
 
     // KPI cards in a 4-column grid (label + value pairs)
-    void writeKpiCard(int r, int col, String label, String value, String bgColor, String fgColor) {
+    void writeKpiCard(int r, int col, String label, String value,
+        String bgColor, String fgColor) {
       final labelRange = sheet.getRangeByIndex(r, col);
       labelRange.setText(label);
       labelRange.cellStyle.fontSize = 9;
@@ -627,25 +811,49 @@ class PayrollSpreadsheetExportService {
     // Row 1: Karyawan | Hari | Kehadiran | Terlambat
     writeKpiCard(row, 1, 'Karyawan', '$totalEmployees', '#EFF6FF', '#1E40AF');
     writeKpiCard(row, 3, 'Hari', '$totalDays', '#EFF6FF', '#1E40AF');
-    writeKpiCard(row, 5, 'Kehadiran', '${kehadiranRate.toStringAsFixed(1)}%',
+    writeKpiCard(
+        row,
+        5,
+        'Kehadiran',
+        '${kehadiranRate.toStringAsFixed(1)}%',
         kehadiranRate >= 90 ? '#F0FDF4' : '#FEF2F2',
         kehadiranRate >= 90 ? '#059669' : '#DC2626');
-    writeKpiCard(row, 7, 'Terlambat', '$totalLate',
+    writeKpiCard(
+        row,
+        7,
+        'Terlambat',
+        '$totalLate',
         totalLate > 0 ? '#FFFBEB' : '#F0FDF4',
         totalLate > 0 ? '#92400E' : '#059669');
     row++;
 
     // Row 2: Kurang Jam | Break Lebih | Tidak Hadir | Lembur
-    writeKpiCard(row, 1, 'Kurang Jam', '$totalShortWork',
+    writeKpiCard(
+        row,
+        1,
+        'Kurang Jam',
+        '$totalShortWork',
         totalShortWork > 0 ? '#FEF2F2' : '#F0FDF4',
         totalShortWork > 0 ? '#B91C1C' : '#059669');
-    writeKpiCard(row, 3, 'Break Lebih', '$totalExcessBreak',
+    writeKpiCard(
+        row,
+        3,
+        'Break Lebih',
+        '$totalExcessBreak',
         totalExcessBreak > 0 ? '#FEF2F2' : '#F0FDF4',
         totalExcessBreak > 0 ? '#B91C1C' : '#059669');
-    writeKpiCard(row, 5, 'Tidak Hadir', '$totalAbsence',
+    writeKpiCard(
+        row,
+        5,
+        'Tidak Hadir',
+        '$totalAbsence',
         totalAbsence > 0 ? '#FEF2F2' : '#F0FDF4',
         totalAbsence > 0 ? '#B91C1C' : '#059669');
-    writeKpiCard(row, 7, 'Lembur', '$totalOvertime',
+    writeKpiCard(
+        row,
+        7,
+        'Lembur',
+        '$totalOvertime',
         totalOvertime > 0 ? '#FFFBEB' : '#F8FAFC',
         totalOvertime > 0 ? '#92400E' : '#6B7280');
     row++;
@@ -675,19 +883,19 @@ class PayrollSpreadsheetExportService {
     final headerRowIndex = row;
 
     const headers = <String>[
-      'Karyawan',        // col 1
-      'Kontrak',         // col 2
-      'Terlambat',       // col 3
-      'Avg Telat',       // col 4
-      'Kurang Jam',      // col 5
-      'Break Lebih',     // col 6
-      'Tidak Hadir',     // col 7
-      'Lembur',          // col 8
-      'Avg Lembur',      // col 9
-      'Avg Kurang',      // col 10
+      'Karyawan', // col 1
+      'Kontrak', // col 2
+      'Terlambat', // col 3
+      'Avg Telat', // col 4
+      'Kurang Jam', // col 5
+      'Break Lebih', // col 6
+      'Tidak Hadir', // col 7
+      'Lembur', // col 8
+      'Avg Lembur', // col 9
+      'Avg Kurang', // col 10
       'Avg Break Lebih', // col 11
-      'Masuk',           // col 12
-      'Visualisasi',     // col 13
+      'Masuk', // col 12
+      'Visualisasi', // col 13
     ];
 
     for (var col = 0; col < headers.length; col++) {
@@ -738,12 +946,24 @@ class PayrollSpreadsheetExportService {
           final cmp = b.overtimeCount.compareTo(a.overtimeCount);
           return cmp != 0 ? cmp : bAvg.avgOvertime.compareTo(aAvg.avgOvertime);
         case SpreadsheetSortMode.aman:
-          final aTotal = a.lateCount + a.shortWorkCount + a.excessBreakCount + a.absenceCount;
-          final bTotal = b.lateCount + b.shortWorkCount + b.excessBreakCount + b.absenceCount;
+          final aTotal = a.lateCount +
+              a.shortWorkCount +
+              a.excessBreakCount +
+              a.absenceCount;
+          final bTotal = b.lateCount +
+              b.shortWorkCount +
+              b.excessBreakCount +
+              b.absenceCount;
           return aTotal.compareTo(bTotal);
         case SpreadsheetSortMode.bermasalah:
-          final aTotal = a.lateCount + a.shortWorkCount + a.excessBreakCount + a.absenceCount;
-          final bTotal = b.lateCount + b.shortWorkCount + b.excessBreakCount + b.absenceCount;
+          final aTotal = a.lateCount +
+              a.shortWorkCount +
+              a.excessBreakCount +
+              a.absenceCount;
+          final bTotal = b.lateCount +
+              b.shortWorkCount +
+              b.excessBreakCount +
+              b.absenceCount;
           return bTotal.compareTo(aTotal);
       }
     });
@@ -751,9 +971,14 @@ class PayrollSpreadsheetExportService {
     // Max issues for non-manager rows (used for bar scaling)
     final maxIssues = sortedRows
         .where((r) => !managerIds.contains(r.employeeId))
-        .map((r) => r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount)
+        .map((r) =>
+            r.lateCount +
+            r.shortWorkCount +
+            r.excessBreakCount +
+            r.absenceCount)
         .fold(0, (int prev, int v) => v > prev ? v : prev);
-    var rowCounter = 0; // tracks rendered non-manager rows for alternating colors
+    var rowCounter =
+        0; // tracks rendered non-manager rows for alternating colors
 
     // Totals accumulators for mini cart
     var sumLate = 0;
@@ -765,7 +990,9 @@ class PayrollSpreadsheetExportService {
 
     for (var i = 0; i < sortedRows.length; i++) {
       final r = sortedRows[i];
-      if (managerIds.contains(r.employeeId)) continue; // managers in separate section below
+      if (managerIds.contains(r.employeeId)) {
+        continue; // managers in separate section below
+      }
       final averages = employeeAverages[r.employeeId] ??
           const (avgLate: 0.0, avgOvertime: 0.0, avgShort: 0.0, avgBreak: 0.0);
       final isEvenRow = rowCounter % 2 == 0;
@@ -796,7 +1023,12 @@ class PayrollSpreadsheetExportService {
       final countCells = <({int col, int count, String bgHigh, String fgHigh})>[
         (col: 3, count: r.lateCount, bgHigh: '#FEF3C7', fgHigh: '#92400E'),
         (col: 5, count: r.shortWorkCount, bgHigh: '#FEE2E2', fgHigh: '#B91C1C'),
-        (col: 6, count: r.excessBreakCount, bgHigh: '#FEE2E2', fgHigh: '#B91C1C'),
+        (
+          col: 6,
+          count: r.excessBreakCount,
+          bgHigh: '#FEE2E2',
+          fgHigh: '#B91C1C'
+        ),
         (col: 7, count: r.absenceCount, bgHigh: '#FEE2E2', fgHigh: '#B91C1C'),
         (col: 8, count: r.overtimeCount, bgHigh: '#FEF3C7', fgHigh: '#92400E'),
       ];
@@ -824,8 +1056,10 @@ class PayrollSpreadsheetExportService {
       // Col 4: Avg Telat (NEW)
       final avgLateCell = sheet.getRangeByIndex(row, 4);
       avgLateCell.setText(_formatMinutesToDuration(averages.avgLate));
-      avgLateCell.cellStyle.fontColor = averages.avgLate > 0 ? '#92400E' : '#9CA3AF';
-      avgLateCell.cellStyle.backColor = averages.avgLate > 0 ? '#FEF3C7' : rowBgColor;
+      avgLateCell.cellStyle.fontColor =
+          averages.avgLate > 0 ? '#92400E' : '#9CA3AF';
+      avgLateCell.cellStyle.backColor =
+          averages.avgLate > 0 ? '#FEF3C7' : rowBgColor;
       avgLateCell.cellStyle.hAlign = xlsio.HAlignType.center;
       avgLateCell.cellStyle.vAlign = xlsio.VAlignType.center;
       avgLateCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
@@ -834,8 +1068,10 @@ class PayrollSpreadsheetExportService {
       // Col 9: Avg Lembur (NEW)
       final avgOtCell = sheet.getRangeByIndex(row, 9);
       avgOtCell.setText(_formatMinutesToDuration(averages.avgOvertime));
-      avgOtCell.cellStyle.fontColor = averages.avgOvertime > 0 ? '#92400E' : '#9CA3AF';
-      avgOtCell.cellStyle.backColor = averages.avgOvertime > 0 ? '#FEF3C7' : rowBgColor;
+      avgOtCell.cellStyle.fontColor =
+          averages.avgOvertime > 0 ? '#92400E' : '#9CA3AF';
+      avgOtCell.cellStyle.backColor =
+          averages.avgOvertime > 0 ? '#FEF3C7' : rowBgColor;
       avgOtCell.cellStyle.hAlign = xlsio.HAlignType.center;
       avgOtCell.cellStyle.vAlign = xlsio.VAlignType.center;
       avgOtCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
@@ -844,7 +1080,8 @@ class PayrollSpreadsheetExportService {
       // Col 10: Avg Kurang
       final avgShortCell = sheet.getRangeByIndex(row, 10);
       avgShortCell.setText(_formatMinutesToDuration(averages.avgShort));
-      avgShortCell.cellStyle.fontColor = averages.avgShort > 0 ? '#B91C1C' : '#9CA3AF';
+      avgShortCell.cellStyle.fontColor =
+          averages.avgShort > 0 ? '#B91C1C' : '#9CA3AF';
       avgShortCell.cellStyle.backColor = rowBgColor;
       avgShortCell.cellStyle.hAlign = xlsio.HAlignType.center;
       avgShortCell.cellStyle.vAlign = xlsio.VAlignType.center;
@@ -854,7 +1091,8 @@ class PayrollSpreadsheetExportService {
       // Col 11: Avg Break Lebih
       final avgBreakCell = sheet.getRangeByIndex(row, 11);
       avgBreakCell.setText(_formatMinutesToDuration(averages.avgBreak));
-      avgBreakCell.cellStyle.fontColor = averages.avgBreak > 0 ? '#B91C1C' : '#9CA3AF';
+      avgBreakCell.cellStyle.fontColor =
+          averages.avgBreak > 0 ? '#B91C1C' : '#9CA3AF';
       avgBreakCell.cellStyle.backColor = rowBgColor;
       avgBreakCell.cellStyle.hAlign = xlsio.HAlignType.center;
       avgBreakCell.cellStyle.vAlign = xlsio.VAlignType.center;
@@ -864,10 +1102,8 @@ class PayrollSpreadsheetExportService {
       // Col 12: Masuk (attendance day count)
       final masukCell = sheet.getRangeByIndex(row, 12);
       masukCell.setNumber(masukCount.toDouble());
-      masukCell.cellStyle.backColor =
-          masukCount > 0 ? '#DCFCE7' : rowBgColor;
-      masukCell.cellStyle.fontColor =
-          masukCount > 0 ? '#166534' : '#9CA3AF';
+      masukCell.cellStyle.backColor = masukCount > 0 ? '#DCFCE7' : rowBgColor;
+      masukCell.cellStyle.fontColor = masukCount > 0 ? '#166534' : '#9CA3AF';
       masukCell.cellStyle.bold = masukCount > 0;
       masukCell.cellStyle.hAlign = xlsio.HAlignType.center;
       masukCell.cellStyle.vAlign = xlsio.VAlignType.center;
@@ -875,7 +1111,8 @@ class PayrollSpreadsheetExportService {
       masukCell.cellStyle.borders.all.color = '#E5E7EB';
 
       // Col 13: Visualisasi (unicode bar chart per row)
-      final totalIssues = r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount;
+      final totalIssues =
+          r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount;
       final vizCell = sheet.getRangeByIndex(row, 13);
       vizCell.setText(_buildUnicodeBar(totalIssues, maxIssues));
       vizCell.cellStyle.fontColor = totalIssues > 0 ? '#B91C1C' : '#166534';
@@ -946,14 +1183,24 @@ class PayrollSpreadsheetExportService {
     // Apply auto-filter to the per-employee summary table (header + data rows, exclude TOTAL)
     if (rowCounter > 0) {
       sheet.autoFilters.filterRange = sheet.getRangeByIndex(
-        headerRowIndex, 1, headerRowIndex + rowCounter, 13,
+        headerRowIndex,
+        1,
+        headerRowIndex + rowCounter,
+        13,
       );
     }
 
     return row;
   }
 
-  Map<String, ({double avgLate, double avgOvertime, double avgShort, double avgBreak})> _calculateEmployeeAverages(
+  Map<
+      String,
+      ({
+        double avgLate,
+        double avgOvertime,
+        double avgShort,
+        double avgBreak
+      })> _calculateEmployeeAverages(
     Iterable<AttendancePolicyRecapDay> recapRows,
   ) {
     final employeeData = <String, List<AttendancePolicyRecapDay>>{};
@@ -962,7 +1209,13 @@ class PayrollSpreadsheetExportService {
       employeeData.putIfAbsent(recap.employeeId, () => []).add(recap);
     }
 
-    final averages = <String, ({double avgLate, double avgOvertime, double avgShort, double avgBreak})>{};
+    final averages = <String,
+        ({
+      double avgLate,
+      double avgOvertime,
+      double avgShort,
+      double avgBreak
+    })>{};
 
     for (final entry in employeeData.entries) {
       final employeeRecaps = entry.value;
@@ -998,12 +1251,20 @@ class PayrollSpreadsheetExportService {
         }
       }
 
-      final avgShort = workDayCount > 0 ? totalShortMinutes / workDayCount : 0.0;
-      final avgBreak = workDayCount > 0 ? totalBreakMinutes / workDayCount : 0.0;
+      final avgShort =
+          workDayCount > 0 ? totalShortMinutes / workDayCount : 0.0;
+      final avgBreak =
+          workDayCount > 0 ? totalBreakMinutes / workDayCount : 0.0;
       final avgLate = lateDayCount > 0 ? totalLateMinutes / lateDayCount : 0.0;
-      final avgOvertime = overtimeDayCount > 0 ? totalOvertimeMinutes / overtimeDayCount : 0.0;
+      final avgOvertime =
+          overtimeDayCount > 0 ? totalOvertimeMinutes / overtimeDayCount : 0.0;
 
-      averages[entry.key] = (avgLate: avgLate, avgOvertime: avgOvertime, avgShort: avgShort, avgBreak: avgBreak);
+      averages[entry.key] = (
+        avgLate: avgLate,
+        avgOvertime: avgOvertime,
+        avgShort: avgShort,
+        avgBreak: avgBreak
+      );
     }
 
     return averages;
@@ -1046,7 +1307,8 @@ class PayrollSpreadsheetExportService {
     required Iterable<AttendancePolicyRecapDay> recapRows,
   }) {
     // Build per-manager working hours from recapRows
-    final managerData = <String, ({String name, String contract, int masukDays, int totalNetMinutes})>{};
+    final managerData = <String,
+        ({String name, String contract, int masukDays, int totalNetMinutes})>{};
     for (final recap in recapRows) {
       if (!recap.isManagerExempt) continue;
       if (recap.firstScanLocal == null) continue;
@@ -1054,7 +1316,9 @@ class PayrollSpreadsheetExportService {
           ? recap.netWorkMinutes!
           : () {
               if (recap.lastPulangLocal != null) {
-                final raw = recap.lastPulangLocal!.difference(recap.firstScanLocal!).inMinutes;
+                final raw = recap.lastPulangLocal!
+                    .difference(recap.firstScanLocal!)
+                    .inMinutes;
                 final breaks = recap.totalBreakMinutes ?? 0;
                 return math.max(0, raw - breaks);
               }
@@ -1084,7 +1348,13 @@ class PayrollSpreadsheetExportService {
     row++;
 
     // Headers
-    const mgHeaders = <String>['Karyawan', 'Kontrak', 'Hari Masuk', 'Total Jam Kerja', 'Avg Jam/Hari'];
+    const mgHeaders = <String>[
+      'Karyawan',
+      'Kontrak',
+      'Hari Masuk',
+      'Total Jam Kerja',
+      'Avg Jam/Hari'
+    ];
     for (var col = 0; col < mgHeaders.length; col++) {
       final cell = sheet.getRangeByIndex(row, col + 1);
       cell.setText(mgHeaders[col]);
@@ -1109,7 +1379,9 @@ class PayrollSpreadsheetExportService {
       sheet.getRangeByIndex(row, 1).setText(m.name);
       sheet.getRangeByIndex(row, 2).setText(m.contract);
       sheet.getRangeByIndex(row, 3).setNumber(m.masukDays.toDouble());
-      sheet.getRangeByIndex(row, 4).setText(_formatMinutesToDuration(m.totalNetMinutes.toDouble()));
+      sheet
+          .getRangeByIndex(row, 4)
+          .setText(_formatMinutesToDuration(m.totalNetMinutes.toDouble()));
       sheet.getRangeByIndex(row, 5).setText(_formatMinutesToDuration(avgMins));
 
       for (var col = 1; col <= 5; col++) {
@@ -1117,7 +1389,8 @@ class PayrollSpreadsheetExportService {
         cell.cellStyle.backColor = bg;
         cell.cellStyle.fontColor = '#374151';
         cell.cellStyle.vAlign = xlsio.VAlignType.center;
-        cell.cellStyle.hAlign = col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
+        cell.cellStyle.hAlign =
+            col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
         cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
         cell.cellStyle.borders.all.color = '#DDD6FE';
       }
@@ -1127,7 +1400,8 @@ class PayrollSpreadsheetExportService {
     // Note
     final note = sheet.getRangeByIndex(row, 1, row, 5);
     note.merge();
-    note.setText('ℹ Kepala toko dihitung dari scan masuk/pulang aktual. Tidak dikenai penalti jadwal.');
+    note.setText(
+        'ℹ Kepala toko dihitung dari scan masuk/pulang aktual. Tidak dikenai penalti jadwal.');
     note.cellStyle.fontSize = 8;
     note.cellStyle.fontColor = '#7C3AED';
     note.cellStyle.italic = true;
@@ -1166,21 +1440,13 @@ class PayrollSpreadsheetExportService {
     sectionTitle.rowHeight = 28;
     row++;
 
-    // --- Bar Chart Data: Top 10 employees by total issues ---
-    final sortedByIssues = List<PayrollMatrixRow>.from(dataset.rows)
-      ..sort((a, b) {
-        final aTotal = a.lateCount + a.shortWorkCount + a.excessBreakCount + a.absenceCount;
-        final bTotal = b.lateCount + b.shortWorkCount + b.excessBreakCount + b.absenceCount;
-        return bTotal.compareTo(aTotal);
-      });
+    final staffRows = dataset.rows.where((row) => !row.isManagerExempt);
+    final hasAnyIssue = staffRows.any((row) =>
+        row.lateCount > 0 ||
+        row.shortWorkCount > 0 ||
+        row.excessBreakCount > 0);
 
-    final barData = sortedByIssues
-        .where((r) => !r.isManagerExempt)
-        .where((r) => r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount > 0)
-        .take(math.min(10, sortedByIssues.length))
-        .toList();
-
-    if (barData.isEmpty) {
+    if (!hasAnyIssue) {
       final emptyCell = sheet.getRangeByIndex(row, 1, row, 11);
       emptyCell.merge();
       emptyCell.setText('  (tidak ada data masalah untuk diagram)');
@@ -1190,125 +1456,123 @@ class PayrollSpreadsheetExportService {
       return row + 2;
     }
 
-    // Write bar chart data block
-    final barDataStartRow = row;
+    final chartRanges = <({String title, int startRow, int endRow})>[];
 
-    // Headers
-    sheet.getRangeByIndex(row, 1).setText('Karyawan');
-    sheet.getRangeByIndex(row, 2).setText('Terlambat');
-    sheet.getRangeByIndex(row, 3).setText('Kurang Jam');
-    sheet.getRangeByIndex(row, 4).setText('Break Lebih');
-    sheet.getRangeByIndex(row, 5).setText('Tidak Hadir');
+    int writeCategoryBlock({
+      required int startRow,
+      required String title,
+      required String countHeader,
+      required int Function(PayrollMatrixRow row) countFor,
+      required String color,
+    }) {
+      var currentRow = startRow;
+      final sorted = List<PayrollMatrixRow>.from(staffRows)
+        ..sort((a, b) => countFor(b).compareTo(countFor(a)));
+      final rows = sorted
+          .where((item) => countFor(item) > 0)
+          .take(10)
+          .toList(growable: false);
 
-    for (var col = 1; col <= 5; col++) {
-      final cell = sheet.getRangeByIndex(row, col);
-      cell.cellStyle.bold = true;
-      cell.cellStyle.fontSize = 8;
-      cell.cellStyle.fontColor = '#374151';
-      cell.cellStyle.backColor = '#F3F4F6';
-      cell.cellStyle.hAlign = xlsio.HAlignType.center;
-      cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
-      cell.cellStyle.borders.all.color = '#E5E7EB';
-    }
-    row++;
+      final titleRange = sheet.getRangeByIndex(currentRow, 1, currentRow, 3);
+      titleRange.merge();
+      titleRange.setText(title);
+      titleRange.cellStyle.bold = true;
+      titleRange.cellStyle.fontSize = 9;
+      titleRange.cellStyle.fontColor = color;
+      titleRange.cellStyle.backColor = '#F8FAFC';
+      titleRange.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+      titleRange.cellStyle.borders.all.color = '#E5E7EB';
+      currentRow++;
 
-    // Data rows
-    for (final r in barData) {
-      // Truncate long names for chart readability
-      final displayName = r.employeeName.length > 20
-          ? '${r.employeeName.substring(0, 20)}...'
-          : r.employeeName;
-      sheet.getRangeByIndex(row, 1).setText(displayName);
-      sheet.getRangeByIndex(row, 2).setNumber(r.lateCount.toDouble());
-      sheet.getRangeByIndex(row, 3).setNumber(r.shortWorkCount.toDouble());
-      sheet.getRangeByIndex(row, 4).setNumber(r.excessBreakCount.toDouble());
-      sheet.getRangeByIndex(row, 5).setNumber(r.absenceCount.toDouble());
-
-      for (var col = 1; col <= 5; col++) {
-        final cell = sheet.getRangeByIndex(row, col);
+      sheet.getRangeByIndex(currentRow, 1).setText('Karyawan');
+      sheet.getRangeByIndex(currentRow, 2).setText(countHeader);
+      sheet.getRangeByIndex(currentRow, 3).setText('Bar');
+      for (var col = 1; col <= 3; col++) {
+        final cell = sheet.getRangeByIndex(currentRow, col);
+        cell.cellStyle.bold = true;
         cell.cellStyle.fontSize = 8;
         cell.cellStyle.fontColor = '#374151';
-        cell.cellStyle.hAlign = col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
+        cell.cellStyle.backColor = '#F3F4F6';
+        cell.cellStyle.hAlign = xlsio.HAlignType.center;
         cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
         cell.cellStyle.borders.all.color = '#E5E7EB';
       }
-      row++;
+      final headerRow = currentRow;
+      currentRow++;
+
+      final maxCount = rows
+          .map(countFor)
+          .fold(0, (int prev, int value) => math.max(prev, value));
+      for (final item in rows) {
+        final displayName = item.employeeName.length > 22
+            ? '${item.employeeName.substring(0, 22)}...'
+            : item.employeeName;
+        sheet.getRangeByIndex(currentRow, 1).setText(displayName);
+        sheet
+            .getRangeByIndex(currentRow, 2)
+            .setNumber(countFor(item).toDouble());
+        sheet.getRangeByIndex(currentRow, 3).setText(
+              _buildUnicodeBar(countFor(item), maxCount, width: 12),
+            );
+        for (var col = 1; col <= 3; col++) {
+          final cell = sheet.getRangeByIndex(currentRow, col);
+          cell.cellStyle.fontSize = 8;
+          cell.cellStyle.fontColor = col == 3 ? color : '#374151';
+          cell.cellStyle.hAlign =
+              col == 1 ? xlsio.HAlignType.left : xlsio.HAlignType.center;
+          cell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
+          cell.cellStyle.borders.all.color = '#E5E7EB';
+        }
+        currentRow++;
+      }
+
+      if (rows.isNotEmpty) {
+        chartRanges.add((
+          title: title,
+          startRow: headerRow,
+          endRow: currentRow - 1,
+        ));
+      }
+
+      return math.max(currentRow + 1, startRow + 14);
     }
 
-    final barDataEndRow = row - 1;
+    row = writeCategoryBlock(
+      startRow: row,
+      title: 'Top Telat',
+      countHeader: 'Telat',
+      countFor: (item) => item.lateCount,
+      color: '#92400E',
+    );
+    row = writeCategoryBlock(
+      startRow: row,
+      title: 'Top Kurang Jam Kerja',
+      countHeader: 'Kurang',
+      countFor: (item) => item.shortWorkCount,
+      color: '#B91C1C',
+    );
+    row = writeCategoryBlock(
+      startRow: row,
+      title: 'Top Overtime Istirahat',
+      countHeader: 'Istirahat',
+      countFor: (item) => item.excessBreakCount,
+      color: '#BE185D',
+    );
 
-    // --- Pie Chart Data: Proportions of total issues ---
-    // Layout is VERTICAL (4 rows × 2 cols): col 1 = label, col 2 = value.
-    // Syncfusion pie charts require this layout with isSeriesInRows=false
-    // to produce a single series with 4 slices. A horizontal layout
-    // (2 rows × 4 cols) creates 4 separate series instead of 1 pie.
-    row++; // blank row
-
-    final pieStartRow = row;
-
-    var totalLate = 0;
-    var totalShort = 0;
-    var totalBreak = 0;
-    var totalAbsence = 0;
-    for (final r in dataset.rows) {
-      totalLate += r.lateCount;
-      totalShort += r.shortWorkCount;
-      totalBreak += r.excessBreakCount;
-      totalAbsence += r.absenceCount;
-    }
-
-    final pieCategories = <String>['Terlambat', 'Kurang Jam', 'Break Lebih', 'Tidak Hadir'];
-    final pieValues = <int>[totalLate, totalShort, totalBreak, totalAbsence];
-
-    for (var i = 0; i < 4; i++) {
-      final labelCell = sheet.getRangeByIndex(pieStartRow + i, 1);
-      labelCell.setText(pieCategories[i]);
-      labelCell.cellStyle.bold = true;
-      labelCell.cellStyle.fontSize = 8;
-      labelCell.cellStyle.fontColor = '#374151';
-      labelCell.cellStyle.backColor = '#F3F4F6';
-      labelCell.cellStyle.hAlign = xlsio.HAlignType.center;
-      labelCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
-      labelCell.cellStyle.borders.all.color = '#E5E7EB';
-
-      final valCell = sheet.getRangeByIndex(pieStartRow + i, 2);
-      valCell.setNumber(pieValues[i].toDouble());
-      valCell.cellStyle.fontSize = 9;
-      valCell.cellStyle.fontColor = '#111827';
-      valCell.cellStyle.hAlign = xlsio.HAlignType.center;
-      valCell.cellStyle.borders.all.lineStyle = xlsio.LineStyle.thin;
-      valCell.cellStyle.borders.all.color = '#E5E7EB';
-    }
-
-    row = pieStartRow + 4;
-
-    // --- Create Charts ---
     try {
       final charts = ChartCollection(sheet);
-
-      // Bar Chart: Masalah Per Karyawan (stacked bar)
-      final barChart = charts.add();
-      barChart.chartType = ExcelChartType.bar;
-      barChart.dataRange = sheet.getRangeByIndex(barDataStartRow, 1, barDataEndRow, 5);
-      barChart.isSeriesInRows = false;
-      barChart.chartTitle = 'Masalah Per Karyawan';
-      barChart.topRow = barDataStartRow;
-      barChart.leftColumn = 6;
-      barChart.bottomRow = barDataStartRow + 15;
-      barChart.rightColumn = 11;
-
-      // Pie Chart: Proporsi Masalah
-      // dataRange spans 4 rows × 2 cols: col 1 = category labels, col 2 = values.
-      // isSeriesInRows=false means columns are series → 1 series with 4 slices.
-      final pieChart = charts.add();
-      pieChart.chartType = ExcelChartType.pie;
-      pieChart.dataRange = sheet.getRangeByIndex(pieStartRow, 1, pieStartRow + 3, 2);
-      pieChart.isSeriesInRows = false;
-      pieChart.chartTitle = 'Proporsi Masalah';
-      pieChart.topRow = barDataStartRow + 16;
-      pieChart.leftColumn = 6;
-      pieChart.bottomRow = barDataStartRow + 30;
-      pieChart.rightColumn = 11;
+      for (final range in chartRanges) {
+        final chart = charts.add();
+        chart.chartType = ExcelChartType.bar;
+        chart.dataRange =
+            sheet.getRangeByIndex(range.startRow, 1, range.endRow, 2);
+        chart.isSeriesInRows = false;
+        chart.chartTitle = range.title;
+        chart.topRow = range.startRow;
+        chart.leftColumn = 5;
+        chart.bottomRow = range.startRow + 12;
+        chart.rightColumn = 11;
+      }
 
       sheet.charts = charts;
     } catch (e, st) {
@@ -1317,8 +1581,7 @@ class PayrollSpreadsheetExportService {
       print('[PayrollSpreadsheet] Chart creation failed: $e\n$st');
     }
 
-    // Return row after charts area
-    return math.max(row, barDataStartRow + 31) + 1;
+    return row + 1;
   }
 
   void _writeTopInsights(
@@ -1340,126 +1603,83 @@ class PayrollSpreadsheetExportService {
     row++;
 
     final employeeAverages = _calculateEmployeeAverages(recapRows);
+    final staffRows = dataset.rows.where((row) => !row.isManagerExempt);
 
-    // Kepala Gerai section — comprehensive stats
-    final managers = dataset.rows
-        .where((r) => recapRows.any((recap) =>
-            recap.employeeId == r.employeeId && recap.isManagerExempt))
-        .toList();
-
-    if (managers.isNotEmpty) {
-      final managerEntries = managers.map((r) {
-        final mAvg = employeeAverages[r.employeeId] ??
-            const (avgLate: 0.0, avgOvertime: 0.0, avgShort: 0.0, avgBreak: 0.0);
-        final hadirDays = r.cells
-            .where((c) =>
-                c.hasData &&
-                c.primaryStatus != AttendancePolicyPrimaryStatus.absence)
-            .length;
-        String entry =
-            '⭐ ${r.employeeName} (${r.employmentContract.label}) — Masuk: $hadirDays hari';
-        if (r.lateCount > 0) {
-          entry +=
-              ', Telat: ${r.lateCount}x (avg ${_formatMinutesToDuration(mAvg.avgLate)})';
-        }
-        if (r.overtimeCount > 0) {
-          entry +=
-              ', Lembur: ${r.overtimeCount}x (avg ${_formatMinutesToDuration(mAvg.avgOvertime)})';
-        }
-        return entry;
-      }).toList();
-
-      _writeInsightSubSection(
-        sheet,
-        row: row,
-        title: 'KEPALA GERAI',
-        entries: managerEntries,
-        bgColor: '#F0FDF4',
-        fgColor: '#059669',
-        borderColor: '#059669',
-        boldEntries: true,
-      );
-      row += 2 + managers.length;
+    List<String> categoryEntries({
+      required int Function(PayrollMatrixRow row) countFor,
+      required double Function(
+        ({
+          double avgLate,
+          double avgOvertime,
+          double avgShort,
+          double avgBreak
+        }) averages,
+      ) averageFor,
+      required String label,
+    }) {
+      final sorted = List<PayrollMatrixRow>.from(staffRows)
+        ..sort((a, b) => countFor(b).compareTo(countFor(a)));
+      return sorted.where((row) => countFor(row) > 0).take(5).map((row) {
+        final averages = employeeAverages[row.employeeId] ??
+            const (
+              avgLate: 0.0,
+              avgOvertime: 0.0,
+              avgShort: 0.0,
+              avgBreak: 0.0
+            );
+        return '${row.employeeName} — ${countFor(row)}x $label, rata-rata ${_formatMinutesToDuration(averageFor(averages))}';
+      }).toList(growable: false);
     }
 
-    // Sort by issue severity
-    final sorted = List<PayrollMatrixRow>.from(dataset.rows)
-      ..sort((a, b) {
-        final aTotal =
-            a.lateCount + a.shortWorkCount + a.excessBreakCount + a.absenceCount;
-        final bTotal =
-            b.lateCount + b.shortWorkCount + b.excessBreakCount + b.absenceCount;
-        return bTotal.compareTo(aTotal);
-      });
-
-    // Top 5 problematic — comprehensive with all avg data
-    final problematicEntries = sorted
-        .take(math.min(5, sorted.length))
-        .where((r) =>
-            r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount > 0)
-        .map((r) {
-      final averages = employeeAverages[r.employeeId] ??
-          const (avgLate: 0.0, avgOvertime: 0.0, avgShort: 0.0, avgBreak: 0.0);
-      final total =
-          r.lateCount + r.shortWorkCount + r.excessBreakCount + r.absenceCount;
-      String text = '🔴 ${r.employeeName} — $total masalah';
-      final parts = <String>[];
-      if (r.lateCount > 0) {
-        parts.add(
-            'telat: ${r.lateCount}x avg ${_formatMinutesToDuration(averages.avgLate)}');
-      }
-      if (r.shortWorkCount > 0) {
-        parts.add(
-            'kurang: ${r.shortWorkCount}x avg ${_formatMinutesToDuration(averages.avgShort)}');
-      }
-      if (r.excessBreakCount > 0) {
-        parts.add(
-            'break: ${r.excessBreakCount}x avg ${_formatMinutesToDuration(averages.avgBreak)}');
-      }
-      if (r.absenceCount > 0) {
-        parts.add('absen: ${r.absenceCount}x');
-      }
-      if (parts.isNotEmpty) text += ' (${parts.join(', ')})';
-      return text;
-    }).toList();
-
-    _writeInsightSubSection(
-      sheet,
-      row: row,
-      title: 'KARYAWAN PALING BANYAK MASALAH',
-      entries: problematicEntries,
-      bgColor: '#FEF2F2',
-      fgColor: '#B91C1C',
-      borderColor: '#FECACA',
+    final lateEntries = categoryEntries(
+      countFor: (row) => row.lateCount,
+      averageFor: (averages) => averages.avgLate,
+      label: 'telat',
     );
-    row += 2 + problematicEntries.length;
-
-    // Top 5 overtime — with avg duration
-    final sortedOt = List<PayrollMatrixRow>.from(dataset.rows)
-      ..sort((a, b) => b.overtimeCount.compareTo(a.overtimeCount));
-
-    final overtimeEntries = sortedOt
-        .take(math.min(5, sortedOt.length))
-        .where((r) => r.overtimeCount > 0)
-        .map((r) {
-      final otAvg = employeeAverages[r.employeeId] ??
-          const (avgLate: 0.0, avgOvertime: 0.0, avgShort: 0.0, avgBreak: 0.0);
-      return '⏱️ ${r.employeeName} — Lembur ${r.overtimeCount} hari (avg ${_formatMinutesToDuration(otAvg.avgOvertime)} per hari)';
-    }).toList();
-
     _writeInsightSubSection(
       sheet,
       row: row,
-      title: 'KARYAWAN PALING BANYAK LEMBUR',
-      entries: overtimeEntries,
+      title: 'PALING BANYAK TELAT',
+      entries: lateEntries,
       bgColor: '#FFFBEB',
       fgColor: '#92400E',
       borderColor: '#FDE68A',
     );
-    row += 2 + overtimeEntries.length;
+    row += 2 + lateEntries.length;
 
-    // Clean employees
-    final cleanEmployees = dataset.rows.where((r) =>
+    final shortEntries = categoryEntries(
+      countFor: (row) => row.shortWorkCount,
+      averageFor: (averages) => averages.avgShort,
+      label: 'kurang jam kerja',
+    );
+    _writeInsightSubSection(
+      sheet,
+      row: row,
+      title: 'PALING BANYAK KURANG JAM KERJA',
+      entries: shortEntries,
+      bgColor: '#FEF2F2',
+      fgColor: '#B91C1C',
+      borderColor: '#FECACA',
+    );
+    row += 2 + shortEntries.length;
+
+    final breakEntries = categoryEntries(
+      countFor: (row) => row.excessBreakCount,
+      averageFor: (averages) => averages.avgBreak,
+      label: 'istirahat berlebih',
+    );
+    _writeInsightSubSection(
+      sheet,
+      row: row,
+      title: 'PALING BANYAK OVERTIME ISTIRAHAT',
+      entries: breakEntries,
+      bgColor: '#FDF2F8',
+      fgColor: '#BE185D',
+      borderColor: '#FBCFE8',
+    );
+    row += 2 + breakEntries.length;
+
+    final cleanEmployees = staffRows.where((r) =>
         r.lateCount == 0 &&
         r.shortWorkCount == 0 &&
         r.excessBreakCount == 0 &&

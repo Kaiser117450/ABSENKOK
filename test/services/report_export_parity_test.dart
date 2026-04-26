@@ -66,7 +66,6 @@ void main() {
       expect(cellsByKey[overtimeKey]?.secondaryTags, contains('OT'));
       expect(cellsByKey[noShowKey]?.secondaryTags, contains('ABS'));
 
-      expect(recapDataset.isCompatibilityMode, isTrue);
       expect(recapDataset.fallbackRows, hasLength(1));
       expect(
         recapByKey[legacyFallbackKey]?.attendanceStatus.label,
@@ -87,10 +86,10 @@ void main() {
           ),
       };
       expect(orderedSummary.keys.toList(), PayrollMatrixRow.summaryLabels);
-      expect(orderedSummary.values.toList(), <int>[2, 0, 0, 1, 1]);
+      expect(orderedSummary.values.toList(), <int>[2, 0, 0, 1, 2]);
     });
 
-    test('only turns on compatibility mode when fallback rows are present', () {
+    test('keeps fallback rows empty when there are no legacy logs', () {
       final bundle = buildReportExportParityFixtureBundle();
 
       final withoutFallback = service.build(
@@ -104,7 +103,6 @@ void main() {
       );
 
       expect(withoutFallback.fallbackRows, isEmpty);
-      expect(withoutFallback.isCompatibilityMode, isFalse);
     });
   });
 }

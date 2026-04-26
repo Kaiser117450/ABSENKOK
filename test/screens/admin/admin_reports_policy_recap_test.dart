@@ -2,7 +2,6 @@ import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/models/attendance_policy_signal.dart';
 import 'package:absensi_enakko_flutter/models/shift_band.dart';
 import 'package:absensi_enakko_flutter/screens/admin/admin_reports_screen.dart';
-import 'package:absensi_enakko_flutter/widgets/attendance_policy_signal_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,12 +35,9 @@ void main() {
       shiftBand: shiftBand,
       requiredWorkMinutes: 600,
       lateCutoffLocal: '07:00',
-      breakFirstDeadlineLocal: '09:00',
       attendanceStatus: attendanceStatus,
       lateKind: lateKind,
       isLate: lateKind != LateKind.none,
-      breakFirstEligible: lateKind == LateKind.breakFirstEligible,
-      breakFirstConfirmed: lateKind == LateKind.breakFirstConfirmed,
       firstScanLocal: DateTime(2026, 3, 26, 7, 15),
       firstBreakLocal: DateTime(2026, 3, 26, 12, 0),
       lastPulangLocal: DateTime(2026, 3, 26, 17, 15),
@@ -155,16 +151,15 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: PolicyRecapTile(recap: recap, scanCountMap: const <String, int>{}),
+              body: PolicyRecapTile(
+                  recap: recap, scanCountMap: const <String, int>{}),
             ),
           ),
         );
 
-        expect(find.text('Manager exempt'), findsWidgets);
+        expect(find.text('Manager Exempt'), findsWidgets);
         expect(find.text('Terlambat'), findsOneWidget);
-        expect(find.byType(AttendancePolicySignalChip), findsWidgets);
         expect(find.textContaining('tidak kena penalti merah'), findsOneWidget);
-        expect(find.textContaining('Kerja '), findsOneWidget);
       },
     );
 
@@ -204,8 +199,12 @@ void main() {
             home: Scaffold(
               body: ListView(
                 children: [
-                  PolicyRecapTile(recap: strictOvernightRecap, scanCountMap: const <String, int>{}),
-                  PolicyRecapTile(recap: fallbackNoScheduleRecap, scanCountMap: const <String, int>{}),
+                  PolicyRecapTile(
+                      recap: strictOvernightRecap,
+                      scanCountMap: const <String, int>{}),
+                  PolicyRecapTile(
+                      recap: fallbackNoScheduleRecap,
+                      scanCountMap: const <String, int>{}),
                 ],
               ),
             ),
@@ -214,14 +213,14 @@ void main() {
 
         expect(find.text('Employee emp-6'), findsOneWidget);
         expect(find.text('Employee emp-7'), findsOneWidget);
-        expect(find.text('Tanpa jadwal'), findsOneWidget);
+        expect(find.text('Hadir Tanpa Jadwal'), findsOneWidget);
         expect(
           find.text(
             'Hadir tanpa jadwal; aturan kontrak tetap dipakai untuk menghitung jam kerja, istirahat, dan lembur.',
           ),
           findsOneWidget,
         );
-        expect(find.text('Istirahat berlebih'), findsOneWidget);
+        expect(find.textContaining('Istirahat Berlebih'), findsOneWidget);
         expect(find.textContaining('Break malam melebihi kontrak'),
             findsOneWidget);
       },

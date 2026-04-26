@@ -16,8 +16,6 @@ class ShiftSlot {
   final int requiredWorkMinutes;
   final int lateCutoffHour;
   final int lateCutoffMinute;
-  final int breakFirstDeadlineHour;
-  final int breakFirstDeadlineMinute;
 
   const ShiftSlot({
     required this.name,
@@ -28,8 +26,6 @@ class ShiftSlot {
     required this.requiredWorkMinutes,
     required this.lateCutoffHour,
     required this.lateCutoffMinute,
-    required this.breakFirstDeadlineHour,
-    required this.breakFirstDeadlineMinute,
   });
 
   factory ShiftSlot.fromBand({
@@ -47,10 +43,6 @@ class ShiftSlot {
             ? 0
             : SchedulePolicyService.defaultRequiredWorkMinutes(contract));
     final resolvedStartTime = startTime ?? _defaultStartTimeForBand(band);
-    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
-      band: band,
-      contract: contract,
-    );
 
     return ShiftSlot(
       name: name ?? band.label,
@@ -67,8 +59,6 @@ class ShiftSlot {
       requiredWorkMinutes: resolvedRequiredWorkMinutes,
       lateCutoffHour: lateCutoff?.hour ?? 0,
       lateCutoffMinute: lateCutoff?.minute ?? 0,
-      breakFirstDeadlineHour: breakFirstDeadline?.hour ?? 0,
-      breakFirstDeadlineMinute: breakFirstDeadline?.minute ?? 0,
     );
   }
 
@@ -124,8 +114,6 @@ class ShiftSlot {
         'required_work_minutes': requiredWorkMinutes,
         'late_cutoff_hour': lateCutoffHour,
         'late_cutoff_minute': lateCutoffMinute,
-        'break_first_deadline_hour': breakFirstDeadlineHour,
-        'break_first_deadline_minute': breakFirstDeadlineMinute,
         'start_hour': startTime.hour,
         'start_minute': startTime.minute,
         'end_hour': endTime.hour,
@@ -147,10 +135,6 @@ class ShiftSlot {
       requiredWorkMinutes,
     );
     final lateCutoff = SchedulePolicyService.lateCutoff(band);
-    final breakFirstDeadline = SchedulePolicyService.breakFirstDeadline(
-      band: band,
-      contract: inferredContract,
-    );
     final defaultStartTime = _defaultStartTimeForBand(band);
     final startTime = _readTimeOfDay(
       json,
@@ -185,14 +169,6 @@ class ShiftSlot {
       lateCutoffMinute: _readInt(
         json['late_cutoff_minute'],
         lateCutoff?.minute ?? 0,
-      ),
-      breakFirstDeadlineHour: _readInt(
-        json['break_first_deadline_hour'],
-        breakFirstDeadline?.hour ?? 0,
-      ),
-      breakFirstDeadlineMinute: _readInt(
-        json['break_first_deadline_minute'],
-        breakFirstDeadline?.minute ?? 0,
       ),
     );
   }

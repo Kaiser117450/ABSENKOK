@@ -14,8 +14,6 @@ class AdminPolicyRecapDatasetResult {
   final List<AttendancePolicyRecapDay> mergedRows;
   final List<AttendancePolicyRecapDay> strictRows;
   final List<AttendancePolicyRecapDay> fallbackRows;
-
-  bool get isCompatibilityMode => fallbackRows.isNotEmpty;
 }
 
 class AdminPolicyRecapDatasetService {
@@ -57,7 +55,8 @@ class AdminPolicyRecapDatasetService {
     )..sort(_compareRecapRows);
 
     final mergedByKey = <String, AttendancePolicyRecapDay>{
-      for (final row in strictRowList) _buildRowKey(row.employeeId, row.logicalDate): row,
+      for (final row in strictRowList)
+        _buildRowKey(row.employeeId, row.logicalDate): row,
     };
 
     for (final row in fallbackRows) {

@@ -230,10 +230,6 @@ String _formatPolicyMinutes(int? minutes) {
   return '${hours}j ${remainder}m';
 }
 
-const String payrollCompatibilityModeTitle = 'Mode kompatibilitas aktif';
-const String payrollCompatibilityModeBody =
-    'Sebagian hari payroll dihitung dari log absensi dan kontrak karena jadwal belum tersedia.';
-
 class AdminReportsScreen extends ConsumerStatefulWidget {
   const AdminReportsScreen({super.key});
 
@@ -269,8 +265,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   List<AttendancePolicyRecapDay> _policyRecapFallbackRows = [];
   PayrollMatrixDataset? _payrollMatrixDataset;
   bool _loadingDaily = false;
-  bool _isPayrollCompatibilityMode = false;
   PolicyRecapFilter _selectedPolicyRecapFilter = PolicyRecapFilter.semua;
+  String _policyRecapNameQuery = '';
   String? _policyRecapError;
   String? _payrollExportStatusMessage;
   bool _payrollExportStatusIsError = false;
@@ -342,8 +338,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
     _isLoadingMore = false;
     _loading = false;
     _loadingDaily = false;
-    _isPayrollCompatibilityMode = false;
     _selectedPolicyRecapFilter = PolicyRecapFilter.semua;
+    _policyRecapNameQuery = '';
     _policyRecapError = null;
     _exportingPayrollPdf = false;
     _exportingSpreadsheet = false;
@@ -476,8 +472,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                 error: null as String?,
               );
             }
-            final rows = await _attendancePolicyRecapService
-                .fetchAllOutletsPolicyRecap(
+            final rows =
+                await _attendancePolicyRecapService.fetchAllOutletsPolicyRecap(
               outletIds: outletIds,
               startDate: _startDate,
               endDate: _endDate,
@@ -535,8 +531,8 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         _policyRecapRows = recapDataset.mergedRows;
         _policyRecapFallbackRows = recapDataset.fallbackRows;
         _payrollMatrixDataset = payrollDataset;
-        _isPayrollCompatibilityMode = recapDataset.isCompatibilityMode;
         _selectedPolicyRecapFilter = PolicyRecapFilter.semua;
+        _policyRecapNameQuery = '';
         _policyRecapError = recapResult.error;
         _loadingDaily = false;
       });
@@ -588,8 +584,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       final outletEmployees = entry.value;
       final outlet = outletById[oId];
       final outletName = outlet?.name ?? 'Outlet';
-      final operatingMode =
-          outlet?.operatingMode ?? OutletOperatingMode.normal;
+      final operatingMode = outlet?.operatingMode ?? OutletOperatingMode.normal;
 
       final result = _adminPolicyRecapDatasetService.build(
         employees: outletEmployees,
@@ -896,7 +891,6 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         outletName: outletName,
         startDate: _startDate,
         endDate: _endDate,
-        isCompatibilityMode: _isPayrollCompatibilityMode,
       );
 
       await Share.shareXFiles(
@@ -1725,6 +1719,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       payrollExportStatusIsError: _payrollExportStatusIsError,
       spreadsheetSortMode: _spreadsheetSortMode,
       onSortModeChanged: (mode) => setState(() => _spreadsheetSortMode = mode),
+      nameQuery: _policyRecapNameQuery,
+      onNameQueryChanged: (query) {
+        setState(() => _policyRecapNameQuery = query);
+      },
     );
   }
 
@@ -1789,6 +1787,8 @@ class PolicyRecapTab extends StatelessWidget {
     this.emptyNoDataSubtext = 'Tidak ada hari recap pada rentang waktu ini.',
     this.spreadsheetSortMode = SpreadsheetSortMode.bermasalah,
     this.onSortModeChanged,
+    this.nameQuery = '',
+    this.onNameQueryChanged,
   });
 
   final bool isLoading;
@@ -1811,6 +1811,8 @@ class PolicyRecapTab extends StatelessWidget {
   final bool payrollExportStatusIsError;
   final SpreadsheetSortMode spreadsheetSortMode;
   final ValueChanged<SpreadsheetSortMode>? onSortModeChanged;
+  final String nameQuery;
+  final ValueChanged<String>? onNameQueryChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1835,13 +1837,22 @@ class PolicyRecapTab extends StatelessWidget {
       );
     }
 
-    final filteredRows = filterPolicyRecapRows(rows, selectedFilter);
+    final normalizedQuery = nameQuery.trim().toLowerCase();
+    final filteredRows = filterPolicyRecapRows(rows, selectedFilter)
+        .where(
+          (row) =>
+              normalizedQuery.isEmpty ||
+              row.employeeName.toLowerCase().contains(normalizedQuery),
+        )
+        .toList(growable: false)
+      ..sort(_comparePolicyRecapRowsNewestFirst);
     final pendingBelumPulangCount =
         rows.where(_isBelumAbsenPulangPolicyRecapRow).length;
     final activeIncompleteCount =
         rows.where(_isActiveIncompletePolicyRecapRow).length;
     final pendingCount = pendingBelumPulangCount + activeIncompleteCount;
-    final hasActiveFilter = selectedFilter != PolicyRecapFilter.semua;
+    final hasActiveFilter =
+        selectedFilter != PolicyRecapFilter.semua || normalizedQuery.isNotEmpty;
 
     final summaryChips = <Widget>[
       _PolicyMetaChip(
@@ -1862,11 +1873,6 @@ class PolicyRecapTab extends StatelessWidget {
         _PolicyMetaChip(
           icon: Icons.timelapse_outlined,
           label: '$activeIncompleteCount hari berjalan',
-        ),
-      if (fallbackRows.isNotEmpty)
-        _PolicyMetaChip(
-          icon: Icons.history_toggle_off_outlined,
-          label: '${fallbackRows.length} kompatibilitas',
         ),
     ];
 
@@ -1897,9 +1903,21 @@ class PolicyRecapTab extends StatelessWidget {
                   child: Row(
                     children: [
                       ChoiceChip(
-                        label: Text('🔴 Bermasalah', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.bermasalah ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.bermasalah ? Colors.white : Colors.grey[800])),
-                        selected: spreadsheetSortMode == SpreadsheetSortMode.bermasalah,
-                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.bermasalah),
+                        label: Text('🔴 Bermasalah',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.bermasalah
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.bermasalah
+                                    ? Colors.white
+                                    : Colors.grey[800])),
+                        selected: spreadsheetSortMode ==
+                            SpreadsheetSortMode.bermasalah,
+                        onSelected: (_) =>
+                            onSortModeChanged!(SpreadsheetSortMode.bermasalah),
                         selectedColor: const Color(0xFFDC2626),
                         backgroundColor: Colors.grey[100],
                         visualDensity: VisualDensity.compact,
@@ -1907,9 +1925,21 @@ class PolicyRecapTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       ChoiceChip(
-                        label: Text('⏱️ Terlambat', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.terlambat ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.terlambat ? Colors.white : Colors.grey[800])),
-                        selected: spreadsheetSortMode == SpreadsheetSortMode.terlambat,
-                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.terlambat),
+                        label: Text('⏱️ Terlambat',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.terlambat
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.terlambat
+                                    ? Colors.white
+                                    : Colors.grey[800])),
+                        selected: spreadsheetSortMode ==
+                            SpreadsheetSortMode.terlambat,
+                        onSelected: (_) =>
+                            onSortModeChanged!(SpreadsheetSortMode.terlambat),
                         selectedColor: const Color(0xFFDC2626),
                         backgroundColor: Colors.grey[100],
                         visualDensity: VisualDensity.compact,
@@ -1917,9 +1947,21 @@ class PolicyRecapTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       ChoiceChip(
-                        label: Text('⏱️ Overtime', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.overtime ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.overtime ? Colors.white : Colors.grey[800])),
-                        selected: spreadsheetSortMode == SpreadsheetSortMode.overtime,
-                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.overtime),
+                        label: Text('⏱️ Overtime',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.overtime
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.overtime
+                                    ? Colors.white
+                                    : Colors.grey[800])),
+                        selected:
+                            spreadsheetSortMode == SpreadsheetSortMode.overtime,
+                        onSelected: (_) =>
+                            onSortModeChanged!(SpreadsheetSortMode.overtime),
                         selectedColor: const Color(0xFFDC2626),
                         backgroundColor: Colors.grey[100],
                         visualDensity: VisualDensity.compact,
@@ -1927,9 +1969,21 @@ class PolicyRecapTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       ChoiceChip(
-                        label: Text('✅ Aman', style: TextStyle(fontSize: 12, fontWeight: spreadsheetSortMode == SpreadsheetSortMode.aman ? FontWeight.w600 : FontWeight.w400, color: spreadsheetSortMode == SpreadsheetSortMode.aman ? Colors.white : Colors.grey[800])),
-                        selected: spreadsheetSortMode == SpreadsheetSortMode.aman,
-                        onSelected: (_) => onSortModeChanged!(SpreadsheetSortMode.aman),
+                        label: Text('✅ Aman',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.aman
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: spreadsheetSortMode ==
+                                        SpreadsheetSortMode.aman
+                                    ? Colors.white
+                                    : Colors.grey[800])),
+                        selected:
+                            spreadsheetSortMode == SpreadsheetSortMode.aman,
+                        onSelected: (_) =>
+                            onSortModeChanged!(SpreadsheetSortMode.aman),
                         selectedColor: const Color(0xFF059669),
                         backgroundColor: Colors.grey[100],
                         visualDensity: VisualDensity.compact,
@@ -1947,21 +2001,21 @@ class PolicyRecapTab extends StatelessWidget {
           children: [
             Expanded(
               child: _CompactExportButton(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'PDF Payroll',
-                isLoading: exportingPayrollPdf,
-                onPressed: canExportPayrollPdf ? onExportPayrollPdf : null,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _CompactExportButton(
                 icon: Icons.grid_on_outlined,
                 label: 'Spreadsheet',
                 isLoading: exportingSpreadsheet,
                 onPressed: canExportPayrollSpreadsheet
                     ? onExportPayrollSpreadsheet
                     : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _CompactExportButton(
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'PDF Insight',
+                isLoading: exportingPayrollPdf,
+                onPressed: canExportPayrollPdf ? onExportPayrollPdf : null,
               ),
             ),
           ],
@@ -1998,37 +2052,6 @@ class PolicyRecapTab extends StatelessWidget {
             ),
           ),
         ],
-        // ── Compatibility mode subtle chip ─────────────────────────
-        if (fallbackRows.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 14,
-                  color: Color(0xFF64748B),
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Kompatibilitas aktif',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
         // ── Summary chips ─────────────────────────────────────────
         if (summaryChips.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -2043,6 +2066,13 @@ class PolicyRecapTab extends StatelessWidget {
         ],
         // ── Filter toggle + chips ─────────────────────────────────
         const SizedBox(height: 12),
+        if (onNameQueryChanged != null) ...[
+          _PolicyRecapSearchField(
+            initialValue: nameQuery,
+            onChanged: onNameQueryChanged!,
+          ),
+          const SizedBox(height: 12),
+        ],
         _PolicyRecapFilterSection(
           selectedFilter: selectedFilter,
           onFilterChanged: onFilterChanged,
@@ -2054,9 +2084,11 @@ class PolicyRecapTab extends StatelessWidget {
           AppEmptyState(
             icon: Icons.event_busy_outlined,
             heading: 'Belum Ada Hari yang Cocok',
-            subtext: selectedFilter == PolicyRecapFilter.semua
-                ? emptyNoDataSubtext
-                : 'Tidak ada hari yang cocok dengan filter ${selectedFilter.label.toLowerCase()} pada rentang ini.',
+            subtext: normalizedQuery.isNotEmpty
+                ? 'Tidak ada nama karyawan yang cocok dengan pencarian "$nameQuery".'
+                : selectedFilter == PolicyRecapFilter.semua
+                    ? emptyNoDataSubtext
+                    : 'Tidak ada hari yang cocok dengan filter ${selectedFilter.label.toLowerCase()} pada rentang ini.',
           )
         else
           ...filteredRows.map(
@@ -2065,6 +2097,29 @@ class PolicyRecapTab extends StatelessWidget {
       ],
     );
   }
+}
+
+int _comparePolicyRecapRowsNewestFirst(
+  AttendancePolicyRecapDay left,
+  AttendancePolicyRecapDay right,
+) {
+  final leftDate = DateTime(
+    left.logicalDate.year,
+    left.logicalDate.month,
+    left.logicalDate.day,
+  );
+  final rightDate = DateTime(
+    right.logicalDate.year,
+    right.logicalDate.month,
+    right.logicalDate.day,
+  );
+  final dateComparison = rightDate.compareTo(leftDate);
+  if (dateComparison != 0) return dateComparison;
+  final nameComparison = left.employeeName
+      .toLowerCase()
+      .compareTo(right.employeeName.toLowerCase());
+  if (nameComparison != 0) return nameComparison;
+  return left.employeeId.compareTo(right.employeeId);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2358,9 +2413,8 @@ class PolicyRecapTile extends StatelessWidget {
     if (recap.hasSignal(AttendancePolicySignal.overtime) ||
         recap.primaryStatus == AttendancePolicyPrimaryStatus.overtime) {
       final otMin = recap.overtimeMinutes ?? 0;
-      final otLabel = otMin > 0
-          ? 'Lembur (${_formatPolicyMinutes(otMin)})'
-          : 'Lembur';
+      final otLabel =
+          otMin > 0 ? 'Lembur (${_formatPolicyMinutes(otMin)})' : 'Lembur';
       badges.add(_SignalBadge(
         label: otLabel,
         bgColor: const Color(0xFFFEF3C7),
@@ -2610,10 +2664,82 @@ class _CompactExportButton extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: onPressed != null
-              ? AppColors.primary
-              : AppColors.textSecondary,
+          color:
+              onPressed != null ? AppColors.primary : AppColors.textSecondary,
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Policy Name Search
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PolicyRecapSearchField extends StatefulWidget {
+  const _PolicyRecapSearchField({
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_PolicyRecapSearchField> createState() =>
+      _PolicyRecapSearchFieldState();
+}
+
+class _PolicyRecapSearchFieldState extends State<_PolicyRecapSearchField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PolicyRecapSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != oldWidget.initialValue &&
+        widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      onChanged: widget.onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: _controller.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Bersihkan pencarian',
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  _controller.clear();
+                  widget.onChanged('');
+                  setState(() {});
+                },
+              ),
+        labelText: 'Cari nama karyawan',
+        hintText: 'Ketik nama',
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -2678,9 +2804,7 @@ class _PolicyRecapFilterSectionState extends State<_PolicyRecapFilterSection> {
               ),
               const SizedBox(width: 6),
               Text(
-                widget.hasActiveFilter
-                    ? widget.selectedFilter.label
-                    : 'Filter',
+                widget.hasActiveFilter ? widget.selectedFilter.label : 'Filter',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -2720,8 +2844,7 @@ class _PolicyRecapFilterSectionState extends State<_PolicyRecapFilterSection> {
                   selectedColor: AppColors.primary.withValues(alpha: 0.12),
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color:
-                        isSelected ? AppColors.primary : AppColors.border,
+                    color: isSelected ? AppColors.primary : AppColors.border,
                   ),
                   labelStyle: TextStyle(
                     fontSize: 12,

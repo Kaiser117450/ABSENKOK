@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:absensi_enakko_flutter/models/attendance_policy_signal.dart';
+import 'package:absensi_enakko_flutter/models/employee_contract.dart';
+import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/models/payroll_matrix_day_cell.dart';
 import 'package:absensi_enakko_flutter/models/payroll_matrix_row.dart';
-import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/services/admin_policy_recap_dataset_service.dart';
 import 'package:absensi_enakko_flutter/services/payroll_matrix_builder.dart';
 import 'package:absensi_enakko_flutter/services/payroll_spreadsheet_export_service.dart';
@@ -31,7 +33,7 @@ void main() {
     });
 
     test(
-        'generates a real payroll workbook for mixed strict and fallback matrix rows with locked headers and no forbidden fields',
+        'generates a real payroll workbook with newest dates, attended checkmarks, manager sheet, and no forbidden fields',
         () async {
       final context = _buildParitySpreadsheetContext(recapDatasetService);
       final service = PayrollSpreadsheetExportService(
@@ -71,6 +73,11 @@ void main() {
         'Kontrak',
         'Jabatan',
       ]);
+      expect(headerValues[3], contains('28 Mar'));
+      expect(
+        headerValues[3 + context.dataset.dates.length - 1],
+        contains('18 Mar'),
+      );
       expect(
         headerValues
             .skip(3 + context.dataset.dates.length)
@@ -95,16 +102,25 @@ void main() {
       expect(allValues, contains('Full-Time'));
       expect(allValues, contains('Hana Tanpa Jadwal'));
       expect(allValues, contains('Part-Time'));
-      // Now uses enrichedExportText with full labels + duration
-      expect(allValues, contains(lateCell.enrichedExportText));
-      expect(allValues, contains(overtimeCell.enrichedExportText));
+      expect(allValues, isNot(contains('★ Intan Kepala Gerai')));
+      expect(allValues, contains('✓ Absen'));
+      expect(
+        allValues,
+        contains('✓ Absen\n${lateCell.secondaryDescriptions.join(' | ')}'),
+      );
+      expect(
+        allValues,
+        contains(
+          '✓ Absen\n${overtimeCell.secondaryDescriptions.join(' | ')}',
+        ),
+      );
       expect(allValues, contains(absenceCell.enrichedExportText));
-      expect(allValues, contains(fallbackCell.enrichedExportText));
+      expect(allValues, isNot(contains(fallbackCell.enrichedExportText)));
       // Enriched text uses full labels like "Terlambat", "Lembur", "Tidak Hadir"
       expect(lateCell.enrichedExportText, contains('Terlambat'));
       expect(overtimeCell.enrichedExportText, contains('Lembur'));
       expect(absenceCell.enrichedExportText, contains('Tidak Hadir'));
-      expect(fallbackCell.enrichedExportText, contains('Hadir tanpa jadwal'));
+      expect(fallbackCell.enrichedExportText, isNot(contains('Tidak Hadir')));
       // Original short tags still available via exportText
       expect(lateCell.exportText, contains('TLT'));
       expect(overtimeCell.exportText, contains('OT'));
@@ -113,6 +129,21 @@ void main() {
       // Verify Sheet 2 "Insight Payroll" exists
       expect(workbook.tables.containsKey('Insight Payroll'), isTrue,
           reason: 'Workbook should contain Insight Payroll sheet');
+      expect(workbook.tables.containsKey('Kepala Gerai'), isTrue,
+          reason: 'Managers should be exported to their own sheet');
+      final managerSheet = workbook.tables['Kepala Gerai']!;
+      final managerValues = managerSheet.rows
+          .expand((row) => row)
+          .whereType<Data>()
+          .map((cell) => cell.value.toString())
+          .toList(growable: false);
+      expect(managerValues, contains('★ Kepala Gerai'));
+      expect(managerValues, contains('★ Intan Kepala Gerai'));
+      expect(managerValues, contains('Masuk'));
+      expect(managerValues, contains('Jam Kerja'));
+      expect(managerValues, contains('Istirahat'));
+      expect(managerValues, contains(contains('✓ Masuk')));
+
       final insightSheet = workbook.tables['Insight Payroll']!;
       expect(insightSheet.rows.isNotEmpty, isTrue,
           reason: 'Insight sheet should have data');
@@ -167,13 +198,13 @@ void main() {
         final resolvedStyle = workbookStyles.resolve(styleIndex);
         expect(
           resolvedStyle.fillColorHex,
-          styledCell.expectedCell.fillColorHex,
+          _expectedExportFillColor(styledCell.expectedCell),
           reason:
               '$cellReference should preserve fillColorHex from parity data',
         );
         expect(
           resolvedStyle.textColorHex,
-          styledCell.expectedCell.textColorHex,
+          _expectedExportTextColor(styledCell.expectedCell),
           reason:
               '$cellReference should preserve textColorHex from parity data',
         );
@@ -211,11 +242,90 @@ _ParitySpreadsheetContext _buildParitySpreadsheetContext(
     employees: bundle.employees,
     recapRows: recapDataset.mergedRows,
   );
+  final managerRecapRows = <AttendancePolicyRecapDay>[
+    _buildManagerRecapDay(DateTime(2026, 3, 28)),
+  ];
+  final datasetWithManager = PayrollMatrixDataset(
+    dates: dataset.dates,
+    rows: <PayrollMatrixRow>[
+      ...dataset.rows,
+      _buildManagerMatrixRow(dataset.dates),
+    ],
+  );
 
   return _ParitySpreadsheetContext(
     bundle: bundle,
-    dataset: dataset,
-    recapRows: recapDataset.mergedRows,
+    dataset: datasetWithManager,
+    recapRows: <AttendancePolicyRecapDay>[
+      ...recapDataset.mergedRows,
+      ...managerRecapRows,
+    ],
+  );
+}
+
+PayrollMatrixRow _buildManagerMatrixRow(List<DateTime> dates) {
+  return PayrollMatrixRow(
+    employeeId: 'emp-manager',
+    employeeName: 'Intan Kepala Gerai',
+    employmentContract: EmployeeContract.fulltime,
+    employeeRole: 'Kepala Gerai',
+    cells: dates.map((date) {
+      if (_isSameDate(date, DateTime(2026, 3, 28))) {
+        return PayrollMatrixDayCell(
+          date: date,
+          primaryLabel: 'Kepala Gerai',
+          secondaryTags: const <String>[],
+          secondaryDescriptions: const <String>['Manager Exempt'],
+          fillColorHex: '#F5F3FF',
+          textColorHex: '#4C1D95',
+          primaryStatus: AttendancePolicyPrimaryStatus.exemptManager,
+          hasData: true,
+        );
+      }
+      return PayrollMatrixDayCell.placeholder(date);
+    }).toList(growable: false),
+    lateCount: 0,
+    shortWorkCount: 0,
+    excessBreakCount: 0,
+    absenceCount: 0,
+    overtimeCount: 0,
+    isManagerExempt: true,
+  );
+}
+
+AttendancePolicyRecapDay _buildManagerRecapDay(DateTime date) {
+  return AttendancePolicyRecapDay(
+    logicalDate: date,
+    employeeId: 'emp-manager',
+    employeeName: 'Intan Kepala Gerai',
+    outletId: 'outlet-parity',
+    outletName: 'Outlet Parity',
+    shiftBand: null,
+    requiredWorkMinutes: 0,
+    lateCutoffLocal: '07:00',
+    attendanceStatus: AttendancePolicyStatus.hadir,
+    lateKind: LateKind.none,
+    isLate: false,
+    firstScanLocal: DateTime(date.year, date.month, date.day, 8),
+    firstBreakLocal: DateTime(date.year, date.month, date.day, 12),
+    lastPulangLocal: DateTime(date.year, date.month, date.day, 17),
+    notes: null,
+    primaryStatus: AttendancePolicyPrimaryStatus.exemptManager,
+    primarySeverity: AttendancePolicySeverity.info,
+    detailSignals: const <AttendancePolicySignal>[
+      AttendancePolicySignal.exemptManager,
+    ],
+    detailNotes: const <String>[],
+    isManagerExempt: true,
+    managerPosition: 'Kepala Gerai',
+    employmentContract: EmployeeContract.fulltime,
+    logicalDayComplete: true,
+    netWorkMinutes: 510,
+    totalBreakMinutes: 40,
+    overtimeMinutes: 0,
+    shortWorkMinutes: 0,
+    excessBreakMinutes: 0,
+    pairedBreakCount: 1,
   );
 }
 
@@ -239,11 +349,18 @@ class _ParitySpreadsheetContext {
   }
 
   String cellReferenceFor(String employeeId, DateTime date) {
-    final rowIndex = dataset.rows
-        .indexWhere((candidate) => candidate.employeeId == employeeId);
+    final staffRows = dataset.rows
+        .where((candidate) => !candidate.isManagerExempt)
+        .toList(growable: false);
+    final rowIndex =
+        staffRows.indexWhere((candidate) => candidate.employeeId == employeeId);
     expect(rowIndex, isNonNegative);
 
-    final columnIndex = dataset.dates.indexWhere(
+    final dates = dataset.dates
+        .map((date) => DateTime(date.year, date.month, date.day))
+        .toList(growable: false)
+      ..sort((left, right) => right.compareTo(left));
+    final columnIndex = dates.indexWhere(
       (candidate) => _isSameDate(candidate, date),
     );
     expect(columnIndex, isNonNegative);
@@ -379,6 +496,40 @@ String _normalizeRgb(String value) {
       ? normalized.substring(normalized.length - 6)
       : normalized.padLeft(6, '0');
   return '#$rgb';
+}
+
+String? _expectedExportFillColor(PayrollMatrixDayCell cell) {
+  return _isAttendedExpectedCell(cell) ? '#DCFCE7' : cell.fillColorHex;
+}
+
+String? _expectedExportTextColor(PayrollMatrixDayCell cell) {
+  return _isAttendedExpectedCell(cell) ? '#166534' : cell.textColorHex;
+}
+
+bool _isAttendedExpectedCell(PayrollMatrixDayCell cell) {
+  if (!cell.hasData) {
+    return false;
+  }
+  switch (cell.primaryStatus) {
+    case AttendancePolicyPrimaryStatus.hadir:
+    case AttendancePolicyPrimaryStatus.hadirTanpaJadwal:
+    case AttendancePolicyPrimaryStatus.late:
+    case AttendancePolicyPrimaryStatus.shortWork:
+    case AttendancePolicyPrimaryStatus.excessBreak:
+    case AttendancePolicyPrimaryStatus.overtime:
+    case AttendancePolicyPrimaryStatus.exemptManager:
+      return true;
+    case AttendancePolicyPrimaryStatus.absence:
+    case AttendancePolicyPrimaryStatus.belumAbsenPulang:
+    case AttendancePolicyPrimaryStatus.activeIncomplete:
+    case AttendancePolicyPrimaryStatus.belumMasuk:
+    case AttendancePolicyPrimaryStatus.sakit:
+    case AttendancePolicyPrimaryStatus.izin:
+    case AttendancePolicyPrimaryStatus.cuti:
+    case AttendancePolicyPrimaryStatus.libur:
+    case null:
+      return false;
+  }
 }
 
 String _excelColumnName(int columnIndex) {

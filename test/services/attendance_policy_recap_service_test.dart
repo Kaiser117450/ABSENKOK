@@ -157,11 +157,10 @@ void main() {
           AttendancePolicyStatus.hadirTanpaJadwal);
 
       expect(legacyRows, hasLength(1));
-      expect(legacyRows.first.lateKind, LateKind.breakFirstConfirmed);
-      expect(legacyRows.first.breakFirstConfirmed, isTrue);
+      expect(legacyRows.first.lateKind, LateKind.none);
       expect(
         legacyRows.first.primaryStatus,
-        AttendancePolicyPrimaryStatus.late,
+        AttendancePolicyPrimaryStatus.hadir,
       );
     });
   });

@@ -44,9 +44,8 @@ void main() {
       expect(recap.detailSignals, contains(AttendancePolicySignal.late));
       expect(
         recap.detailSignals,
-        contains(AttendancePolicySignal.breakFirstConfirmed),
+        isNot(contains(AttendancePolicySignal.exemptManager)),
       );
-      expect(recap.breakFirstConfirmed, isTrue);
       expect(recap.netWorkMinutes, 555);
       expect(recap.shortWorkMinutes, 45);
       expect(recap.pairedBreakCount, 1);
@@ -113,8 +112,6 @@ void main() {
       expect(recap.primaryStatus, AttendancePolicyPrimaryStatus.overtime);
       expect(recap.primarySeverity, AttendancePolicySeverity.yellow);
       expect(recap.lateKind, LateKind.none);
-      expect(recap.breakFirstEligible, isFalse);
-      expect(recap.breakFirstConfirmed, isFalse);
       expect(recap.detailSignals, contains(AttendancePolicySignal.overtime));
       expect(
         recap.detailSignals,
@@ -147,7 +144,7 @@ void main() {
 
       expect(recap.primaryStatus, AttendancePolicyPrimaryStatus.hadir);
       expect(recap.attendanceStatus, AttendancePolicyStatus.hadir);
-      expect(recap.lateKind, LateKind.breakFirstEligible);
+      expect(recap.lateKind, LateKind.none);
       expect(recap.isLate, isTrue);
       expect(recap.detailNotes, ['legacy payload']);
       expect(recap.requiredWorkMinutes, 540);

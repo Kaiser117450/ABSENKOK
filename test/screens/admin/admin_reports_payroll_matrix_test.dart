@@ -1,6 +1,7 @@
 import 'package:absensi_enakko_flutter/models/attendance_policy_recap_day.dart';
 import 'package:absensi_enakko_flutter/screens/admin/admin_reports_screen.dart';
 import 'package:absensi_enakko_flutter/services/admin_policy_recap_dataset_service.dart';
+import 'package:absensi_enakko_flutter/services/payroll_spreadsheet_export_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,6 +61,8 @@ void main() {
               exportingSpreadsheet: false,
               onExportPayrollPdf: () {},
               onExportPayrollSpreadsheet: () {},
+              spreadsheetSortMode: SpreadsheetSortMode.bermasalah,
+              onSortModeChanged: (_) {},
             ),
           ),
         ),
@@ -84,7 +87,7 @@ void main() {
       );
     });
 
-    testWidgets('shows compatibility copy and payroll support CTAs',
+    testWidgets('hides compatibility copy and prioritizes spreadsheet export',
         (tester) async {
       final recapRows = buildCompatibilityRows();
 
@@ -95,28 +98,18 @@ void main() {
         fallbackRows: recapRows.fallbackRows,
       );
 
-      expect(find.text('Mode kompatibilitas aktif'), findsOneWidget);
+      expect(find.text('Mode kompatibilitas aktif'), findsNothing);
       expect(
         find.text(
           'Sebagian hari admin recap dipulihkan dari log absensi dan kontrak karena jadwal belum tersedia.',
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      await tester.scrollUntilVisible(
-        find.text('Output Payroll'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Output Payroll'), findsOneWidget);
-      expect(
-        find.text(
-          'PDF payroll dan spreadsheet tetap tersedia sebagai output gaji dari dataset recap yang sama.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Ekspor PDF Payroll'), findsOneWidget);
-      expect(find.text('Ekspor Spreadsheet'), findsOneWidget);
+      expect(find.text('Urutkan Spreadsheet:'), findsOneWidget);
+      expect(find.text('Spreadsheet'), findsWidgets);
+      expect(find.text('PDF Insight'), findsOneWidget);
+      expect(find.text('Ekspor PDF Payroll'), findsNothing);
+      expect(find.text('Ekspor Spreadsheet'), findsNothing);
     });
   });
 }

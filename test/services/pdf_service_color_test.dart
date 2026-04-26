@@ -163,8 +163,6 @@ void main() {
           requiredWorkMinutes: 600,
           lateCutoffHour: 7,
           lateCutoffMinute: 0,
-          breakFirstDeadlineHour: 9,
-          breakFirstDeadlineMinute: 0,
         );
 
     test('builds estimated window from contract and shift span', () {

@@ -22,9 +22,11 @@ void main() {
     int? overtimeMinutes = 0,
     int? shortWorkMinutes = 0,
     int? excessBreakMinutes = 0,
+    DateTime? logicalDate,
   }) {
+    final date = logicalDate ?? DateTime(2026, 3, 28);
     return AttendancePolicyRecapDay(
-      logicalDate: DateTime(2026, 3, 28),
+      logicalDate: date,
       employeeId: employeeId,
       employeeName: employeeName,
       outletId: 'outlet-1',
@@ -32,15 +34,12 @@ void main() {
       shiftBand: shiftBand,
       requiredWorkMinutes: 540,
       lateCutoffLocal: '07:00',
-      breakFirstDeadlineLocal: '09:00',
       attendanceStatus: attendanceStatus,
       lateKind: lateKind,
       isLate: lateKind != LateKind.none,
-      breakFirstEligible: lateKind == LateKind.breakFirstEligible,
-      breakFirstConfirmed: lateKind == LateKind.breakFirstConfirmed,
-      firstScanLocal: DateTime(2026, 3, 28, 7, 15),
-      firstBreakLocal: DateTime(2026, 3, 28, 12, 0),
-      lastPulangLocal: DateTime(2026, 3, 28, 17, 15),
+      firstScanLocal: DateTime(date.year, date.month, date.day, 7, 15),
+      firstBreakLocal: DateTime(date.year, date.month, date.day, 12, 0),
+      lastPulangLocal: DateTime(date.year, date.month, date.day, 17, 15),
       notes: null,
       primaryStatus: primaryStatus,
       primarySeverity: primarySeverity,
@@ -72,7 +71,7 @@ void main() {
 
   group('Rekap Harian — widget behavior', () {
     testWidgets(
-      'shows merged day rows and compatibility banner only when fallback rows exist',
+      'shows merged day rows newest first without compatibility banner and supports name search',
       (tester) async {
         final strictRow = buildRecap(
           employeeId: 'emp-1',
@@ -82,6 +81,7 @@ void main() {
           detailSignals: const [AttendancePolicySignal.late],
           detailNotes: const ['Terlambat melewati cutoff pagi.'],
           lateKind: LateKind.normal,
+          logicalDate: DateTime(2026, 3, 28),
         );
         final fallbackRow = buildRecap(
           employeeId: 'emp-2',
@@ -93,6 +93,7 @@ void main() {
           shiftBand: null,
           netWorkMinutes: 480,
           totalBreakMinutes: 45,
+          logicalDate: DateTime(2026, 3, 29),
         );
 
         await tester.pumpWidget(
@@ -102,20 +103,26 @@ void main() {
           ),
         );
 
-        expect(find.text('Mode kompatibilitas aktif'), findsOneWidget);
-        expect(
-          find.text(
-            'Sebagian hari admin recap dipulihkan dari log absensi dan kontrak karena jadwal belum tersedia.',
-          ),
-          findsOneWidget,
-        );
+        expect(find.text('Mode kompatibilitas aktif'), findsNothing);
+        expect(find.text('Cari nama karyawan'), findsOneWidget);
         expect(find.text('Ayu Strict'), findsOneWidget);
         expect(find.text('Bimo Fallback', skipOffstage: false), findsOneWidget);
+        expect(
+          tester
+              .getTopLeft(find.text('Bimo Fallback', skipOffstage: false).first)
+              .dy,
+          lessThan(
+            tester
+                .getTopLeft(find.text('Ayu Strict', skipOffstage: false).first)
+                .dy,
+          ),
+        );
 
-        await tester.pumpWidget(buildHarness(rows: [strictRow]));
+        await tester.enterText(find.byType(TextField), 'ayu');
         await tester.pumpAndSettle();
 
-        expect(find.text('Mode kompatibilitas aktif'), findsNothing);
+        expect(find.text('Ayu Strict', skipOffstage: false), findsOneWidget);
+        expect(find.text('Bimo Fallback', skipOffstage: false), findsNothing);
       },
     );
 
@@ -151,13 +158,15 @@ void main() {
           ),
         );
 
-        final pendingFilter = find.byWidgetPredicate(
-          (widget) =>
-              widget is ChoiceChip &&
-              widget.label is Text &&
-              (widget.label as Text).data == 'Belum absen pulang',
+        await tester.scrollUntilVisible(
+          find.text('Filter'),
+          300,
+          scrollable: find.byType(Scrollable).first,
         );
-
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Filter'));
+        await tester.pumpAndSettle();
+        final pendingFilter = find.text('Belum absen pulang');
         await tester.tap(pendingFilter);
         await tester.pumpAndSettle();
 
@@ -227,6 +236,7 @@ class _PolicyRecapHarness extends StatefulWidget {
 
 class _PolicyRecapHarnessState extends State<_PolicyRecapHarness> {
   PolicyRecapFilter _selectedFilter = PolicyRecapFilter.semua;
+  String _nameQuery = '';
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +249,10 @@ class _PolicyRecapHarnessState extends State<_PolicyRecapHarness> {
       selectedFilter: _selectedFilter,
       onFilterChanged: (filter) {
         setState(() => _selectedFilter = filter);
+      },
+      nameQuery: _nameQuery,
+      onNameQueryChanged: (value) {
+        setState(() => _nameQuery = value);
       },
       loadingBuilder: () => const SizedBox.shrink(),
       scanCountMap: const <String, int>{},

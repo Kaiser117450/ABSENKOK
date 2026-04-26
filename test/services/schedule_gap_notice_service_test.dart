@@ -58,12 +58,9 @@ void main() {
       shiftBand: null,
       requiredWorkMinutes: 600,
       lateCutoffLocal: null,
-      breakFirstDeadlineLocal: null,
       attendanceStatus: AttendancePolicyStatus.hadirTanpaJadwal,
       lateKind: LateKind.none,
       isLate: false,
-      breakFirstEligible: false,
-      breakFirstConfirmed: false,
       firstScanLocal: DateTime(
         logicalDate.year,
         logicalDate.month,

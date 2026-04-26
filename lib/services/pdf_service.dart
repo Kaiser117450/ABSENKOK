@@ -271,6 +271,7 @@ class PdfService {
                 color: PdfColor.fromHex('E5E7EB'),
                 width: 0.5,
               ),
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
               columnWidths: {
                 0: const pw.FlexColumnWidth(
                     2.5), // Employee name — flex to fill remaining space
@@ -327,6 +328,7 @@ class PdfService {
                 // Data rows
                 ...employees.map((emp) {
                   return pw.TableRow(
+                    verticalAlignment: pw.TableCellVerticalAlignment.full,
                     children: [
                       // Employee name cell — name only, no role sub-label
                       pw.Container(

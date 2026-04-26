@@ -51,7 +51,7 @@ const List<String> reportExportParityScenarioIds = <String>[
   'overtime',
   'outlet-24-jam',
   'outlet-normal',
-  'break-first',
+  'late-normal',
   'no-show',
   'legacy-fallback-no-schedule',
 ];
@@ -93,8 +93,8 @@ ReportExportParityFixtureBundle buildReportExportParityFixtureBundle() {
       outletId: outletId,
     ),
     _buildEmployee(
-      id: 'emp-break-first',
-      name: 'Farah Break First',
+      id: 'emp-late-normal',
+      name: 'Farah Telat Normal',
       contract: EmployeeContract.parttime,
       outletId: outletId,
     ),
@@ -177,7 +177,7 @@ ReportExportParityFixtureBundle buildReportExportParityFixtureBundle() {
       netWorkMinutes: 598,
     ),
     _buildStrictRow(
-      employee: employeeById['emp-break-first']!,
+      employee: employeeById['emp-late-normal']!,
       logicalDate: DateTime(2026, 3, 27),
       firstScanLocal: DateTime(2026, 3, 27, 10, 15),
       lastPulangLocal: DateTime(2026, 3, 27, 19, 15),
@@ -186,9 +186,8 @@ ReportExportParityFixtureBundle buildReportExportParityFixtureBundle() {
       attendanceStatus: AttendancePolicyStatus.hadir,
       detailSignals: const <AttendancePolicySignal>[
         AttendancePolicySignal.late,
-        AttendancePolicySignal.breakFirstConfirmed,
       ],
-      lateKind: LateKind.breakFirstConfirmed,
+      lateKind: LateKind.normal,
       isLate: true,
       netWorkMinutes: 540,
     ),
@@ -272,7 +271,7 @@ ReportExportParityFixtureBundle buildReportExportParityFixtureBundle() {
       isCompatibilityRow: false,
     ),
     reportExportParityKey(
-      employeeById['emp-break-first']!.id,
+      employeeById['emp-late-normal']!.id,
       DateTime(2026, 3, 27),
     ): const ReportExportParityExpectation(
       primaryLabel: 'Terlambat',
@@ -387,12 +386,9 @@ AttendancePolicyRecapDay _buildStrictRow({
     requiredWorkMinutes:
         employee.employmentContract == EmployeeContract.parttime ? 540 : 600,
     lateCutoffLocal: '07:00',
-    breakFirstDeadlineLocal: '09:00',
     attendanceStatus: attendanceStatus,
     lateKind: lateKind,
     isLate: isLate,
-    breakFirstEligible: lateKind == LateKind.breakFirstEligible,
-    breakFirstConfirmed: lateKind == LateKind.breakFirstConfirmed,
     firstScanLocal: firstScanLocal,
     firstBreakLocal: null,
     lastPulangLocal: lastPulangLocal,

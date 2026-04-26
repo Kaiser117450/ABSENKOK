@@ -440,16 +440,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return _formatClock(shift.lateCutoffHour, shift.lateCutoffMinute);
   }
 
-  String _formatBreakFirstDeadline(ShiftSlot shift) {
-    if (shift.band == ShiftBand.libur) {
-      return '-';
-    }
-    return _formatClock(
-      shift.breakFirstDeadlineHour,
-      shift.breakFirstDeadlineMinute,
-    );
-  }
-
   void _replaceEntryForDay(Employee emp, DateTime date, ShiftSlot shift,
       {String? role}) {
     _currentSchedule!.entries.removeWhere((e) =>
@@ -569,34 +559,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
     return 'FULLTIME 10j';
   }
 
-  String _buildBulkBreakFirstSummary(ShiftBand band, List<Employee> employees) {
-    if (band == ShiftBand.libur) {
-      return 'Tidak berlaku';
-    }
-
-    final fulltimeShift = ShiftSlot.fromBand(
-      band: band,
-      contract: EmployeeContract.fulltime,
-    );
-    final parttimeShift = ShiftSlot.fromBand(
-      band: band,
-      contract: EmployeeContract.parttime,
-    );
-
-    final hasFulltime =
-        employees.any((emp) => emp.employmentContract.dbValue == 'FULLTIME');
-    final hasParttime =
-        employees.any((emp) => emp.employmentContract.dbValue == 'PARTTIME');
-
-    if (hasFulltime && hasParttime) {
-      return 'FULLTIME sampai ${_formatBreakFirstDeadline(fulltimeShift)} • PARTTIME sampai ${_formatBreakFirstDeadline(parttimeShift)}';
-    }
-    if (hasParttime) {
-      return 'PARTTIME sampai ${_formatBreakFirstDeadline(parttimeShift)}';
-    }
-    return 'FULLTIME sampai ${_formatBreakFirstDeadline(fulltimeShift)}';
-  }
-
   Widget _buildReviewRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -686,10 +648,6 @@ class _ShiftSchedulerScreenState extends ConsumerState<ShiftSchedulerScreen> {
                 band == ShiftBand.libur
                     ? 'Tidak berlaku'
                     : _formatLateCutoff(policyShift),
-              ),
-              _buildReviewRow(
-                'Break-first',
-                _buildBulkBreakFirstSummary(band, selectedEmployees),
               ),
               const SizedBox(height: 12),
               const Text('Role (Opsional)',
@@ -1650,13 +1608,6 @@ String _formatPreviewLateCutoff(ShiftSlot shift) {
   return _formatScheduleClock(shift.lateCutoffHour, shift.lateCutoffMinute);
 }
 
-String _formatPreviewBreakFirst(ShiftSlot shift) {
-  if (shift.band == ShiftBand.libur) {
-    return 'Tidak berlaku';
-  }
-  return 'sampai ${_formatScheduleClock(shift.breakFirstDeadlineHour, shift.breakFirstDeadlineMinute)} (${shift.requiredWorkMinutes < SchedulePolicyService.fulltimeRequiredWorkMinutes ? 'PARTTIME' : 'FULLTIME'})';
-}
-
 class ScheduleEntryEditorSelection {
   const ScheduleEntryEditorSelection({
     required this.band,
@@ -1857,8 +1808,6 @@ class _ScheduleAssignedEntryEditorSheetState
             ),
             _buildReviewRow(
                 'Batas telat', _formatPreviewLateCutoff(previewShift)),
-            _buildReviewRow(
-                'Break-first', _formatPreviewBreakFirst(previewShift)),
             const SizedBox(height: 8),
             Row(
               children: [
