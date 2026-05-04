@@ -1440,6 +1440,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
         } else if (_isActive && !wasActive) {
           payload['archived_at'] = null;
         }
+      } else if (!_isActive) {
+        payload['archived_at'] = DateTime.now().toIso8601String();
       }
 
       if (widget.employee == null) {
