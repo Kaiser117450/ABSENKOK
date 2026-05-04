@@ -156,7 +156,13 @@
       "Bash(ls .tmp/)",
       "Bash(wc -c sentry-wizard.exe)",
       "Bash(rm -f sentry-wizard.exe test_pdf_compilation.dart \"pubspec.yaml.tmp.7504.1774432286998\")",
-      "Bash(rm -rf .tmp/)"
+      "Bash(rm -rf .tmp/)",
+      "Bash(ls -la \"C:\\\\Users\\\\HYPE R Series\\\\Desktop\\\\projekan\\\\absensi apk\\\\absensi_enakko_flutter\\\\build\\\\app\\\\outputs\\\\flutter-apk\"/*.apk)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(cmd:*)",
+      "Bash(awk -F'test/' '{print $2}')",
+      "Bash(awk -F':' '{print $1}')"
     ]
   }
 }

@@ -1,306 +1,209 @@
 # Codebase Concerns
 
-**Analysis Date:** 2024-12-29
+**Analysis Date:** 2026-04-14
+
+## Project State & Documentation Drift
+
+**Root guidance points to missing or stale repo contracts:**
+- Issue: `AGENTS.md:13-18` says `pubspec.yaml` is `v8.1.0`, tells agents to read `CLAUDE.md`, and references `build_flutter.ps1`, but `pubspec.yaml:4` is `8.7.0+8700`, `CLAUDE.md` is absent from the repo root, and `build_flutter.ps1` is absent while the active build scripts live in `tool/release_build.ps1`, `tool/release_preflight.ps1`, and `tool/release_env.ps1`.
+- Files: `AGENTS.md`, `pubspec.yaml`, `tool/release_build.ps1`, `tool/release_preflight.ps1`, `tool/release_env.ps1`
+- Impact: onboarding, automation, and release guidance can route contributors to files that do not exist and to milestone metadata that no longer matches the shipped app version.
+- Fix approach: refresh `AGENTS.md` to reference the `tool/` scripts, remove the hard dependency on missing `CLAUDE.md`, and align all version references with `pubspec.yaml`.
+
+**Planning state overstates verification closure:**
+- Issue: `.planning/STATE.md:20-44` marks milestone `v8.1` complete with no next phase, while `.planning/phases/62-schedule-gap-notices/62-VALIDATION.md:1-74` is still `draft`, `nyquist_compliant: false`, `wave_0_complete: false`, and all mapped checks remain pending.
+- Files: `.planning/STATE.md`, `.planning/phases/62-schedule-gap-notices/62-VALIDATION.md`
+- Impact: milestone closeout looks more complete than the verification ledger says it is, which weakens future audits and follow-up planning.
+- Fix approach: either close the Phase 62 validation artifact truthfully or reopen the milestone verification state until the artifact matches the shipped status.
+
+**Inventory docs lag behind the actual repo surface:**
+- Issue: `sql/AGENTS.md:8` says `sql/` contains 27 files through Phase 59, but `sql/` currently contains 30 tracked `.sql` files including `sql/phase_58_shift_roles_table.sql` and `sql/phase_62_parttime_late_overnight_fixes.sql`; `test/screens/kiosk/AGENTS.md:7-12` says the kiosk suite has 2 tests while `test/screens/kiosk/` contains 3 tracked tests.
+- Files: `sql/AGENTS.md`, `sql/phase_58_shift_roles_table.sql`, `sql/phase_62_parttime_late_overnight_fixes.sql`, `test/screens/kiosk/AGENTS.md`, `test/screens/kiosk/kiosk_idle_cleanup_test.dart`, `test/screens/kiosk/kiosk_scan_server_time_test.dart`, `test/screens/kiosk/kiosk_scan_streak_test.dart`
+- Impact: codebase maps and agent guidance are not reliable inventories of the current repo.
+- Fix approach: refresh AGENTS inventories whenever new SQL or test files land.
 
 ## Tech Debt
 
-**Schedule Balancing Algorithm (Deferred Feature):**
-- Issue: Schedule generator uses basic round-robin algorithm; advanced balancing is stubbed out
-- Files: `lib/services/schedule_generator.dart:173`
-- Impact: Generated schedules may not distribute workload fairly; manual adjustment still needed
-- Fix approach: Implement the TODO at line 173 — add workload balancing logic that redistributes shifts when variance between employee work-days exceeds threshold
+**Tracked repair artifacts still compete with real source:**
+- Issue: the root keeps 64 tracked `fix_*.py` rewrite scripts plus helper scripts such as `run_fixes.py`, `step1_imports.py`, `step2_snackbars.py`, `step3_containers.py`, `step4_shimmers.py`, and `convert_containers.py`; the source tree also tracks 8 `.checkpoint2` snapshots such as `lib/core/constants.dart.checkpoint2`, `lib/screens/admin/admin_reports_screen.dart.checkpoint2`, `lib/services/sqlite_service.dart.checkpoint2`, and `lib/services/sync_service.dart.checkpoint2`.
+- Files: `fix_admin_dashboard.py`, `fix_outlets_proper*.py`, `fix_shimmer*.py`, `fix_snackbar*.py`, `run_fixes.py`, `step1_imports.py`, `step2_snackbars.py`, `step3_containers.py`, `step4_shimmers.py`, `convert_containers.py`, `lib/core/constants.dart.checkpoint2`, `lib/screens/admin/admin_dashboard_screen.dart.checkpoint2`, `lib/screens/admin/admin_employees_screen.dart.checkpoint2`, `lib/screens/admin/admin_reports_screen.dart.checkpoint2`, `lib/services/sqlite_service.dart.checkpoint2`, `lib/services/sync_service.dart.checkpoint2`
+- Impact: repo search results are noisy, source-of-truth files are harder to identify, and cleanup/refactor work has a higher chance of touching the wrong artifact.
+- Fix approach: remove obsolete repair scripts from the tracked tree or move them into an explicitly archival directory outside the active source surface; drop `.checkpoint2` files from version control once their content is either merged or discarded.
 
-**Massive Python Fix Script Collection:**
-- Issue: 66 Python scripts (`fix_*.py`) in root directory indicate repeated manual code repairs during development
-- Files: Root directory contains `fix_admin_dashboard.py`, `fix_outlets_proper*.py` (24 variations), `fix_final*.py` (18 variations), `fix_shimmer*.py`, `fix_snackbar*.py`, etc.
-- Impact: Suggests past code quality issues with shimmer widgets, container widgets, outlet screens, and snackbar implementations that required automated fixing
-- Fix approach: Delete these scripts after verifying they're no longer needed; add linting rules to prevent similar issues (e.g., enforce const constructors, validate widget patterns)
+**Admin/reporting surfaces are still monolithic ownership hotspots:**
+- Issue: `lib/screens/admin/admin_reports_screen.dart` is 2642 lines, `lib/screens/admin/admin_dashboard_screen.dart` is 2323 lines, `lib/screens/admin/admin_employees_screen.dart` is 2047 lines, and `lib/screens/admin/shift_scheduler_screen.dart` is 1773 lines, each combining screen state, data loading, mutations, and multiple embedded view models/widgets.
+- Files: `lib/screens/admin/admin_reports_screen.dart`, `lib/screens/admin/admin_dashboard_screen.dart`, `lib/screens/admin/admin_employees_screen.dart`, `lib/screens/admin/shift_scheduler_screen.dart`
+- Impact: concurrent work conflicts quickly, regressions are hard to localize, and simple feature changes require editing large multi-responsibility files.
+- Fix approach: keep extracting feature-specific panels and service/controller seams, especially around payroll export, dashboard mutation flows, employee management dialogs, and scheduler persistence.
 
-**Hardcoded Admin Name:**
-- Issue: Login screen greeting hardcoded to specific person
-- Files: `lib/screens/admin/admin_login_screen.dart:139`
-- Impact: Greeting displays "Halo, Akmal 👋" for all admin users — unprofessional for multi-admin deployment
-- Fix approach: Remove hardcoded name or fetch from user profile metadata
-
-**Build Logs Committed to Repository:**
-- Issue: 6 build log files present in root directory
-- Files: `adb_install.log`, `adb_install_utf8.log`, `build.log`, `flutter_01.log`, `flutter_02.log`, `flutter_build.log`
-- Impact: Clutters repository with temporary files; `.gitignore` already excludes `*.log` but these were committed before rule was added
-- Fix approach: Delete log files and commit removal
-
-**Missing .env.example Template:**
-- Issue: `.env` file exists but no `.env.example` template for new developers
-- Files: `.env` (exists), `.env.example` (missing)
-- Impact: New developers/deployments don't know which environment variables are required
-- Fix approach: Create `.env.example` with placeholder values for `SUPABASE_URL` and `SUPABASE_ANON_KEY`
-
-**Debug Print Statements in Production:**
-- Issue: 40+ debug/print statements scattered throughout codebase
-- Files: `lib/services/sync_service.dart:63,69,80`, `lib/services/kiosk_background_service.dart`, `lib/providers/app_provider.dart:125,127`, and others
-- Impact: Console spam in production builds; minor performance overhead
-- Fix approach: Replace with proper logging framework or wrap in `kDebugMode` checks
-
-**No README Documentation:**
-- Issue: README.md contains only default Flutter template text
-- Files: `README.md`
-- Impact: No setup instructions, architecture overview, or deployment guide for new team members
-- Fix approach: Document app architecture, environment setup, Supabase configuration, and deployment process
+**Deferred algorithm and RPC contract work remains in the runtime path:**
+- Issue: `lib/services/schedule_generator.dart:171` still contains the balancing TODO, and `lib/services/payroll_matrix_builder.dart:59` still contains the `TODO(per-day-role)` note that depends on richer recap RPC output.
+- Files: `lib/services/schedule_generator.dart`, `lib/services/payroll_matrix_builder.dart`
+- Impact: roster fairness remains only partially implemented, and per-day role-aware payroll semantics remain blocked on an unfinished backend/UI contract.
+- Fix approach: finish the balancing rules in `ScheduleGenerator` and complete the per-day role payload contract end-to-end before broadening payroll semantics again.
 
 ## Known Bugs
 
-**Schedule UI Grid Redesign Deferred (REQ-M5-02):**
-- Symptoms: Schedule grid not optimized for mobile viewing; known gap from milestone v1.1
-- Files: `lib/screens/admin/shift_scheduler_screen.dart`
-- Trigger: Mentioned in user's context as deferred feature
-- Workaround: Current grid works but may require horizontal scrolling on small screens
+**Guidance contract bug at the repo root:**
+- Symptoms: following `AGENTS.md` literally sends contributors to `CLAUDE.md` and `build_flutter.ps1`, neither of which exists in the root repo, while the listed app version no longer matches `pubspec.yaml`.
+- Files: `AGENTS.md`, `pubspec.yaml`, `tool/release_build.ps1`, `tool/release_preflight.ps1`
+- Trigger: onboarding, AI automation, or manual release work that starts from root guidance.
+- Workaround: use `README.md` plus the `tool/release_*.ps1` scripts as the active release surface.
 
-**Scroll Synchronization Fragility:**
-- Problem: Synchronized scrolling between employee list and schedule grid uses boolean flag
-- Files: `lib/screens/admin/shift_scheduler_screen.dart:55,71-86`
-- Cause: Manual sync with `_isSyncing` flag to prevent infinite loop — can desync if widgets rebuild during scroll
-- Improvement path: Use `ScrollController.position.pixels` listener with debouncing instead of jumpTo
+**Verification ledger bug for completed Phase 62 work:**
+- Symptoms: project state treats Phase 62 as complete, but the matching validation ledger remains pending/draft.
+- Files: `.planning/STATE.md`, `.planning/phases/62-schedule-gap-notices/62-VALIDATION.md`
+- Trigger: milestone closeout, codebase mapping, or audit work that trusts `.planning/STATE.md` without checking phase validation artifacts.
+- Workaround: consult the Phase 62 summaries and tests directly instead of trusting the validation frontmatter.
+
+## Rollout Constraints
+
+**Database rollout stays manual and additive-only:**
+- Constraint: `.planning/STATE.md:34` says production schema changes remain additive only and still require explicit user confirmation before any production migration is applied.
+- Files: `.planning/STATE.md`, `sql/phase_54_workforce_contract_outlet_mode_20260326.sql`, `sql/phase_55_schedule_policy_foundation_20260326.sql`, `sql/phase_56_server_time_scan_authority_20260327.sql`, `sql/phase_57_strict_recap_evaluation_engine_20260327.sql`, `sql/phase_62_parttime_late_overnight_fixes.sql`
+- Impact: rollout sequencing and applied/unapplied migration truth remain operationally critical; repo state alone is not enough to know what production already has.
+- Fix approach: keep an explicit applied-migration ledger tied to each milestone closeout and annotate pending SQL files before release work starts.
+
+**Release preflight does not fail on analyzer warnings:**
+- Constraint: `tool/release_preflight.ps1:81-88` runs `flutter analyze --no-fatal-infos --no-fatal-warnings` before tests and `:app:compileReleaseSources`.
+- Files: `tool/release_preflight.ps1`
+- Impact: warning debt can ship through the official preflight lane, so release readiness depends on manual discipline rather than a strict static-analysis gate.
+- Fix approach: add a strict analyzer lane for release or a second script that fails on warnings for milestone closeout and shipping branches.
+
+**Shared-root env workflow couples the Flutter app and Astro portal:**
+- Constraint: `README.md:53-77` describes one root `.env` workflow for the portal, while `lib/main.dart:33-66` loads `.env` for Flutter and `pubspec.yaml:122-126` packages `.env` into the app bundle.
+- Files: `README.md`, `lib/main.dart`, `pubspec.yaml`, `src/lib/supabase/env.ts`
+- Impact: operator/build steps must keep mobile-safe and server-only environment values separated manually; one mistake can put the wrong secret set on the wrong runtime.
+- Fix approach: split app and server env contracts into separate templates and file names, and make the Flutter build fail fast when server-only keys are present.
 
 ## Security Considerations
 
-**Environment Variables in .env File:**
-- Risk: `.env` file contains `SUPABASE_URL` and `SUPABASE_ANON_KEY` — must never be committed
-- Files: `lib/main.dart:54,60-61`
-- Current mitigation: `.gitignore` excludes `.env` files
-- Recommendations: Verify `.env` is NOT in git history; add pre-commit hook to block `.env` commits; document secret rotation procedure
+**Portal auth falls back to a hardcoded default secret:**
+- Risk: `src/lib/portal/auth.ts:55-62` derives hidden portal passwords from `PORTAL_SECRET` but silently falls back to `'enakko-portal-default-secret'` when the env var is missing.
+- Files: `src/lib/portal/auth.ts`, `.env.example`, `README.md`
+- Current mitigation: none in the tracked repo; `.env.example:1-4` and `README.md:71-77` do not document `PORTAL_SECRET`, so new environments can miss it and still boot.
+- Recommendations: remove the fallback, require `PORTAL_SECRET`, and fail closed during server startup when it is missing.
 
-**Anon Key in Kiosk Mode:**
-- Risk: Kiosks use Supabase anon key without per-device JWT
-- Files: `lib/core/supabase_client.dart:11-13`
-- Current mitigation: Password verification happens server-side via RPC `verify_kiosk_password`; outlet identity stored in SharedPreferences; RLS policies enforce outlet-scoped access
-- Recommendations: Acceptable for kiosk use case where device is physically secured; ensure RLS policies are tested
+**The same root env template invites service-role leakage into the mobile app bundle:**
+- Risk: `pubspec.yaml:123` includes `.env` as a Flutter asset, while `.env.example:3` and `README.md:74-76` teach the same root env flow to include `SUPABASE_SERVICE_ROLE_KEY` for portal provisioning.
+- Files: `pubspec.yaml`, `lib/main.dart`, `.env.example`, `README.md`, `src/lib/supabase/env.ts`
+- Current mitigation: `.gitignore:64-66` ignores `.env` and `.env.*`, so the secret file itself is not tracked by default.
+- Recommendations: split env files by runtime, reject service-role-like keys during Flutter build packaging, and document a mobile-only env contract that contains only `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SENTRY_DSN`.
 
-**No Rate Limiting on Auth Endpoints:**
-- Risk: Admin login has no client-side rate limiting
-- Files: `lib/screens/admin/admin_login_screen.dart:31-111`
-- Current mitigation: 15-second timeout on auth requests
-- Recommendations: Add exponential backoff after failed login attempts; rely on Supabase built-in rate limiting
-
-**Location Data Best-Effort Only:**
-- Risk: GPS coordinates captured with 1-second timeout; can be null
-- Files: `lib/screens/kiosk/kiosk_scan_screen.dart:144-148`
-- Current mitigation: Lat/lng are nullable; attendance logs still created without GPS
-- Recommendations: Acceptable trade-off for kiosk use case (attendance must succeed even if GPS fails)
-
-**Sensitive Error Details Exposed:**
-- Risk: Admin login shows full error messages including stack traces
-- Files: `lib/screens/admin/admin_login_screen.dart:104-106`
-- Current mitigation: Only shown in debug context
-- Recommendations: Remove stack trace exposure in production builds; wrap in `kDebugMode` check
-
-**SharedPreferences for Session Storage:**
-- Risk: Kiosk session stored in SharedPreferences (not encrypted)
-- Files: `lib/providers/app_provider.dart:90`
-- Current mitigation: Comment notes this replaced SecureStorage to avoid ANR; session only contains `outlet_id`, `outlet_name`, `device_id` — no passwords
-- Recommendations: Acceptable — session data is not sensitive; physical kiosk security is primary defense
+**Service-role admin provisioning lives in the same repo as public portal auth helpers:**
+- Risk: `src/lib/supabase/admin.ts:4-117` and `src/lib/portal/provision.ts:21-125` keep service-role account creation/update logic beside the public portal codepaths, which increases the chance of accidental misuse during future refactors.
+- Files: `src/lib/supabase/admin.ts`, `src/lib/portal/provision.ts`, `src/lib/supabase/env.ts`, `supabase/functions/provision-employee-portal-user/index.ts`
+- Current mitigation: the service-role client is server-side only and `ensurePortalPasswordlessAccount()` checks for active/non-archived employees plus matching `app_role` and `employee_id`.
+- Recommendations: add explicit startup validation and audit logging around provisioning entrypoints, and keep privileged helpers isolated from request-layer code.
 
 ## Performance Bottlenecks
 
-**24-Hour Attendance Query Window:**
-- Problem: Dashboard loads all attendance logs from past 24 hours (covers overnight shifts)
-- Files: `lib/screens/admin/admin_dashboard_screen.dart:117-134`
-- Cause: Query includes 24-hour lookback with 200-record limit; can be slow with many scans
-- Improvement path: Add pagination; cache dashboard stats; index `scanned_at` column in Supabase
+**Portal account provisioning scales as a full auth-user scan:**
+- Problem: `src/lib/portal/provision.ts:91-125` pages through `admin.auth.admin.listUsers()` 200 users at a time until it finds a matching hidden email or exhausts the user list.
+- Files: `src/lib/portal/provision.ts`
+- Cause: there is no direct indexed lookup path from `employee_id` or hidden auth email to auth user id before hitting the auth admin API.
+- Improvement path: persist and trust the auth user id in `employee_portal_accounts`, query that mapping first, and only fall back to `listUsers()` for one-off recovery work.
 
-**Real-time Subscription Overhead:**
-- Problem: Dashboard subscribes to attendance_logs and employees tables; rebuilds on every insert
-- Files: `lib/screens/admin/admin_dashboard_screen.dart:37,44`
-- Cause: Realtime channels trigger full reload on any change
-- Improvement path: Debounce realtime updates; only reload affected rows instead of full list
-
-**Employee Cache TTL Too Short:**
-- Problem: NFC employee cache expires after 5 minutes; refetches frequently
-- Files: `lib/services/employee_cache_service.dart:15`
-- Cause: Conservative TTL to detect when employee changes outlets
-- Improvement path: Increase TTL to 15 minutes or use Supabase realtime to invalidate cache when employee records change
-
-**Backup Mode Cache 5 Hour TTL:**
-- Problem: Backup mode persists for 5 hours; stale if employee changes outlet mid-day
-- Files: `lib/services/employee_cache_service.dart:16`
-- Cause: Long TTL to avoid repeated backup confirmations
-- Improvement path: Add manual "End Backup" button; allow admin to force-clear backup mode
-
-**No List Virtualization:**
-- Problem: Dashboard renders all logs (up to 200) without ListView.builder virtualization
-- Files: `lib/screens/admin/admin_dashboard_screen.dart`
-- Cause: List is built all at once; no lazy loading
-- Improvement path: Already using ListView — verify it's using `.builder()` for large lists
-
-**Synchronous Scroll Sync:**
-- Problem: Scroll controllers use `jumpTo` which can cause jank
-- Files: `lib/screens/admin/shift_scheduler_screen.dart:74,82`
-- Cause: Immediate jump instead of smooth animation
-- Improvement path: Use `animateTo` with short duration or implement CustomScrollView with single controller
-
-**Background Service Polling:**
-- Problem: Overlay activation polls every 120ms for up to 1600ms
-- Files: `lib/services/kiosk_background_service.dart:23-24`
-- Cause: Checking if overlay window is ready
-- Improvement path: Acceptable for one-time activation; not a continuous poll
+**Export/reporting orchestration is still heavy and centralized:**
+- Problem: `lib/screens/admin/admin_reports_screen.dart` owns daily report fetches, payroll roster loading, PDF export, spreadsheet export, tab state, and filter state; `lib/services/payroll_spreadsheet_export_service.dart` and `lib/services/payroll_pdf_matrix_export_service.dart` are also large single-pass builders.
+- Files: `lib/screens/admin/admin_reports_screen.dart`, `lib/services/payroll_spreadsheet_export_service.dart`, `lib/services/payroll_pdf_matrix_export_service.dart`
+- Cause: screen-level orchestration, export assembly, and artifact-specific formatting are still tightly coupled.
+- Improvement path: push more data assembly into dedicated controllers/services and keep the screen focused on state transitions and presentation.
 
 ## Fragile Areas
 
-**NFC Service Platform-Specific UID Extraction:**
-- Files: `lib/services/nfc_service.dart:40-118`
-- Why fragile: Tries 8 different NFC technology types in sequence; depends on platform-specific identifiers
-- Safe modification: Always test with multiple card types (e-KTP, bank cards, e-Toll) when changing UID extraction logic
-- Test coverage: No unit tests for NFC service
+**Payroll/reporting parity chain:**
+- Files: `lib/services/admin_policy_recap_dataset_service.dart`, `lib/services/payroll_matrix_builder.dart`, `lib/services/payroll_spreadsheet_export_service.dart`, `lib/services/payroll_pdf_matrix_export_service.dart`, `lib/screens/admin/admin_reports_screen.dart`, `test/services/report_export_parity_test.dart`
+- Why fragile: salary-facing spreadsheet and PDF output must stay aligned with the corrected recap semantics, and the runtime path still spans multiple large services plus a large screen shell.
+- Safe modification: update recap dataset logic, matrix building, both exporters, and parity tests together; do not treat one exporter as a secondary path.
+- Test coverage: `test/services/report_export_parity_test.dart` locks the export seam, but the UI shell still concentrates a lot of state and wiring in one file.
 
-**Foreground Service Notification Management:**
-- Files: `lib/services/kiosk_background_service.dart`
-- Why fragile: Manages 3 different notification types (foreground service, custom pill, heads-up scan); Android version-specific behavior
-- Safe modification: Test on Android 13+ (needs POST_NOTIFICATIONS permission) and Android 10-12 (no permission required)
-- Test coverage: No automated tests for notification display
+**Kiosk runtime stack:**
+- Files: `lib/screens/kiosk/kiosk_idle_screen.dart`, `lib/screens/kiosk/kiosk_scan_screen.dart`, `lib/services/kiosk_background_service.dart`, `lib/services/heartbeat_service.dart`, `lib/services/nfc_service.dart`
+- Why fragile: background service lifecycle, overlay/notification tiers, NFC listener state, queued fallback, and heartbeat reporting all interact across separate files and device-only behavior.
+- Safe modification: validate idle cleanup, scan success/failure, heartbeat start/stop, and overlay cleanup as one device flow instead of editing single functions in isolation.
+- Test coverage: `test/screens/kiosk/kiosk_idle_cleanup_test.dart`, `test/screens/kiosk/kiosk_scan_server_time_test.dart`, and `test/screens/kiosk/kiosk_scan_streak_test.dart` cover important slices, but `lib/services/kiosk_background_service.dart` and `lib/services/heartbeat_service.dart` have no dedicated test files.
 
-**SQLite Migration Logic:**
-- Files: `lib/services/sqlite_service.dart:58-88`
-- Why fragile: Recreates table on schema changes; migrates only 'pending' and 'failed' logs
-- Safe modification: Always verify migration doesn't lose unsynced logs; test upgrade from all previous versions (v1→v5)
-- Test coverage: No migration tests
-
-**Scroll Synchronization State:**
-- Files: `lib/screens/admin/shift_scheduler_screen.dart:71-86`
-- Why fragile: Boolean flag prevents infinite loop; can desync if controllers rebuild
-- Safe modification: Always test scroll in both directions; verify no janky behavior on fast scrolling
-- Test coverage: No scroll tests
-
-**Kiosk Session Restoration:**
-- Files: `lib/providers/app_provider.dart:87-112`
-- Why fragile: Catches all exceptions to prevent splash screen hang; clears corrupt session data silently
-- Safe modification: Never throw in `loadSession()`; always call `forceUnblockLoading()` safety-net
-- Test coverage: No session restoration tests
-
-**Admin Role Detection:**
-- Files: `lib/screens/admin/admin_login_screen.dart:61-74`
-- Why fragile: Checks both `userMetadata` and `appMetadata` for `app_role`; different Supabase Auth versions store role in different locations
-- Safe modification: Always test with both admin and kepala_gerai roles; verify RLS policies match role checks
-- Test coverage: No auth tests
+**Scheduler surface:**
+- Files: `lib/screens/admin/shift_scheduler_screen.dart`, `lib/services/schedule_generator.dart`, `lib/services/schedule_policy_service.dart`, `lib/services/schedule_sqlite_service.dart`
+- Why fragile: one stateful screen combines Supabase loading, SQLite fallback, time-off flows, auto-generation, manual edits, and PDF export.
+- Safe modification: regression-test load/save/export/bulk assign flows together and avoid changing fallback rules without matching integration coverage.
+- Test coverage: `test/screens/admin/shift_scheduler_screen_test.dart` exists, but there is no dedicated test suite for `lib/services/schedule_policy_service.dart` or `lib/services/schedule_sqlite_service.dart`.
 
 ## Scaling Limits
 
-**200-Log Dashboard Limit:**
-- Current capacity: Dashboard shows max 200 logs per day
-- Limit: With 4 outlets × 10 employees × 4 scans/day = 160 logs/day (under limit); breaks if expanding to 10+ outlets
-- Scaling path: Add pagination; filter by outlet; lazy load older logs
+**Portal auth provisioning cost grows with total auth-user count, not active employee count:**
+- Current capacity: `src/lib/portal/provision.ts` scans auth users 200 at a time until it finds a match.
+- Limit: provisioning and reset cost increases linearly as auth users accumulate, including stale hidden accounts and unrelated auth entries.
+- Scaling path: persist auth ids in `employee_portal_accounts`, query the mapping first, and reserve auth-user scans for repair tools only.
 
-**Sync Service Batch Size:**
-- Current capacity: Syncs all pending logs in parallel via `Future.wait()`
-- Limit: `AppConstants.syncBatchSize = 50` defined but not used; all pending logs sync at once
-- Scaling path: Implement batch processing; sync in chunks of 50 to avoid memory issues with 1000+ pending logs
-
-**Schedule Generator Complexity:**
-- Current capacity: Generates schedules for monthly periods with all employees
-- Limit: O(days × shifts × employees²) — becomes slow with 50+ employees or 90-day periods
-- Scaling path: Memoize availability checks; pre-filter employees by home_outlet_id
-
-**In-Memory Employee Cache:**
-- Current capacity: Caches all NFC UID lookups in memory
-- Limit: No max size; could grow unbounded with 1000+ unique scans
-- Scaling path: Implement LRU eviction; cap cache at 500 entries
-
-**Realtime Subscriptions:**
-- Current capacity: Dashboard subscribes to 2 realtime channels
-- Limit: Supabase free tier allows 200 concurrent connections; each open dashboard = 2 connections
-- Scaling path: Unsubscribe when dashboard not visible; implement connection pooling
+**Large shared screens limit safe parallel delivery:**
+- Current capacity: a small number of contributors can coordinate changes inside `lib/screens/admin/admin_reports_screen.dart` and `lib/screens/admin/admin_dashboard_screen.dart`.
+- Limit: concurrent feature work collides quickly because reporting, dashboard, and scheduler logic still live in a few large shared files.
+- Scaling path: keep splitting route shells into smaller feature widgets and dedicated mutation handlers so future changes land in narrower files.
 
 ## Dependencies at Risk
 
-**flutter_overlay_window (v0.5.0):**
-- Risk: Unmaintained package; last update 8 months ago; limited Android OEM support
-- Impact: Overlay pill may not work on Xiaomi/Oppo/Vivo devices with aggressive background restrictions
-- Migration plan: Fallback to notification-only mode if overlay fails; acceptable since custom notification is primary UI
+**The Android kiosk stack is pinned by plugin compatibility:**
+- Risk: `AGENTS.md:39` explicitly says Kotlin must stay on `1.9.25` because Kotlin 2.x breaks `nfc_manager`; the kiosk path also depends on `flutter_foreground_task` and `flutter_overlay_window`.
+- Files: `AGENTS.md`, `pubspec.yaml`, `lib/services/nfc_service.dart`, `lib/services/kiosk_background_service.dart`
+- Impact: Kotlin/AGP upgrades remain coupled to NFC, background-service, and overlay behavior instead of being routine tooling changes.
+- Migration plan: treat `nfc_manager`, `flutter_foreground_task`, and `flutter_overlay_window` as one upgrade spike and verify the whole kiosk runtime on-device before moving the Android toolchain.
 
-**nfc_manager (v3.5.0):**
-- Risk: Platform-specific NFC APIs change frequently across Android versions
-- Impact: NFC scanning could break on new Android releases
-- Migration plan: Test on Android 15 beta; consider switching to platform channels for direct NFC control
-
-**supabase_flutter (v2.8.4):**
-- Risk: Rapid version updates; breaking changes between minor versions
-- Impact: Auth flow, realtime, or RLS behavior changes
-- Migration plan: Pin to current version; test thoroughly before upgrading; monitor Supabase changelog
+**The payroll artifact stack has a wide third-party surface:**
+- Risk: payroll export depends on `syncfusion_flutter_xlsio`, `syncfusion_officechart`, `pdf`, and `printing`, with large builder services on top.
+- Files: `pubspec.yaml`, `lib/services/payroll_spreadsheet_export_service.dart`, `lib/services/payroll_pdf_matrix_export_service.dart`, `lib/services/pdf_service.dart`
+- Impact: exporter regressions can break payroll artifacts without touching attendance capture or recap logic.
+- Migration plan: keep fixture-driven parity tests mandatory and add sample-artifact review whenever export dependencies move.
 
 ## Missing Critical Features
 
-**No Offline Dashboard:**
-- Problem: Admin dashboard requires internet; cannot view cached attendance data offline
-- Blocks: Reviewing logs during network outages
-- Priority: Medium — kiosk has offline queue; admin can wait for connectivity
+**No automated Astro/portal test lane:**
+- Problem: `src/` contains no tracked `*.test.*` or `*.spec.*` files, and `package.json:6-10` defines only `dev`, `build`, `preview`, and `check`.
+- Blocks: confident edits to portal auth, provisioning, employee resolution, and schedule rendering.
 
-**No Export to Excel:**
-- Problem: PDF export only; many users prefer Excel for further analysis
-- Blocks: Importing attendance data into payroll systems
-- Priority: Medium — PDF is readable but not editable
-
-**No Audit Log:**
-- Problem: No tracking of who edited which records (manual attendance, schedule changes)
-- Blocks: Accountability for data changes
-- Priority: High — needed for production system integrity
-
-**No Shift Swap Requests:**
-- Problem: Employees cannot request shift swaps through app; must contact admin manually
-- Blocks: Self-service schedule management
-- Priority: Low — acceptable for v1.1; defer to v1.2+
-
-**No Push Notifications:**
-- Problem: Admins don't get notified of time-off requests, sakit/izin submissions
-- Blocks: Timely approval workflow
-- Priority: Medium — admins must manually check dashboard
+**No closed verification artifact for shipped Phase 62 work:**
+- Problem: `.planning/phases/62-schedule-gap-notices/62-VALIDATION.md` still records pending Wave 0 gaps even though `.planning/STATE.md` presents the phase and milestone as complete.
+- Blocks: trustworthy milestone closeout and future auditability.
 
 ## Test Coverage Gaps
 
-**NFC Service:**
-- What's not tested: UID extraction logic across 8 card types
-- Files: `lib/services/nfc_service.dart`
-- Risk: Breaking change could prevent card reading in production
-- Priority: High — core business function
+**Offline and persistence services:**
+- What's not tested: `lib/services/heartbeat_service.dart`, `lib/services/employee_cache_service.dart`, `lib/services/schedule_sqlite_service.dart`, `lib/services/sqlite_service.dart`, `lib/services/schedule_policy_service.dart`, `lib/services/location_service.dart`
+- Files: `lib/services/heartbeat_service.dart`, `lib/services/employee_cache_service.dart`, `lib/services/schedule_sqlite_service.dart`, `lib/services/sqlite_service.dart`, `lib/services/schedule_policy_service.dart`, `lib/services/location_service.dart`
+- Risk: background, offline, migration, and cache regressions surface only on-device or after rollout.
+- Priority: High
 
-**Sync Service:**
-- What's not tested: Duplicate log handling, network failure retry, batch sync
-- Files: `lib/services/sync_service.dart`
-- Risk: Lost attendance logs if sync fails silently
-- Priority: High — data integrity critical
+**Background-service orchestration:**
+- What's not tested: `lib/services/kiosk_background_service.dart`
+- Files: `lib/services/kiosk_background_service.dart`
+- Risk: overlay, notification, and service cleanup regressions are easy to ship because the device-only service layer has no dedicated safety net.
+- Priority: High
 
-**SQLite Migrations:**
-- What's not tested: Schema upgrades from v1→v2→v3→v4→v5
-- Files: `lib/services/sqlite_service.dart:58-88`
-- Risk: Data loss during app update
-- Priority: High — migration bugs only surface in production
+**Sync failure handling beyond ordering:**
+- What's not tested: live RPC failure, retry, partial recovery, and error/reporting behavior in `lib/services/sync_service.dart`; the existing suite in `test/services/sync_service_order_test.dart` only locks replay ordering semantics.
+- Files: `lib/services/sync_service.dart`, `test/services/sync_service_order_test.dart`
+- Risk: sync loss or noisy failure handling can slip through while the order-only tests stay green.
+- Priority: High
 
-**Schedule Generator:**
-- What's not tested: Fairness algorithm, understaffing warnings, time-off integration
-- Files: `lib/services/schedule_generator.dart`
-- Risk: Unbalanced schedules or OPEN slots not detected
-- Priority: Medium — admin reviews before publishing
+**End-to-end PDF assembly behavior:**
+- What's not tested: full document layout and content assembly in `lib/services/pdf_service.dart`; `test/services/pdf_service_color_test.dart` only covers helper color mapping, DTO construction, and role selection helpers.
+- Files: `lib/services/pdf_service.dart`, `test/services/pdf_service_color_test.dart`
+- Risk: artifact layout/data regressions can pass current tests.
+- Priority: Medium
 
-**Kiosk Session Restore:**
-- What's not tested: Corrupt session data recovery, SharedPreferences failure
-- Files: `lib/providers/app_provider.dart:87-112`
-- Risk: App stuck on splash screen if session restore throws
-- Priority: High — blocks app startup
+**Portal auth and provisioning:**
+- What's not tested: `src/lib/portal/auth.ts`, `src/lib/portal/provision.ts`, and `src/lib/supabase/admin.ts`
+- Files: `src/lib/portal/auth.ts`, `src/lib/portal/provision.ts`, `src/lib/supabase/admin.ts`
+- Risk: hidden-account provisioning, deterministic password generation, and service-role request behavior can regress without any automated signal.
+- Priority: High
 
-**Admin Auth Flow:**
-- What's not tested: Role detection (admin vs kepala_gerai), RLS policy enforcement
-- Files: `lib/screens/admin/admin_login_screen.dart:61-90`
-- Risk: Unauthorized access if role check fails
-- Priority: High — security-critical
-
-**Employee Cache Race Conditions:**
-- What's not tested: Concurrent cache access, lock contention
-- Files: `lib/services/employee_cache_service.dart:25-42`
-- Risk: Cache corruption with simultaneous NFC scans
-- Priority: Medium — mutex implemented but not stress-tested
-
-**PDF Generation:**
-- What's not tested: Schedule rendering with OPEN slots, multi-page overflow, Indonesian characters
-- Files: `lib/services/pdf_service.dart`
-- Risk: Malformed PDFs or crashes with edge-case data
-- Priority: Low — visual bugs, not data loss
+**Root smoke lane remains placeholder-only:**
+- What's not tested: the root `test/widget_test.dart:1-10` still contains only a placeholder widget test.
+- Files: `test/widget_test.dart`
+- Risk: the repo keeps a nominal smoke test without protecting any meaningful top-level app behavior.
+- Priority: Low
 
 ---
 
-*Concerns audit: 2024-12-29*
+*Concerns audit: 2026-04-14*

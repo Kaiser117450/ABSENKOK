@@ -1,540 +1,215 @@
 # Testing Patterns
 
-**Analysis Date:** 2024-12-20
+**Analysis Date:** 2026-04-14
 
 ## Test Framework
 
 **Runner:**
-- `flutter_test` (Flutter SDK built-in)
-- Version: SDK-bundled (no explicit version in pubspec.yaml)
-- Config: No explicit test configuration file (uses Flutter defaults)
+- Flutter tests use `flutter_test` from `pubspec.yaml`; no `dart_test.yaml`, `flutter_test_config.dart`, or `integration_test/` directory was detected.
+- The portal slice does not ship a JavaScript test runner. `package.json` exposes `astro check` and `astro build`, but no `vitest`, `jest`, or `playwright` config is present.
 
 **Assertion Library:**
-- `flutter_test` built-in `expect()` assertions
-- Matchers: `isTrue`, `isEmpty`, `isA<Type>()`, direct equality
+- Assertions use `expect(...)` with stock `flutter_test` matchers such as `isTrue`, `isFalse`, `orderedEquals`, `contains`, and `findsOneWidget` across `test/services/`, `test/models/`, `test/widgets/`, and `test/screens/`.
 
 **Run Commands:**
 ```bash
-flutter test                  # Run all tests
-flutter test --watch          # Watch mode (not explicitly used, but available)
-flutter test --coverage       # Generate coverage (no coverage setup detected)
+flutter test
+flutter test test/services/report_export_parity_test.dart
+flutter test test/screens/kiosk/kiosk_scan_server_time_test.dart
+flutter test --no-test-assets
+powershell -ExecutionPolicy Bypass -File tool/release_preflight.ps1
+npm run check
+npm run build
 ```
 
 ## Test File Organization
 
 **Location:**
-- Tests mirror source structure: `test/` directory parallels `lib/`
-- Pattern: Co-located by feature area
+- Production areas are mirrored under `test/`: `test/models/`, `test/services/`, `test/providers/`, `test/screens/admin/`, `test/screens/kiosk/`, and `test/widgets/`.
+- Shared fixture code lives in `test/fixtures/report_export_parity_fixture.dart`.
+- Root-level focused tests still exist where the feature is tiny or cross-cutting: `test/device_identity_service_test.dart`.
+- Milestone/rollout contract tests live in explicit phase folders such as `test/phase32/`, `test/phase50/`, `test/phase51/`, `test/phase52/`, `test/phase53/`, `test/phase56/`, and `test/phase57/`.
 
 **Naming:**
-- Unit tests: `{feature}_test.dart` (e.g., `shift_schedule_test.dart`, `pdf_service_color_test.dart`)
-- Widget tests: `{widget}_widget_test.dart` (e.g., `overlay_pill_widget_test.dart`)
-- Screen tests: `{screen}_test.dart` (e.g., `rekap_harian_test.dart`)
+- Most files follow `{feature}_test.dart`: `test/services/sentry_service_test.dart`, `test/models/attendance_policy_recap_day_test.dart`, `test/widgets/employee_contract_badge_test.dart`.
+- Widget/screen behavior tests often encode the feature scenario directly: `test/screens/admin/admin_dashboard_schedule_gap_test.dart`, `test/screens/kiosk/kiosk_scan_server_time_test.dart`.
+- Source-contract tests are named around the rollout artifact they lock: `test/phase57/strict_recap_sql_contract_test.dart`, `test/phase53/security_hardening_acceptance_contract_test.dart`.
 
 **Structure:**
-```
+```text
 test/
-├── widget_test.dart                          # Placeholder for default Flutter test
+├── fixtures/
+│   └── report_export_parity_fixture.dart
 ├── models/
-│   ├── overlay_pill_state_test.dart         # Model serialization tests
-│   └── shift_schedule_test.dart             # Schedule model tests
+├── providers/
 ├── services/
-│   ├── pdf_report_service_test.dart         # Service logic tests
-│   └── pdf_service_color_test.dart          # PDF color mapping tests
 ├── screens/
-│   └── admin/
-│       └── rekap_harian_test.dart           # Screen-level tests
-└── widgets/
-    └── overlay_pill_widget_test.dart        # Widget rendering tests
+│   ├── admin/
+│   └── kiosk/
+├── widgets/
+└── phase32/, phase50/ ... phase57/
 ```
 
 ## Test Structure
 
 **Suite Organization:**
 ```dart
-// test/models/shift_schedule_test.dart
 void main() {
-  group('ShiftSlot factories', () {
-    test('pagi shift has correct name and time range', () {
-      final pagi = ShiftSlot.pagi();
-      expect(pagi.name, 'Pagi');
-      expect(pagi.startTime, const TimeOfDay(hour: 9, minute: 0));
-      expect(pagi.endTime, const TimeOfDay(hour: 17, minute: 0));
-    });
-
-    test('siang shift has correct name and time range', () {
-      final siang = ShiftSlot.siang();
-      expect(siang.name, 'Siang');
-      expect(siang.startTime, const TimeOfDay(hour: 12, minute: 0));
-      expect(siang.endTime, const TimeOfDay(hour: 20, minute: 0));
-    });
-  });
-
-  group('ScheduleEntry serialization', () {
-    test('toJson → fromJson round-trips for normal entry', () {
-      final emp = _makeEmployee('emp-1', 'Alice');
-      final original = ScheduleEntry.fromEmployee(
-        id: 'entry-1',
-        date: DateTime(2024, 3, 4),
-        employee: emp,
-        shift: ShiftSlot.pagi(),
+  group('SyncService queue replay order', () {
+    test('queued rows replay in ascending queueOrder', () async {
+      final fakeAuthority = _FakeKioskScanAuthorityService();
+      final result = await SyncService.syncPendingLogs(
+        connectivityProbe: () async => [ConnectivityResult.wifi],
+        pendingLogsLoader: () async => [_pendingLog(localId: 'queue-1', queueOrder: 1)],
+        authorityService: fakeAuthority,
       );
 
-      final json = original.toJson();
-      final restored = ScheduleEntry.fromJson(json);
-
-      expect(restored.id, original.id);
-      expect(restored.employeeId, original.employeeId);
-      expect(restored.displayName, original.displayName);
+      expect(result.synced, 1);
+      expect(fakeAuthority.requests.map((request) => request.queueOrder), orderedEquals([1]));
     });
   });
 }
 ```
 
 **Patterns:**
-- `group()` for logical test suites (by feature or method)
-- `test()` for individual test cases
-- Setup helpers: private factory functions like `_makeEmployee()`, `_makeSummary()`
-- No explicit `setUp()` or `tearDown()` in model tests (stateless)
-- Widget tests use `setUp()` and `tearDown()` for stream/controller cleanup
-
-## Test Helpers
-
-**Factory Functions:**
-```dart
-// test/models/shift_schedule_test.dart
-Employee _makeEmployee(String id, String name) => Employee(
-  id: id,
-  name: name,
-  isActive: true,
-  createdAt: '2024-01-01',
-  updatedAt: '2024-01-01',
-);
-
-OutletSchedule _makeSchedule({
-  String id = 'sched-1',
-  String outletId = 'outlet-1',
-  DateTime? start,
-  DateTime? end,
-  List<ScheduleEntry>? entries,
-  DateTime? syncedAt,
-}) {
-  return OutletSchedule(
-    id: id,
-    outletId: outletId,
-    startDate: start ?? DateTime(2024, 3, 4),
-    endDate: end ?? DateTime(2024, 3, 10),
-    template: ShiftTemplate.standard(outletId),
-    entries: entries ?? [],
-    createdAt: DateTime(2024, 3, 1),
-    syncedAt: syncedAt,
-  );
-}
-```
-
-**Test-Specific Methods:**
-```dart
-// test/services/pdf_report_service_test.dart
-final stats = PdfReportService.computeStatsForTest([]);
-// Production code exposes test helpers via static methods suffixed with "ForTest"
-
-// test/services/pdf_service_color_test.dart
-final color = PdfService.statusTextColorForTest('Sakit');
-final color = PdfService.typeTextColorForTest('Masuk');
-```
-
-## Widget Testing
-
-**Pattern:**
-```dart
-// test/widgets/overlay_pill_widget_test.dart
-void main() {
-  group('KioskOverlayUI', () {
-    late StreamController<String> stream;
-
-    setUp(() {
-      stream = StreamController<String>.broadcast();
-    });
-
-    tearDown(() async {
-      await stream.close();
-    });
-
-    Future<void> pumpOverlay(
-      WidgetTester tester, {
-      Color background = Colors.white,
-    }) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ColoredBox(
-            color: background,
-            child: KioskOverlayUI(
-              dataStream: stream.stream,
-              autoCollapseDelay: const Duration(hours: 1),
-              clockTick: const Duration(hours: 1),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-    }
-
-    testWidgets(
-      'idle payload renders outlet time and attendance accent indicator',
-      (tester) async {
-        await pumpOverlay(tester);
-
-        stream.add(
-          _payload(
-            mode: 'idle',
-            outlet: 'Gerai Braga',
-            time: '09:30',
-            attendanceType: 'pulang',
-            accentHex: '#6B7280',
-          ),
-        );
-        await tester.pump();
-        await tester.pumpAndSettle();
-
-        final outlet = tester.widget<Text>(
-          find.byKey(const Key('overlay-pill-outlet')),
-        );
-        final attendance = tester.widget<Text>(
-          find.byKey(const Key('overlay-pill-attendance')),
-        );
-
-        expect(outlet.data, 'Gerai Braga');
-        // ... additional assertions
-      },
-    );
-  });
-}
-```
-
-**Key Patterns:**
-- `pumpWidget()` to render widget tree
-- `pump()` and `pumpAndSettle()` to advance animation frames
-- `find.byKey()` to locate specific widgets (requires `Key` in source)
-- `tester.widget<T>()` to access widget properties for assertions
-- `MaterialApp` wrapper for widgets requiring Material context
+- Files normally start with local builders or harness helpers, then `group(...)`, then `test(...)` / `testWidgets(...)`: `test/services/schedule_gap_notice_service_test.dart`, `test/screens/admin/admin_reports_policy_recap_test.dart`, `test/widgets/payroll_matrix_table_test.dart`.
+- `TestWidgetsFlutterBinding.ensureInitialized()` is used in tests that need platform bindings or `SharedPreferences`: `test/providers/app_provider_biometric_test.dart`, `test/services/biometric_service_test.dart`.
+- Widget tests wrap UI in `MaterialApp` and usually `Scaffold` before pumping: `test/widgets/overlay_pill_widget_test.dart`, `test/screens/admin/admin_dashboard_schedule_gap_test.dart`, `test/screens/admin/rekap_harian_test.dart`.
+- Long or scrollable screens use `pumpAndSettle()` and `scrollUntilVisible(...)` before assertions: `test/screens/admin/central_dashboard_screen_test.dart`, `test/screens/admin/chart_dashboard_screen_test.dart`, `test/screens/admin/admin_reports_payroll_matrix_test.dart`.
 
 ## Mocking
 
-**Framework:** No mocking library detected
+**Framework:** No `mockito`, `mocktail`, or generated mocking code was detected.
 
 **Patterns:**
-- **No mocking** used in existing tests
-- Tests use real model instances created via factory helpers
-- Services tested via exposed static methods (`computeStatsForTest`, `statusTextColorForTest`)
-- Widget tests use real `StreamController` (not mocked)
-
-**What is NOT Mocked:**
-- Model classes (use real instances with test data)
-- Services (tested via public/test-exposed APIs)
-- DateTime (use real `DateTime(2024, 3, 4)` instances)
-- Colors, TimeOfDay, other Flutter primitives
-
-**Future Mocking (Not Currently Used):**
-- For Supabase calls: Consider `mockito` or `mocktail` package
-- For NFC hardware: Consider injectable service with test double
-
-## Test Data
-
-**Fixtures:**
-- No separate fixture files — data created inline via helper functions
-- Factory pattern preferred:
 ```dart
-DailySummary _makeSummary({
-  required String dateLabel,
-  required DailySummaryStatus status,
-  DateTime? firstMasuk,
-  DateTime? lastPulang,
-  Duration? workDuration,
-  String? employeeId,
-  String? employeeName,
-  int scanCount = 1,
-}) {
-  final employee = employeeId != null
-      ? Employee(
-          id: employeeId,
-          name: employeeName ?? 'Emp $employeeId',
-          isActive: true,
-          createdAt: '',
-          updatedAt: '',
-        )
-      : null;
+class FakeAdminPolicyRecapDatasetService
+    extends AdminPolicyRecapDatasetService {
+  FakeAdminPolicyRecapDatasetService(this.result);
 
-  return DailySummary(
-    dateLabel: dateLabel,
-    employee: employee,
-    outlet: null,
-    firstMasuk: firstMasuk,
-    lastPulang: lastPulang,
-    workDuration: workDuration,
-    totalBreak: Duration.zero,
-    scanCount: scanCount,
-    status: status,
-  );
+  final AdminPolicyRecapDatasetResult result;
+
+  @override
+  AdminPolicyRecapDatasetResult build({...}) => result;
 }
 ```
 
+- Tests prefer handwritten fakes and subclass overrides: `FakeAdminPolicyRecapDatasetService` in `test/services/schedule_gap_notice_service_test.dart`, `_FakeKioskScanAuthorityService` in `test/services/sync_service_order_test.dart`.
+- Dependency injection beats global mocking. Service methods accept callbacks or providers directly: `SyncService.syncPendingLogs(...)`, `PayrollPdfMatrixExportService(...)`, `PayrollSpreadsheetExportService(...)`.
+- Screen tests rely on debug/test constructors instead of stubbing internals: `KioskScanScreen.testable` in `lib/screens/kiosk/kiosk_scan_screen.dart`, `KioskIdleScreen.testable` in `lib/screens/kiosk/kiosk_idle_screen.dart`, `ChartDashboardScreen.testable` in `lib/screens/admin/chart_dashboard_screen.dart`, `CentralDashboardScreen.injected` in `lib/screens/admin/central_dashboard_screen.dart`.
+- Preference-driven tests seed platform state with `SharedPreferences.setMockInitialValues(...)`: `test/providers/app_provider_biometric_test.dart`.
+
+**What to Mock:**
+- Service boundaries, async loaders, temp-directory providers, and persistence probes.
+- Provider state containers in widget tests via `ProviderContainer()` plus `UncontrolledProviderScope`: `test/screens/kiosk/kiosk_scan_server_time_test.dart`, `test/screens/admin/chart_dashboard_screen_test.dart`.
+
+**What NOT to Mock:**
+- Domain models and value objects. Most tests use real `Employee`, `AttendanceLog`, `AttendancePolicyRecapDay`, `PayrollMatrixRow`, and `PayrollMatrixDayCell` instances.
+- Widget keys and real layout surfaces. Tests assert against rendered keys and text rather than fake widgets: `test/widgets/overlay_pill_widget_test.dart`, `test/widgets/payroll_matrix_table_test.dart`.
+
+## Fixtures and Factories
+
+**Test Data:**
+```dart
+final bundle = buildReportExportParityFixtureBundle();
+final recapDataset = service.build(
+  employees: bundle.employees,
+  strictRows: bundle.strictRows,
+  attendanceLogs: bundle.attendanceLogs,
+  outletId: bundle.outletId,
+  outletName: bundle.outletName,
+  outletOperatingMode: bundle.outletOperatingMode,
+);
+```
+
+- The main shared fixture is `test/fixtures/report_export_parity_fixture.dart`. It builds one canonical mixed strict/fallback reporting dataset reused by `test/services/report_export_parity_test.dart`, `test/services/payroll_pdf_matrix_export_service_test.dart`, `test/services/payroll_spreadsheet_export_service_test.dart`, and `test/screens/admin/admin_reports_payroll_matrix_test.dart`.
+- Most other files keep small local factories at the top of the test: `buildRecap` in `test/screens/admin/admin_reports_policy_recap_test.dart`, `buildEntry` in `test/screens/admin/admin_dashboard_schedule_gap_test.dart`, `buildDataset` in `test/widgets/payroll_matrix_table_test.dart`, `_pendingLog` in `test/services/sync_service_order_test.dart`.
+- There is no JSON fixture directory or golden-image fixture suite in the current repo.
+
 **Location:**
-- Test data defined at top of test file (private helper functions)
-- No shared fixtures directory
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Pure logic, model serialization, business rules
-- Examples:
-  - `test/models/shift_schedule_test.dart` — Tests `ShiftSlot` factories, serialization, date normalization
-  - `test/services/pdf_service_color_test.dart` — Tests color mapping logic for PDF generation
-  - `test/services/pdf_report_service_test.dart` — Tests statistics computation
-
-**Widget Tests:**
-- Scope: Widget rendering, user interaction, state updates
-- Examples:
-  - `test/widgets/overlay_pill_widget_test.dart` — Tests overlay pill UI rendering based on stream payloads
-
-**Integration Tests:**
-- Not detected in codebase
-
-**E2E Tests:**
-- Not used
+- Shared reusable fixture code: `test/fixtures/`.
+- File-backed source contracts: phase tests such as `test/phase57/strict_recap_sql_contract_test.dart` and `test/phase53/security_hardening_acceptance_contract_test.dart` read real `sql/` or `tool/` files from the repo with `File(...).readAsStringSync()`.
 
 ## Coverage
 
-**Requirements:** No coverage target enforced
+**Requirements:** No enforced coverage target or coverage threshold was detected.
 
 **View Coverage:**
 ```bash
 flutter test --coverage
-# Generates coverage/lcov.info (standard Flutter location)
 ```
 
 **Current State:**
-- No `.coverage/` or `coverage/` directory in codebase
-- No coverage threshold in CI configuration
-- Tests exist for core models and services but coverage is sparse
+- No `coverage/` directory, LCOV gate, or GitHub Actions workflow directory is present in the repo.
+- Coverage is strongest in the payroll/reporting stack (`test/services/report_export_parity_test.dart`, `test/services/payroll_pdf_matrix_export_service_test.dart`, `test/services/payroll_spreadsheet_export_service_test.dart`), policy recap UI (`test/screens/admin/admin_reports_policy_recap_test.dart`, `test/screens/admin/rekap_harian_test.dart`), kiosk server-time flows (`test/screens/kiosk/kiosk_scan_server_time_test.dart`), and shared widgets (`test/widgets/overlay_pill_widget_test.dart`).
+
+## Test Types
+
+**Unit Tests:**
+- Pure model and service rules are covered in `test/models/` and `test/services/`.
+- Examples: `test/models/attendance_policy_recap_day_test.dart`, `test/services/sync_service_order_test.dart`, `test/services/sentry_service_test.dart`, `test/services/attendance_policy_recap_service_test.dart`.
+
+**Widget Tests:**
+- Admin, kiosk, and shared widget behavior is exercised with `testWidgets(...)`: `test/screens/admin/`, `test/screens/kiosk/`, `test/widgets/`.
+- These tests focus on text, keys, button behavior, chip visibility, and scrollable layouts instead of pixel-perfect golden output.
+
+**Artifact/Export Tests:**
+- Spreadsheet export tests generate real `.xlsx` files, decode them with `Excel.decodeBytes`, and inspect ZIP/XML internals via `ZipDecoder`: `test/services/payroll_spreadsheet_export_service_test.dart`.
+- PDF export tests generate real files and inspect serialized preview/file content for forbidden-field exclusion: `test/services/payroll_pdf_matrix_export_service_test.dart`.
+
+**Source-Contract Tests:**
+- Rollout/contract tests assert that SQL and PowerShell helper files exist and contain required tokens: `test/phase57/strict_recap_sql_contract_test.dart`, `test/phase53/security_hardening_acceptance_contract_test.dart`, `test/phase51/sql_role_guard_contract_test.dart`, `test/phase52/portal_recovery_contract_test.dart`.
+
+**E2E Tests:**
+- `integration_test/` was not detected.
+- No Playwright, Jest, or Vitest suite was detected for the Astro portal.
 
 ## Common Patterns
 
-**Model Serialization Tests:**
+**Provider-aware widget harness:**
 ```dart
-test('toJson → fromJson round-trips correctly', () {
-  final original = ShiftSlot.pagi();
-  final json = original.toJson();
-  final restored = ShiftSlot.fromJson(json);
+final container = ProviderContainer();
+addTearDown(container.dispose);
 
-  expect(restored.name, original.name);
-  expect(restored.startTime, original.startTime);
-  expect(restored.endTime, original.endTime);
-});
+await tester.pumpWidget(
+  UncontrolledProviderScope(
+    container: container,
+    child: MaterialApp(home: KioskScanScreen.testable(...)),
+  ),
+);
 ```
 
-**Enum Extension Tests:**
+- This pattern appears in `test/screens/kiosk/kiosk_scan_server_time_test.dart`, `test/screens/kiosk/kiosk_scan_streak_test.dart`, and `test/screens/admin/chart_dashboard_screen_test.dart`.
+
+**Key-driven assertions:**
 ```dart
-test('label returns correct Indonesian labels', () {
-  expect(ScheduleStatus.normal.label, 'Masuk');
-  expect(ScheduleStatus.sakit.label, 'Sakit');
-  expect(ScheduleStatus.izin.label, 'Izin');
-  expect(ScheduleStatus.libur.label, 'Libur');
-  expect(ScheduleStatus.cuti.label, 'Cuti');
-});
+expect(find.byKey(const Key('payroll-employee-rail')), findsOneWidget);
+expect(find.byKey(const Key('overlay-pill-attendance')), findsOneWidget);
 ```
 
-**Factory Method Tests:**
-```dart
-test('sakit entry has correct status and display name', () {
-  final emp = _makeEmployee('emp-1', 'Alice');
-  final entry = ScheduleEntry.sakit(
-    id: 'entry-2',
-    date: DateTime(2024, 3, 5),
-    employee: emp,
-    shift: ShiftSlot.pagi(),
-    notes: 'Demam',
-  );
+- Shared widgets expose stable keys specifically for tests: `test/widgets/payroll_matrix_table_test.dart`, `test/widgets/overlay_pill_widget_test.dart`, `test/widgets/color_picker_field_test.dart`.
 
-  expect(entry.status, ScheduleStatus.sakit);
-  expect(entry.displayName, 'Alice (SAKIT)');
-  expect(entry.isDayOff, true);
-  expect(entry.notes, 'Demam');
-});
-```
+**Injected screen seams:**
+- `CentralDashboardScreen.injected` swaps network loaders in `test/screens/admin/central_dashboard_screen_test.dart`.
+- `ChartDashboardScreen.testable` injects debug datasets in `test/screens/admin/chart_dashboard_screen_test.dart`.
+- `KioskScanScreen.testable` and `KioskIdleScreen.testable` bypass hardware/network dependencies in `test/screens/kiosk/kiosk_scan_server_time_test.dart`.
 
-**Date Normalization Tests:**
-```dart
-// Validates the date normalization pattern used in SQLite service
-test('toIso8601String().split(T)[0] produces yyyy-MM-dd', () {
-  final date = DateTime(2024, 3, 4, 15, 30, 45);
-  final normalized = date.toIso8601String().split('T')[0];
-  expect(normalized, '2024-03-04');
-});
+**Real file generation:**
+- Export tests create temp directories with `Directory.systemTemp.createTemp(...)`, clean them in `tearDown(...)`, and assert on the produced filenames and bytes: `test/services/payroll_spreadsheet_export_service_test.dart`, `test/services/payroll_pdf_matrix_export_service_test.dart`.
 
-test('round-trip: DateTime → split(T)[0] → parse matches original date', () {
-  final original = DateTime(2024, 12, 31, 23, 59, 59);
-  final normalized = original.toIso8601String().split('T')[0];
-  final parsed = DateTime.parse(normalized);
+## Verification Tooling
 
-  expect(parsed.year, original.year);
-  expect(parsed.month, original.month);
-  expect(parsed.day, original.day);
-});
-```
+**Repo-local tooling:**
+- `tool/release_preflight.ps1` is the main scripted verification lane. It asserts the pinned Android toolchain and then runs `flutter analyze --no-fatal-infos --no-fatal-warnings`, `flutter test --no-test-assets`, and `android\\gradlew.bat :app:compileReleaseSources`.
+- `tool/security_hardening_acceptance.ps1` is part of the verified rollout surface indirectly locked by `test/phase53/security_hardening_acceptance_contract_test.dart`.
 
-**Color/Constant Mapping Tests:**
-```dart
-test('Sakit maps to red (#DC2626)', () {
-  final color = PdfService.statusTextColorForTest('Sakit');
-  expect(color, PdfColor.fromHex('DC2626'));
-});
+**Portal verification:**
+- `package.json` exposes `npm run check` -> `astro check` and `npm run build` -> `astro build`.
+- The portal slice currently uses build/typecheck verification only; no behavior-test harness was detected under `src/`.
 
-test('unknown status falls through to green (default)', () {
-  final color = PdfService.statusTextColorForTest('UnknownStatus');
-  expect(color, PdfColor.fromHex('16A34A'));
-});
-```
-
-**Statistics/Aggregation Tests:**
-```dart
-test('2 employees x 2 days all normal hadir → totalHadir=4, rate=100%', () {
-  final summaries = [
-    _makeSummary(
-      dateLabel: '2024-01-01',
-      status: DailySummaryStatus.normal,
-      firstMasuk: DateTime(2024, 1, 1, 8, 0),
-      lastPulang: DateTime(2024, 1, 1, 17, 0),
-      workDuration: const Duration(hours: 8),
-      employeeId: 'emp1',
-      scanCount: 2,
-    ),
-    // ... more summaries
-  ];
-  
-  final stats = PdfReportService.computeStatsForTest(summaries);
-  
-  expect(stats.totalHadir, 4);
-  expect(stats.attendanceRate, 100.0);
-});
-```
-
-**Widget Stream Tests:**
-```dart
-testWidgets('stream update triggers widget rebuild', (tester) async {
-  await pumpOverlay(tester);
-  
-  stream.add(_payload(mode: 'idle', outlet: 'Outlet A'));
-  await tester.pump();
-  
-  final text = tester.widget<Text>(find.byKey(const Key('overlay-pill-outlet')));
-  expect(text.data, 'Outlet A');
-  
-  stream.add(_payload(mode: 'idle', outlet: 'Outlet B'));
-  await tester.pump();
-  
-  final updated = tester.widget<Text>(find.byKey(const Key('overlay-pill-outlet')));
-  expect(updated.data, 'Outlet B');
-});
-```
-
-## Test Documentation
-
-**Doc Comments in Tests:**
-```dart
-/// Phase 8 — Schedule System Validation Tests
-/// Tests model serialization, date handling, and entry logic
-/// that underpin the Supabase-first load / SQLite cache architecture.
-
-/// Phase 8.1 — PDF Export Validation Tests
-/// Tests status/type color mapping and label correctness
-/// that ensure PDF output matches UI badge colors.
-```
-
-**Pattern:**
-- Tests include phase/feature context
-- Explain **why** the test matters (not just what it tests)
-- Reference architecture decisions ("Supabase-first load / SQLite cache")
-
-## Async Testing
-
-**Pattern:**
-```dart
-testWidgets('async widget updates', (tester) async {
-  await pumpOverlay(tester);
-  
-  stream.add(payload);
-  await tester.pump();           // Advance one frame
-  await tester.pumpAndSettle();  // Wait for all animations
-  
-  // Assertions after async updates complete
-  expect(find.text('Expected'), findsOneWidget);
-});
-```
-
-**Key Points:**
-- All widget tests use `async` callback: `(tester) async`
-- `await pumpWidget()` to render initial tree
-- `await pump()` to advance single frame after state change
-- `await pumpAndSettle()` to wait for animations to complete
-
-## Error Case Testing
-
-**Pattern:**
-```dart
-test('fromJson with null status defaults to normal', () {
-  final json = {
-    'id': 'entry-x',
-    'date': '2024-03-04T00:00:00.000',
-    'employee_id': 'emp-1',
-    'status': null,  // Null/missing field
-  };
-  final entry = ScheduleEntry.fromJson(json);
-  expect(entry.status, ScheduleStatus.normal);  // Default fallback
-});
-
-test('empty string falls through to green (default)', () {
-  final color = PdfService.statusTextColorForTest('');
-  expect(color, PdfColor.fromHex('16A34A'));
-});
-```
-
-## What's Tested
-
-**Covered:**
-- ✅ Model serialization (`fromJson`, `toJson`)
-- ✅ Factory methods (e.g., `ShiftSlot.pagi()`, `ScheduleEntry.sakit()`)
-- ✅ Enum extensions (`.label`, `.color`, `.fromString()`)
-- ✅ Business logic (stats computation, date normalization)
-- ✅ Color/constant mappings for PDF generation
-- ✅ Widget rendering from stream data
-- ✅ Getter properties (`isDraft`, `isWeekly`, `initial`)
-
-**Not Covered:**
-- ❌ Supabase queries (no integration tests)
-- ❌ NFC scanning (hardware-dependent)
-- ❌ SQLite operations (no database tests)
-- ❌ Network connectivity checks
-- ❌ Background services (foreground service, overlay)
-- ❌ Navigation flows (GoRouter redirects)
-- ❌ User interactions (button taps, form submissions)
-- ❌ Screen-level state management (most screens untested)
-
-## Test Gaps
-
-**Missing Critical Tests:**
-- **SyncService**: No tests for offline queue sync logic
-- **NfcService**: No tests for UID extraction (hardware mock needed)
-- **SqliteService**: No tests for database operations
-- **AppProvider/AppNotifier**: No tests for state management
-- **Admin screens**: No widget tests for dashboard, employees, reports
-- **Kiosk screens**: Scan flow untested
-
-**Priority Test Additions:**
-1. `SyncService.syncPendingLogs()` — offline queue is critical path
-2. `AppNotifier` state transitions — drives routing logic
-3. `SqliteService` CRUD operations — offline data integrity
-4. Kiosk scan screen flow — core user journey
+**Automation state:**
+- No `.github/workflows/` directory was detected, so verification remains repo-local and script-driven rather than CI-enforced.
 
 ---
 
-*Testing analysis: 2024-12-20*
+*Testing analysis: 2026-04-14*

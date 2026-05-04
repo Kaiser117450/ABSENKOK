@@ -1,225 +1,151 @@
 # External Integrations
 
-**Analysis Date:** 2026-03-11
+**Analysis Date:** 2026-04-14
 
 ## APIs & External Services
 
-**Backend as a Service:**
-- Supabase - PostgreSQL database, authentication, realtime subscriptions, RPC functions
-  - SDK/Client: `supabase_flutter ^2.8.4`
-  - Auth: `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`
-  - Initialization: `lib/main.dart` (lines 59-72) with PKCE auth flow
-  - Client factory: `lib/core/supabase_client.dart` exposes `SupabaseClientFactory.admin` and `SupabaseClientFactory.kiosk`
-  - Global readiness flag: `supabaseReady` boolean in `lib/main.dart`
+**Backend Platform:**
+- Supabase - Shared backend for the Flutter app, Astro portal, SQL RPC layer, realtime subscriptions, and Edge Functions.
+  - SDK/Client: `supabase_flutter` in `lib/main.dart` and `lib/core/supabase_client.dart`; `@supabase/ssr` in `src/middleware.ts` and `src/lib/supabase/server.ts`; `@supabase/supabase-js` in `src/lib/supabase/admin.ts` and `supabase/functions/*/index.ts`.
+  - Auth: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` via `lib/main.dart` and `src/lib/supabase/env.ts`.
+  - Mobile bootstrap: `lib/main.dart`.
+  - Portal SSR/auth boundary: `src/middleware.ts`, `src/lib/portal/auth.ts`, `src/pages/portal/auth/sign-in.ts`, and `src/pages/portal/auth/sign-out.ts`.
+  - Privileged server logic: `src/lib/portal/provision.ts` plus tracked Edge Functions in `supabase/functions/`.
+
+**Observability:**
+- Sentry - Release-only crash and background-failure reporting for the Flutter app.
+  - SDK/Client: `sentry_flutter` in `lib/main.dart`.
+  - Auth: `SENTRY_DSN`.
+  - Filtering/throttling: `lib/services/sentry_service.dart`.
+
+**Distribution / Hosting:**
+- Vercel - Web hosting target for the Astro site and portal.
+  - SDK/Client: `@astrojs/vercel` in `astro.config.mjs`.
+  - Auth: Vercel environment variables are read in `astro.config.mjs` for allowed-domain generation.
+
+**Messaging / Handoff Channels:**
+- WhatsApp deep link - Admin credential sharing uses `url_launcher` in `lib/screens/admin/create_admin_screen.dart`.
+  - SDK/Client: `url_launcher`.
+  - Auth: none.
+- Native Android share/print flows - Report and credential export uses `share_plus` and `printing` in `lib/services/pdf_service.dart`, `lib/services/pdf_report_service.dart`, `lib/screens/admin/admin_reports_screen.dart`, and `lib/screens/admin/create_admin_screen.dart`.
 
 ## Data Storage
 
 **Databases:**
+- Supabase PostgreSQL - The primary system of record for auth-aware operational data.
+  - Connection: `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `lib/main.dart`; `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in `src/lib/supabase/env.ts`.
+  - Client: `supabase_flutter`, `@supabase/ssr`, and `@supabase/supabase-js`.
+  - Core tables used by the Flutter app:
+    - `employees` - queried and updated from `lib/screens/admin/admin_employees_screen.dart`, `lib/screens/kiosk/kiosk_idle_screen.dart`, `lib/services/csv_import_service.dart`, and `lib/services/live_content_provider.dart`.
+    - `outlets` - managed from `lib/screens/admin/admin_outlets_screen.dart`, `lib/screens/admin/csv_import_screen.dart`, and `lib/screens/admin/archived_employees_screen.dart`.
+    - `attendance_logs` - read/write paths in `lib/screens/admin/admin_dashboard_screen.dart`, `lib/screens/admin/admin_reports_screen.dart`, `lib/screens/admin/shift_scheduler_screen.dart`, `lib/services/analytics_service.dart`, and `lib/services/live_content_provider.dart`.
+    - `kiosk_devices` - device status and heartbeat surface read by `lib/screens/admin/admin_dashboard_screen.dart` and `lib/screens/admin/central_dashboard_screen.dart`, with updates sent from `lib/services/heartbeat_service.dart`.
+    - `badges` and `employee_streaks` - badge/streak features in `lib/services/badge_service.dart`, `lib/services/streak_service.dart`, and `lib/services/streak_badge_service.dart`.
+    - `schedules`, `schedule_entries`, `time_off_requests`, and `shift_roles` - scheduling and policy surfaces in `lib/screens/admin/shift_scheduler_screen.dart`, `lib/services/schedule_sqlite_service.dart`, and `lib/services/shift_role_service.dart`.
+  - Portal-specific tables and mappings:
+    - `employee_portal_accounts` - portal account mapping used by `src/lib/portal/employee.ts`, `src/lib/portal/provision.ts`, and the SQL rollout files `sql/phase_37_employee_portal_foundation_20260322.sql` and `sql/repair_employee_portal_accounts_20260325.sql`.
+  - RPCs used directly by current code:
+    - Kiosk/device/auth RPCs: `activate_kiosk_device` in `lib/screens/setup/setup_screen.dart`; `get_kiosk_scan_context` and `record_kiosk_scan` in `lib/services/kiosk_scan_authority_service.dart`; `upsert_kiosk_heartbeat` in `lib/services/heartbeat_service.dart`; `set_device_nickname` and `archive_device` in `lib/screens/admin/admin_dashboard_screen.dart`.
+    - Admin analytics RPCs: `get_attendance_rates`, `get_overtime_flags`, `get_missing_clockouts`, `get_central_dashboard_summary`, and `get_outlet_control_center` in `lib/services/analytics_service.dart`; `get_weekly_trend` and `get_outlet_comparison` in `lib/screens/admin/chart_dashboard_screen.dart`; `get_arrival_patterns` in `lib/services/pattern_detection_service.dart`; `get_admin_schedule_policy_recap` in `lib/services/attendance_policy_recap_service.dart`.
+    - Portal RPCs: `resolve_portal_employee` in `src/lib/portal/employee.ts`; `get_portal_schedule_overview` in `src/lib/portal/schedule.ts`; `search_portal_employees` in `src/pages/portal/auth/search.ts`.
 
-**Primary: Supabase (PostgreSQL)**
-- Connection: Environment variables `SUPABASE_URL` + `SUPABASE_ANON_KEY`
-- Client: `supabase_flutter` SDK with anon key (kiosk) and email/password auth (admin)
-
-**Supabase Tables:**
-
-| Table Name | Purpose | Key Fields | Access Pattern |
-|------------|---------|------------|----------------|
-| `employees` | Employee records | `id`, `name`, `nfc_uid`, `home_outlet_id`, `position`, `is_active`, `employee_code`, `photo_url`, `active_badge_id` | CRUD in `lib/screens/admin/admin_employees_screen.dart`, realtime subscription for updates |
-| `outlets` | Restaurant locations | `id`, `name`, `is_active`, `kiosk_password` (bcrypt hash) | CRUD in `lib/screens/admin/admin_outlets_screen.dart`, filter queries by `is_active=true` |
-| `attendance_logs` | Attendance records | `employee_id`, `scan_outlet_id`, `type` (masuk/break/pulang/kembali/sakit/izin), `scanned_at`, `lat`, `lng`, `device_id`, `local_id` (unique), `is_backup`, `notes` | INSERT in `lib/services/sync_service.dart`, SELECT queries in reports `lib/screens/admin/admin_reports_screen.dart`, realtime subscription in dashboard |
-| `badges` | Employee badge definitions | `id`, `name`, `icon_url`, `color` | SELECT all in `lib/services/badge_service.dart` (in-memory cache), UPDATE `employees.active_badge_id` for assignment |
-| `schedules` | Shift schedule headers | `id`, `name`, `start_date`, `end_date`, `outlet_id` | CRUD in `lib/screens/admin/shift_scheduler_screen.dart` |
-| `schedule_entries` | Individual shift assignments | `schedule_id`, `employee_id`, `date`, `shift_type` | Batch INSERT/DELETE in shift scheduler |
-| `time_off_requests` | Sakit/izin requests | `employee_id`, `start_date`, `end_date`, `type` (sakit/izin), `reason`, `status` | CRUD in `lib/screens/admin/sakit_izin_list_screen.dart`, INSERT in dialog, queries in scheduler for calendar view |
-
-**Realtime Subscriptions:**
-- `dashboard:attendance_logs` - Subscribes to INSERT events on `attendance_logs` table in `lib/screens/admin/admin_dashboard_screen.dart` (line 317)
-- `dashboard:employees` - Subscribes to ALL events on `employees` table in dashboard (line 333)
-- `employees:realtime` - Subscribes to ALL events on `employees` table in employees screen (line 61 of `lib/screens/admin/admin_employees_screen.dart`)
-
-**Supabase RPC Functions:**
-- `verify_kiosk_password` - Server-side bcrypt password verification for kiosk setup
-  - Params: `p_outlet_name` (string), `p_password` (string)
-  - Returns: `{ outlet_id, outlet_name, success }` or null
-  - Called in `lib/screens/setup/setup_screen.dart` (lines 58-65)
-  - Timeout: 15 seconds to prevent ANR
-
-**Local: SQLite Offline Queue**
-- Database: `absensi_enakko.db` (v5)
-- Connection: `sqflite` package via `lib/services/sqlite_service.dart`
-- Client: `sqflite` ORM
-- WAL mode enabled for concurrent reads
-
-**SQLite Tables:**
-- `pending_logs` - Offline attendance queue
-  - Schema: `local_id` (TEXT PK), `employee_id`, `scan_outlet_id`, `type`, `lat`, `lng`, `device_id`, `scanned_at`, `sync_status` (pending/uploading/synced/failed), `retry_count`, `is_backup`, `notes`, `created_at`
-  - Indexes: `idx_sync_status`, `idx_created_at DESC`
-  - Version migrations: v1→v2 dropped selfie columns, v3 updated CHECK constraints, v4 added `is_backup` and `notes`, v5 added sakit/izin types
-  - Cleanup: Old synced logs deleted after 7 days in `lib/services/sqlite_service.dart`
+- Local SQLite - Offline-first persistence on the Android device.
+  - Connection: local filesystem via `sqflite`.
+  - Client: `lib/services/sqlite_service.dart` and `lib/services/schedule_sqlite_service.dart`.
+  - Databases:
+    - `absensi_enakko.db` - offline attendance queue defined by `AppConstants.dbName` in `lib/core/constants.dart` and created by `lib/services/sqlite_service.dart`.
+    - `shift_schedules.db` - offline schedule cache created by `lib/services/schedule_sqlite_service.dart`.
 
 **File Storage:**
-- Supabase Storage - NOT USED (no `.storage()` calls detected)
-- Employee photos: External URLs stored in `employees.photo_url` field (no local storage or Supabase buckets)
+- Local device filesystem only for generated operator artifacts.
+  - PDF and export staging happens in `lib/services/pdf_service.dart`, `lib/services/pdf_report_service.dart`, `lib/services/payroll_pdf_matrix_export_service.dart`, `lib/services/payroll_spreadsheet_export_service.dart`, and `lib/screens/admin/csv_import_screen.dart`.
+- Repo-tracked static assets are served from `assets/`, `public/`, and `src/assets/images/`.
+- No Supabase Storage bucket integration is detected in `lib/`, `src/`, or `supabase/functions/`.
 
 **Caching:**
-- In-memory badge cache - `lib/services/badge_service.dart` caches all badge records on first fetch
-- In-memory employee cache - `lib/services/employee_cache_service.dart` caches active employees filtered by outlet
-- Image cache - `cached_network_image` package caches employee photos from URLs
+- In-memory mobile caches:
+  - Badge cache in `lib/services/badge_service.dart`.
+  - Employee/live-content cache in `lib/services/live_content_provider.dart`.
+  - Arrival pattern cache in `lib/services/pattern_detection_service.dart`.
+  - Shift role cache in `lib/services/shift_role_service.dart`.
+- Persistent mobile cache/state:
+  - Kiosk session, overlay preference, biometric preference, and installation UUID in `SharedPreferences` through `lib/providers/app_provider.dart`, `lib/services/device_identity_service.dart`, and `lib/core/constants.dart`.
+- Web caching:
+  - Portal employee search explicitly disables caching with `Cache-Control: no-store` in `src/pages/portal/auth/search.ts`.
+  - Static asset caching for `_astro` files and `.webp` files is set in `vercel.json`.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Supabase Auth - Email/password authentication for admin users
-  - Implementation: PKCE auth flow configured in `lib/main.dart` (line 62-64)
-  - Admin login: `lib/screens/admin/admin_login_screen.dart` uses `Supabase.instance.client.auth.signInWithPassword()`
-  - Kiosk mode: Anonymous client with outlet_id stored in SharedPreferences (`kiosk_session_v1` key)
-  - Session persistence: SharedPreferences for kiosk (replaced SecureStorage to avoid ANR issues noted in `pubspec.yaml` line 24)
-
-**Roles:**
-- `admin` - Full access (email/password auth via Supabase Auth)
-- `kepala_gerai` - Outlet manager with restricted access to single outlet (stored in `managedOutletId` in `lib/providers/app_provider.dart`)
-- Kiosk - No authentication, outlet identity verified via `verify_kiosk_password` RPC at setup time
-
-## Hardware Integration
-
-**NFC Reader:**
-- Implementation: `nfc_manager` package in `lib/services/nfc_service.dart`
-- Supported cards: e-KTP (NfcA), e-Toll (MifareClassic), Flazz BCA (NfcF/FeliCa), bank cards (IsoDep), Mifare Ultralight, ISO 14443-B, ISO 15693
-- Universal UID extraction: Priority fallback across 8 NFC technologies (lines 40-79 of `nfc_service.dart`)
-- Intent filters: `ACTION_TECH_DISCOVERED`, `ACTION_NDEF_DISCOVERED`, `ACTION_TAG_DISCOVERED` in `AndroidManifest.xml`
-- NFC tech filter: `android/app/src/main/res/xml/nfc_tech_filter.xml` (declares supported NFC technology types)
-- Hardware requirement: Marked as required in manifest (`android:required="true"`)
-- Initialization: 3-second timeout in `lib/main.dart` (lines 79-85)
-- Debounce: 1500ms to prevent double scans (`AppConstants.nfcDebounceMs`)
-
-**GPS Location:**
-- Implementation: `geolocator` package in `lib/services/location_service.dart`
-- Strategy: Best-effort capture, never throws errors, returns null if unavailable
-- Accuracy: Medium (balance between battery and precision)
-- Timeout: 5 seconds for position acquisition
-- Permissions: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` in `AndroidManifest.xml`
-- Usage: Captured at attendance scan time, stored in `attendance_logs.lat/lng` fields
-
-**Foreground Service:**
-- Implementation: `flutter_foreground_task` in `lib/services/kiosk_background_service.dart`
-- Purpose: Keep kiosk alive for background NFC scanning without app open
-- Service type: `connectedDevice` (declared in `AndroidManifest.xml`)
-- Permissions: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `RECEIVE_BOOT_COMPLETED`
-- Notification: Custom pill-style persistent notification via MethodChannel to Kotlin (`com.enakko.kiosk/notification`)
-
-**System Overlay:**
-- Implementation: `flutter_overlay_window` in `lib/overlay_task.dart`
-- Purpose: Dynamic Island-style floating pill showing kiosk status/time
-- Permission: `SYSTEM_ALERT_WINDOW`
-- Entry point: `overlayMain()` with `@pragma('vm:entry-point')` to prevent tree-shaking
-- Window size: 380x96 pixels
-- Auto-collapse: 3 seconds after scan event
-
-## Network & Connectivity
-
-**Connectivity Monitoring:**
-- Package: `connectivity_plus` in `lib/services/sync_service.dart`
-- Usage: Check network state before attempting Supabase sync (line 19)
-- Offline handling: Failed syncs marked as 'failed' in SQLite, retry count incremented
-
-**HTTP Client:**
-- Package: `http ^1.2.2`
-- Purpose: Custom header injection for kiosk authentication (noted in `pubspec.yaml` line 48)
-- Usage: Direct HTTP calls for scenarios requiring custom auth headers beyond Supabase SDK
+- Supabase Auth - Used across mobile admin login, portal sessions, and hidden portal identities.
+  - Implementation:
+    - Flutter app initializes Supabase PKCE auth in `lib/main.dart`.
+    - Admin and kepala gerai sessions are handled through `Supabase.instance.client.auth` in `lib/app.dart`, `lib/screens/admin/admin_login_screen.dart`, and `lib/screens/admin/change_password_screen.dart`.
+    - Portal sessions use SSR cookies through `src/middleware.ts` and `src/lib/supabase/server.ts`.
+    - Portal employee identities are mapped server-side through `employee_portal_accounts` in `src/lib/portal/employee.ts`.
+- Kiosk identity - Not a full auth session; activation is RPC-driven and backed by a persistent installation UUID.
+  - Implementation: `lib/screens/setup/setup_screen.dart` calls `activate_kiosk_device`, and `lib/services/device_identity_service.dart` stores `installation_device_uuid_v1`.
+- Optional device-local biometric gate - `lib/services/biometric_service.dart` and `lib/providers/app_provider.dart`.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- Strategy: Console logging only
-- Uncaught errors: Logged via `FlutterError.onError` and `PlatformDispatcher.instance.onError` in `lib/main.dart` (lines 31-38)
-- Service errors: Logged with `debugPrint()` in individual services (e.g., sync failures in `lib/services/sync_service.dart`)
-- No external crash reporting service (Sentry, Firebase Crashlytics, etc.)
+- Sentry - Release-mode error reporting only.
+  - Flutter entrypoint: `lib/main.dart`.
+  - Event filtering and throttled background capture: `lib/services/sentry_service.dart`.
 
 **Logs:**
-- Production: `debugPrint()` calls throughout codebase (stripped in release builds by Flutter)
-- Sync operations: Console output for sync success/failure counts (`[Sync] Done: X synced, Y failed`)
-- NFC operations: Debug output for UID extraction and scan events
+- Flutter uses `debugPrint()` and a few guarded `print()` paths in services such as `lib/services/sync_service.dart`, `lib/services/heartbeat_service.dart`, `lib/services/nfc_service.dart`, and `lib/services/location_service.dart`.
+- Astro server routes and portal helpers use `console.error()` in files such as `src/pages/portal/auth/sign-in.ts` and `src/pages/portal/auth/search.ts`.
+- Supabase Edge Functions use `console.error()` / thrown HTTP responses inside `supabase/functions/*/index.ts`.
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Distribution: Manual APK distribution (no Play Store deployment detected)
-- Build output: `ABSENKOK-v{versionName}.apk` generated in `android/app/build/outputs/apk/release/`
+- Web hosting is Vercel via `astro.config.mjs` and `vercel.json`.
+- Mobile distribution is manual/operator-driven through `tool/release_preflight.ps1` and `tool/release_build.ps1`.
+- Backend hosting is Supabase, with SQL rollout source under `sql/` and function source under `supabase/functions/`.
 
 **CI Pipeline:**
-- None detected (no `.github/workflows/`, `.gitlab-ci.yml`, or similar config files)
-
-**Build Process:**
-- Manual: `flutter build apk --release` with ProGuard/R8 minification enabled
-- Obfuscation: Enabled for release builds (ProGuard rules in `android/app/proguard-rules.pro`)
-- Signing: Debug keys used for release builds (line 33 of `android/app/build.gradle.kts`)
-
-## Background Sync
-
-**Sync Service:**
-- Implementation: `lib/services/sync_service.dart`
-- Trigger: Manual via admin UI or periodic background (details in `kiosk_background_service.dart`)
-- Strategy: Batch upload pending logs from SQLite to Supabase `attendance_logs` table
-- Batch size: 50 records (`AppConstants.syncBatchSize`)
-- Max retries: 5 (`AppConstants.syncMaxRetries`)
-- Duplicate handling: PostgrestException code '23505' (unique constraint violation on `local_id`) treated as success
-- Cleanup: Synced logs deleted after successful upload
-
-## Document Generation
-
-**PDF Generation:**
-- Implementation: `pdf` package in `lib/services/pdf_service.dart`
-- Use cases:
-  - Per-scan attendance report (`AttendancePerScanPdfRow` model)
-  - Daily summary report (`AttendanceDailyPdfRow` model)
-- Font loading: `rootBundle` for custom fonts
-- Output: PDF file saved to device storage via `path_provider`
-- Sharing: `printing` package for native print/share dialog
-
-**CSV Export:**
-- Implementation: Manual CSV string generation in report screens
-- Sharing: `share_plus` package via native Android share sheet
-
-**Screenshot Export:**
-- Implementation: `screenshot` package
-- Use case: Schedule calendar widget-to-image conversion in `lib/screens/admin/shift_scheduler_screen.dart`
-
-## Webhooks & Callbacks
-
-**Incoming:**
-- None detected (no webhook endpoints or listeners)
-
-**Outgoing:**
-- None detected (no webhook POST calls to external services)
+- No GitHub Actions pipeline is tracked under `.github/workflows/`.
+- The `.github/` directory contains GSD agent metadata and workflow templates under `.github/get-shit-done/`, but not an active CI runner for builds/tests/deployments.
 
 ## Environment Configuration
 
 **Required env vars:**
-- `SUPABASE_URL` - Supabase project API endpoint (format: `https://{project-ref}.supabase.co`)
-- `SUPABASE_ANON_KEY` - Supabase anonymous/public API key for client initialization
+- Flutter app:
+  - `SUPABASE_URL` - read in `lib/main.dart`.
+  - `SUPABASE_ANON_KEY` - read in `lib/main.dart`.
+  - `SENTRY_DSN` - read in `lib/main.dart`.
+- Astro portal server:
+  - `SUPABASE_URL` or `PUBLIC_SUPABASE_URL` - read in `src/lib/supabase/env.ts`.
+  - `SUPABASE_ANON_KEY` or `PUBLIC_SUPABASE_ANON_KEY` - read in `src/lib/supabase/env.ts`.
+  - `SUPABASE_SERVICE_ROLE_KEY` - required by `src/lib/supabase/admin.ts` and `src/lib/portal/provision.ts`.
+  - `PORTAL_SECRET` - used in `src/lib/portal/auth.ts` for hidden portal password derivation.
+  - `PUBLIC_SITE_URL` - used in `astro.config.mjs`.
+  - `VERCEL_PROJECT_PRODUCTION_URL`, `VERCEL_BRANCH_URL`, and `VERCEL_URL` - read in `astro.config.mjs` for allowed-domain generation.
+- Supabase Edge Functions:
+  - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and, for `supabase/functions/provision-employee-portal-user/index.ts`, also `SUPABASE_ANON_KEY`.
+- Android release tooling:
+  - `ABSENKOK_JAVA_HOME` in `tool/release_env.ps1`.
+  - Optional `ANDROID_HOME` / `ANDROID_SDK_ROOT` in `tool/release_build.ps1` for adb resolution.
 
 **Secrets location:**
-- `.env` file at project root (loaded in `lib/main.dart` line 54)
-- `.env` is in `.gitignore` (must be configured per deployment)
+- Root `.env` and `.env.example` exist for local app/web configuration.
+- Portal server secrets are consumed through runtime environment access in `src/lib/supabase/env.ts` and `src/lib/portal/auth.ts`.
+- Android signing is wired to `android/key.properties` through `android/app/build.gradle.kts`; the file exists locally and should be treated as private.
+- No tracked `supabase/config.toml` is present, so Supabase local CLI project config is not the source of truth in this repo.
 
-**Session storage:**
-- Kiosk session: SharedPreferences key `kiosk_session_v1` (outlet_id, outlet_name, device_id JSON)
-- Overlay preference: SharedPreferences key `overlay_keep_foreground_v1` (boolean)
+## Webhooks & Callbacks
 
-## Special Integrations
+**Incoming:**
+- No third-party webhook endpoints are detected.
+- Server endpoints exist for portal auth/search under `src/pages/portal/auth/`, but they are application routes, not general-purpose webhook receivers.
 
-**Locale & Internationalization:**
-- Implementation: `intl` package with Indonesian locale
-- Initialization: `initializeDateFormatting('id_ID')` in `lib/main.dart` (lines 27-28)
-- Default locale: `id_ID` for date/time formatting throughout app
-
-**Device Orientation:**
-- Locked to portrait mode via `SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])` in `lib/main.dart` (lines 41-43)
-
-**Battery Optimization:**
-- Permission: `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` in manifest
-- Purpose: Prevent Android from killing foreground service during kiosk operation
+**Outgoing:**
+- No third-party webhook delivery integration is detected.
+- The app and portal do make outbound calls to Supabase services and Edge Functions from `lib/`, `src/lib/`, and `supabase/functions/`, but no generic callback/webhook dispatcher is present.
 
 ---
 
-*Integration audit: 2026-03-11*
+*Integration audit: 2026-04-14*
