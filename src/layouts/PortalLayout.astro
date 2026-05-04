@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import type { PortalEmployee } from '../lib/portal/employee';
 
-type ActiveSection = 'home' | 'attendance' | 'leaderboard';
+type ActiveSection = 'home' | 'attendance';
 
 interface Props {
   title: string;
@@ -102,7 +102,7 @@ const identitySubline = buildSubline(employee.position, employee.home_outlet_nam
         </div>
       </div>
 
-      <!-- Shell nav — Beranda, Kehadiran, Peringkat destinations -->
+      <!-- Shell nav — Beranda, Kehadiran -->
       <nav
         class="flex items-center gap-0 border-t border-gray-100"
         aria-label="Navigasi portal"
@@ -121,13 +121,7 @@ const identitySubline = buildSubline(employee.position, employee.home_outlet_nam
         >
           Kehadiran
         </a>
-        <a
-          href="/portal/leaderboard"
-          class={`flex-1 text-center py-2 text-xs font-semibold tracking-wide transition border-b-2 ${activeSection === 'leaderboard' ? 'border-[#E91E8C] text-[#E91E8C]' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
-          aria-current={activeSection === 'leaderboard' ? 'page' : undefined}
-        >
-          Peringkat
-        </a>
+        <!-- Leaderboard temporarily disabled -->
       </nav>
 
       <!-- Pending / loading progress bar — shown briefly on form submit or page nav -->
