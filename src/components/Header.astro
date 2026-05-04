@@ -4,8 +4,7 @@ import { Image } from 'astro:assets';
 import { Menu, X, Download } from '@lucide/astro';
 import absenkokLogo from '../assets/images/ABSENKOK.png';
 
-const isLeaderboardPage = Astro.url.pathname === '/leaderboard';
-const homeAnchor = (hash: string) => (isLeaderboardPage ? `/${hash}` : hash);
+const homeAnchor = (hash: string) => hash;
 ---
 
 <header id="main-header" class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border transition-shadow duration-300">
@@ -66,9 +65,7 @@ const homeAnchor = (hash: string) => (isLeaderboardPage ? `/${hash}` : hash);
     class="md:hidden hidden bg-white border-t border-brand-border"
   >
     <div class="px-6 py-5 space-y-1">
-      <a href="/leaderboard" class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
-        Leaderboard
-      </a>
+      <!-- Leaderboard temporarily disabled -->
       <a href={homeAnchor('#fitur')} class="mobile-link block rounded-lg px-4 py-3 text-sm font-medium text-brand-text-secondary hover:bg-brand-surface hover:text-brand-pink transition-colors duration-200">
         Fitur
       </a>

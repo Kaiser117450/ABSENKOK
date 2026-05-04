@@ -1421,7 +1421,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     });
 
     try {
-      final payload = {
+      final wasActive = widget.employee?.isActive ?? true;
+      final payload = <String, dynamic>{
         'name': _nameCtrl.text.trim(),
         'position': _positionCtrl.text.trim().isEmpty
             ? null
@@ -1431,6 +1432,17 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
         'home_outlet_id': _selectedOutletId,
         'is_active': _isActive,
       };
+
+      // Sync archived_at when is_active changes
+      if (widget.employee != null) {
+        if (!_isActive && wasActive) {
+          payload['archived_at'] = DateTime.now().toIso8601String();
+        } else if (_isActive && !wasActive) {
+          payload['archived_at'] = null;
+        }
+      } else if (!_isActive) {
+        payload['archived_at'] = DateTime.now().toIso8601String();
+      }
 
       if (widget.employee == null) {
         await SupabaseClientFactory.admin.from('employees').insert(payload);
