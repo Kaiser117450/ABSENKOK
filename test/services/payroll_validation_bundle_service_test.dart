@@ -35,7 +35,8 @@ void main() {
             PayrollEvidenceSource.spreadsheet:
                 snapshot(PayrollEvidenceSource.spreadsheet),
             PayrollEvidenceSource.pdf: snapshot(PayrollEvidenceSource.pdf),
-            PayrollEvidenceSource.portal: snapshot(PayrollEvidenceSource.portal),
+            PayrollEvidenceSource.portal:
+                snapshot(PayrollEvidenceSource.portal),
           },
       blockerReason: blockerReason,
     );
@@ -86,7 +87,10 @@ void main() {
       );
 
       expect(bundle.readinessHeadline, 'Payroll siap dipakai');
-      expect(bundle.scenarioStatuses, hasLength(7));
+      expect(
+        bundle.scenarioStatuses,
+        hasLength(requiredPayrollRolloutScenarioIds.length),
+      );
       expect(bundle.content, contains('Status Rollout'));
       expect(bundle.content, contains('Skenario wajib'));
       expect(bundle.content, contains('Bukti parity'));

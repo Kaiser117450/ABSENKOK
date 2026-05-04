@@ -6,7 +6,7 @@ import 'package:absensi_enakko_flutter/widgets/employee_contract_badge.dart';
 
 void main() {
   group('EmployeeContractBadge', () {
-    testWidgets('renders Full-Time label for fulltime', (tester) async {
+    testWidgets('renders compact F marker for fulltime', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -15,10 +15,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Full-Time'), findsOneWidget);
+      expect(find.text('F'), findsOneWidget);
     });
 
-    testWidgets('renders Part-Time label for parttime', (tester) async {
+    testWidgets('renders compact P marker for parttime', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -27,7 +27,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Part-Time'), findsOneWidget);
+      expect(find.text('P'), findsOneWidget);
     });
 
     testWidgets('does not render raw DB strings', (tester) async {

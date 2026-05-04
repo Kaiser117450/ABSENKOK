@@ -171,7 +171,8 @@ void main() {
           expect(results[0].isValid, isTrue,
               reason: 'alias "${entry.key}" should be valid');
           expect(results[0].resolvedContract, entry.value,
-              reason: 'alias "${entry.key}" should normalize to ${entry.value}');
+              reason:
+                  'alias "${entry.key}" should normalize to ${entry.value}');
         }
       });
 
@@ -472,7 +473,7 @@ void main() {
         expect(payloads[0]['employment_contract'], 'PARTTIME');
       });
 
-      test('optional fields are null not omitted', () {
+      test('optional fields keep stable defaults and are not omitted', () {
         final validations = [
           CsvRowValidation(
             row: CsvRow(
@@ -492,7 +493,7 @@ void main() {
         // Keys must exist even if null
         expect(payloads[0].containsKey('position'), isTrue);
         expect(payloads[0].containsKey('photo_url'), isTrue);
-        expect(payloads[0]['position'], isNull);
+        expect(payloads[0]['position'], 'Crew');
         expect(payloads[0]['photo_url'], isNull);
         expect(payloads[0].containsKey('employment_contract'), isTrue);
       });

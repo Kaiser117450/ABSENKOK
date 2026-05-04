@@ -211,8 +211,9 @@ class CsvImportService {
 
   /// Build Supabase insert payloads from validated rows.
   ///
-  /// Every map has ALL keys (consistent shape) — optional values are `null`,
-  /// never omitted. This prevents Supabase batch insert mismatch errors.
+  /// Every map has ALL keys (consistent shape). Missing photos stay `null`;
+  /// missing positions follow the employee form default (`Crew`).
+  /// This prevents Supabase batch insert mismatch errors.
   static List<Map<String, dynamic>> buildInsertPayloads(
     List<CsvRowValidation> validRows,
   ) {
