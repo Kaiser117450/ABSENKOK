@@ -2,9 +2,6 @@
 // Header.astro — Sticky navigation with brand logo (rounded image) + anchor links
 import { Image } from 'astro:assets';
 import absenkokLogo from '../assets/images/ABSENKOK.png';
-
-const isLeaderboardPage = Astro.url.pathname === '/leaderboard';
-const homeAnchor = (hash: string) => (isLeaderboardPage ? `/${hash}` : hash);
 ---
 
 <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-brand-border">
@@ -25,22 +22,22 @@ const homeAnchor = (hash: string) => (isLeaderboardPage ? `/${hash}` : hash);
     <!-- Nav Links (hidden on mobile) -->
     <ul class="hidden md:flex items-center gap-8">
       <li>
-        <a href={homeAnchor('#fitur')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href="#fitur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Fitur
         </a>
       </li>
       <li>
-        <a href={homeAnchor('#cara-kerja')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href="#cara-kerja" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Cara Kerja
         </a>
       </li>
       <li>
-        <a href={homeAnchor('#arsitektur')} class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
+        <a href="#arsitektur" class="text-sm font-medium text-brand-text-secondary hover:text-brand-pink transition-colors duration-300">
           Arsitektur
         </a>
       </li>
       <li>
-        <a href={homeAnchor('#download')} class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2 hover:bg-brand-pink-dark transition-colors duration-300 shadow-sm hover:shadow-md">
+        <a href="#download" class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-brand-pink rounded-full px-5 py-2 hover:bg-brand-pink-dark transition-colors duration-300 shadow-sm hover:shadow-md">
           Download
         </a>
       </li>

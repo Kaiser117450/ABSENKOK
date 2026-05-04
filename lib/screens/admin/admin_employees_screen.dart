@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:absensi_enakko_flutter/core/supabase_client.dart';
 import 'package:absensi_enakko_flutter/core/theme.dart';
 import 'package:absensi_enakko_flutter/models/employee.dart';
+import 'package:absensi_enakko_flutter/models/employee_archive_state.dart';
 import 'package:absensi_enakko_flutter/models/employee_contract.dart';
 import 'package:absensi_enakko_flutter/models/outlet.dart';
 import 'package:absensi_enakko_flutter/providers/app_provider.dart';
@@ -143,7 +144,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       list = list.where((e) => e.homeOutletId == _filterOutletId).toList();
     }
     if (_filterContract != null) {
-      list = list.where((e) => e.employmentContract == _filterContract).toList();
+      list =
+          list.where((e) => e.employmentContract == _filterContract).toList();
     }
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -361,10 +363,12 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                color: AppColors.textMuted.withValues(alpha: 0.1),
+                                color:
+                                    AppColors.textMuted.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: AppColors.textMuted.withValues(alpha: 0.2)),
+                                    color: AppColors.textMuted
+                                        .withValues(alpha: 0.2)),
                               ),
                               child: const Tooltip(
                                 message: 'Riwayat Karyawan',
@@ -535,9 +539,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                             width: 12,
                             height: 12,
                             decoration: BoxDecoration(
-                              color: _filterContract == EmployeeContract.fulltime
-                                  ? const Color(0xFFDC2626)
-                                  : AppColors.textSecondary,
+                              color:
+                                  _filterContract == EmployeeContract.fulltime
+                                      ? const Color(0xFFDC2626)
+                                      : AppColors.textSecondary,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
@@ -546,9 +551,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                               style: TextStyle(
                                 fontSize: 7,
                                 fontWeight: FontWeight.w800,
-                                color: _filterContract == EmployeeContract.fulltime
-                                    ? Colors.white
-                                    : Colors.white,
+                                color:
+                                    _filterContract == EmployeeContract.fulltime
+                                        ? Colors.white
+                                        : Colors.white,
                                 height: 1,
                               ),
                             ),
@@ -557,10 +563,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                           Text(
                             'Full-Time',
                             style: TextStyle(
-                              fontWeight: _filterContract ==
-                                      EmployeeContract.fulltime
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
+                              fontWeight:
+                                  _filterContract == EmployeeContract.fulltime
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -574,9 +580,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                             width: 12,
                             height: 12,
                             decoration: BoxDecoration(
-                              color: _filterContract == EmployeeContract.parttime
-                                  ? const Color(0xFFF97316)
-                                  : AppColors.textSecondary,
+                              color:
+                                  _filterContract == EmployeeContract.parttime
+                                      ? const Color(0xFFF97316)
+                                      : AppColors.textSecondary,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
@@ -585,9 +592,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                               style: TextStyle(
                                 fontSize: 7,
                                 fontWeight: FontWeight.w800,
-                                color: _filterContract == EmployeeContract.parttime
-                                    ? Colors.white
-                                    : Colors.white,
+                                color:
+                                    _filterContract == EmployeeContract.parttime
+                                        ? Colors.white
+                                        : Colors.white,
                                 height: 1,
                               ),
                             ),
@@ -596,10 +604,10 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                           Text(
                             'Part-Time',
                             style: TextStyle(
-                              fontWeight: _filterContract ==
-                                      EmployeeContract.parttime
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
+                              fontWeight:
+                                  _filterContract == EmployeeContract.parttime
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
                             ),
                           ),
                         ],
@@ -641,7 +649,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                         color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.18)),
+                            color: const Color(0xFFF59E0B)
+                                .withValues(alpha: 0.18)),
                       ),
                       child: const Icon(Icons.workspace_premium,
                           size: 20, color: Color(0xFFF59E0B)),
@@ -769,7 +778,7 @@ class _ArchiveConfirmDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.15),
+              color: AppColors.danger.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.archive_outlined,
@@ -796,10 +805,10 @@ class _ArchiveConfirmDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
+                color: AppColors.warning.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.warning.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -1010,14 +1019,18 @@ class _EmployeeCard extends StatelessWidget {
                                 width: 18,
                                 height: 18,
                                 decoration: BoxDecoration(
-                                  color: employee.employmentContract == EmployeeContract.fulltime
+                                  color: employee.employmentContract ==
+                                          EmployeeContract.fulltime
                                       ? const Color(0xFFDC2626)
                                       : const Color(0xFFF97316),
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  employee.employmentContract == EmployeeContract.fulltime ? 'F' : 'P',
+                                  employee.employmentContract ==
+                                          EmployeeContract.fulltime
+                                      ? 'F'
+                                      : 'P',
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
@@ -1220,9 +1233,9 @@ class _ActionBtn extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
           ),
           child: Icon(icon, size: 16, color: color),
         ),
@@ -1436,7 +1449,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.15),
+              color: AppColors.accent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.nfc, color: AppColors.accent, size: 22),
@@ -1472,7 +1485,7 @@ class _AssignNfcDialogState extends State<_AssignNfcDialog> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.1),
+                color: AppColors.accent.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.contactless,
@@ -1672,11 +1685,12 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     _empCodeCtrl = TextEditingController(text: emp?.employeeCode ?? '');
     // Lookup map O(1): lowercase name → archived employee (tidak ada DB call saat ketik)
     _archivedByName = {
-      for (final e in widget.archivedEmployees)
-        e.name.toLowerCase().trim(): e,
+      for (final e in widget.archivedEmployees) e.name.toLowerCase().trim(): e,
     };
     // forcedOutletId ALWAYS takes precedence for kepala_gerai
-    _selectedOutletId = widget.forcedOutletId ?? emp?.homeOutletId ?? widget.outlets.firstOrNull?.id;
+    _selectedOutletId = widget.forcedOutletId ??
+        emp?.homeOutletId ??
+        widget.outlets.firstOrNull?.id;
     _isActive = emp?.isActive ?? true;
     // New employees default to PARTTIME; existing keep their stored value
     _selectedContract = emp?.employmentContract ?? EmployeeContract.parttime;
@@ -1784,7 +1798,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
         return;
       }
 
-      final payload = {
+      final payload = <String, Object?>{
         'name': _nameCtrl.text.trim(),
         'position': (_selectedPosition == null || _selectedPosition!.isEmpty)
             ? null
@@ -1792,9 +1806,15 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
         'employee_code':
             _empCodeCtrl.text.trim().isEmpty ? null : _empCodeCtrl.text.trim(),
         'home_outlet_id': effectiveOutletId,
-        'is_active': _isActive,
         'employment_contract': _selectedContract.dbValue,
       };
+      payload.addAll(
+        buildEmployeeArchiveStatePayload(
+          isActive: _isActive,
+          existingArchivedAt: widget.employee?.archivedAt,
+          archivedAtWhenInactive: DateTime.now(),
+        ),
+      );
 
       if (widget.employee == null) {
         await SupabaseClientFactory.admin.from('employees').insert(payload);
@@ -1829,10 +1849,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
   Future<void> _restoreEmployee(Employee archived) async {
     setState(() => _saving = true);
     try {
-      await SupabaseClientFactory.admin
-          .from('employees')
-          .update({'is_active': true, 'archived_at': null})
-          .eq('id', archived.id);
+      await SupabaseClientFactory.admin.from('employees').update(
+          {'is_active': true, 'archived_at': null}).eq('id', archived.id);
       widget.onSaved();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -2055,7 +2073,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                                     child: Text(o.name),
                                   ))
                               .toList(),
-                          validator: (v) => v == null ? 'Outlet harus dipilih' : null,
+                          validator: (v) =>
+                              v == null ? 'Outlet harus dipilih' : null,
                           // null = read-only (kepala_gerai tidak bisa ganti outlet)
                           onChanged: widget.forcedOutletId != null
                               ? null
@@ -2077,32 +2096,27 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                for (final c
-                                    in EmployeeContract.values) ...[
-                                  if (c.index > 0)
-                                    const SizedBox(width: 8),
+                                for (final c in EmployeeContract.values) ...[
+                                  if (c.index > 0) const SizedBox(width: 8),
                                   Expanded(
                                     child: GestureDetector(
-                                      onTap: () => setState(
-                                          () => _selectedContract = c),
+                                      onTap: () =>
+                                          setState(() => _selectedContract = c),
                                       child: AnimatedContainer(
-                                        duration: const Duration(
-                                            milliseconds: 200),
-                                        padding:
-                                            const EdgeInsets.symmetric(
-                                                vertical: 10),
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 10),
                                         decoration: BoxDecoration(
-                                          color:
-                                              _selectedContract == c
-                                                  ? AppColors.primary
-                                                  : AppColors.surface,
+                                          color: _selectedContract == c
+                                              ? AppColors.primary
+                                              : AppColors.surface,
                                           borderRadius:
                                               BorderRadius.circular(10),
                                           border: Border.all(
-                                            color:
-                                                _selectedContract == c
-                                                    ? AppColors.primary
-                                                    : AppColors.border,
+                                            color: _selectedContract == c
+                                                ? AppColors.primary
+                                                : AppColors.border,
                                           ),
                                         ),
                                         alignment: Alignment.center,
@@ -2111,11 +2125,9 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
-                                            color:
-                                                _selectedContract == c
-                                                    ? Colors.white
-                                                    : AppColors
-                                                        .textSecondary,
+                                            color: _selectedContract == c
+                                                ? Colors.white
+                                                : AppColors.textSecondary,
                                           ),
                                         ),
                                       ),
@@ -2189,7 +2201,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                         color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                            color:
+                                const Color(0xFFF59E0B).withValues(alpha: 0.4)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2227,14 +2240,18 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                                   ? null
                                   : () {
                                       final match = _archivedMatch;
-                                      if (match != null) _restoreEmployee(match);
+                                      if (match != null) {
+                                        _restoreEmployee(match);
+                                      }
                                     },
                               icon: const Icon(Icons.restore, size: 16),
                               label: const Text('Pulihkan Karyawan Ini'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFD97706),
-                                side: const BorderSide(color: Color(0xFFF59E0B)),
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                side:
+                                    const BorderSide(color: Color(0xFFF59E0B)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 textStyle: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
