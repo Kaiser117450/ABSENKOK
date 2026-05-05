@@ -57,10 +57,36 @@ export async function ensurePortalPasswordlessAccount(
   if (existingAuthUser) {
     assertReusablePortalAuthUser(existingAuthUser, employeeId);
     await updateSupabaseAuthAdminUser(existingAuthUser.id, userAttributes);
+    await upsertPortalAccountMapping(employeeId, existingAuthUser.id, authEmail);
     return;
   }
 
-  await createSupabaseAuthAdminUser(userAttributes);
+  const newAuthUser = await createSupabaseAuthAdminUser(userAttributes);
+  // Persist the (employee_id -> auth_user_id) mapping so the next sign-in
+  // hits the indexed `employee_portal_accounts` lookup instead of falling
+  // through to the legacy `auth.admin.listUsers` paginated sweep.
+  await upsertPortalAccountMapping(employeeId, newAuthUser.id, authEmail);
+}
+
+async function upsertPortalAccountMapping(
+  employeeId: string,
+  authUserId: string,
+  authEmail: string,
+) {
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from('employee_portal_accounts')
+    .upsert(
+      {
+        employee_id: employeeId,
+        auth_user_id: authUserId,
+        auth_email: authEmail,
+      },
+      { onConflict: 'employee_id' },
+    );
+  if (error) {
+    throw new Error(`Failed to persist portal account mapping: ${error.message}`);
+  }
 }
 
 function assertReusablePortalAuthUser(existingAuthUser: PortalAuthUser, employeeId: string) {
