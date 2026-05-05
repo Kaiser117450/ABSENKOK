@@ -4,9 +4,28 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const errorParam = Astro.url.searchParams.get('error');
-const errorMessage = errorParam ? 'Gagal masuk. Silakan coba lagi.' : null;
+const retryAfterParam = Astro.url.searchParams.get('retry_after');
+
+let errorMessage: string | null = null;
+if (errorParam === 'rate_limited') {
+  const retryAfter = Number.isFinite(Number(retryAfterParam))
+    ? Number(retryAfterParam)
+    : 60;
+  errorMessage = `Terlalu banyak percobaan. Silakan tunggu ${retryAfter} detik dan coba lagi.`;
+} else if (errorParam === 'turnstile') {
+  errorMessage = 'Verifikasi keamanan gagal. Coba refresh halaman ini dan login ulang.';
+} else if (errorParam) {
+  errorMessage = 'Gagal masuk. Silakan coba lagi.';
+}
 
 const signedOut = Astro.url.searchParams.get('signed_out') === '1';
+
+// Turnstile site key is exposed to the browser. It is meant to be
+// public — only the secret key (server side) is sensitive.
+const turnstileSiteKey =
+  typeof import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'string'
+    ? import.meta.env.PUBLIC_TURNSTILE_SITE_KEY
+    : '';
 ---
 
 <BaseLayout
@@ -84,6 +103,17 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
             >Ganti</button>
           </div>
 
+          {turnstileSiteKey && (
+            <div class="mb-4 flex justify-center">
+              <div
+                class="cf-turnstile"
+                data-sitekey={turnstileSiteKey}
+                data-theme="light"
+                data-size="flexible"
+              ></div>
+            </div>
+          )}
+
           <button
             type="submit"
             id="submit-btn"
@@ -94,6 +124,15 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
             <span id="btn-loading" class="hidden">Memproses…</span>
           </button>
         </form>
+
+        {turnstileSiteKey && (
+          <script
+            is:inline
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            async
+            defer
+          ></script>
+        )}
 
       </div>
     </div>
