@@ -64,16 +64,15 @@ export type PortalScheduleResult =
  * Asia/Makassar (WITA, UTC+8). This helper centralises the assumption so a
  * future timezone field can replace it without touching every portal page.
  */
+const portalReferenceFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Makassar',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 export function getPortalReferenceDate(): string {
-  const now = new Date();
-  // Format in the business timezone to get the local calendar date.
-  const formatter = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: 'Asia/Makassar',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return formatter.format(now); // "YYYY-MM-DD" (sv-SE locale produces ISO format)
+  return portalReferenceFormatter.format(new Date()); // "YYYY-MM-DD" (sv-SE locale produces ISO format)
 }
 
 // ---------------------------------------------------------------------------

@@ -15,6 +15,25 @@ function derivePortalEmail(employeeId: string): string {
   return `employee+${employeeId}@portal.absenkok.internal`
 }
 
+/**
+ * Generate a 32-character random password using the runtime's CSPRNG.
+ * The password is never returned to the caller — it is stored only in
+ * Supabase Auth (hashed) and re-derived deterministically by the portal
+ * sign-in flow from PORTAL_SECRET + employee id. Generating a random
+ * placeholder here defends against admins accidentally provisioning
+ * accounts with weak/guessable passwords if the Astro flow is bypassed.
+ */
+function generateRandomPassword(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  let out = ''
+  for (let i = 0; i < bytes.length; i += 1) {
+    out += alphabet[bytes[i] % alphabet.length]
+  }
+  return out
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -58,16 +77,19 @@ serve(async (req) => {
       )
     }
 
-    // Parse request body — only accept employee_id and password
+    // Parse request body — only accept employee_id. Password is generated
+    // server-side so the caller cannot ship a weak/guessable value.
     const body = await req.json()
-    const { employee_id, password } = body as { employee_id?: string; password?: string }
+    const { employee_id } = body as { employee_id?: string }
 
-    if (!employee_id || !password) {
+    if (!employee_id) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: employee_id, password' }),
+        JSON.stringify({ error: 'Missing required field: employee_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const password = generateRandomPassword()
 
     // Load employee row server-side — source of truth, not caller-supplied display fields
     const { data: employee, error: employeeError } = await supabaseAdmin

@@ -51,9 +51,18 @@ export function normalizeSearchText(raw: string): string {
  * Derive the deterministic internal password for a portal auth user.
  * The employee never sees or types this — it's an implementation detail
  * so we can use Supabase Auth sessions without requiring a real password.
+ *
+ * Throws when `PORTAL_SECRET` is missing. The previous implementation fell
+ * back to a hardcoded default which made every account predictable from a
+ * checkout of the public source — `PORTAL_SECRET` is now mandatory.
  */
 export function buildPortalAuthPassword(employeeId: string): string {
-  const secret = import.meta.env.PORTAL_SECRET ?? 'enakko-portal-default-secret';
+  const secret = import.meta.env.PORTAL_SECRET;
+  if (typeof secret !== 'string' || secret.length < 16) {
+    throw new Error(
+      'PORTAL_SECRET environment variable is required and must be at least 16 characters. Set it in the deployment environment before serving the portal.',
+    );
+  }
   const digest = createHash('sha256')
     .update(`${secret}:${employeeId}`)
     .digest('base64url')
