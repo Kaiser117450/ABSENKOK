@@ -124,10 +124,21 @@ begin
 end;
 $$;
 
--- Allow the public-internet anon role + signed-in employees to call it.
--- Service role can always call it (bypasses the grant).
+-- Restrict the RPC to the service_role.
+--
+-- Earlier revisions granted execute to anon + authenticated so the Astro
+-- server's anon client could call it directly. That created a targeted-DoS
+-- vector: an attacker holding the public anon key could call the RPC via
+-- PostgREST with a victim's IP in `p_ip` and `p_max_requests = 1`, racing
+-- the counter past the legitimate limit and locking the victim out for a
+-- whole minute. PostgREST honours the granted role's permissions, so the
+-- only safe answer is to make this RPC service-role-only and proxy it
+-- from a server-side handler that has the service-role key (which is
+-- never shipped to the browser). See src/lib/portal/rate-limit.ts.
+revoke execute on function public.check_and_increment_rate_limit(text, text, int, int)
+  from public, anon, authenticated;
 grant execute on function public.check_and_increment_rate_limit(text, text, int, int)
-  to anon, authenticated;
+  to service_role;
 
 -- 3) Cleanup helper — schedule from pg_cron or a Supabase scheduled
 -- function. Not auto-scheduled here; the table stays small even without
@@ -908,7 +919,10 @@ create or replace function public.get_skor_tier_overview(
 returns table (
   employee_id uuid,
   employee_name text,
-  position text,
+  -- `position` is a SQL reserved word — quote it in the DDL so PG parses
+  -- this as a column declaration rather than a `position(... in ...)`
+  -- function call header.
+  "position" text,
   home_outlet_id uuid,
   home_outlet_name text,
   photo_url text,
@@ -931,7 +945,7 @@ as $$
   select
     e.id                                              as employee_id,
     e.name                                            as employee_name,
-    e.position                                        as position,
+    e.position                                        as "position",
     e.home_outlet_id                                  as home_outlet_id,
     o.name                                            as home_outlet_name,
     e.photo_url                                       as photo_url,
