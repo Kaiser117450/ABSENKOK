@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '../supabase/server';
+import { createSupabaseAdminClient } from '../supabase/admin';
 
 /**
  * Result returned by the Postgres `check_and_increment_rate_limit` RPC.
@@ -49,7 +49,10 @@ export async function checkRateLimit(
   const ip = getClientIp(request);
 
   try {
-    const supabase = createSupabaseServerClient(request.headers.get('cookie') ?? '');
+    // Must use the service-role client. The RPC is granted only to
+    // service_role precisely so the public anon key cannot be used to call
+    // it from the browser with a spoofed `p_ip` to lock out a victim.
+    const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.rpc('check_and_increment_rate_limit', {
       p_ip: ip,
       p_endpoint: endpoint,

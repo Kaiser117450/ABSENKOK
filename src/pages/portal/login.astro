@@ -220,7 +220,13 @@ const turnstileSiteKey =
     turnstileReady = true;
     if (pendingSubmit) {
       pendingSubmit = false;
-      loginForm?.submit();
+      // Belt-and-suspenders: refuse to submit an empty selection even if
+      // pendingSubmit slipped through some edge case.
+      if (employeeIdInput!.value) {
+        loginForm?.submit();
+      } else {
+        clearLoadingState();
+      }
     }
   };
   (window as unknown as Record<string, unknown>).absenkokTurnstileExpired = () => {
@@ -364,6 +370,17 @@ const turnstileSiteKey =
     searchInput!.value = '';
     chooser!.classList.add('hidden');
     searchInput!.focus();
+
+    // Cancel any in-flight Turnstile-deferred submit. Otherwise a user that
+    // (1) clicked an employee card while Turnstile was still solving, then
+    // (2) clicked "Ganti" before the token arrived would have the Turnstile
+    // success callback fire `loginForm.submit()` after the employee_id has
+    // already been cleared, posting an empty form that the server rejects
+    // with `?error=invalid` and burning a sign-in rate-limit credit.
+    pendingSubmit = false;
+    clearLoadingState();
+    const btnLoading = document.getElementById('btn-loading');
+    if (btnLoading) btnLoading.textContent = 'Memproses…';
   }
 
   clearBtn?.addEventListener('click', clearSelection);

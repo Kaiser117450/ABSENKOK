@@ -107,10 +107,21 @@ begin
 end;
 $$;
 
--- Allow the public-internet anon role + signed-in employees to call it.
--- Service role can always call it (bypasses the grant).
+-- Restrict the RPC to the service_role.
+--
+-- Earlier revisions granted execute to anon + authenticated so the Astro
+-- server's anon client could call it directly. That created a targeted-DoS
+-- vector: an attacker holding the public anon key could call the RPC via
+-- PostgREST with a victim's IP in `p_ip` and `p_max_requests = 1`, racing
+-- the counter past the legitimate limit and locking the victim out for a
+-- whole minute. PostgREST honours the granted role's permissions, so the
+-- only safe answer is to make this RPC service-role-only and proxy it
+-- from a server-side handler that has the service-role key (which is
+-- never shipped to the browser). See src/lib/portal/rate-limit.ts.
+revoke execute on function public.check_and_increment_rate_limit(text, text, int, int)
+  from public, anon, authenticated;
 grant execute on function public.check_and_increment_rate_limit(text, text, int, int)
-  to anon, authenticated;
+  to service_role;
 
 -- 3) Cleanup helper — schedule from pg_cron or a Supabase scheduled
 -- function. Not auto-scheduled here; the table stays small even without
