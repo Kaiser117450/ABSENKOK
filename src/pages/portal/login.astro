@@ -4,9 +4,28 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const errorParam = Astro.url.searchParams.get('error');
-const errorMessage = errorParam ? 'Gagal masuk. Silakan coba lagi.' : null;
+const retryAfterParam = Astro.url.searchParams.get('retry_after');
+
+let errorMessage: string | null = null;
+if (errorParam === 'rate_limited') {
+  const retryAfter = Number.isFinite(Number(retryAfterParam))
+    ? Number(retryAfterParam)
+    : 60;
+  errorMessage = `Terlalu banyak percobaan. Silakan tunggu ${retryAfter} detik dan coba lagi.`;
+} else if (errorParam === 'turnstile') {
+  errorMessage = 'Verifikasi keamanan gagal. Coba refresh halaman ini dan login ulang.';
+} else if (errorParam) {
+  errorMessage = 'Gagal masuk. Silakan coba lagi.';
+}
 
 const signedOut = Astro.url.searchParams.get('signed_out') === '1';
+
+// Turnstile site key is exposed to the browser. It is meant to be
+// public — only the secret key (server side) is sensitive.
+const turnstileSiteKey =
+  typeof import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'string'
+    ? import.meta.env.PUBLIC_TURNSTILE_SITE_KEY
+    : '';
 ---
 
 <BaseLayout
@@ -41,7 +60,13 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
           </div>
         )}
 
-        <form method="POST" action="/portal/auth/sign-in" id="login-form" novalidate>
+        <form
+          method="POST"
+          action="/portal/auth/sign-in"
+          id="login-form"
+          novalidate
+          data-turnstile-enabled={turnstileSiteKey ? 'true' : 'false'}
+        >
           <!-- Name search -->
           <div class="mb-4">
             <label for="search_name" class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -84,6 +109,21 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
             >Ganti</button>
           </div>
 
+          {turnstileSiteKey && (
+            <div class="mb-4 flex justify-center">
+              <div
+                id="turnstile-widget"
+                class="cf-turnstile"
+                data-sitekey={turnstileSiteKey}
+                data-theme="light"
+                data-size="flexible"
+                data-callback="absenkokTurnstileSuccess"
+                data-expired-callback="absenkokTurnstileExpired"
+                data-error-callback="absenkokTurnstileError"
+              ></div>
+            </div>
+          )}
+
           <button
             type="submit"
             id="submit-btn"
@@ -94,6 +134,15 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
             <span id="btn-loading" class="hidden">Memproses…</span>
           </button>
         </form>
+
+        {turnstileSiteKey && (
+          <script
+            is:inline
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            async
+            defer
+          ></script>
+        )}
 
       </div>
     </div>
@@ -121,6 +170,71 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
     // Elements missing — bail out gracefully.
     throw new Error('Portal login: required DOM elements missing.');
   }
+
+  // ── Turnstile coordination ──────────────────────────────────────────────────
+  // Auto-submit on card click must wait until the Turnstile widget produced a
+  // token, otherwise the server rejects the form with `?error=turnstile`.
+  // The widget's `data-callback` fires `absenkokTurnstileSuccess` on success;
+  // until then `selectEmployee` stages a deferred submit.
+  const turnstileEnabled = loginForm?.dataset.turnstileEnabled === 'true';
+  let turnstileReady = false;
+  let pendingSubmit = false;
+
+  // Cloudflare's API exposes `window.turnstile`. Declare a minimal shape.
+  interface TurnstileApi {
+    getResponse: (widget?: string) => string | undefined;
+  }
+  const w = window as Window & { turnstile?: TurnstileApi };
+
+  function isTurnstileTokenReady(): boolean {
+    if (!turnstileEnabled) return true;
+    if (turnstileReady) return true;
+    // Fallback: query the API directly in case the data-callback hasn't fired
+    // yet but the token is already in the hidden input.
+    const token = w.turnstile?.getResponse?.();
+    if (typeof token === 'string' && token.length > 0) {
+      turnstileReady = true;
+      return true;
+    }
+    return false;
+  }
+
+  function showLoadingState() {
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    if (btnText) btnText.classList.add('hidden');
+    if (btnLoading) btnLoading.classList.remove('hidden');
+    submitBtn!.disabled = true;
+  }
+
+  function clearLoadingState() {
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
+    if (btnText) btnText.classList.remove('hidden');
+    if (btnLoading) btnLoading.classList.add('hidden');
+    submitBtn!.disabled = false;
+  }
+
+  // Public callbacks registered via the widget's data-* attributes.
+  (window as unknown as Record<string, unknown>).absenkokTurnstileSuccess = () => {
+    turnstileReady = true;
+    if (pendingSubmit) {
+      pendingSubmit = false;
+      loginForm?.submit();
+    }
+  };
+  (window as unknown as Record<string, unknown>).absenkokTurnstileExpired = () => {
+    turnstileReady = false;
+  };
+  (window as unknown as Record<string, unknown>).absenkokTurnstileError = () => {
+    turnstileReady = false;
+    pendingSubmit = false;
+    clearLoadingState();
+    if (searchStatus) {
+      searchStatus.textContent = 'Verifikasi keamanan gagal. Refresh halaman dan coba lagi.';
+      searchStatus.classList.remove('hidden');
+    }
+  };
 
   // In-memory prefix cache: { normalizedQuery -> result array }
   const cache = new Map<string, EmployeeCard[]>();
@@ -227,13 +341,19 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
     chooser!.classList.add('hidden');
     if (searchStatus) searchStatus.classList.add('hidden');
 
-    // Auto-submit — passwordless login, no extra step needed.
-    const btnText = document.getElementById('btn-text');
-    const btnLoading = document.getElementById('btn-loading');
-    if (btnText) btnText.classList.add('hidden');
-    if (btnLoading) btnLoading.classList.remove('hidden');
-    submitBtn!.disabled = true;
-    loginForm?.submit();
+    // Auto-submit — passwordless login. When Turnstile is enabled, submission
+    // must wait until the widget produced a token; otherwise the server
+    // rejects with `?error=turnstile`.
+    showLoadingState();
+
+    if (isTurnstileTokenReady()) {
+      loginForm?.submit();
+    } else {
+      // Stage submission and wait for `absenkokTurnstileSuccess` callback.
+      pendingSubmit = true;
+      const btnLoading = document.getElementById('btn-loading');
+      if (btnLoading) btnLoading.textContent = 'Memverifikasi…';
+    }
   }
 
   function clearSelection(): void {
@@ -315,17 +435,24 @@ const signedOut = Astro.url.searchParams.get('signed_out') === '1';
     debounceTimer = setTimeout(() => fetchResults(query), 250);
   });
 
-  // Prevent form submission when no employee is selected.
+  // Prevent form submission when no employee is selected, or when Turnstile
+  // is enabled but hasn't yet produced a token.
   loginForm?.addEventListener('submit', (e) => {
     if (!employeeIdInput!.value) {
       e.preventDefault();
       searchInput!.focus();
+      return;
     }
 
-    const btnText = document.getElementById('btn-text');
-    const btnLoading = document.getElementById('btn-loading');
-    if (btnText) btnText.classList.add('hidden');
-    if (btnLoading) btnLoading.classList.remove('hidden');
-    submitBtn!.disabled = true;
+    if (!isTurnstileTokenReady()) {
+      e.preventDefault();
+      pendingSubmit = true;
+      showLoadingState();
+      const btnLoading = document.getElementById('btn-loading');
+      if (btnLoading) btnLoading.textContent = 'Memverifikasi…';
+      return;
+    }
+
+    showLoadingState();
   });
 </script>

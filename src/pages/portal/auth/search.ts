@@ -8,6 +8,13 @@ import {
   SEARCH_MAX_RESULTS,
   SEARCH_MIN_LENGTH,
 } from '../../../lib/portal/auth';
+import { buildRateLimitJsonResponse, checkRateLimit } from '../../../lib/portal/rate-limit';
+
+// 20 search requests per minute per IP. Sized for ~100 employees doing
+// occasional name lookups; well above any single-user typing speed but
+// low enough to make name+UUID enumeration impractical.
+const SEARCH_RATE_LIMIT_MAX = 20;
+const SEARCH_RATE_LIMIT_WINDOW_SECONDS = 60;
 
 export interface EmployeeSearchResult {
   employee_id: string;
@@ -60,6 +67,7 @@ function mapEmployeeSearchResult(row: unknown): EmployeeSearchResult | null {
 }
 
 export const GET: APIRoute = async ({ request }) => {
+  // Cheap guard first: bad input shape should not consume rate-limit budget.
   const url = new URL(request.url);
   const rawQuery = url.searchParams.get('q') ?? '';
   const normalized = normalizeSearchText(rawQuery);
@@ -69,6 +77,16 @@ export const GET: APIRoute = async ({ request }) => {
     normalized.length > SEARCH_MAX_QUERY_LENGTH
   ) {
     return emptyResultsResponse();
+  }
+
+  const rateLimit = await checkRateLimit(
+    request,
+    'portal_search',
+    SEARCH_RATE_LIMIT_MAX,
+    SEARCH_RATE_LIMIT_WINDOW_SECONDS,
+  );
+  if (rateLimit && !rateLimit.allowed) {
+    return buildRateLimitJsonResponse(rateLimit.retry_after);
   }
 
   try {
