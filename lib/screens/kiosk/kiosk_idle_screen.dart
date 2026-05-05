@@ -474,25 +474,33 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       debugPrint(
           '[MoveEmployee] Moving ${employee.name} (${employee.id}) to outlet $newOutletId');
 
-      // Gunanon_key untuk bypass RLS jika perlu, atau pastikan RLS allow update
-      final result = await SupabaseClientFactory.admin
-          .from('employees')
-          .update({
-            'home_outlet_id': newOutletId,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', employee.id)
-          .select(); // Tambah select untuk confirm update berhasil
+      // Use the SECURITY DEFINER RPC `move_employee_to_outlet` instead of a
+      // direct table UPDATE. Direct updates require relying on the anon role
+      // having broad UPDATE permission on `employees`, which the kiosk APK
+      // anon key would expose to anyone who extracts it. The RPC validates
+      // the move server-side and returns a structured `{ success, error }`
+      // payload.
+      final response = await SupabaseClientFactory.admin.rpc(
+        'move_employee_to_outlet',
+        params: {
+          'p_employee_id': employee.id,
+          'p_new_outlet_id': newOutletId,
+        },
+      );
 
-      debugPrint('[MoveEmployee] Update result: $result');
+      debugPrint('[MoveEmployee] RPC response: $response');
 
-      if (result.isEmpty) {
-        debugPrint('[MoveEmployee] WARNING: No rows updated!');
-        return false;
+      if (response is Map<String, dynamic>) {
+        final success = response['success'] == true;
+        if (!success) {
+          debugPrint('[MoveEmployee] FAILED: ${response['error']}');
+        }
+        return success;
       }
 
-      debugPrint('[MoveEmployee] Success! Rows updated: ${result.length}');
-      return true;
+      // Older RPC variants may have returned a non-map success indicator.
+      // Treat any non-null, non-error response as success to stay compatible.
+      return response != null;
     } catch (e, stack) {
       debugPrint('[MoveEmployee] ERROR: $e');
       debugPrint('[MoveEmployee] Stack: $stack');
