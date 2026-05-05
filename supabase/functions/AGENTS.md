@@ -12,7 +12,7 @@ Supabase Edge Functions — Deno runtime serverless functions for privileged bac
 | Directory | Role |
 |-----------|------|
 | `clear-must-change-password/` | Clears the password-change flag after an employee's first login |
-| `create-admin-user/` | Provisions an admin auth user with `app_role: admin` metadata |
+| `create-admin-user/` | Provisions scoped admin auth users with `app_role: kepala_gerai` or `area_supervisor` metadata |
 | `provision-employee-portal-user/` | Creates employee portal credentials (email/password from employee data) |
 
 ## For AI Agents

@@ -140,7 +140,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       final user = res.session?.user;
       final claims = AdminSessionClaims.fromUser(user);
 
-      // Hanya admin dan kepala_gerai yang boleh masuk dashboard
+      // Hanya admin, kepala_gerai, dan area_supervisor yang boleh masuk dashboard
       if (claims == null) {
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
@@ -156,8 +156,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
 
       // First-login: force password change for accounts flagged with
       // must_change_password in app_metadata (set by create-admin-user).
-      final mustChange =
-          user?.appMetadata['must_change_password'] == true;
+      final mustChange = user?.appMetadata['must_change_password'] == true;
 
       // Apply claims WITH the mustChangePassword flag so GoRouter handles
       // the redirect declaratively (no race with onAuthStateChange listener).

@@ -22,11 +22,12 @@ BEGIN
     RAISE EXCEPTION '❌ User dengan email "%" tidak ditemukan di auth.users. Buat akun dulu di Supabase Auth Dashboard.', v_email;
   END IF;
 
-  -- 2. Update app metadata — set admin, hapus managed_outlet_id jika ada
+  -- 2. Update app metadata — set admin, hapus scope outlet jika ada
   UPDATE auth.users
   SET raw_app_meta_data = (COALESCE(raw_app_meta_data, '{}'::jsonb)
     || '{"app_role": "admin"}'::jsonb)
     - 'managed_outlet_id'
+    - 'managed_outlet_ids'
   WHERE id = v_user_id;
 
   RAISE NOTICE '✅ BERHASIL! % sekarang Admin (akses penuh)', v_email;

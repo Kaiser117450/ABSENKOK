@@ -17,12 +17,19 @@ class AppState {
   /// true jika user login dengan role 'kepala_gerai'
   final bool isKepalaGerai;
 
+  /// true jika user login dengan role 'area_supervisor'
+  final bool isAreaSupervisor;
+
   /// true when the user must change their password before accessing dashboard.
   /// Set from app_metadata.must_change_password on first login.
   final bool mustChangePassword;
 
-  /// outlet_id yang dikelola oleh kepala_gerai (null untuk admin / kiosk)
+  /// outlet_id utama yang dikelola role scoped (null untuk admin / kiosk)
   final String? managedOutletId;
+
+  /// semua outlet yang boleh diakses role scoped.
+  final List<String> managedOutletIds;
+
   final bool isLoading;
   final Employee? detectedEmployee; // Set after NFC tap on kiosk idle screen
   final int pendingCount; // Unsynced SQLite records count
@@ -37,8 +44,10 @@ class AppState {
     this.kioskSession,
     this.isAdmin = false,
     this.isKepalaGerai = false,
+    this.isAreaSupervisor = false,
     this.mustChangePassword = false,
     this.managedOutletId,
+    this.managedOutletIds = const <String>[],
     this.isLoading = true,
     this.detectedEmployee,
     this.pendingCount = 0,
@@ -50,17 +59,51 @@ class AppState {
     this.hasBiometricHardware = false,
   });
 
-  /// true jika user sedang login sebagai admin atau kepala gerai
-  bool get isAnyAdmin => isAdmin || isKepalaGerai;
+  /// true jika user sedang login sebagai admin, kepala gerai, atau area supervisor
+  bool get isAnyAdmin => isAdmin || isKepalaGerai || isAreaSupervisor;
+
+  bool get isScopedOutletAdmin => isKepalaGerai || isAreaSupervisor;
+
+  List<String> get scopedOutletIds {
+    if (managedOutletIds.isNotEmpty) {
+      return managedOutletIds;
+    }
+    final outletId = managedOutletId;
+    if (outletId == null) {
+      return const <String>[];
+    }
+    return <String>[outletId];
+  }
+
+  String? get primaryScopedOutletId {
+    if (managedOutletId != null) {
+      return managedOutletId;
+    }
+    return scopedOutletIds.firstOrNull;
+  }
+
+  bool canAccessOutlet(String? outletId) {
+    if (isAdmin) {
+      return true;
+    }
+    final normalizedOutletId = outletId?.trim();
+    if (normalizedOutletId == null || normalizedOutletId.isEmpty) {
+      return false;
+    }
+    return scopedOutletIds.contains(normalizedOutletId);
+  }
 
   AppState copyWith({
     KioskSession? kioskSession,
     bool clearKiosk = false,
     bool? isAdmin,
     bool? isKepalaGerai,
+    bool? isAreaSupervisor,
     bool? mustChangePassword,
     String? managedOutletId,
+    List<String>? managedOutletIds,
     bool clearManagedOutlet = false,
+    bool clearManagedOutlets = false,
     bool? isLoading,
     Employee? detectedEmployee,
     bool clearEmployee = false,
@@ -77,10 +120,14 @@ class AppState {
         kioskSession: clearKiosk ? null : (kioskSession ?? this.kioskSession),
         isAdmin: isAdmin ?? this.isAdmin,
         isKepalaGerai: isKepalaGerai ?? this.isKepalaGerai,
+        isAreaSupervisor: isAreaSupervisor ?? this.isAreaSupervisor,
         mustChangePassword: mustChangePassword ?? this.mustChangePassword,
         managedOutletId: clearManagedOutlet
             ? null
             : (managedOutletId ?? this.managedOutletId),
+        managedOutletIds: clearManagedOutlets
+            ? const <String>[]
+            : (managedOutletIds ?? this.managedOutletIds),
         isLoading: isLoading ?? this.isLoading,
         detectedEmployee:
             clearEmployee ? null : (detectedEmployee ?? this.detectedEmployee),
@@ -169,12 +216,15 @@ class AppNotifier extends StateNotifier<AppState> {
     state = state.copyWith(
       isAdmin: false,
       isKepalaGerai: false,
+      isAreaSupervisor: false,
       mustChangePassword: false,
       clearManagedOutlet: true,
+      clearManagedOutlets: true,
     );
   }
 
-  void applyAdminSessionClaims(AdminSessionClaims? claims, {bool mustChangePassword = false}) {
+  void applyAdminSessionClaims(AdminSessionClaims? claims,
+      {bool mustChangePassword = false}) {
     if (claims == null) {
       clearAdminSessionMode();
       return;
@@ -184,17 +234,21 @@ class AppNotifier extends StateNotifier<AppState> {
       state = state.copyWith(
         isAdmin: true,
         isKepalaGerai: false,
+        isAreaSupervisor: false,
         mustChangePassword: mustChangePassword,
         clearManagedOutlet: true,
+        clearManagedOutlets: true,
       );
       return;
     }
 
     state = state.copyWith(
       isAdmin: false,
-      isKepalaGerai: true,
+      isKepalaGerai: claims.isKepalaGerai,
+      isAreaSupervisor: claims.isAreaSupervisor,
       mustChangePassword: mustChangePassword,
       managedOutletId: claims.managedOutletId,
+      managedOutletIds: claims.effectiveManagedOutletIds,
     );
   }
 
@@ -202,8 +256,11 @@ class AppNotifier extends StateNotifier<AppState> {
   /// Panggil dengan outletId=null untuk clear (saat logout).
   void setKepalaGeraiMode(String? outletId) => state = state.copyWith(
         isKepalaGerai: outletId != null,
+        isAreaSupervisor: false,
         managedOutletId: outletId,
+        managedOutletIds: outletId == null ? null : <String>[outletId],
         clearManagedOutlet: outletId == null,
+        clearManagedOutlets: outletId == null,
       );
 
   void setDetectedEmployee(Employee? emp) => state = emp == null

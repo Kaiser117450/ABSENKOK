@@ -29,8 +29,8 @@ import 'package:absensi_enakko_flutter/widgets/kiosk_device_card.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   /// Optional outlet pre-selection for full admin drilldown from
-  /// [CentralDashboardScreen]. Has no effect for [kepala_gerai] whose outlet
-  /// is locked to [AppState.managedOutletId].
+  /// [CentralDashboardScreen]. Scoped outlet roles can only preselect one of
+  /// their managed outlets.
   final String? initialOutletId;
 
   const AdminDashboardScreen({super.key, this.initialOutletId});
@@ -72,12 +72,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-set outlet filter untuk kepala_gerai sebelum load data
+    // Auto-set outlet filter untuk role scoped sebelum load data.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = ref.read(appProvider);
-      if (appState.isKepalaGerai && appState.managedOutletId != null) {
-        // kepala_gerai is always locked to their managed outlet
-        setState(() => _selectedOutletId = appState.managedOutletId);
+      if (appState.isScopedOutletAdmin) {
+        final initialScopedOutletId =
+            appState.canAccessOutlet(widget.initialOutletId)
+                ? widget.initialOutletId
+                : appState.primaryScopedOutletId;
+        setState(() => _selectedOutletId = initialScopedOutletId);
       } else if (appState.isAdmin && widget.initialOutletId != null) {
         // Full admin arriving from CentralDashboardScreen drilldown
         setState(() => _selectedOutletId = widget.initialOutletId);
@@ -99,18 +102,38 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Future<void> _loadOutlets() async {
     try {
-      final data = await SupabaseClientFactory.admin
+      final appState = ref.read(appProvider);
+      if (appState.isScopedOutletAdmin && appState.scopedOutletIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _outlets = const <Outlet>[];
+            _loading = false;
+          });
+        }
+        return;
+      }
+
+      var query = SupabaseClientFactory.admin
           .from('outlets')
           .select('*')
-          .eq('is_active', true)
-          .order('name');
+          .eq('is_active', true);
+      if (appState.isScopedOutletAdmin) {
+        query = query.inFilter('id', appState.scopedOutletIds);
+      }
+      final data = await query.order('name');
 
       final outlets = (data as List)
           .map((e) => Outlet.fromJson(e as Map<String, dynamic>))
           .toList();
 
       if (mounted) {
-        setState(() => _outlets = outlets);
+        setState(() {
+          _outlets = outlets;
+          if (appState.isScopedOutletAdmin &&
+              !appState.canAccessOutlet(_selectedOutletId)) {
+            _selectedOutletId = outlets.firstOrNull?.id;
+          }
+        });
         await Future.wait([
           _loadLogs(),
           _loadScheduleGapNotices(),
@@ -131,12 +154,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Future<void> _loadKioskDevices() async {
     try {
-      final data = await SupabaseClientFactory.admin
+      final appState = ref.read(appProvider);
+      if (appState.isScopedOutletAdmin && appState.scopedOutletIds.isEmpty) {
+        if (mounted) setState(() => _kioskDevices = const <KioskDevice>[]);
+        return;
+      }
+
+      var query = SupabaseClientFactory.admin
           .from('kiosk_devices')
           .select('*')
-          .eq('is_active', true)
-          .order('outlet_id')
-          .order('created_at');
+          .eq('is_active', true);
+      if (appState.isScopedOutletAdmin) {
+        query = query.inFilter('outlet_id', appState.scopedOutletIds);
+      }
+      final data = await query.order('outlet_id').order('created_at');
       final devices = <KioskDevice>[];
       for (final rawRow in data as List) {
         try {
@@ -150,8 +181,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       }
       // Auto-archive devices yang offline > 4 hari
       await _autoArchiveStaleDevices(devices);
-      final activeDevices =
-          devices.where((d) => !d.isStale).toList();
+      final activeDevices = devices.where((d) => !d.isStale).toList();
       if (mounted) {
         setState(() {
           _kioskDevices = activeDevices;
@@ -299,9 +329,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           .from('employees')
           .select('id')
           .eq('is_active', true);
-      // Kepala gerai: hitung hanya karyawan di outletnya
-      if (appState.isKepalaGerai && appState.managedOutletId != null) {
-        q = q.eq('home_outlet_id', appState.managedOutletId!);
+      if (appState.isScopedOutletAdmin) {
+        if (appState.scopedOutletIds.isEmpty) return;
+        q = q.inFilter('home_outlet_id', appState.scopedOutletIds);
       }
       await q;
     } catch (_) {}
@@ -330,8 +360,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           .gte('scanned_at', startOfDay)
           .lte('scanned_at', endOfDay);
 
-      if (_selectedOutletId != null) {
-        q = q.eq('scan_outlet_id', _selectedOutletId!);
+      final activeOutletId = _activeOutletFilterId();
+      if (activeOutletId != null) {
+        q = q.eq('scan_outlet_id', activeOutletId);
       }
 
       final data = await q.order('scanned_at', ascending: false).limit(200);
@@ -360,7 +391,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Future<void> _loadOpenShifts() async {
     if (!supabaseReady) return;
     try {
-      final appState = ref.read(appProvider);
       // 32h window catches overnight shifts from yesterday evening
       final cutoff = DateTime.now()
           .subtract(const Duration(hours: 32))
@@ -373,12 +403,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               'employee_id, type, scanned_at, scan_outlet_id, employees(id, name, photo_url, active_badge_id)')
           .gte('scanned_at', cutoff);
 
-      // Kepala gerai: strictly limited to managed outlet.
+      // Scoped roles: strictly limited to one selected managed outlet.
       // Full admin: follow selected outlet filter if any.
-      if (appState.isKepalaGerai && appState.managedOutletId != null) {
-        q = q.eq('scan_outlet_id', appState.managedOutletId!);
-      } else if (_selectedOutletId != null) {
-        q = q.eq('scan_outlet_id', _selectedOutletId!);
+      final activeOutletId = _activeOutletFilterId();
+      if (activeOutletId != null) {
+        q = q.eq('scan_outlet_id', activeOutletId);
       }
 
       final data = await q.order('scanned_at', ascending: true);
@@ -544,7 +573,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   Future<void> _manualPulang(_OpenShift shift) async {
     final appState = ref.read(appProvider);
-    if (appState.isKepalaGerai && appState.managedOutletId != shift.outletId) {
+    if (appState.isScopedOutletAdmin &&
+        !appState.canAccessOutlet(shift.outletId)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -811,7 +841,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Hero Header ───────────────────────────────────────────────────────────
 
   Widget _buildHeroHeader() {
-    final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
+    final appState = ref.watch(appProvider);
+    final isFullAdmin = appState.isAdmin;
+    final roleTitle = appState.isAreaSupervisor
+        ? 'Area Supervisor'
+        : appState.isKepalaGerai
+            ? 'Kepala Gerai'
+            : 'Admin Enakko';
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -865,9 +901,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            ref.watch(appProvider).isKepalaGerai
-                                ? 'Kepala Gerai'
-                                : 'Admin Enakko',
+                            roleTitle,
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -1237,7 +1271,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Quick Actions ─────────────────────────────────────────────────────────
 
   Widget _buildQuickActions() {
-    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final isScopedAdmin = ref.watch(appProvider).isScopedOutletAdmin;
     final hasResolvedScheduleGapOutlet =
         _resolveActiveDashboardOutletContext() != null;
     final showScheduleGapAction =
@@ -1248,7 +1282,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            // Tombol "Jadwal Shift" - tersedia untuk Admin & Kepala Gerai
+            // Tombol "Jadwal Shift" - tersedia untuk role operasional
             _QuickActionBtn(
               icon: Icons.calendar_month_rounded,
               label: 'Jadwal',
@@ -1258,7 +1292,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
             const SizedBox(width: 10),
             // Tombol hanya untuk admin penuh
-            if (!isKepalaGerai) ...[
+            if (!isScopedAdmin) ...[
               _QuickActionBtn(
                 icon: Icons.add_business_rounded,
                 label: 'Gerai',
@@ -1380,10 +1414,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  ({String outletId, Outlet outlet})? _resolveActiveDashboardOutletContext() {
+  String? _activeOutletFilterId() {
     final appState = ref.read(appProvider);
-    final outletId =
-        appState.isKepalaGerai ? appState.managedOutletId : _selectedOutletId;
+    if (!appState.isScopedOutletAdmin) {
+      return _selectedOutletId;
+    }
+
+    if (appState.canAccessOutlet(_selectedOutletId)) {
+      return _selectedOutletId;
+    }
+    return appState.primaryScopedOutletId;
+  }
+
+  ({String outletId, Outlet outlet})? _resolveActiveDashboardOutletContext() {
+    final outletId = _activeOutletFilterId();
     if (outletId == null || outletId.trim().isEmpty) {
       return null;
     }
@@ -1514,10 +1558,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   // ─── Outlet Filter ─────────────────────────────────────────────────────────
 
   Widget _buildOutletFilter() {
-    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final appState = ref.watch(appProvider);
 
     // Kepala gerai: tampilkan nama outlet sebagai label statis (tidak bisa ganti)
-    if (isKepalaGerai) {
+    if (appState.isKepalaGerai) {
       final outletName = _outlets
               .where((o) => o.id == _selectedOutletId)
               .map((o) => o.name)
@@ -1567,7 +1611,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       );
     }
 
-    // Admin: chip filter biasa
+    // Admin penuh bisa melihat semua; area supervisor hanya memilih gerai assigned.
+    final showAllChip = appState.isAdmin;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1591,14 +1636,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             children: [
-              _FilterChip(
-                label: 'Semua',
-                selected: _selectedOutletId == null,
-                onTap: () {
-                  setState(() => _selectedOutletId = null);
-                  _refreshDashboardData();
-                },
-              ),
+              if (showAllChip)
+                _FilterChip(
+                  label: 'Semua',
+                  selected: _selectedOutletId == null,
+                  onTap: () {
+                    setState(() => _selectedOutletId = null);
+                    _refreshDashboardData();
+                  },
+                ),
               ..._outlets.map((o) => Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: _FilterChip(

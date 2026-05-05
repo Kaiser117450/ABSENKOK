@@ -27,7 +27,7 @@ class AdminShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appState = ref.watch(appProvider);
-    final isKepalaGerai = appState.isKepalaGerai;
+    final isScopedAdmin = appState.isScopedOutletAdmin;
     final idx = _selectedIndex(context);
 
     return Scaffold(
@@ -35,7 +35,11 @@ class AdminShell extends ConsumerWidget {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: _EnakkoAppBar(
-          subtitle: isKepalaGerai ? 'KEPALA GERAI' : 'ADMIN DASHBOARD',
+          subtitle: appState.isAreaSupervisor
+              ? 'AREA SUPERVISOR'
+              : appState.isKepalaGerai
+                  ? 'KEPALA GERAI'
+                  : 'ADMIN DASHBOARD',
           onLogout: () => _confirmLogout(context, ref),
           onSettings: () => _showSettingsDialog(context, ref),
         ),
@@ -43,7 +47,7 @@ class AdminShell extends ConsumerWidget {
       body: child,
       bottomNavigationBar: _EnakkoBottomNav(
         currentIndex: idx,
-        showOutlets: !isKepalaGerai, // kepala_gerai tidak bisa kelola gerai
+        showOutlets: !isScopedAdmin,
         onTap: (i) {
           switch (i) {
             case 0:
@@ -105,8 +109,7 @@ class AdminShell extends ConsumerWidget {
               Navigator.pop(ctx);
               // Just clear admin mode — keep Supabase session alive
               // so biometric login can re-authenticate next time.
-              ref.read(appProvider.notifier).setAdminMode(false);
-              ref.read(appProvider.notifier).setKepalaGeraiMode(null);
+              ref.read(appProvider.notifier).clearAdminSessionMode();
             },
             child: const Text('Keluar'),
           ),

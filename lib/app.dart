@@ -63,12 +63,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/setup'; // Force wait at setup screen
       }
       final isAdmin = appState.isAdmin;
-      final isKepalaGerai = appState.isKepalaGerai;
+      final isScopedAdmin = appState.isScopedOutletAdmin;
+      final isAnyAdmin = appState.isAnyAdmin;
       final hasKiosk = appState.kioskSession != null;
       final mustChangePassword = appState.mustChangePassword;
 
       // Force password change: if flagged, only allow /admin/change-password
-      if (mustChangePassword && (isAdmin || isKepalaGerai)) {
+      if (mustChangePassword && isAnyAdmin) {
         if (loc == '/admin/change-password') return null;
         return '/admin/change-password';
       }
@@ -77,22 +78,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       // "Admin" button anytime), but redirect already-authenticated users
       // to dashboard (e.g. after biometric login sets admin mode).
       if (loc == '/admin/login') {
-        if (isAdmin || isKepalaGerai) return '/admin/dashboard';
+        if (isAnyAdmin) return '/admin/dashboard';
         return null;
       }
 
       // /admin/change-password: only accessible when mustChangePassword is true.
       // If user navigates here without the flag, redirect to dashboard or login.
       if (loc == '/admin/change-password') {
-        if (isAdmin || isKepalaGerai) return '/admin/dashboard';
+        if (isAnyAdmin) return '/admin/dashboard';
         return '/admin/login';
       }
 
       if (isAdmin) {
         // Admin penuh → akses semua halaman admin
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
-      } else if (isKepalaGerai) {
-        // Kepala gerai → akses dashboard/karyawan/laporan saja,
+      } else if (isScopedAdmin) {
+        // Kepala gerai / area supervisor → akses dashboard/karyawan/laporan saja,
         // TIDAK bisa ke halaman admin khusus (outlet, CSV import)
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
         if (loc.startsWith('/admin/network-summary')) return '/admin/dashboard';
@@ -102,6 +103,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/admin/dashboard';
         }
         if (loc.startsWith('/admin/create-account')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/chart-dashboard')) {
+          final outletId = state.uri.queryParameters['outletId'];
+          if (!appState.canAccessOutlet(outletId)) {
+            return '/admin/dashboard';
+          }
+        }
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
         if (!loc.startsWith('/kiosk')) return '/kiosk';

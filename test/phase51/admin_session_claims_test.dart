@@ -11,7 +11,9 @@ void main() {
       expect(claims, isNotNull);
       expect(claims!.isAdmin, isTrue);
       expect(claims.isKepalaGerai, isFalse);
+      expect(claims.isAreaSupervisor, isFalse);
       expect(claims.managedOutletId, isNull);
+      expect(claims.effectiveManagedOutletIds, isEmpty);
     });
 
     test('resolves kepala gerai only with managed outlet id', () {
@@ -25,7 +27,38 @@ void main() {
       expect(claims, isNotNull);
       expect(claims!.isAdmin, isFalse);
       expect(claims.isKepalaGerai, isTrue);
+      expect(claims.isAreaSupervisor, isFalse);
       expect(claims.managedOutletId, 'outlet-1');
+      expect(claims.effectiveManagedOutletIds, ['outlet-1']);
+    });
+
+    test('resolves area supervisor with multiple managed outlet ids', () {
+      final claims = AdminSessionClaims.fromMetadata(
+        appMetadata: const {
+          'app_role': 'area_supervisor',
+          'managed_outlet_ids': ['outlet-1', 'outlet-2', 'outlet-1'],
+        },
+      );
+
+      expect(claims, isNotNull);
+      expect(claims!.isAdmin, isFalse);
+      expect(claims.isKepalaGerai, isFalse);
+      expect(claims.isAreaSupervisor, isTrue);
+      expect(claims.managedOutletId, 'outlet-1');
+      expect(claims.effectiveManagedOutletIds, ['outlet-1', 'outlet-2']);
+    });
+
+    test('resolves area supervisor from legacy single outlet id fallback', () {
+      final claims = AdminSessionClaims.fromMetadata(
+        appMetadata: const {
+          'app_role': 'area_supervisor',
+          'managed_outlet_id': 'outlet-1',
+        },
+      );
+
+      expect(claims, isNotNull);
+      expect(claims!.isAreaSupervisor, isTrue);
+      expect(claims.effectiveManagedOutletIds, ['outlet-1']);
     });
 
     test('rejects kepala gerai without managed outlet id', () {
@@ -41,6 +74,25 @@ void main() {
           appMetadata: const {
             'app_role': 'kepala_gerai',
             'managed_outlet_id': '',
+          },
+        ),
+        isNull,
+      );
+    });
+
+    test('rejects area supervisor without managed outlets', () {
+      expect(
+        AdminSessionClaims.fromMetadata(
+          appMetadata: const {'app_role': 'area_supervisor'},
+        ),
+        isNull,
+      );
+
+      expect(
+        AdminSessionClaims.fromMetadata(
+          appMetadata: const {
+            'app_role': 'area_supervisor',
+            'managed_outlet_ids': [],
           },
         ),
         isNull,

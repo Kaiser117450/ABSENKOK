@@ -3,12 +3,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 enum AdminSessionRole {
   admin,
   kepalaGerai,
+  areaSupervisor,
 }
 
 class AdminSessionClaims {
   const AdminSessionClaims._({
     required this.role,
     this.managedOutletId,
+    this.managedOutletIds = const <String>[],
   });
 
   const AdminSessionClaims.admin() : this._(role: AdminSessionRole.admin);
@@ -17,13 +19,25 @@ class AdminSessionClaims {
       : this._(
           role: AdminSessionRole.kepalaGerai,
           managedOutletId: managedOutletId,
+          managedOutletIds: const <String>[],
+        );
+
+  AdminSessionClaims.areaSupervisor(List<String> managedOutletIds)
+      : this._(
+          role: AdminSessionRole.areaSupervisor,
+          managedOutletId:
+              managedOutletIds.isEmpty ? null : managedOutletIds.first,
+          managedOutletIds: List.unmodifiable(managedOutletIds),
         );
 
   final AdminSessionRole role;
   final String? managedOutletId;
+  final List<String> managedOutletIds;
 
   bool get isAdmin => role == AdminSessionRole.admin;
   bool get isKepalaGerai => role == AdminSessionRole.kepalaGerai;
+  bool get isAreaSupervisor => role == AdminSessionRole.areaSupervisor;
+  bool get isScopedOutletAdmin => isKepalaGerai || isAreaSupervisor;
 
   static AdminSessionClaims? fromUser(User? user) {
     return fromMetadata(
@@ -48,9 +62,35 @@ class AdminSessionClaims {
           return null;
         }
         return AdminSessionClaims.kepalaGerai(outletId);
+      case 'area_supervisor':
+        final outletIds = _readNonEmptyStringList(
+          appMetadata?['managed_outlet_ids'],
+        );
+        final legacyOutletId = _readNonEmptyString(
+          appMetadata?['managed_outlet_id'],
+        );
+        final scopedOutletIds = <String>{
+          ...outletIds,
+          if (legacyOutletId != null) legacyOutletId,
+        }.toList(growable: false);
+        if (scopedOutletIds.isEmpty) {
+          return null;
+        }
+        return AdminSessionClaims.areaSupervisor(scopedOutletIds);
       default:
         return null;
     }
+  }
+
+  List<String> get effectiveManagedOutletIds {
+    if (managedOutletIds.isNotEmpty) {
+      return managedOutletIds;
+    }
+    final outletId = managedOutletId;
+    if (outletId == null) {
+      return const <String>[];
+    }
+    return <String>[outletId];
   }
 
   static String? _readNonEmptyString(Object? value) {
@@ -64,5 +104,27 @@ class AdminSessionClaims {
     }
 
     return normalized;
+  }
+
+  static List<String> _readNonEmptyStringList(Object? value) {
+    if (value is List) {
+      return value
+          .map(_readNonEmptyString)
+          .nonNulls
+          .toSet()
+          .toList(growable: false);
+    }
+
+    final single = _readNonEmptyString(value);
+    if (single == null) {
+      return const <String>[];
+    }
+
+    return single
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
   }
 }

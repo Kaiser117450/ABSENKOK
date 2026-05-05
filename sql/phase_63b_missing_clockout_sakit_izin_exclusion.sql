@@ -32,13 +32,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to read missing clock-outs';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to read missing clock-outs';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only read their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only read assigned outlets';
   END IF;
 
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::JSON)

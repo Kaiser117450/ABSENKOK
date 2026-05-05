@@ -4,6 +4,56 @@
 -- Closes null-claim privilege bypasses in dashboard and analytics role guards.
 -- ============================================================
 
+CREATE OR REPLACE FUNCTION public.current_admin_can_access_outlet(
+  p_outlet_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role TEXT := NULLIF(BTRIM(auth.jwt() -> 'app_metadata' ->> 'app_role'), '');
+  v_metadata JSONB := COALESCE(auth.jwt() -> 'app_metadata', '{}'::JSONB);
+  v_legacy_outlet_text TEXT :=
+      NULLIF(BTRIM(v_metadata ->> 'managed_outlet_id'), '');
+  v_candidate TEXT;
+  v_allowed_outlets UUID[] := ARRAY[]::UUID[];
+BEGIN
+  IF p_outlet_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  IF v_role = 'admin' THEN
+    RETURN TRUE;
+  END IF;
+
+  IF v_role NOT IN ('kepala_gerai', 'area_supervisor') THEN
+    RETURN FALSE;
+  END IF;
+
+  IF v_legacy_outlet_text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
+    v_allowed_outlets := array_append(v_allowed_outlets, v_legacy_outlet_text::UUID);
+  END IF;
+
+  IF jsonb_typeof(v_metadata -> 'managed_outlet_ids') = 'array' THEN
+    FOR v_candidate IN
+      SELECT jsonb_array_elements_text(v_metadata -> 'managed_outlet_ids')
+    LOOP
+      IF v_candidate ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
+        v_allowed_outlets := array_append(v_allowed_outlets, v_candidate::UUID);
+      END IF;
+    END LOOP;
+  END IF;
+
+  RETURN p_outlet_id = ANY(v_allowed_outlets);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.current_admin_can_access_outlet(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_admin_can_access_outlet(UUID) TO authenticated;
+
 -- 1. get_attendance_rates: Returns attendance percentage for an outlet
 -- in a date range.
 CREATE OR REPLACE FUNCTION get_attendance_rates(
@@ -37,13 +87,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to read dashboard aggregates';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to read dashboard aggregates';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only read their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only read assigned outlets';
   END IF;
 
   SELECT COUNT(*)
@@ -110,13 +160,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to read dashboard trends';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to read dashboard trends';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only read their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only read assigned outlets';
   END IF;
 
   SELECT COALESCE(json_agg(row_to_json(t) ORDER BY t.date), '[]'::JSON)
@@ -260,13 +310,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to update streaks';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to update streaks';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM v_employee_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only update streaks for their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(v_employee_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only update streaks for assigned outlets';
   END IF;
 
   WITH logical_days AS (
@@ -360,13 +410,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to read overtime flags';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to read overtime flags';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only read their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only read assigned outlets';
   END IF;
 
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::JSON)
@@ -441,13 +491,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized to read missing clock-outs';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized to read missing clock-outs';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only read their managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only read assigned outlets';
   END IF;
 
   SELECT COALESCE(json_agg(row_to_json(t)), '[]'::JSON)
@@ -509,13 +559,13 @@ BEGIN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'kepala_gerai', 'area_supervisor') THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  IF v_role = 'kepala_gerai'
-     AND (v_managed_outlet_id IS NULL OR v_managed_outlet_id IS DISTINCT FROM p_outlet_id) THEN
-    RAISE EXCEPTION 'Kepala gerai can only access managed outlet';
+  IF v_role IN ('kepala_gerai', 'area_supervisor')
+     AND NOT public.current_admin_can_access_outlet(p_outlet_id) THEN
+    RAISE EXCEPTION 'Scoped admin can only access assigned outlets';
   END IF;
 
   RETURN (

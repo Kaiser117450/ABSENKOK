@@ -37,8 +37,19 @@ class _ArchivedEmployeesScreenState
     setState(() => _loading = true);
     try {
       final appState = ref.read(appProvider);
-      final isKepalaGerai = appState.isKepalaGerai;
-      final managedOutletId = appState.managedOutletId;
+      final isScopedAdmin = appState.isScopedOutletAdmin;
+      final scopedOutletIds = appState.scopedOutletIds;
+
+      if (isScopedAdmin && scopedOutletIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _archivedEmployees = const <Employee>[];
+            _outlets = const <Outlet>[];
+            _loading = false;
+          });
+        }
+        return;
+      }
 
       // Query archived employees only
       var empFilter = SupabaseClientFactory.admin
@@ -46,17 +57,15 @@ class _ArchivedEmployeesScreenState
           .select('*')
           .eq('is_active', false)
           .not('archived_at', 'is', null);
-      if (isKepalaGerai && managedOutletId != null) {
-        empFilter = empFilter.eq('home_outlet_id', managedOutletId);
+      if (isScopedAdmin) {
+        empFilter = empFilter.inFilter('home_outlet_id', scopedOutletIds);
       }
       final empData = await empFilter.order('archived_at', ascending: false);
 
       // Load outlets for display
-      var outFilter = SupabaseClientFactory.admin
-          .from('outlets')
-          .select('*');
-      if (isKepalaGerai && managedOutletId != null) {
-        outFilter = outFilter.eq('id', managedOutletId);
+      var outFilter = SupabaseClientFactory.admin.from('outlets').select('*');
+      if (isScopedAdmin) {
+        outFilter = outFilter.inFilter('id', scopedOutletIds);
       }
       final outData = await outFilter.order('name');
 
@@ -82,18 +91,18 @@ class _ArchivedEmployeesScreenState
   Future<void> _restoreEmployee(Employee employee) async {
     try {
       final appState = ref.read(appProvider);
-      final isKepalaGerai = appState.isKepalaGerai;
-      final managedOutletId = appState.managedOutletId;
+      final isScopedAdmin = appState.isScopedOutletAdmin;
 
-      var updateFilter = SupabaseClientFactory.admin
-          .from('employees')
-          .update({
-            'is_active': true,
-            'archived_at': null,
-          })
-          .eq('id', employee.id);
-      if (isKepalaGerai && managedOutletId != null) {
-        updateFilter = updateFilter.eq('home_outlet_id', managedOutletId);
+      var updateFilter = SupabaseClientFactory.admin.from('employees').update({
+        'is_active': true,
+        'archived_at': null,
+      }).eq('id', employee.id);
+      if (isScopedAdmin) {
+        if (!appState.canAccessOutlet(employee.homeOutletId)) {
+          throw Exception('Outlet tidak diizinkan');
+        }
+        updateFilter =
+            updateFilter.eq('home_outlet_id', employee.homeOutletId!);
       }
       await updateFilter;
 
@@ -125,8 +134,7 @@ class _ArchivedEmployeesScreenState
                       child: AppEmptyState(
                         icon: Icons.archive_outlined,
                         heading: 'Belum Ada Karyawan Diarsipkan',
-                        subtext:
-                            'Karyawan yang diarsipkan akan muncul di sini',
+                        subtext: 'Karyawan yang diarsipkan akan muncul di sini',
                       ),
                     ),
                   ],
@@ -236,8 +244,7 @@ class _ArchivedEmployeeCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                EmployeeContractBadge(
-                    contract: employee.employmentContract),
+                EmployeeContractBadge(contract: employee.employmentContract),
                 const SizedBox(height: 4),
                 if (outletName != null)
                   Text(
@@ -268,8 +275,7 @@ class _ArchivedEmployeeCard extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.success,
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
         ],

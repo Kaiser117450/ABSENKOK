@@ -47,11 +47,12 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   @override
   void initState() {
     super.initState();
-    // Kepala gerai: auto-set filter ke outlet mereka
+    // Role scoped: auto-set filter ke outlet pertama yang boleh diakses.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = ref.read(appProvider);
-      if (appState.isKepalaGerai && appState.managedOutletId != null) {
-        setState(() => _filterOutletId = appState.managedOutletId);
+      if (appState.isScopedOutletAdmin &&
+          appState.primaryScopedOutletId != null) {
+        setState(() => _filterOutletId = appState.primaryScopedOutletId);
       }
       _loadData();
     });
@@ -81,8 +82,20 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     setState(() => _loading = true);
     try {
       final appState = ref.read(appProvider);
-      final isKepalaGerai = appState.isKepalaGerai;
-      final managedOutletId = appState.managedOutletId;
+      final isScopedAdmin = appState.isScopedOutletAdmin;
+      final scopedOutletIds = appState.scopedOutletIds;
+
+      if (isScopedAdmin && scopedOutletIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _employees = const <Employee>[];
+            _archivedEmployees = const <Employee>[];
+            _outlets = const <Outlet>[];
+            _loading = false;
+          });
+        }
+        return;
+      }
 
       // Query karyawan — filter SEBELUM order() agar .eq() tersedia
       // (PostgrestTransformBuilder tidak punya .eq(), hanya PostgrestFilterBuilder)
@@ -90,8 +103,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           .from('employees')
           .select('*')
           .eq('is_active', true);
-      if (isKepalaGerai && managedOutletId != null) {
-        empFilter = empFilter.eq('home_outlet_id', managedOutletId);
+      if (isScopedAdmin) {
+        empFilter = empFilter.inFilter('home_outlet_id', scopedOutletIds);
       }
       final empData = await empFilter.order('name');
 
@@ -100,18 +113,18 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           .from('employees')
           .select('*')
           .eq('is_active', false);
-      if (isKepalaGerai && managedOutletId != null) {
-        archFilter = archFilter.eq('home_outlet_id', managedOutletId);
+      if (isScopedAdmin) {
+        archFilter = archFilter.inFilter('home_outlet_id', scopedOutletIds);
       }
       final archData = await archFilter.order('name');
 
-      // Query outlet — kepala_gerai hanya load outletnya sendiri
+      // Query outlet — role scoped hanya load outlet yang assigned.
       var outFilter = SupabaseClientFactory.admin
           .from('outlets')
           .select('*')
           .eq('is_active', true);
-      if (isKepalaGerai && managedOutletId != null) {
-        outFilter = outFilter.eq('id', managedOutletId);
+      if (isScopedAdmin) {
+        outFilter = outFilter.inFilter('id', scopedOutletIds);
       }
       final outData = await outFilter.order('name');
 
@@ -129,6 +142,9 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           _outlets = (outData as List)
               .map((e) => Outlet.fromJson(e as Map<String, dynamic>))
               .toList();
+          if (isScopedAdmin && !appState.canAccessOutlet(_filterOutletId)) {
+            _filterOutletId = _outlets.firstOrNull?.id;
+          }
           _loading = false;
         });
         _subscribeRealtime();
@@ -168,7 +184,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
         employee: existing,
         outlets: _outlets,
         archivedEmployees: _archivedEmployees,
-        // Kepala gerai: saat tambah karyawan baru, auto-set ke outletnya
+        // Kepala gerai: saat tambah karyawan baru, auto-set ke outletnya.
+        // Area supervisor tetap bisa pilih dari daftar outlet assigned.
         forcedOutletId:
             appState.isKepalaGerai ? appState.managedOutletId : null,
         onSaved: _loadData,
@@ -228,9 +245,12 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
 
   ({String id, String name})? _resolveSakitIzinOutlet(Employee employee) {
     final appState = ref.read(appProvider);
-    final outletId = appState.isKepalaGerai
-        ? appState.managedOutletId
-        : employee.homeOutletId ?? _outlets.firstOrNull?.id;
+    final employeeOutletId = employee.homeOutletId;
+    final outletId = appState.isScopedOutletAdmin
+        ? (appState.canAccessOutlet(employeeOutletId)
+            ? employeeOutletId
+            : appState.primaryScopedOutletId)
+        : employeeOutletId ?? _outlets.firstOrNull?.id;
 
     if (outletId == null) {
       return null;
@@ -319,7 +339,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
     final noNfcCount = _employees.where((e) => e.nfcUid == null).length;
     final canImportCsv = ref.watch(appProvider).isAdmin;
     final isFullAdmin = ref.watch(appProvider.select((s) => s.isAdmin));
-    final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+    final appState = ref.watch(appProvider);
+    final isScopedAdmin = appState.isScopedOutletAdmin;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F5F0),
@@ -354,7 +375,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                           color: AppColors.accent,
                         ),
                         // Archive navigation button — hanya untuk admin penuh
-                        if (!isKepalaGerai) ...[
+                        if (!isScopedAdmin) ...[
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () =>
@@ -663,7 +684,9 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           // ── OUTLET FILTER CHIPS ──────────────────────────────────────────
           if (_outlets.isNotEmpty)
             Builder(builder: (context) {
-              final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+              final appState = ref.watch(appProvider);
+              final isFullAdmin = appState.isAdmin;
+              final isKepalaGerai = appState.isKepalaGerai;
               return Container(
                 color: Colors.white,
                 child: Column(
@@ -678,7 +701,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                         child: Row(
                           children: [
                             // "Semua" chip hanya tampil untuk admin penuh
-                            if (!isKepalaGerai)
+                            if (isFullAdmin)
                               _FilterChip2(
                                 label: 'Semua',
                                 selected: _filterOutletId == null,
@@ -690,7 +713,8 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
                                   child: _FilterChip2(
                                     label: o.name,
                                     selected: _filterOutletId == o.id,
-                                    // Kepala gerai tidak bisa ganti filter outlet
+                                    // Kepala gerai tidak bisa ganti filter outlet.
+                                    // Area supervisor bisa roll antar gerai assigned.
                                     onTap: isKepalaGerai
                                         ? null
                                         : () => setState(

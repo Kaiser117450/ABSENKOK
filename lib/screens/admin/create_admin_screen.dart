@@ -29,9 +29,9 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
   final _service = AdminOnboardingService();
 
   _ScreenState _screenState = _ScreenState.form;
+  CreateAdminAccountRole _selectedRole = CreateAdminAccountRole.kepalaGerai;
   List<Map<String, dynamic>> _outlets = [];
-  String? _selectedOutletId;
-  String? _selectedOutletName;
+  final Set<String> _selectedOutletIds = <String>{};
   bool _loadingOutlets = true;
   bool _passwordVisible = false;
   CreateUserResult? _creationResult;
@@ -89,7 +89,8 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
       final result = await _service.createUser(
         name: _nameCtrl.text,
         email: _emailCtrl.text,
-        outletId: _selectedOutletId!,
+        role: _selectedRole,
+        outletIds: _selectedOutletIds.toList(growable: false),
       );
       if (!mounted) return;
       setState(() {
@@ -118,8 +119,8 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
     _successAnimCtrl.reset();
     setState(() {
       _screenState = _ScreenState.form;
-      _selectedOutletId = null;
-      _selectedOutletName = null;
+      _selectedRole = CreateAdminAccountRole.kepalaGerai;
+      _selectedOutletIds.clear();
       _creationResult = null;
       _passwordVisible = false;
     });
@@ -136,10 +137,12 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
 
   Future<void> _copyCredentials() async {
     final result = _creationResult!;
+    final outletSummary = _outletSummaryForIds(result.outletIds);
     final text = 'Akses Aplikasi ABSENKOK\n'
+        'Role: ${result.role.label}\n'
         'Email: ${result.email}\n'
         'Password: ${result.password}\n'
-        'Gerai: ${_selectedOutletName ?? '-'}\n'
+        'Gerai: $outletSummary\n'
         'Dibuat: ${_formatTimestamp(result.createdAt)}';
 
     await Clipboard.setData(ClipboardData(text: text));
@@ -156,7 +159,10 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
 
   Future<void> _shareViaWhatsApp() async {
     final result = _creationResult!;
+    final outletSummary = _outletSummaryForIds(result.outletIds);
     final message = 'Akses Aplikasi ABSENKOK\n\n'
+        'Role: ${result.role.label}\n'
+        'Gerai: $outletSummary\n'
         'Email: ${result.email}\n'
         'Password: ${result.password}\n\n'
         'Silakan login di aplikasi dan segera ganti password Anda.';
@@ -180,6 +186,8 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
 
   Future<void> _generatePdfAuditTrail() async {
     final result = _creationResult!;
+    final outletSummary = _outletSummaryForIds(result.outletIds);
+    final outletIdSummary = result.outletIds.join(', ');
     final now = DateTime.now();
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm:ss', 'id_ID');
     final adminEmail =
@@ -202,7 +210,7 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
             children: [
               // === HEADER ===
               pw.Text(
-                'Audit Trail — Pembuatan Akun Kepala Gerai',
+                'Audit Trail — Pembuatan Akun ${result.role.label}',
                 style: pw.TextStyle(
                   fontSize: 24,
                   fontWeight: pw.FontWeight.bold,
@@ -226,16 +234,16 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
               _pdfFieldRow(
                   'Password', result.password, textSecondary, textPrimary),
               _pdfFieldRow(
-                  'Role', 'Kepala Gerai', textSecondary, textPrimary),
+                  'Role', result.role.label, textSecondary, textPrimary),
               pw.SizedBox(height: 20),
 
               // === OUTLET ASSIGNMENT ===
               _pdfSectionLabel('Penugasan Gerai', textPrimary),
               pw.SizedBox(height: 8),
-              _pdfFieldRow('Nama Gerai', _selectedOutletName ?? '-',
-                  textSecondary, textPrimary),
               _pdfFieldRow(
-                  'Outlet ID', result.outletId, textSecondary, textPrimary),
+                  'Nama Gerai', outletSummary, textSecondary, textPrimary),
+              _pdfFieldRow(
+                  'Outlet ID', outletIdSummary, textSecondary, textPrimary),
               pw.SizedBox(height: 20),
 
               // === METADATA ===
@@ -245,8 +253,8 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                   'Dibuat oleh', adminEmail, textSecondary, textPrimary),
               _pdfFieldRow('Dibuat pada', _formatTimestamp(result.createdAt),
                   textSecondary, textPrimary),
-              _pdfFieldRow('Dokumen dicetak',
-                  '${dateFormat.format(now)} WIB', textSecondary, textPrimary),
+              _pdfFieldRow('Dokumen dicetak', '${dateFormat.format(now)} WIB',
+                  textSecondary, textPrimary),
 
               pw.Spacer(),
 
@@ -308,6 +316,57 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
     );
   }
 
+  List<String> _outletNamesForIds(Iterable<String> outletIds) {
+    final outletNameById = <String, String>{
+      for (final outlet in _outlets)
+        if (outlet['id'] is String && outlet['name'] is String)
+          outlet['id'] as String: outlet['name'] as String,
+    };
+
+    return outletIds
+        .map((id) => outletNameById[id] ?? id)
+        .toList(growable: false);
+  }
+
+  String _outletSummaryForIds(Iterable<String> outletIds) {
+    final names = _outletNamesForIds(outletIds);
+    if (names.isEmpty) {
+      return '-';
+    }
+    return names.join(', ');
+  }
+
+  void _changeRole(CreateAdminAccountRole role) {
+    setState(() {
+      _selectedRole = role;
+      if (role == CreateAdminAccountRole.kepalaGerai &&
+          _selectedOutletIds.length > 1) {
+        final firstOutletId = _selectedOutletIds.first;
+        _selectedOutletIds
+          ..clear()
+          ..add(firstOutletId);
+      }
+    });
+  }
+
+  void _selectSingleOutlet(String outletId) {
+    setState(() {
+      _selectedOutletIds
+        ..clear()
+        ..add(outletId);
+    });
+  }
+
+  void _toggleSupervisorOutlet(String outletId, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedOutletIds.add(outletId);
+      } else {
+        _selectedOutletIds.remove(outletId);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -315,7 +374,7 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
         title: Text(
           _screenState == _ScreenState.success
               ? 'Akun Berhasil Dibuat'
-              : 'Buat Akun Kepala Gerai',
+              : 'Buat Akun Operasional',
         ),
       ),
       body: AnimatedSwitcher(
@@ -351,6 +410,116 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
     );
   }
 
+  Widget _buildRoleSelector() {
+    return SegmentedButton<CreateAdminAccountRole>(
+      segments: const [
+        ButtonSegment<CreateAdminAccountRole>(
+          value: CreateAdminAccountRole.kepalaGerai,
+          icon: Icon(Icons.storefront_outlined),
+          label: Text('Kepala Gerai'),
+        ),
+        ButtonSegment<CreateAdminAccountRole>(
+          value: CreateAdminAccountRole.areaSupervisor,
+          icon: Icon(Icons.manage_accounts_outlined),
+          label: Text('Area Supervisor'),
+        ),
+      ],
+      selected: {_selectedRole},
+      onSelectionChanged: (roles) => _changeRole(roles.first),
+    );
+  }
+
+  Widget _buildOutletAssignmentSelector() {
+    if (_loadingOutlets) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_selectedRole == CreateAdminAccountRole.kepalaGerai) {
+      return DropdownButtonFormField<String>(
+        initialValue:
+            _selectedOutletIds.isEmpty ? null : _selectedOutletIds.first,
+        decoration: const InputDecoration(
+          labelText: 'Pilih Gerai',
+          hintText: 'Pilih satu gerai yang ditugaskan',
+          prefixIcon: Icon(Icons.store_outlined),
+        ),
+        items: _outlets
+            .map((outlet) => DropdownMenuItem<String>(
+                  value: outlet['id'] as String,
+                  child: Text(outlet['name'] as String),
+                ))
+            .toList(),
+        onChanged: (value) {
+          if (value == null) return;
+          _selectSingleOutlet(value);
+        },
+        validator: (value) {
+          if (value == null) return 'Pilih gerai terlebih dahulu';
+          return null;
+        },
+      );
+    }
+
+    return FormField<Set<String>>(
+      initialValue: _selectedOutletIds,
+      validator: (_) {
+        if (_selectedOutletIds.isEmpty) {
+          return 'Pilih minimal satu gerai';
+        }
+        return null;
+      },
+      builder: (field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Gerai Area Supervisor',
+                prefixIcon: const Icon(Icons.store_mall_directory_outlined),
+                errorText: field.errorText,
+                contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              ),
+              child: Column(
+                children: _outlets.map((outlet) {
+                  final outletId = outlet['id'] as String;
+                  final selected = _selectedOutletIds.contains(outletId);
+                  return CheckboxListTile(
+                    value: selected,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(
+                      outlet['name'] as String,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onChanged: (value) {
+                      _toggleSupervisorOutlet(outletId, value ?? false);
+                      field.didChange(_selectedOutletIds);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Supervisor hanya bisa membuka dashboard, karyawan, laporan, dan jadwal untuk gerai yang dipilih.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildFormState() {
     return SingleChildScrollView(
       key: const ValueKey('form'),
@@ -382,7 +551,7 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Buat akun Kepala Gerai baru. Password akan digenerate otomatis.',
+                      'Buat akun Kepala Gerai atau Area Supervisor. Password akan digenerate otomatis.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -436,43 +605,10 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
             ),
             const SizedBox(height: 16),
 
-            // Outlet dropdown
-            _loadingOutlets
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary),
-                    ),
-                  )
-                : DropdownButtonFormField<String>(
-                    value: _selectedOutletId,
-                    decoration: const InputDecoration(
-                      labelText: 'Pilih Gerai',
-                      hintText: 'Pilih gerai yang ditugaskan',
-                      prefixIcon: Icon(Icons.store_outlined),
-                    ),
-                    items: _outlets
-                        .map((o) => DropdownMenuItem<String>(
-                              value: o['id'] as String,
-                              child: Text(o['name'] as String),
-                            ))
-                        .toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedOutletId = val;
-                        _selectedOutletName = _outlets
-                            .firstWhere(
-                              (o) => o['id'] == val,
-                              orElse: () => {},
-                            )['name'] as String?;
-                      });
-                    },
-                    validator: (v) {
-                      if (v == null) return 'Pilih gerai terlebih dahulu';
-                      return null;
-                    },
-                  ),
+            _buildRoleSelector(),
+            const SizedBox(height: 16),
+
+            _buildOutletAssignmentSelector(),
             const SizedBox(height: 28),
 
             // Submit button
@@ -514,11 +650,11 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                 children: [
                   const Icon(Icons.check_circle, color: AppColors.success),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Akun Berhasil Dibuat ✓',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
@@ -526,10 +662,10 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                             fontSize: 15,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Kredensial siap untuk dibagikan kepada Kepala Gerai baru.',
-                          style: TextStyle(
+                          'Kredensial siap untuk dibagikan kepada ${result.role.label} baru.',
+                          style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13,
                           ),
@@ -565,9 +701,14 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                   const SizedBox(height: 8),
                   _credentialRow('Email', result.email),
                   const SizedBox(height: 8),
+                  _credentialRow('Role', result.role.label),
+                  const SizedBox(height: 8),
                   _passwordRow(result.password),
                   const SizedBox(height: 8),
-                  _credentialRow('Gerai', _selectedOutletName ?? '-'),
+                  _credentialRow(
+                    'Gerai',
+                    _outletSummaryForIds(result.outletIds),
+                  ),
                   const SizedBox(height: 8),
                   _credentialRow('Dibuat', _formatTimestamp(result.createdAt)),
                 ],

@@ -41,7 +41,8 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
   final bool isFirstLogin;
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
@@ -89,8 +90,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
       if (res.status != 200) {
         final data = res.data;
-        final errorMsg =
-            (data is Map && data['error'] != null) ? data['error'] : 'Unknown error';
+        final errorMsg = (data is Map && data['error'] != null)
+            ? data['error']
+            : 'Unknown error';
         throw Exception('Gagal menghapus flag: $errorMsg');
       }
 
@@ -100,11 +102,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       // 4. Clear the mustChangePassword flag in AppState — this triggers
       //    GoRouter to redirect from /admin/change-password to /admin/dashboard.
       ref.read(appProvider.notifier).applyAdminSessionClaims(
-            ref.read(appProvider).isAdmin
-                ? const AdminSessionClaims.admin()
-                : AdminSessionClaims.kepalaGerai(
-                    ref.read(appProvider).managedOutletId ?? '',
-                  ),
+            AdminSessionClaims.fromUser(
+              Supabase.instance.client.auth.currentSession?.user,
+            ),
             mustChangePassword: false,
           );
 
@@ -339,8 +339,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                         ),
-                        onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm),
+                        onPressed: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
                       ),
                     ),
                     validator: (v) {

@@ -290,12 +290,13 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
       if (!mounted || _tabCtrl.indexIsChanging) return;
       setState(() {});
     });
-    // Kepala gerai: auto-set outlet sebelum load
+    // Role scoped: auto-set outlet sebelum load
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final appState = ref.read(appProvider);
-      if (appState.isKepalaGerai && appState.managedOutletId != null) {
-        setState(() => _selectedOutletId = appState.managedOutletId);
+      if (appState.isScopedOutletAdmin &&
+          appState.primaryScopedOutletId != null) {
+        setState(() => _selectedOutletId = appState.primaryScopedOutletId);
       }
     });
     _loadOutlets();
@@ -311,19 +312,48 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   Future<void> _loadOutlets() async {
     try {
-      final data = await SupabaseClientFactory.admin
+      final appState = ref.read(appProvider);
+      if (appState.isScopedOutletAdmin && appState.scopedOutletIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _outlets = const <Outlet>[];
+            _selectedOutletId = null;
+          });
+        }
+        return;
+      }
+
+      var query = SupabaseClientFactory.admin
           .from('outlets')
           .select('*')
-          .eq('is_active', true)
-          .order('name');
+          .eq('is_active', true);
+      if (appState.isScopedOutletAdmin) {
+        query = query.inFilter('id', appState.scopedOutletIds);
+      }
+      final data = await query.order('name');
       if (mounted) {
         setState(() {
           _outlets = (data as List)
               .map((e) => Outlet.fromJson(e as Map<String, dynamic>))
               .toList();
+          if (appState.isScopedOutletAdmin &&
+              !appState.canAccessOutlet(_selectedOutletId)) {
+            _selectedOutletId = _outlets.firstOrNull?.id;
+          }
         });
       }
     } catch (_) {}
+  }
+
+  String? _activeOutletFilterId() {
+    final appState = ref.read(appProvider);
+    if (!appState.isScopedOutletAdmin) {
+      return _selectedOutletId;
+    }
+    if (appState.canAccessOutlet(_selectedOutletId)) {
+      return _selectedOutletId;
+    }
+    return appState.primaryScopedOutletId;
   }
 
   void _markDataDirty() {
@@ -358,8 +388,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
         .gte('scanned_at', start.toUtc().toIso8601String())
         .lte('scanned_at', end.toUtc().toIso8601String());
 
-    if (_selectedOutletId != null) {
-      query = query.eq('scan_outlet_id', _selectedOutletId!);
+    final activeOutletId = _activeOutletFilterId();
+    if (activeOutletId != null) {
+      query = query.eq('scan_outlet_id', activeOutletId);
     }
     return query;
   }
@@ -439,7 +470,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Future<void> _loadDailySummaryData() async {
-    final outletId = _selectedOutletId?.trim();
+    final outletId = _activeOutletFilterId()?.trim();
     final isSingleOutlet = outletId != null && outletId.isNotEmpty;
 
     setState(() {
@@ -649,11 +680,18 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   Future<List<Employee>> _fetchAllEmployeesForPayroll() async {
-    final data = await SupabaseClientFactory.admin
+    final appState = ref.read(appProvider);
+    var query = SupabaseClientFactory.admin
         .from('employees')
         .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
+    if (appState.isScopedOutletAdmin) {
+      if (appState.scopedOutletIds.isEmpty) {
+        return const <Employee>[];
+      }
+      query = query.inFilter('home_outlet_id', appState.scopedOutletIds);
+    }
+    final data = await query.order('name');
     return (data as List)
         .map((item) => Employee.fromJson(item as Map<String, dynamic>))
         .toList(growable: false);
@@ -661,7 +699,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
 
   ({String outletName, OutletOperatingMode operatingMode})
       _resolvePayrollOutletContext(List<_ReportRow> sourceRows) {
-    final selectedOutletId = _selectedOutletId?.trim();
+    final selectedOutletId = _activeOutletFilterId()?.trim();
     if (selectedOutletId != null && selectedOutletId.isNotEmpty) {
       for (final outlet in _outlets) {
         if (outlet.id == selectedOutletId) {
@@ -1061,9 +1099,10 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
   }
 
   String _resolvedOutletName() {
-    if (_selectedOutletId == null) return 'Semua Outlet';
+    final activeOutletId = _activeOutletFilterId();
+    if (activeOutletId == null) return 'Semua Outlet';
     for (final outlet in _outlets) {
-      if (outlet.id == _selectedOutletId) return outlet.name;
+      if (outlet.id == activeOutletId) return outlet.name;
     }
     return 'Outlet Terpilih';
   }
@@ -1440,7 +1479,9 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
               // Outlet + Load button row
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isKepalaGerai = ref.watch(appProvider).isKepalaGerai;
+                  final appState = ref.watch(appProvider);
+                  final isFullAdmin = appState.isAdmin;
+                  final isKepalaGerai = appState.isKepalaGerai;
                   const double buttonWidth = 96;
                   const double spacerWidth = 8;
                   final double dropdownWidth =
@@ -1474,7 +1515,7 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               )
-                            // Dropdown biasa untuk admin
+                            // Dropdown biasa untuk admin penuh dan area supervisor.
                             : DropdownButtonFormField<String?>(
                                 initialValue: _selectedOutletId,
                                 isDense: true,
@@ -1484,10 +1525,11 @@ class _AdminReportsScreenState extends ConsumerState<AdminReportsScreen>
                                       horizontal: 12, vertical: 8),
                                 ),
                                 items: [
-                                  const DropdownMenuItem<String?>(
-                                    value: null,
-                                    child: Text('Semua Outlet'),
-                                  ),
+                                  if (isFullAdmin)
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('Semua Outlet'),
+                                    ),
                                   ..._outlets
                                       .map((o) => DropdownMenuItem<String?>(
                                             value: o.id,

@@ -40,7 +40,8 @@ BEGIN
   SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb)
     || jsonb_build_object(
          'app_role', 'kepala_gerai',
-         'managed_outlet_id', v_outlet_id::text
+         'managed_outlet_id', v_outlet_id::text,
+         'managed_outlet_ids', jsonb_build_array(v_outlet_id::text)
        )
   WHERE id = v_user_id;
 

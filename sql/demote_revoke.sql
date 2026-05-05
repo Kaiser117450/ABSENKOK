@@ -30,9 +30,12 @@ BEGIN
     RETURN;
   END IF;
 
-  -- 2. Hapus app_role dan managed_outlet_id dari metadata
+  -- 2. Hapus app_role dan scope outlet dari metadata
   UPDATE auth.users
-  SET raw_app_meta_data = raw_app_meta_data - 'app_role' - 'managed_outlet_id'
+  SET raw_app_meta_data = raw_app_meta_data
+    - 'app_role'
+    - 'managed_outlet_id'
+    - 'managed_outlet_ids'
   WHERE id = v_user_id;
 
   RAISE NOTICE '✅ BERHASIL! Role "%" dicabut dari %', v_old_role, v_email;
