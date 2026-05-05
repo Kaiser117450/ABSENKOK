@@ -11,7 +11,7 @@ import {
   tierCappedLabel,
   tierStyle,
 } from '../../../../lib/portal/tier';
-import { getUserAppRole } from '../../../../lib/portal/auth';
+import { ADMIN_PORTAL_ROLES, getUserAppRole } from '../../../../lib/portal/auth';
 import { createSupabaseServerClient } from '../../../../lib/supabase/server';
 
 const portalUser = (Astro.locals as Record<string, unknown>).portalUser as
@@ -23,7 +23,13 @@ if (!portalUser) {
   return Astro.redirect('/portal/login');
 }
 
-const role = getUserAppRole(portalUser) ?? 'admin';
+// Defense-in-depth: middleware has already filtered admin-only routes, but
+// fail closed here as well so a misconfigured middleware (e.g. missing env
+// vars) can never silently grant admin privileges via a fallback default.
+const role = getUserAppRole(portalUser);
+if (!role || !ADMIN_PORTAL_ROLES.has(role)) {
+  return Astro.redirect('/portal');
+}
 const userSummary = {
   id: portalUser.id,
   email: portalUser.email ?? null,
@@ -245,12 +251,13 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Aspek</label>
               <select
+                id="rating-aspect"
                 name="aspect_id"
                 required
                 class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
               >
                 {aspects.map((a) => (
-                  <option value={a.id}>
+                  <option value={a.id} data-max-score={a.max_score}>
                     [{a.category === 'manual' ? 'Manual' : 'QC'}] {a.display_name} (max {a.max_score})
                   </option>
                 ))}
@@ -260,15 +267,35 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Nilai</label>
               <input
+                id="rating-score"
                 type="number"
                 name="score"
                 step="0.1"
                 min="0"
+                max={aspects[0]?.max_score ?? 5}
                 required
                 class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
               />
               <p class="text-[11px] text-slate-400 mt-1">Sesuaikan dengan max-score aspek (mis. 0-5 untuk Manual, 0-100 untuk QC).</p>
             </div>
+
+            <script is:inline>
+              // Keep the score input's `max` attribute in sync with the
+              // selected aspect's `data-max-score`. Server-side enforcement
+              // also exists in /portal/admin/api/rating so this is purely UX.
+              (function () {
+                const sel = document.getElementById('rating-aspect');
+                const num = document.getElementById('rating-score');
+                if (!sel || !num) return;
+                function sync() {
+                  const opt = sel.options[sel.selectedIndex];
+                  const max = opt && opt.dataset.maxScore;
+                  if (max) num.setAttribute('max', max);
+                }
+                sel.addEventListener('change', sync);
+                sync();
+              })();
+            </script>
 
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan (opsional)</label>

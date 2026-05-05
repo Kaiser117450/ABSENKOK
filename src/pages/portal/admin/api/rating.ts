@@ -52,6 +52,31 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return new Response('Invalid score', { status: 400 });
   }
 
+  // Look up the aspect to enforce the upper bound. The rating_aspects.max_score
+  // column is the per-aspect ceiling (e.g. 5 for star ratings, 100 for percent
+  // scores). Without this check an admin or kepala_gerai could submit an
+  // arbitrary numeric value (e.g. 9999) which would then poison the weighted
+  // average inside compute_employee_score.
+  const { data: aspect, error: aspectError } = await supabase
+    .from('rating_aspects')
+    .select('max_score, is_active')
+    .eq('id', aspectId)
+    .maybeSingle<{ max_score: number; is_active: boolean }>();
+
+  if (aspectError) {
+    console.error('[POST /admin/api/rating] aspect lookup failed', aspectError);
+    return new Response('Failed to validate aspect', { status: 500 });
+  }
+  if (!aspect || !aspect.is_active) {
+    return new Response('Unknown or inactive aspect', { status: 400 });
+  }
+  if (score > aspect.max_score) {
+    return new Response(
+      `Score exceeds the maximum (${aspect.max_score}) for this aspect`,
+      { status: 400 },
+    );
+  }
+
   // Upsert via the unique constraint on (employee_id, aspect_id, rated_by, rating_period).
   const { error } = await supabase.from('employee_ratings').upsert(
     {

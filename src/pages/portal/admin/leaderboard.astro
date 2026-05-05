@@ -10,7 +10,7 @@ import {
   formatScore,
   tierStyle,
 } from '../../../lib/portal/tier';
-import { getUserAppRole } from '../../../lib/portal/auth';
+import { ADMIN_PORTAL_ROLES, getUserAppRole } from '../../../lib/portal/auth';
 
 const portalUser = (Astro.locals as Record<string, unknown>).portalUser as
   | { id: string; email?: string | null; app_metadata?: Record<string, unknown> | null }
@@ -21,7 +21,13 @@ if (!portalUser) {
   return Astro.redirect('/portal/login');
 }
 
-const role = getUserAppRole(portalUser) ?? 'admin';
+// Defense-in-depth: middleware has already filtered admin-only routes, but
+// fail closed here as well so a misconfigured middleware (e.g. missing env
+// vars) can never silently grant admin privileges via a fallback default.
+const role = getUserAppRole(portalUser);
+if (!role || !ADMIN_PORTAL_ROLES.has(role)) {
+  return Astro.redirect('/portal');
+}
 const userSummary = {
   id: portalUser.id,
   email: portalUser.email ?? null,
