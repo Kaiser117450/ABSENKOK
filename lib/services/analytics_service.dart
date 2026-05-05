@@ -327,85 +327,48 @@ class AnalyticsService {
   }
 
   /// Get employee insight data for the chart dashboard.
-  /// Returns aggregated attendance issues per employee for current month.
-  /// Returns empty list if [supabaseReady] is false or if the query fails.
+  ///
+  /// Returns aggregated attendance signals per employee for the calendar
+  /// month containing today, scoped to [outletId]. Backed by the
+  /// `get_site_leaderboard` RPC, which already runs the strict Phase 57
+  /// recap engine on the server (so issue/safe day counts here match the
+  /// admin leaderboard exactly).
+  ///
+  /// Returns an empty list if [supabaseReady] is false or if the RPC fails.
+  ///
+  /// Previously this method tried to aggregate `attendance_logs` row-by-row
+  /// in the client. That implementation referenced columns that do not
+  /// exist on `attendance_logs` (`outlet_id`, `status`, `is_late`) — the
+  /// real columns are `scan_outlet_id` plus a derived `type` (`masuk` /
+  /// `pulang`). The per-row error was swallowed by the surrounding try
+  /// block, which is why the chart dashboard "Employee Insights" section
+  /// silently rendered as empty in production.
   Future<List<EmployeeInsightData>> getEmployeeInsights(String outletId) async {
     if (!supabaseReady) return [];
     try {
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-
-      final startStr =
-          '${startOfMonth.year}-${startOfMonth.month.toString().padLeft(2, '0')}-${startOfMonth.day.toString().padLeft(2, '0')}';
-      final endStr =
-          '${endOfMonth.year}-${endOfMonth.month.toString().padLeft(2, '0')}-${endOfMonth.day.toString().padLeft(2, '0')}';
-
-      // Query attendance logs for current month and aggregate per employee
-      final result = await SupabaseClientFactory.admin
-        .from('attendance_logs')
-        .select('''
-          employee_id,
-          employees!inner(name),
-          status,
-          is_late,
-          created_at
-        ''')
-        .eq('outlet_id', outletId)
-        .gte('created_at', startStr)
-        .lte('created_at', endStr)
-        .order('employee_id');
-
+      final result = await SupabaseClientFactory.admin.rpc(
+        'get_site_leaderboard',
+      );
       if (result == null) return [];
 
-      // Group by employee and count issues
-      final Map<String, Map<String, dynamic>> employeeStats = {};
+      final rows = (result as List).cast<Map<String, dynamic>>();
 
-      for (final record in result) {
-        final employeeId = record['employee_id'] as String;
-        final employeeName = record['employees']['name'] as String;
-        final status = record['status'] as String;
-        final isLate = record['is_late'] as bool? ?? false;
-
-        if (!employeeStats.containsKey(employeeId)) {
-          employeeStats[employeeId] = {
-            'employee_id': employeeId,
-            'employee_name': employeeName,
-            'late_count': 0,
-            'absence_count': 0,
-            'short_work_count': 0,
-            'excess_break_count': 0,
-            'overtime_count': 0,
-            'safe_count': 0,
-          };
-        }
-
-        final stats = employeeStats[employeeId]!;
-
-        // Count various issues based on status
-        if (isLate) {
-          stats['late_count'] = (stats['late_count'] as int) + 1;
-        }
-
-        // For now, we'll use simplified logic since we don't have the full attendance analysis
-        // In a real implementation, you'd want to analyze the full day's attendance pattern
-        switch (status) {
-          case 'absent':
-            stats['absence_count'] = (stats['absence_count'] as int) + 1;
-            break;
-          case 'masuk':
-            if (!isLate) {
-              stats['safe_count'] = (stats['safe_count'] as int) + 1;
-            }
-            break;
-          // Add more status analysis as needed
-        }
-      }
-
-      return employeeStats.values
-          .map((stats) => EmployeeInsightData.fromJson(stats))
+      return rows
+          .where((row) => row['home_outlet_id'] == outletId)
+          .map((row) => EmployeeInsightData.fromJson({
+                'employee_id': row['employee_id'],
+                'employee_name': row['employee_name'],
+                'late_count': row['late_count'],
+                'absence_count': row['absence_count'],
+                'short_work_count': row['short_work_count'],
+                'excess_break_count': row['excess_break_count'],
+                'overtime_count': row['overtime_count'],
+                // safe_days from the recap = days the employee was on duty
+                // and triggered no issue signals. Map onto our existing
+                // safeCount field to keep the Insight UI unchanged.
+                'safe_count': row['safe_days'],
+              }))
           .toList();
-
     } catch (e) {
       debugPrint('[AnalyticsService] getEmployeeInsights failed: $e');
       return [];
