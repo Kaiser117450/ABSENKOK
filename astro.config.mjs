@@ -36,7 +36,12 @@ const allowedDomains = [site, process.env.VERCEL_PROJECT_PRODUCTION_URL, process
 
 export default defineConfig({
   site,
-  output: 'static',
+  // `output: 'server'` makes the safe default for `/portal/*` pages — any new
+  // page added under `/portal/` will be server-rendered (and therefore run
+  // through the auth middleware) unless it explicitly opts into prerender.
+  // Marketing pages such as `src/pages/index.astro` set
+  // `export const prerender = true` to remain statically generated.
+  output: 'server',
   adapter: vercel(),
   integrations: [sitemap()],
   security: {

@@ -96,3 +96,6 @@ skills-lock.json
 
 # Stray test files
 test_pdf_compilation.dart
+
+# Devin/AI editor checkpoint snapshots — never commit
+*.checkpoint*

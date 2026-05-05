@@ -52,7 +52,7 @@ export async function ensurePortalPasswordlessAccount(
     },
   };
 
-  const existingAuthUser = await findPortalAuthUserByEmail(authEmail);
+  const existingAuthUser = await findPortalAuthUserByEmail(authEmail, employeeId);
 
   if (existingAuthUser) {
     assertReusablePortalAuthUser(existingAuthUser, employeeId);
@@ -88,9 +88,52 @@ function getMetadataString(
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-async function findPortalAuthUserByEmail(email: string): Promise<PortalAuthUser | null> {
+/**
+ * Locate the auth user that owns this hidden portal email.
+ *
+ * Previously this paged through `auth.admin.listUsers` 200-at-a-time on
+ * every login retry, which scaled linearly with the size of `auth.users`.
+ * The `employee_portal_accounts` mapping table now provides a direct
+ * `employee_id -> auth_user_id` lookup, so a single indexed `select`
+ * replaces an unbounded sweep. The list-users fallback is kept only for
+ * accounts created before the mapping table existed (it should normally
+ * be empty after the next login).
+ */
+async function findPortalAuthUserByEmail(
+  email: string,
+  employeeId: string,
+): Promise<PortalAuthUser | null> {
   const admin = createSupabaseAdminClient();
   const normalizedEmail = email.toLowerCase();
+
+  const { data: mapping, error: mappingError } = await admin
+    .from('employee_portal_accounts')
+    .select('auth_user_id')
+    .eq('employee_id', employeeId)
+    .maybeSingle<{ auth_user_id: string }>();
+
+  if (mappingError) {
+    throw new Error(`Failed to read portal account mapping: ${mappingError.message}`);
+  }
+
+  if (mapping?.auth_user_id) {
+    const { data: byId, error: byIdError } = await admin.auth.admin.getUserById(mapping.auth_user_id);
+    if (byIdError) {
+      throw new Error(`Failed to load mapped portal auth user: ${byIdError.message}`);
+    }
+    if (byId.user) {
+      return {
+        id: byId.user.id,
+        email: byId.user.email,
+        email_confirmed_at: byId.user.email_confirmed_at,
+        app_metadata: byId.user.app_metadata as Record<string, unknown> | null,
+      };
+    }
+  }
+
+  // Legacy fallback: account exists in auth.users but no mapping row yet.
+  // First try the cheap one-page lookup; only escalate to a full sweep if
+  // the auth user is on a later page (rare).
   const perPage = 200;
   let page = 1;
 
