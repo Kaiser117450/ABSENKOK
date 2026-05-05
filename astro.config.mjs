@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
 
-const site = process.env.PUBLIC_SITE_URL ?? 'https://absenkok.vercel.app';
+const site = process.env.PUBLIC_SITE_URL ?? 'https://www.absenkok.app';
 
 function toAllowedDomain(value) {
   if (!value) return null;
@@ -23,9 +23,31 @@ function toAllowedDomain(value) {
   }
 }
 
-const allowedDomains = [site, process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL]
-  .map(toAllowedDomain)
-  .filter(Boolean)
+// Collect all known origins: the canonical site, Vercel system URLs, and any
+// extra custom domains provided via PUBLIC_EXTRA_ALLOWED_DOMAINS (comma-separated).
+// For every hostname we also add its www / non-www counterpart so a Cloudflare
+// redirect from www ↔ apex never triggers Astro's CSRF rejection.
+const rawSources = [
+  site,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_URL,
+  ...(process.env.PUBLIC_EXTRA_ALLOWED_DOMAINS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+];
+
+const allowedDomains = rawSources
+  .flatMap((value) => {
+    const parsed = toAllowedDomain(value);
+    if (!parsed) return [];
+    const variants = [parsed];
+    // Auto-add www ↔ non-www counterpart.
+    if (parsed.hostname.startsWith('www.')) {
+      variants.push({ ...parsed, hostname: parsed.hostname.slice(4) });
+    } else if (!parsed.hostname.includes('.vercel.app')) {
+      variants.push({ ...parsed, hostname: `www.${parsed.hostname}` });
+    }
+    return variants;
+  })
   .filter((pattern, index, patterns) => {
     return patterns.findIndex((candidate) =>
       candidate.protocol === pattern.protocol &&
