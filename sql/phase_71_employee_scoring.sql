@@ -754,7 +754,10 @@ create or replace function public.get_skor_tier_overview(
 returns table (
   employee_id uuid,
   employee_name text,
-  position text,
+  -- `position` is a SQL reserved word — quote it in the DDL so PG parses
+  -- this as a column declaration rather than a `position(... in ...)`
+  -- function call header.
+  "position" text,
   home_outlet_id uuid,
   home_outlet_name text,
   photo_url text,
@@ -777,7 +780,7 @@ as $$
   select
     e.id                                              as employee_id,
     e.name                                            as employee_name,
-    e.position                                        as position,
+    e.position                                        as "position",
     e.home_outlet_id                                  as home_outlet_id,
     o.name                                            as home_outlet_name,
     e.photo_url                                       as photo_url,
