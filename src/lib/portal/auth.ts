@@ -29,6 +29,30 @@ export function isProtectedPortalRoute(pathname: string): boolean {
   return true;
 }
 
+/** Roles allowed to access /portal/admin/* */
+export const ADMIN_PORTAL_ROLES = new Set(['admin', 'kepala_gerai', 'area_supervisor']);
+
+/**
+ * Returns true when the path is under the admin portal section
+ * (`/portal/admin/...`). Caller is still expected to additionally check
+ * the user's `app_metadata.app_role`.
+ */
+export function isAdminPortalRoute(pathname: string): boolean {
+  return pathname === '/portal/admin' || pathname.startsWith('/portal/admin/');
+}
+
+/**
+ * Extract the application role from a Supabase user object.
+ * Returns null when no role is configured (e.g. plain employee_portal users).
+ */
+export function getUserAppRole(user: {
+  app_metadata?: Record<string, unknown> | null;
+} | null | undefined): string | null {
+  if (!user || !user.app_metadata) return null;
+  const role = user.app_metadata.app_role;
+  return typeof role === 'string' && role.length > 0 ? role : null;
+}
+
 /**
  * Derive the hidden portal auth email from a stable employee UUID.
  * Format: employee+<uuid>@portal.absenkok.internal

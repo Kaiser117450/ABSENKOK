@@ -1,0 +1,145 @@
+---
+import '../styles/global.css';
+
+interface AdminUserSummary {
+  id: string;
+  email: string | null;
+  role: string;
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  match?: (pathname: string) => boolean;
+}
+
+interface Props {
+  title: string;
+  user: AdminUserSummary;
+  /** Page-specific nav highlight; defaults to current pathname. */
+  activePath?: string;
+}
+
+const { title, user, activePath } = Astro.props;
+const currentPath = activePath ?? Astro.url.pathname;
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    href: '/portal/admin/skor-tier',
+    label: 'Skor Tier',
+    match: (p) => p.startsWith('/portal/admin/skor-tier') || p.startsWith('/portal/admin/hierarchy'),
+  },
+  {
+    href: '/portal/admin/leaderboard',
+    label: 'Leaderboard',
+    match: (p) => p.startsWith('/portal/admin/leaderboard'),
+  },
+];
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Admin',
+  kepala_gerai: 'Kepala Gerai',
+  area_supervisor: 'Area Supervisor',
+};
+const roleLabel = ROLE_LABEL[user.role] ?? user.role;
+---
+
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} — Admin Portal ABSENKOK</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Black Ops One: angular display face used for tier rank labels. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-20 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-12 sm:h-14 flex items-center justify-between gap-3">
+        <!-- Brand -->
+        <a href="/portal/admin/skor-tier" class="inline-flex items-center gap-2 shrink-0 min-w-0">
+          <span class="text-base sm:text-lg font-extrabold tracking-tight leading-none">
+            <span class="text-[#FF4DA0]">ABSEN</span><span class="text-[#7C8DFF]">KOK</span>
+          </span>
+          <span class="hidden sm:inline text-[10px] font-semibold uppercase tracking-widest text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 ml-1 whitespace-nowrap">
+            Admin
+          </span>
+        </a>
+
+        <!-- Inline tabs (visible from sm) -->
+        <nav class="hidden sm:flex items-center gap-1 grow ml-6" aria-label="Admin navigation">
+          {NAV_ITEMS.map((item) => {
+            const isActive = item.match ? item.match(currentPath) : currentPath.startsWith(item.href);
+            return (
+              <a
+                href={item.href}
+                class:list={[
+                  'px-3 py-1.5 text-sm font-medium rounded-md transition',
+                  isActive
+                    ? 'bg-slate-800 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60',
+                ]}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+
+        <!-- User identity + sign out -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div class="text-right hidden sm:block">
+            <div class="text-xs leading-tight text-slate-300">{user.email ?? 'Admin'}</div>
+            <div class="text-[10px] uppercase tracking-wider text-slate-500">{roleLabel}</div>
+          </div>
+          <form method="POST" action="/portal/auth/sign-out">
+            <button
+              type="submit"
+              class="text-xs text-slate-300 hover:text-white transition px-2 py-1 rounded hover:bg-slate-800 whitespace-nowrap"
+              aria-label="Keluar dari admin portal"
+            >
+              Keluar
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Mobile tab strip -->
+      <nav class="sm:hidden border-t border-slate-800 bg-slate-900" aria-label="Admin navigation (mobile)">
+        <div class="max-w-7xl mx-auto px-2 flex overflow-x-auto gap-1">
+          {NAV_ITEMS.map((item) => {
+            const isActive = item.match ? item.match(currentPath) : currentPath.startsWith(item.href);
+            return (
+              <a
+                href={item.href}
+                class:list={[
+                  'px-3 py-2 text-sm font-medium whitespace-nowrap',
+                  isActive ? 'text-white border-b-2 border-[#FF4DA0]' : 'text-slate-400 border-b-2 border-transparent',
+                ]}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </div>
+      </nav>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 py-6 sm:py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+      ABSENKOK Admin &copy; {new Date().getFullYear()}
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,217 @@
+---
+export const prerender = false;
+
+import PortalAdminLayout from '../../../layouts/PortalAdminLayout.astro';
+import {
+  loadSkorTierOverview,
+  uniqueOutletsFromRows,
+} from '../../../lib/portal/skor-tier';
+import {
+  formatScore,
+  tierStyle,
+} from '../../../lib/portal/tier';
+import { getUserAppRole } from '../../../lib/portal/auth';
+
+const portalUser = (Astro.locals as Record<string, unknown>).portalUser as
+  | { id: string; email?: string | null; app_metadata?: Record<string, unknown> | null }
+  | null
+  | undefined;
+
+if (!portalUser) {
+  return Astro.redirect('/portal/login');
+}
+
+const role = getUserAppRole(portalUser) ?? 'admin';
+const userSummary = {
+  id: portalUser.id,
+  email: portalUser.email ?? null,
+  role,
+};
+
+const url = new URL(Astro.request.url);
+const tab = (url.searchParams.get('tab') ?? 'total') as 'total' | 'attendance' | 'manual' | 'qc';
+const outletParam = url.searchParams.get('outlet');
+
+const { rows, period, error } = await loadSkorTierOverview(Astro, {
+  outletId: outletParam || null,
+});
+const outlets = uniqueOutletsFromRows(rows);
+
+// Sort key per tab.
+function getKey(r: (typeof rows)[number]): number | null {
+  switch (tab) {
+    case 'attendance': return r.attendance_score;
+    case 'manual':     return r.manual_score;
+    case 'qc':         return r.qc_score;
+    case 'total':
+    default:           return r.total_score;
+  }
+}
+
+const sortedRows = [...rows].sort((a, b) => {
+  const av = getKey(a);
+  const bv = getKey(b);
+  // Nulls go to the bottom.
+  if (av === null && bv === null) return 0;
+  if (av === null) return 1;
+  if (bv === null) return -1;
+  return bv - av;
+});
+
+const TAB_META: Array<{ key: typeof tab; label: string; subtitle: string }> = [
+  { key: 'total',      label: 'Overall',     subtitle: 'Skor gabungan' },
+  { key: 'attendance', label: 'Kehadiran',   subtitle: 'Dari recap absensi' },
+  { key: 'manual',     label: 'Manual',      subtitle: 'Penilaian admin/kepala' },
+  { key: 'qc',         label: 'QC',          subtitle: 'Hasil quality control' },
+];
+
+function buildHref(params: Record<string, string | null | undefined>): string {
+  const u = new URL(Astro.request.url);
+  for (const [k, v] of Object.entries(params)) {
+    if (v === null || v === undefined || v === '') {
+      u.searchParams.delete(k);
+    } else {
+      u.searchParams.set(k, v);
+    }
+  }
+  return `${u.pathname}?${u.searchParams.toString()}`;
+}
+
+function initials(name: string): string {
+  return name.split(/\s+/).slice(0, 2).map((w) => w[0] ?? '').join('').toUpperCase();
+}
+
+// Highlight medal colours for top 3.
+const MEDAL: Record<number, string> = {
+  1: 'bg-amber-300 text-amber-950',
+  2: 'bg-slate-300 text-slate-900',
+  3: 'bg-amber-500/80 text-amber-950',
+};
+---
+
+<PortalAdminLayout title={`Leaderboard — ${period}`} user={userSummary}>
+  <section class="mb-5">
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+      Leaderboard
+      <span class="text-base font-medium text-slate-500 ml-2">{period}</span>
+    </h1>
+    <p class="text-sm text-slate-500 mt-1">
+      Peringkat karyawan per kategori. Klik nama untuk lihat detail skor & catatan.
+    </p>
+  </section>
+
+  {error && (
+    <div class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      Gagal memuat data: {error}
+    </div>
+  )}
+
+  <!-- Tab strip + outlet filter -->
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200">
+    <nav class="flex flex-wrap gap-1" role="tablist">
+      {TAB_META.map((t) => {
+        const isActive = t.key === tab;
+        return (
+          <a
+            href={buildHref({ tab: t.key })}
+            role="tab"
+            aria-selected={isActive ? 'true' : 'false'}
+            class:list={[
+              '-mb-px px-4 py-2 text-sm font-medium border-b-2 transition',
+              isActive
+                ? 'border-[#FF4DA0] text-slate-900'
+                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300',
+            ]}
+          >
+            <span>{t.label}</span>
+            <span class="block text-[10px] text-slate-400 leading-tight">{t.subtitle}</span>
+          </a>
+        );
+      })}
+    </nav>
+
+    {role === 'admin' && (
+      <form method="GET" class="flex items-center gap-2 mb-1">
+        <input type="hidden" name="tab" value={tab} />
+        <select
+          name="outlet"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+        >
+          <option value="">Semua outlet</option>
+          {outlets.map((o) => (
+            <option value={o.id ?? ''} selected={o.id === outletParam}>{o.name}</option>
+          ))}
+        </select>
+        <button type="submit" class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 transition">
+          Terapkan
+        </button>
+      </form>
+    )}
+  </div>
+
+  <!-- Leaderboard list -->
+  <ol class="space-y-1.5">
+    {sortedRows.length === 0 ? (
+      <li class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-400">
+        Tidak ada data untuk periode ini.
+      </li>
+    ) : (
+      sortedRows.map((r, idx) => {
+        const rank = idx + 1;
+        const ts = tierStyle(r.tier);
+        const medal = MEDAL[rank] ?? null;
+        const value = getKey(r);
+        return (
+          <li>
+            <a
+              href={`/portal/admin/skor-tier/${r.employee_id}`}
+              class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 hover:border-slate-400 transition"
+            >
+              <!-- Rank -->
+              <div
+                class:list={[
+                  'w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-sm font-bold tabular-nums',
+                  medal ?? 'bg-slate-100 text-slate-700',
+                ]}
+              >
+                {rank}
+              </div>
+
+              <!-- Tier ribbon (compact) -->
+              <span class:list={['w-12 text-center font-tier-rank text-sm rounded px-1 py-0.5', ts.ribbon]}>
+                {r.tier}
+              </span>
+
+              <!-- Avatar -->
+              <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
+                {r.photo_url ? (
+                  <img src={r.photo_url} alt={r.employee_name} class="w-full h-full object-cover" />
+                ) : (
+                  initials(r.employee_name)
+                )}
+              </div>
+
+              <!-- Name + meta -->
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-semibold text-slate-900 truncate">{r.employee_name}</div>
+                <div class="text-[11px] text-slate-500 truncate">
+                  {r.position ?? '—'} · {r.home_outlet_name ?? '—'}
+                  {r.is_new && <span class="ml-2 rounded bg-blue-100 text-blue-700 px-1 py-0.5 text-[10px] font-bold">BARU</span>}
+                  {r.employment_contract === 'PARTTIME' && <span class="ml-1 rounded bg-purple-100 text-purple-700 px-1 py-0.5 text-[10px] font-bold">PT</span>}
+                </div>
+              </div>
+
+              <!-- Score -->
+              <div class="text-right shrink-0">
+                <div class="text-base font-bold tabular-nums text-slate-900">{formatScore(value)}</div>
+                <div class="text-[10px] uppercase text-slate-400">
+                  {tab === 'total' ? 'Total' : tab === 'attendance' ? 'Hadir' : tab === 'manual' ? 'Manual' : 'QC'}
+                </div>
+              </div>
+            </a>
+          </li>
+        );
+      })
+    )}
+  </ol>
+</PortalAdminLayout>
