@@ -349,12 +349,17 @@ set search_path = public
 as $$
 declare
   v_employee record;
-  v_late_count int := 0;
-  v_absence_count int := 0;
-  v_short_work_count int := 0;
-  v_excess_break_count int := 0;
-  v_unresolved_count int := 0;
-  v_safe_days int := 0;
+  -- NULL by default so the renormalisation logic can detect missing data.
+  -- Initialising to 0 caused the formula to silently produce 100 for any
+  -- (employee, period) combination that lacked a leaderboard row, which
+  -- in turn corrupted historical periods and zero-scan employees with a
+  -- bogus "perfect attendance" score.
+  v_late_count int;
+  v_absence_count int;
+  v_short_work_count int;
+  v_excess_break_count int;
+  v_unresolved_count int;
+  v_safe_days int;
 
   v_attendance_score numeric;
   v_manual_score numeric;
@@ -394,6 +399,13 @@ begin
   -- recompute when caller asks for the current month; older months use
   -- whatever was last stored. This is acceptable: tier history snapshots
   -- are a future-phase concern.
+  --
+  -- attendance_score stays NULL when:
+  --   • caller asked for a non-current period (we don't backfill history), OR
+  --   • the leaderboard row is missing for this employee (no scans yet,
+  --     or freshly registered without any logs).
+  -- The renormalisation block below then zeroes out the attendance weight
+  -- so the total falls back to whatever manual/qc data exists.
   if p_period = to_char(now() at time zone 'Asia/Makassar', 'YYYY-MM') then
     select late_count, absence_count, short_work_count, excess_break_count,
            unresolved_count, safe_days
@@ -401,17 +413,19 @@ begin
            v_excess_break_count, v_unresolved_count, v_safe_days
       from public.get_site_leaderboard()
      where employee_id = p_employee_id;
-  end if;
 
-  v_attendance_score := greatest(0, least(100,
-      100
-    - (3 * coalesce(v_late_count, 0))
-    - (5 * coalesce(v_absence_count, 0))
-    - (2 * coalesce(v_short_work_count, 0))
-    - (2 * coalesce(v_excess_break_count, 0))
-    - (4 * coalesce(v_unresolved_count, 0))
-    + least(20, 0.5 * coalesce(v_safe_days, 0))
-  ));
+    if found then
+      v_attendance_score := greatest(0, least(100,
+          100
+        - (3 * coalesce(v_late_count, 0))
+        - (5 * coalesce(v_absence_count, 0))
+        - (2 * coalesce(v_short_work_count, 0))
+        - (2 * coalesce(v_excess_break_count, 0))
+        - (4 * coalesce(v_unresolved_count, 0))
+        + least(20, 0.5 * coalesce(v_safe_days, 0))
+      ));
+    end if;
+  end if;
 
   -- ------------------------------------------------------------------
   -- manual_score and qc_score — weighted average of aspect ratings,
