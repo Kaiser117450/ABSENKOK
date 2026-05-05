@@ -1,6 +1,11 @@
 import { defineMiddleware } from 'astro:middleware';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
-import { isProtectedPortalRoute } from './lib/portal/auth';
+import {
+  ADMIN_PORTAL_ROLES,
+  getUserAppRole,
+  isAdminPortalRoute,
+  isProtectedPortalRoute,
+} from './lib/portal/auth';
 import { getSupabaseServerEnv } from './lib/supabase/env';
 
 export const onRequest = defineMiddleware(async (context, next) => {
@@ -62,6 +67,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Enforce auth on protected portal routes before the downstream handler runs.
   if (isProtectedPortalRoute(pathname) && !user) {
     return appendRefreshedCookies(redirect('/portal/login', 302));
+  }
+
+  // Admin portal: gate behind app_role ∈ {admin, kepala_gerai, area_supervisor}.
+  if (isAdminPortalRoute(pathname)) {
+    const role = getUserAppRole(user);
+    if (!role || !ADMIN_PORTAL_ROLES.has(role)) {
+      // Not an admin/manager — bounce to the regular employee portal home.
+      return appendRefreshedCookies(redirect('/portal', 302));
+    }
   }
 
   // Forward to the route handler.

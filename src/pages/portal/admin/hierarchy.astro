@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+// Permanent redirect: /portal/admin/hierarchy → /portal/admin/skor-tier
+// Preserves any querystring (filter / outlet / tier / q) so existing
+// bookmarks keep working with the renamed page.
+return new Response(null, {
+  status: 301,
+  headers: {
+    Location: `/portal/admin/skor-tier${Astro.url.search}`,
+    'Cache-Control': 'public, max-age=3600',
+  },
+});
+---

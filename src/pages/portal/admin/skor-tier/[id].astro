@@ -1,0 +1,442 @@
+---
+export const prerender = false;
+
+import PortalAdminLayout from '../../../../layouts/PortalAdminLayout.astro';
+import {
+  loadEmployeeScoreCard,
+  type ScoreCardNote,
+} from '../../../../lib/portal/skor-tier';
+import {
+  formatScore,
+  tierCappedLabel,
+  tierStyle,
+} from '../../../../lib/portal/tier';
+import { ADMIN_PORTAL_ROLES, getUserAppRole } from '../../../../lib/portal/auth';
+import { createSupabaseServerClient } from '../../../../lib/supabase/server';
+
+const portalUser = (Astro.locals as Record<string, unknown>).portalUser as
+  | { id: string; email?: string | null; app_metadata?: Record<string, unknown> | null }
+  | null
+  | undefined;
+
+if (!portalUser) {
+  return Astro.redirect('/portal/login');
+}
+
+// Defense-in-depth: middleware has already filtered admin-only routes, but
+// fail closed here as well so a misconfigured middleware (e.g. missing env
+// vars) can never silently grant admin privileges via a fallback default.
+const role = getUserAppRole(portalUser);
+if (!role || !ADMIN_PORTAL_ROLES.has(role)) {
+  return Astro.redirect('/portal');
+}
+const userSummary = {
+  id: portalUser.id,
+  email: portalUser.email ?? null,
+  role,
+};
+
+const employeeId = Astro.params.id;
+if (!employeeId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(employeeId)) {
+  return Astro.redirect('/portal/admin/skor-tier');
+}
+
+const { card, error } = await loadEmployeeScoreCard(Astro, employeeId);
+
+const url = new URL(Astro.request.url);
+const notice = url.searchParams.get('notice');
+
+if (!card) {
+  return new Response(null, { status: 302, headers: { Location: '/portal/admin/skor-tier?error=not-found' } });
+}
+
+const ts = tierStyle(card.summary?.tier ?? null);
+const cap = tierCappedLabel(card.summary?.tier_capped_reason ?? null);
+
+// Load active rating aspects for the rating form (admin + kepala_gerai only).
+const canRate = role === 'admin' || role === 'kepala_gerai';
+let aspects: Array<{ id: string; code: string; display_name: string; category: string; max_score: number }> = [];
+if (canRate) {
+  const supabase = createSupabaseServerClient(Astro.request.headers.get('cookie') ?? '');
+  const { data: aspectRows } = await supabase
+    .from('rating_aspects')
+    .select('id, code, display_name, category, max_score')
+    .eq('is_active', true)
+    .order('category', { ascending: true })
+    .order('display_name', { ascending: true });
+  aspects = (aspectRows ?? []) as typeof aspects;
+}
+
+// Build a tree from flat notes using parent_id.
+type NoteNode = ScoreCardNote & { children: NoteNode[] };
+function buildNoteTree(notes: ScoreCardNote[]): NoteNode[] {
+  const map = new Map<string, NoteNode>();
+  notes.forEach((n) => map.set(n.id, { ...n, children: [] }));
+  const roots: NoteNode[] = [];
+  for (const n of map.values()) {
+    if (n.parent_id && map.has(n.parent_id)) {
+      map.get(n.parent_id)!.children.push(n);
+    } else {
+      roots.push(n);
+    }
+  }
+  // Newest top-level first; replies oldest-first (chronological reading).
+  roots.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  for (const n of map.values()) {
+    n.children.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
+  return roots;
+}
+
+const tree = buildNoteTree(card.notes);
+
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  const formatter = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Makassar',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return formatter.format(d);
+}
+
+const ROLE_PILL: Record<string, { label: string; cls: string }> = {
+  admin:           { label: 'Admin',     cls: 'bg-rose-500/20 text-rose-200 ring-rose-500/40' },
+  kepala_gerai:    { label: 'Kepala',    cls: 'bg-amber-500/20 text-amber-200 ring-amber-500/40' },
+  area_supervisor: { label: 'Supervisor',cls: 'bg-sky-500/20 text-sky-200 ring-sky-500/40' },
+};
+---
+
+<PortalAdminLayout title={`${card.employee.name} — Skor Tier`} user={userSummary}>
+  <div class="mb-4">
+    <a
+      href="/portal/admin/skor-tier"
+      class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 transition"
+    >
+      ← Kembali ke Skor Tier
+    </a>
+  </div>
+
+  {error && (
+    <div class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      Gagal memuat: {error}
+    </div>
+  )}
+  {notice === 'note-created' && (
+    <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      Komentar berhasil ditambahkan.
+    </div>
+  )}
+  {notice === 'note-deleted' && (
+    <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      Komentar dihapus.
+    </div>
+  )}
+  {notice === 'rating-saved' && (
+    <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      Penilaian disimpan. Skor sedang di-recompute.
+    </div>
+  )}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <!-- Left: Score Card -->
+    <section class="lg:col-span-1">
+      <article class:list={[
+        'rounded-xl border bg-slate-900 text-white overflow-hidden',
+        'border-slate-700',
+        ts.glow,
+      ]}>
+        <div class:list={['flex items-center justify-between px-4 py-2', ts.ribbon]}>
+          <span class="font-tier-rank text-2xl leading-none">{card.summary?.tier ?? '—'}</span>
+          <span class="text-xs font-bold uppercase tracking-widest">{ts.label}</span>
+        </div>
+        <div class="p-4">
+          <h1 class="text-xl font-extrabold">{card.employee.name}</h1>
+          <p class="text-xs text-slate-400 mt-0.5">
+            {card.employee.position ?? '—'} · Periode {card.period}
+          </p>
+
+          <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-lg bg-slate-800 p-2">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Total</div>
+              <div class="text-lg font-bold tabular-nums">{formatScore(card.summary?.total_score ?? null)}</div>
+            </div>
+            <div class="rounded-lg bg-slate-800 p-2">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Outlet</div>
+              <div class="text-lg font-bold tabular-nums">
+                {card.summary?.rank_outlet ? `#${card.summary.rank_outlet}` : '—'}
+              </div>
+            </div>
+            <div class="rounded-lg bg-slate-800 p-2">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400">Global</div>
+              <div class="text-lg font-bold tabular-nums">
+                {card.summary?.rank_global ? `#${card.summary.rank_global}` : '—'}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Kehadiran</span>
+              <span class="font-bold tabular-nums">{formatScore(card.summary?.attendance_score ?? null)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Penilaian Manual</span>
+              <span class="font-bold tabular-nums">{formatScore(card.summary?.manual_score ?? null)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">QC</span>
+              <span class="font-bold tabular-nums">{formatScore(card.summary?.qc_score ?? null)}</span>
+            </div>
+          </div>
+
+          <!-- Status pills -->
+          <div class="mt-4 flex flex-wrap gap-1.5 text-[10px]">
+            {card.employee.is_new && (
+              <span class="bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40 rounded px-1.5 py-0.5 font-bold">BARU (≤7 hari)</span>
+            )}
+            <span class:list={[
+              'rounded px-1.5 py-0.5 font-bold ring-1',
+              card.employee.employment_contract === 'PARTTIME'
+                ? 'bg-purple-500/20 text-purple-300 ring-purple-500/40'
+                : 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/40',
+            ]}>
+              {card.employee.employment_contract ?? '—'}
+            </span>
+          </div>
+
+          {cap && (
+            <div class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 px-2 py-1.5 text-xs">
+              {cap}
+            </div>
+          )}
+
+          <!-- Icons -->
+          {card.icons.length > 0 && (
+            <div class="mt-4 border-t border-slate-700 pt-3">
+              <h3 class="text-[10px] uppercase tracking-wider text-slate-400 mb-2">Catatan Otomatis</h3>
+              <div class="flex flex-wrap gap-1.5">
+                {card.icons.map((i) => (
+                  <span
+                    class:list={[
+                      'rounded px-2 py-0.5 text-[11px] font-medium',
+                      i.kind === 'achievement'
+                        ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/40',
+                    ]}
+                  >
+                    {i.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </article>
+
+      <!-- Rating form (admin/kepala only) -->
+      {canRate && aspects.length > 0 && (
+        <details class="mt-4 rounded-lg border border-slate-200 bg-white">
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-bold text-slate-900 hover:bg-slate-50 transition list-none [&::-webkit-details-marker]:hidden flex items-center justify-between">
+            <span>Tambah / Update Penilaian</span>
+            <span class="text-xs text-slate-400">▼</span>
+          </summary>
+          <form method="POST" action="/portal/admin/api/rating" class="p-4 border-t border-slate-200 space-y-3">
+            <input type="hidden" name="employee_id" value={card.employee.id} />
+            <input type="hidden" name="rating_period" value={card.period} />
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Aspek</label>
+              <select
+                id="rating-aspect"
+                name="aspect_id"
+                required
+                class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              >
+                {aspects.map((a) => (
+                  <option value={a.id} data-max-score={a.max_score}>
+                    [{a.category === 'manual' ? 'Manual' : 'QC'}] {a.display_name} (max {a.max_score})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nilai</label>
+              <input
+                id="rating-score"
+                type="number"
+                name="score"
+                step="0.1"
+                min="0"
+                max={aspects[0]?.max_score ?? 5}
+                required
+                class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              />
+              <p class="text-[11px] text-slate-400 mt-1">Sesuaikan dengan max-score aspek (mis. 0-5 untuk Manual, 0-100 untuk QC).</p>
+            </div>
+
+            <script is:inline>
+              // Keep the score input's `max` attribute in sync with the
+              // selected aspect's `data-max-score`. Server-side enforcement
+              // also exists in /portal/admin/api/rating so this is purely UX.
+              (function () {
+                const sel = document.getElementById('rating-aspect');
+                const num = document.getElementById('rating-score');
+                if (!sel || !num) return;
+                function sync() {
+                  const opt = sel.options[sel.selectedIndex];
+                  const max = opt && opt.dataset.maxScore;
+                  if (max) num.setAttribute('max', max);
+                }
+                sel.addEventListener('change', sync);
+                sync();
+              })();
+            </script>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan (opsional)</label>
+              <textarea
+                name="notes"
+                rows="2"
+                maxlength="500"
+                class="w-full resize-none rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                placeholder="Konteks penilaian…"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition"
+            >
+              Simpan Penilaian
+            </button>
+          </form>
+        </details>
+      )}
+    </section>
+
+    <!-- Right: Notes -->
+    <section class="lg:col-span-2">
+      <header class="mb-3 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900">Catatan Tim</h2>
+        <span class="text-xs text-slate-400">{card.notes.length} komentar</span>
+      </header>
+
+      <!-- New top-level note form -->
+      <form
+        method="POST"
+        action="/portal/admin/api/note"
+        class="mb-5 rounded-lg border border-slate-200 bg-white p-3"
+      >
+        <input type="hidden" name="employee_id" value={card.employee.id} />
+        <textarea
+          name="body"
+          rows="2"
+          required
+          minlength="1"
+          maxlength="2000"
+          placeholder="Tulis catatan untuk karyawan ini…"
+          class="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        ></textarea>
+        <div class="mt-2 flex items-center justify-between">
+          <span class="text-[11px] text-slate-400">Komentar terlihat oleh admin & kepala gerai outlet ini.</span>
+          <button
+            type="submit"
+            class="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
+          >
+            Kirim
+          </button>
+        </div>
+      </form>
+
+      <!-- Threaded list -->
+      {tree.length === 0 ? (
+        <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-400">
+          Belum ada komentar. Jadilah yang pertama memberi catatan.
+        </div>
+      ) : (
+        <ol class="space-y-3">
+          {tree.map((n) => {
+            const pill = ROLE_PILL[n.author_role] ?? { label: n.author_role, cls: 'bg-slate-200 text-slate-700 ring-slate-300' };
+            return (
+              <li class="rounded-lg border border-slate-200 bg-white">
+                <article class="p-3">
+                  <header class="flex items-center justify-between gap-2 mb-1.5">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="font-semibold text-sm text-slate-900 truncate">{n.author_name}</span>
+                      <span class:list={['text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 font-bold ring-1', pill.cls]}>
+                        {pill.label}
+                      </span>
+                    </div>
+                    <time class="text-[11px] text-slate-400">{formatRelative(n.created_at)}</time>
+                  </header>
+                  <p class="text-sm text-slate-700 whitespace-pre-wrap">{n.body}</p>
+
+                  <!-- Reply toggle -->
+                  <details class="mt-2 group">
+                    <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-900 transition select-none list-none [&::-webkit-details-marker]:hidden">
+                      <span class="group-open:hidden">↳ Balas</span>
+                      <span class="hidden group-open:inline">Tutup balasan</span>
+                    </summary>
+                    <form
+                      method="POST"
+                      action="/portal/admin/api/note"
+                      class="mt-2 rounded-md bg-slate-50 border border-slate-200 p-2"
+                    >
+                      <input type="hidden" name="employee_id" value={card.employee.id} />
+                      <input type="hidden" name="parent_id" value={n.id} />
+                      <textarea
+                        name="body"
+                        rows="2"
+                        required
+                        minlength="1"
+                        maxlength="2000"
+                        placeholder={`Balas ${n.author_name}…`}
+                        class="w-full resize-none rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                      ></textarea>
+                      <div class="mt-1.5 flex items-center justify-end gap-2">
+                        <button
+                          type="submit"
+                          class="rounded bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-700 transition"
+                        >
+                          Balas
+                        </button>
+                      </div>
+                    </form>
+                  </details>
+                </article>
+
+                <!-- Children -->
+                {n.children.length > 0 && (
+                  <ol class="border-t border-slate-100 bg-slate-50/40">
+                    {n.children.map((c) => {
+                      const cpill = ROLE_PILL[c.author_role] ?? { label: c.author_role, cls: 'bg-slate-200 text-slate-700 ring-slate-300' };
+                      return (
+                        <li class="p-3 pl-6 border-l-2 border-slate-200 ml-3">
+                          <header class="flex items-center justify-between gap-2 mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                              <span class="font-semibold text-sm text-slate-900 truncate">{c.author_name}</span>
+                              <span class:list={['text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 font-bold ring-1', cpill.cls]}>
+                                {cpill.label}
+                              </span>
+                            </div>
+                            <time class="text-[11px] text-slate-400">{formatRelative(c.created_at)}</time>
+                          </header>
+                          <p class="text-sm text-slate-700 whitespace-pre-wrap">{c.body}</p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  </div>
+</PortalAdminLayout>
