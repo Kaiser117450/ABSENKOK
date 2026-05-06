@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-// Permanent redirect: /portal/admin/hierarchy → /portal/admin/skor-tier
+// Permanent redirect from /portal/admin/hierarchy to /portal/admin/skor-tier.
 // Preserves any querystring (filter / outlet / tier / q) so existing
 // bookmarks keep working with the renamed page.
 return new Response(null, {

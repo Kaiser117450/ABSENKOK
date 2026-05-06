@@ -114,7 +114,7 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
   <div class="mb-4">
     <a
       href="/portal/admin/skor-tier"
-      class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.1] hover:text-white"
+      class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition"
     >
       <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none">
         <path d="M12 19l-7-7 7-7M5 12h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
@@ -124,22 +124,22 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
   </div>
 
   {error && (
-    <div class="mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+    <div class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
       Gagal memuat: {error}
     </div>
   )}
   {notice === 'note-created' && (
-    <div class="mb-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+    <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
       Komentar berhasil ditambahkan.
     </div>
   )}
   {notice === 'note-deleted' && (
-    <div class="mb-4 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-slate-200">
+    <div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
       Komentar dihapus.
     </div>
   )}
   {notice === 'rating-saved' && (
-    <div class="mb-4 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+    <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
       Penilaian disimpan. Skor sedang di-recompute.
     </div>
   )}
@@ -148,92 +148,86 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
     <!-- Left: Score Card -->
     <section class="lg:col-span-1">
       <article class:list={[
-        'overflow-hidden rounded-[2rem] border bg-slate-950/78 text-white shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl',
-        'border-white/10',
+        'overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm',
         ts.glow,
       ]}>
-        <div class:list={['relative flex items-center justify-between gap-4 overflow-hidden px-5 py-5', ts.ribbon]}>
-          <div>
-            <span class="rank-display block text-6xl leading-none sm:text-7xl">{card.summary?.tier ?? '—'}</span>
-            <span class="mt-1 block text-xs font-black uppercase tracking-[0.28em] opacity-80">{ts.label}</span>
-          </div>
-          <svg class="h-12 w-12 opacity-60" viewBox="0 0 24 24" aria-hidden="true" fill="none">
-            <path d="M12 3l2.35 5.05 5.52.7-4.08 3.72 1.08 5.46L12 15.16 7.13 17.93l1.08-5.46-4.08-3.72 5.52-.7L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-          </svg>
+        <div class:list={['flex items-center justify-between px-5 py-3', ts.ribbon]}>
+          <span class="font-tier-rank text-5xl leading-none">{card.summary?.tier ?? '—'}</span>
+          <span class="text-xs font-bold uppercase tracking-widest">{ts.label}</span>
         </div>
         <div class="p-5">
-          <h1 class="text-2xl font-black tracking-tight">{card.employee.name}</h1>
-          <p class="mt-1 text-xs text-slate-400">
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-950">{card.employee.name}</h1>
+          <p class="text-xs text-slate-400 mt-0.5">
             {card.employee.position ?? '—'} · Periode {card.period}
           </p>
 
-          <div class="mt-5 grid grid-cols-3 gap-2 text-center">
-            <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
-              <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Total</div>
-              <div class="mt-1 text-xl font-black tabular-nums">{formatScore(card.summary?.total_score ?? null)}</div>
+          <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500">Total</div>
+              <div class="text-lg font-extrabold tabular-nums text-slate-950">{formatScore(card.summary?.total_score ?? null)}</div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
-              <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Outlet</div>
-              <div class="mt-1 text-xl font-black tabular-nums">
+            <div class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500">Outlet</div>
+              <div class="text-lg font-extrabold tabular-nums text-slate-950">
                 {card.summary?.rank_outlet ? `#${card.summary.rank_outlet}` : '—'}
               </div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
-              <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Global</div>
-              <div class="mt-1 text-xl font-black tabular-nums">
+            <div class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500">Global</div>
+              <div class="text-lg font-extrabold tabular-nums text-slate-950">
                 {card.summary?.rank_global ? `#${card.summary.rank_global}` : '—'}
               </div>
             </div>
           </div>
 
-          <div class="mt-5 space-y-2 text-sm">
-            <div class="flex justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2">
-              <span class="text-slate-400">Kehadiran</span>
-              <span class="font-black tabular-nums">{formatScore(card.summary?.attendance_score ?? null)}</span>
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Kehadiran</span>
+              <span class="font-bold tabular-nums text-slate-950">{formatScore(card.summary?.attendance_score ?? null)}</span>
             </div>
-            <div class="flex justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2">
-              <span class="text-slate-400">Penilaian Manual</span>
-              <span class="font-black tabular-nums">{formatScore(card.summary?.manual_score ?? null)}</span>
+            <div class="flex justify-between">
+              <span class="text-slate-500">Penilaian Manual</span>
+              <span class="font-bold tabular-nums text-slate-950">{formatScore(card.summary?.manual_score ?? null)}</span>
             </div>
-            <div class="flex justify-between rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2">
-              <span class="text-slate-400">QC</span>
-              <span class="font-black tabular-nums">{formatScore(card.summary?.qc_score ?? null)}</span>
+            <div class="flex justify-between">
+              <span class="text-slate-500">QC</span>
+              <span class="font-bold tabular-nums text-slate-950">{formatScore(card.summary?.qc_score ?? null)}</span>
             </div>
           </div>
 
           <!-- Status pills -->
           <div class="mt-4 flex flex-wrap gap-1.5 text-[10px]">
             {card.employee.is_new && (
-              <span class="rounded-full bg-blue-500/20 px-2.5 py-1 font-bold text-blue-300 ring-1 ring-blue-500/40">BARU (≤7 hari)</span>
+              <span class="bg-blue-50 text-blue-700 ring-1 ring-blue-200 rounded px-1.5 py-0.5 font-bold">BARU (≤7 hari)</span>
             )}
             <span class:list={[
-              'rounded-full px-2.5 py-1 font-bold ring-1',
+              'rounded px-1.5 py-0.5 font-bold ring-1',
               card.employee.employment_contract === 'PARTTIME'
-                ? 'bg-purple-500/20 text-purple-300 ring-purple-500/40'
-                : 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/40',
+                ? 'bg-purple-50 text-purple-700 ring-purple-200'
+                : 'bg-emerald-50 text-emerald-700 ring-emerald-200',
             ]}>
               {card.employee.employment_contract ?? '—'}
             </span>
           </div>
 
           {cap && (
-            <div class="mt-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-300">
+            <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
               {cap}
             </div>
           )}
 
           <!-- Icons -->
           {card.icons.length > 0 && (
-            <div class="mt-5 border-t border-white/10 pt-4">
-              <h3 class="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Catatan Otomatis</h3>
+            <div class="mt-4 border-t border-slate-200 pt-3">
+              <h3 class="text-[10px] uppercase tracking-wider text-slate-400 mb-2">Catatan Otomatis</h3>
               <div class="flex flex-wrap gap-1.5">
                 {card.icons.map((i) => (
                   <span
                     class:list={[
-                      'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold',
+                      'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium',
                       i.kind === 'achievement'
-                        ? 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-500/40'
-                        : 'bg-rose-500/20 text-rose-200 ring-1 ring-rose-500/40',
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                        : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
                     ]}
                   >
                     <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" aria-hidden="true" fill="none">
@@ -243,7 +237,7 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
                         <path d="M12 8v5M12 17h.01M10.3 4.3 2.9 18a1.5 1.5 0 0 0 1.32 2.2h15.56A1.5 1.5 0 0 0 21.1 18L13.7 4.3a1.95 1.95 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                       )}
                     </svg>
-                    {i.label}
+                    <span>{i.label}</span>
                   </span>
                 ))}
               </div>
@@ -254,29 +248,24 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
 
       <!-- Rating form (admin/kepala only) -->
       {canRate && aspects.length > 0 && (
-        <details class="mt-4 rounded-[1.5rem] border border-white/10 bg-slate-950/72 text-slate-100 shadow-2xl shadow-black/20 backdrop-blur-xl">
-          <summary class="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-black text-white transition hover:bg-white/[0.04] list-none [&::-webkit-details-marker]:hidden">
-            <span class="inline-flex items-center gap-2">
-              <svg class="h-4 w-4 text-[#7C8DFF]" viewBox="0 0 24 24" aria-hidden="true" fill="none">
-                <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              Tambah / Update Penilaian
-            </span>
-            <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" aria-hidden="true" fill="none">
-              <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <details class="mt-4 rounded-lg border border-slate-200 bg-white">
+          <summary class="cursor-pointer px-4 py-2.5 text-sm font-bold text-slate-900 hover:bg-slate-50 transition list-none [&::-webkit-details-marker]:hidden flex items-center justify-between">
+            <span>Tambah / Update Penilaian</span>
+            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+              <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </summary>
-          <form method="POST" action="/portal/admin/api/rating" class="space-y-3 border-t border-white/10 p-4">
+          <form method="POST" action="/portal/admin/api/rating" class="p-4 border-t border-slate-200 space-y-3">
             <input type="hidden" name="employee_id" value={card.employee.id} />
             <input type="hidden" name="rating_period" value={card.period} />
 
             <div>
-              <label class="mb-1.5 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Aspek</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Aspek</label>
               <select
                 id="rating-aspect"
                 name="aspect_id"
                 required
-                class="w-full rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 text-sm font-semibold text-white focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+                class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
               >
                 {aspects.map((a) => (
                   <option value={a.id} data-max-score={a.max_score}>
@@ -287,7 +276,7 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
             </div>
 
             <div>
-              <label class="mb-1.5 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Nilai</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nilai</label>
               <input
                 id="rating-score"
                 type="number"
@@ -296,7 +285,7 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
                 min="0"
                 max={aspects[0]?.max_score ?? 5}
                 required
-                class="w-full rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-white focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+                class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
               />
               <p class="text-[11px] text-slate-400 mt-1">Sesuaikan dengan max-score aspek (mis. 0-5 untuk Manual, 0-100 untuk QC).</p>
             </div>
@@ -320,19 +309,19 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
             </script>
 
             <div>
-              <label class="mb-1.5 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Catatan (opsional)</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan (opsional)</label>
               <textarea
                 name="notes"
                 rows="2"
                 maxlength="500"
-                class="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-[#FF4DA0]/60 focus:outline-none focus:ring-4 focus:ring-[#FF4DA0]/15"
+                class="w-full resize-none rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                 placeholder="Konteks penilaian…"
               ></textarea>
             </div>
 
             <button
               type="submit"
-              class="w-full rounded-2xl bg-gradient-to-r from-[#FF4DA0] to-[#7C8DFF] px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-white shadow-[0_14px_36px_rgba(124,141,255,0.26)] transition hover:scale-[1.01]"
+              class="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 transition"
             >
               Simpan Penilaian
             </button>
@@ -343,21 +332,16 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
 
     <!-- Right: Notes -->
     <section class="lg:col-span-2">
-      <header class="mb-3 flex items-center justify-between rounded-[1.5rem] border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-xl">
-        <h2 class="inline-flex items-center gap-2 text-lg font-black text-white">
-          <svg class="h-5 w-5 text-[#FF4DA0]" viewBox="0 0 24 24" aria-hidden="true" fill="none">
-            <path d="M7 8h10M7 12h6m8 0a8 8 0 0 1-11.1 7.37L4 21l1.63-5.9A8 8 0 1 1 21 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          Catatan Tim
-        </h2>
-        <span class="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-bold text-slate-300">{card.notes.length} komentar</span>
+      <header class="mb-3 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900">Catatan Tim</h2>
+        <span class="text-xs text-slate-400">{card.notes.length} komentar</span>
       </header>
 
       <!-- New top-level note form -->
       <form
         method="POST"
         action="/portal/admin/api/note"
-        class="mb-5 rounded-[1.5rem] border border-white/10 bg-slate-950/72 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl"
+        class="mb-5 rounded-lg border border-slate-200 bg-white p-3"
       >
         <input type="hidden" name="employee_id" value={card.employee.id} />
         <textarea
@@ -367,13 +351,13 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
           minlength="1"
           maxlength="2000"
           placeholder="Tulis catatan untuk karyawan ini…"
-          class="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+          class="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
         ></textarea>
         <div class="mt-2 flex items-center justify-between">
           <span class="text-[11px] text-slate-400">Komentar terlihat oleh admin & kepala gerai outlet ini.</span>
           <button
             type="submit"
-            class="rounded-2xl bg-gradient-to-r from-[#FF4DA0] to-[#7C8DFF] px-4 py-2 text-sm font-black text-white shadow-[0_10px_30px_rgba(124,141,255,0.22)] transition hover:scale-[1.01]"
+            class="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
           >
             Kirim
           </button>
@@ -382,7 +366,7 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
 
       <!-- Threaded list -->
       {tree.length === 0 ? (
-        <div class="rounded-[1.5rem] border border-dashed border-white/15 bg-white/[0.04] p-8 text-center text-sm font-semibold text-slate-400">
+        <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-400">
           Belum ada komentar. Jadilah yang pertama memberi catatan.
         </div>
       ) : (
@@ -390,29 +374,29 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
           {tree.map((n) => {
             const pill = ROLE_PILL[n.author_role] ?? { label: n.author_role, cls: 'bg-slate-200 text-slate-700 ring-slate-300' };
             return (
-              <li class="overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/70 text-slate-100 backdrop-blur-xl">
+              <li class="rounded-lg border border-slate-200 bg-white">
                 <article class="p-3">
                   <header class="flex items-center justify-between gap-2 mb-1.5">
                     <div class="flex items-center gap-2 min-w-0">
-                      <span class="truncate text-sm font-black text-white">{n.author_name}</span>
-                      <span class:list={['rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1', pill.cls]}>
+                      <span class="font-semibold text-sm text-slate-900 truncate">{n.author_name}</span>
+                      <span class:list={['text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 font-bold ring-1', pill.cls]}>
                         {pill.label}
                       </span>
                     </div>
                     <time class="text-[11px] text-slate-400">{formatRelative(n.created_at)}</time>
                   </header>
-                  <p class="whitespace-pre-wrap text-sm text-slate-300">{n.body}</p>
+                  <p class="text-sm text-slate-700 whitespace-pre-wrap">{n.body}</p>
 
                   <!-- Reply toggle -->
                   <details class="mt-2 group">
-                    <summary class="cursor-pointer select-none text-xs font-semibold text-slate-400 transition hover:text-white list-none [&::-webkit-details-marker]:hidden">
-                      <span class="group-open:hidden">Balas</span>
+                    <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-900 transition select-none list-none [&::-webkit-details-marker]:hidden">
+                      <span class="group-open:hidden">↳ Balas</span>
                       <span class="hidden group-open:inline">Tutup balasan</span>
                     </summary>
                     <form
                       method="POST"
                       action="/portal/admin/api/note"
-                      class="mt-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2"
+                      class="mt-2 rounded-md bg-slate-50 border border-slate-200 p-2"
                     >
                       <input type="hidden" name="employee_id" value={card.employee.id} />
                       <input type="hidden" name="parent_id" value={n.id} />
@@ -423,12 +407,12 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
                         minlength="1"
                         maxlength="2000"
                         placeholder={`Balas ${n.author_name}…`}
-                        class="w-full resize-none rounded-xl border border-white/10 bg-white/[0.07] px-2 py-1.5 text-sm text-white placeholder-slate-500 focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+                        class="w-full resize-none rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
                       ></textarea>
                       <div class="mt-1.5 flex items-center justify-end gap-2">
                         <button
                           type="submit"
-                          class="rounded-xl bg-white/[0.1] px-3 py-1 text-xs font-bold text-white transition hover:bg-white/[0.15]"
+                          class="rounded bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-700 transition"
                         >
                           Balas
                         </button>
@@ -439,21 +423,21 @@ const ROLE_PILL: Record<string, { label: string; cls: string }> = {
 
                 <!-- Children -->
                 {n.children.length > 0 && (
-                  <ol class="border-t border-white/10 bg-white/[0.03]">
+                  <ol class="border-t border-slate-100 bg-slate-50/40">
                     {n.children.map((c) => {
                       const cpill = ROLE_PILL[c.author_role] ?? { label: c.author_role, cls: 'bg-slate-200 text-slate-700 ring-slate-300' };
                       return (
-                        <li class="ml-3 border-l-2 border-white/10 p-3 pl-6">
+                        <li class="p-3 pl-6 border-l-2 border-slate-200 ml-3">
                           <header class="flex items-center justify-between gap-2 mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
-                              <span class="truncate text-sm font-black text-white">{c.author_name}</span>
-                              <span class:list={['rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1', cpill.cls]}>
+                              <span class="font-semibold text-sm text-slate-900 truncate">{c.author_name}</span>
+                              <span class:list={['text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 font-bold ring-1', cpill.cls]}>
                                 {cpill.label}
                               </span>
                             </div>
                             <time class="text-[11px] text-slate-400">{formatRelative(c.created_at)}</time>
                           </header>
-                          <p class="whitespace-pre-wrap text-sm text-slate-300">{c.body}</p>
+                          <p class="text-sm text-slate-700 whitespace-pre-wrap">{c.body}</p>
                         </li>
                       );
                     })}
