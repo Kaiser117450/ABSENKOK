@@ -1,0 +1,157 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const errorParam = Astro.url.searchParams.get('error');
+const retryAfterParam = Astro.url.searchParams.get('retry_after');
+
+let errorMessage: string | null = null;
+if (errorParam === 'rate_limited') {
+  const retryAfter = Number.isFinite(Number(retryAfterParam))
+    ? Number(retryAfterParam)
+    : 60;
+  errorMessage = `Terlalu banyak percobaan. Silakan tunggu ${retryAfter} detik dan coba lagi.`;
+} else if (errorParam === 'turnstile') {
+  errorMessage = 'Verifikasi keamanan gagal. Coba refresh halaman ini dan login ulang.';
+} else if (errorParam === 'credentials') {
+  errorMessage = 'Email atau password salah. Silakan coba lagi.';
+} else if (errorParam === 'unauthorized') {
+  errorMessage = 'Akun Anda tidak memiliki akses admin. Hubungi administrator.';
+} else if (errorParam) {
+  errorMessage = 'Gagal masuk. Silakan coba lagi.';
+}
+
+const signedOut = Astro.url.searchParams.get('signed_out') === '1';
+
+const turnstileSiteKey =
+  typeof import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'string'
+    ? import.meta.env.PUBLIC_TURNSTILE_SITE_KEY
+    : '';
+---
+
+<BaseLayout
+  title="Admin Portal — ABSENKOK"
+  description="Masuk ke admin portal ABSENKOK untuk mengelola skor tier dan leaderboard."
+>
+  <div class="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 mb-6">
+        <span class="text-2xl font-extrabold tracking-tight">
+          <span class="text-[#FF4DA0]">ABSEN</span><span class="text-[#7C8DFF]">KOK</span>
+        </span>
+      </a>
+      <h1 class="text-2xl font-bold text-slate-900">Admin Portal</h1>
+      <p class="mt-2 text-sm text-slate-500">Masuk dengan email dan password admin Anda.</p>
+    </div>
+
+    <!-- Card -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-6 shadow-md rounded-2xl border border-slate-200">
+
+        {signedOut && (
+          <div class="mb-5 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800" role="status">
+            Anda telah keluar dari Admin Portal.
+          </div>
+        )}
+
+        {errorMessage && (
+          <div class="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" role="alert">
+            {errorMessage}
+          </div>
+        )}
+
+        <form
+          method="POST"
+          action="/portal/admin/auth/sign-in"
+          id="admin-login-form"
+          novalidate
+        >
+          <!-- Email -->
+          <div class="mb-4">
+            <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="admin@absenkok.app"
+              class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-[#7C8DFF] focus:outline-none focus:ring-2 focus:ring-[#7C8DFF]/20 transition"
+            />
+          </div>
+
+          <!-- Password -->
+          <div class="mb-4">
+            <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="Masukkan password"
+              class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-[#7C8DFF] focus:outline-none focus:ring-2 focus:ring-[#7C8DFF]/20 transition"
+            />
+          </div>
+
+          {turnstileSiteKey && (
+            <div class="mb-4 flex justify-center">
+              <div
+                id="turnstile-widget"
+                class="cf-turnstile"
+                data-sitekey={turnstileSiteKey}
+                data-theme="light"
+                data-size="flexible"
+              ></div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            id="submit-btn"
+            class="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/40 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span id="btn-text">Masuk</span>
+            <span id="btn-loading" class="hidden">Memproses...</span>
+          </button>
+        </form>
+
+        {turnstileSiteKey && (
+          <script
+            is:inline
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            async
+            defer
+          ></script>
+        )}
+
+        <div class="mt-6 text-center">
+          <a href="/portal/login" class="text-sm text-slate-500 hover:text-[#FF4DA0] transition">
+            &larr; Kembali ke Portal Karyawan
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const form = document.getElementById('admin-login-form') as HTMLFormElement | null;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+
+  if (form && submitBtn) {
+    form.addEventListener('submit', () => {
+      const btnText = document.getElementById('btn-text');
+      const btnLoading = document.getElementById('btn-loading');
+      if (btnText) btnText.classList.add('hidden');
+      if (btnLoading) btnLoading.classList.remove('hidden');
+      submitBtn.disabled = true;
+    });
+  }
+</script>
