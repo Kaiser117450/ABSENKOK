@@ -42,7 +42,7 @@ export function getClientIp(request: Request): string {
  */
 export async function checkRateLimit(
   request: Request,
-  endpoint: 'portal_search' | 'portal_sign_in',
+  endpoint: 'portal_search' | 'portal_sign_in' | 'admin_sign_in',
   maxRequests: number,
   windowSeconds: number,
 ): Promise<RateLimitResult | null> {
