@@ -15,6 +15,9 @@ const PUBLIC_PORTAL_PATHS = new Set([
   '/portal/auth/search',
   '/portal/auth/sign-in',
   '/portal/auth/sign-out',
+  '/portal/admin/login',
+  '/portal/admin/auth/sign-in',
+  '/portal/admin/auth/sign-out',
 ]);
 
 /**

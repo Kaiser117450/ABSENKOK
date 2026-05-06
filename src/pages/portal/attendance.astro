@@ -1,0 +1,115 @@
+---
+export const prerender = false;
+
+import PortalLayout from '../../layouts/PortalLayout.astro';
+import PortalAttendanceSummary from '../../components/portal/PortalAttendanceSummary.astro';
+import PortalAttendanceHistorySection from '../../components/portal/PortalAttendanceHistorySection.astro';
+import PortalStatePanel from '../../components/portal/PortalStatePanel.astro';
+import { loadPortalAttendanceRecap } from '../../lib/portal/attendance-recap';
+import { countFollowUpDays } from '../../lib/portal/attendance-recap-presentation';
+
+// Load the recap exactly once — never fetch again on this page.
+const result = await loadPortalAttendanceRecap(Astro);
+
+// Unauthenticated: redirect to login.
+if (!result.ok && result.reason === 'unauthenticated') {
+  return Astro.redirect('/portal/login');
+}
+
+// Derive follow-up count from the recap dataset — no second query needed.
+const followUpCount = result.ok ? countFollowUpDays(result.recap.days) : 0;
+
+// Stub employee used when the recap failed and identity is unavailable.
+const FALLBACK_EMPLOYEE = {
+  employee_id: '',
+  employee_name: 'Karyawan',
+  position: null,
+  home_outlet_id: null,
+  home_outlet_name: null,
+  photo_url: null,
+  active_badge_id: null,
+};
+---
+
+{result.ok && result.recap.days.length === 0 && (
+  <PortalLayout title="Kehadiran" employee={result.recap.employee} activeSection="attendance">
+    <!-- Page heading -->
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Rekap Kehadiran</h1>
+      <p class="mt-1 text-sm text-gray-500">
+        Ringkasan kehadiran bulan ini dan riwayat hari-hari terkini.
+      </p>
+    </div>
+
+    <!-- Empty state: no recap days returned for this employee -->
+    <PortalStatePanel
+      variant="empty"
+      title="Belum ada data kehadiran"
+      message="Belum ada data kehadiran yang tersedia untuk bulan ini. Data akan muncul setelah jadwal dan absensi tercatat."
+    />
+  </PortalLayout>
+)}
+
+{result.ok && result.recap.days.length > 0 && (
+  <PortalLayout title="Kehadiran" employee={result.recap.employee} activeSection="attendance">
+    <!-- Page heading -->
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">Rekap Kehadiran</h1>
+      <p class="mt-1 text-sm text-gray-500">
+        Ringkasan kehadiran bulan ini dan riwayat hari-hari terkini.
+      </p>
+    </div>
+
+    <!-- Month-to-date summary counts with follow-up framing -->
+    <div class="mb-6">
+      <PortalAttendanceSummary
+        summaryCounts={result.recap.summaryCounts}
+        monthStart={result.recap.monthStart}
+        followUpCount={followUpCount}
+        streak={result.recap.streak}
+      />
+    </div>
+
+    <!-- Recent day-by-day history -->
+    <PortalAttendanceHistorySection
+      recentDays={result.recap.recentDays}
+      referenceDate={result.recap.referenceDate}
+    />
+  </PortalLayout>
+)}
+
+{!result.ok && result.reason === 'no_mapping' && (
+  <PortalLayout title="Akun Tidak Terhubung" employee={FALLBACK_EMPLOYEE} activeSection="attendance">
+    <PortalStatePanel
+      variant="not-linked"
+      title="Akun tidak terhubung"
+      message="Akun portal Anda belum terhubung ke data karyawan aktif. Hubungi admin untuk mengaktifkan akun Anda."
+    >
+      <form method="POST" action="/portal/auth/sign-out" class="w-full">
+        <button
+          type="submit"
+          class="w-full rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition"
+        >
+          Keluar
+        </button>
+      </form>
+    </PortalStatePanel>
+  </PortalLayout>
+)}
+
+{!result.ok && result.reason === 'rpc_error' && (
+  <PortalLayout title="Terjadi Kesalahan" employee={FALLBACK_EMPLOYEE} activeSection="attendance">
+    <PortalStatePanel
+      variant="error"
+      title="Terjadi kesalahan"
+      message="Tidak dapat memuat data kehadiran. Muat ulang halaman atau coba beberapa saat lagi."
+    >
+      <a
+        href="/portal/attendance"
+        class="inline-block rounded-xl bg-[#E91E8C] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#c2187a] transition"
+      >
+        Muat Ulang
+      </a>
+    </PortalStatePanel>
+  </PortalLayout>
+)}

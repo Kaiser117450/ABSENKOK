@@ -71,10 +71,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Admin portal: gate behind app_role ∈ {admin, kepala_gerai, area_supervisor}.
   if (isAdminPortalRoute(pathname)) {
+    if (!user) {
+      return appendRefreshedCookies(redirect('/portal/admin/login', 302));
+    }
     const role = getUserAppRole(user);
     if (!role || !ADMIN_PORTAL_ROLES.has(role)) {
-      // Not an admin/manager — bounce to the regular employee portal home.
-      return appendRefreshedCookies(redirect('/portal', 302));
+      // Authenticated but not an admin — redirect to admin login with error.
+      return appendRefreshedCookies(redirect('/portal/admin/login?error=unauthorized', 302));
     }
   }
 

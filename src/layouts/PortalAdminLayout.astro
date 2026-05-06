@@ -100,7 +100,7 @@ const roleLabel = ROLE_LABEL[user.role] ?? user.role;
             <div class="text-xs leading-tight text-slate-300">{user.email ?? 'Admin'}</div>
             <div class="text-[10px] uppercase tracking-wider text-slate-500">{roleLabel}</div>
           </div>
-          <form method="POST" action="/portal/auth/sign-out">
+          <form method="POST" action="/portal/admin/auth/sign-out">
             <button
               type="submit"
               class="text-xs text-slate-300 hover:text-white transition px-2 py-1 rounded hover:bg-slate-800 whitespace-nowrap"

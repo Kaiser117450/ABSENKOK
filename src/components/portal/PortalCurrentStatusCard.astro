@@ -1,0 +1,274 @@
+---
+/**
+ * PortalCurrentStatusCard — today's live attendance status for the portal home.
+ *
+ * Presentational only. All business logic lives in
+ * `src/lib/portal/home-status.ts` — this component just renders the
+ * `PortalHomeStatus` model into tone-appropriate surfaces plus a tiny
+ * inline script that ticks the realtime "sedang bekerja" and "istirahat"
+ * counters without polling the server.
+ *
+ * Accessibility:
+ * - Honors `prefers-reduced-motion` (pulse animations disabled when set).
+ * - Initial timer values are rendered server-side from `serverRenderedAt`
+ *   so the page is useful even before the inline script runs.
+ * - Uses `aria-live="polite"` on the timer so screen readers surface
+ *   updates without interrupting the user.
+ */
+import type { PortalHomeStatus } from '../../lib/portal/home-status';
+import { formatElapsed } from '../../lib/portal/home-status';
+
+interface Props {
+  status: PortalHomeStatus;
+}
+
+const { status } = Astro.props;
+
+// Tone → Tailwind class map (all brand tokens already in tailwind config).
+const TONE_SURFACE: Record<PortalHomeStatus['tone'], string> = {
+  success: 'bg-emerald-50 border-emerald-200',
+  accent: 'bg-[#E91E8C]/5 border-[#E91E8C]/20',
+  warning: 'bg-amber-50 border-amber-200',
+  neutral: 'bg-gray-50 border-gray-200',
+};
+
+const TONE_BADGE: Record<PortalHomeStatus['tone'], string> = {
+  success: 'bg-emerald-600/10 text-emerald-800 ring-1 ring-emerald-200',
+  accent: 'bg-[#E91E8C]/10 text-[#E91E8C] ring-1 ring-[#E91E8C]/30',
+  warning: 'bg-amber-500/10 text-amber-800 ring-1 ring-amber-300',
+  neutral: 'bg-gray-200/60 text-gray-700 ring-1 ring-gray-300',
+};
+
+// Format a WITA-absolute instant into "HH:MM" shown in the employee's
+// business-local clock (always rendered in Asia/Makassar so the label
+// matches what the employee sees on their kiosk).
+function formatClock(instant: string | null): string | null {
+  if (!instant) return null;
+  const d = new Date(instant);
+  if (Number.isNaN(d.valueOf())) return null;
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Makassar',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+}
+
+const shiftRange =
+  status.shiftStartAt && status.shiftEndAt
+    ? `${formatClock(status.shiftStartAt)} – ${formatClock(status.shiftEndAt)}`
+    : null;
+
+const cutoffClock = formatClock(status.lateCutoffAt);
+
+// Compute the initial live value for the realtime counter server-side so
+// the card is meaningful with JS disabled or still loading.
+let initialElapsedLabel = '';
+let liveAnchor: string | null = null;
+if (status.phase === 'sedang_bekerja' && status.workStartedAt) {
+  liveAnchor = status.workStartedAt;
+  const startedAt = Date.parse(status.workStartedAt);
+  const renderedAt = Date.parse(status.serverRenderedAt);
+  if (!Number.isNaN(startedAt) && !Number.isNaN(renderedAt)) {
+    initialElapsedLabel = formatElapsed(renderedAt - startedAt);
+  }
+} else if (status.phase === 'istirahat' && status.breakStartedAt) {
+  liveAnchor = status.breakStartedAt;
+  const startedAt = Date.parse(status.breakStartedAt);
+  const renderedAt = Date.parse(status.serverRenderedAt);
+  if (!Number.isNaN(startedAt) && !Number.isNaN(renderedAt)) {
+    initialElapsedLabel = formatElapsed(renderedAt - startedAt);
+  }
+}
+
+const liveLabelByPhase: Record<string, string> = {
+  sedang_bekerja: 'Sedang bekerja',
+  istirahat: 'Istirahat berjalan',
+};
+const liveLabel = liveLabelByPhase[status.phase] ?? '';
+
+// Late minutes (server-computed) — null when not late or when anchors are missing.
+let lateMinutesLabel: string | null = null;
+if (status.isLate && status.lateCutoffAt && status.firstMasukAt) {
+  const diff = Date.parse(status.firstMasukAt) - Date.parse(status.lateCutoffAt);
+  if (diff > 0) {
+    lateMinutesLabel = `${Math.ceil(diff / 60_000)}m`;
+  }
+}
+---
+
+<section
+  class={`rounded-2xl border ${TONE_SURFACE[status.tone]} p-4 sm:p-5 mb-6`}
+  aria-label="Status kehadiran hari ini"
+>
+  <!-- Status header: phase badge + identity subline -->
+  <div class="flex items-start justify-between gap-3 mb-3">
+    <div class="min-w-0">
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+        Status Hari Ini
+      </p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${TONE_BADGE[status.tone]}`}>
+          {status.phase === 'sedang_bekerja' && (
+            <span class="portal-status-dot w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" aria-hidden="true"></span>
+          )}
+          {status.phase === 'istirahat' && (
+            <span class="portal-status-dot w-1.5 h-1.5 rounded-full bg-[#E91E8C] mr-1.5" aria-hidden="true"></span>
+          )}
+          {status.label}
+        </span>
+        {status.isLate && lateMinutesLabel && (
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 ring-1 ring-amber-300">
+            Terlambat {lateMinutesLabel}
+          </span>
+        )}
+      </div>
+      <p class="mt-1 text-xs text-gray-600 truncate" title={status.identityLine}>
+        {status.identityLine}
+      </p>
+    </div>
+  </div>
+
+  <!-- Live timer (only for sedang_bekerja / istirahat) -->
+  {liveAnchor && (
+    <div
+      class="portal-live-timer rounded-xl bg-white/80 border border-white/60 px-4 py-3 mb-3"
+      data-anchor={liveAnchor}
+      data-phase={status.phase}
+    >
+      <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        {liveLabel}
+      </p>
+      <p
+        class="portal-live-value text-2xl font-bold text-gray-900 tabular-nums"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {initialElapsedLabel || '—'}
+      </p>
+    </div>
+  )}
+
+  <!-- Shift / cutoff metadata -->
+  {(shiftRange || cutoffClock) && (
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-xs">
+      {shiftRange && (
+        <div class="rounded-lg bg-white/70 px-3 py-2 border border-white/60">
+          <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Jadwal</p>
+          <p class="text-gray-900 font-semibold">
+            {status.shiftName ? `${status.shiftName} · ${shiftRange}` : shiftRange}
+          </p>
+        </div>
+      )}
+      {cutoffClock && (
+        <div class="rounded-lg bg-white/70 px-3 py-2 border border-white/60">
+          <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Batas Terlambat</p>
+          <p class="text-gray-900 font-semibold">
+            {cutoffClock} <span class="text-gray-500 font-normal">(tol. {status.lateGraceMinutes}m)</span>
+          </p>
+        </div>
+      )}
+    </div>
+  )}
+
+  <!-- Day totals grid -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+    <div class="rounded-lg bg-white/70 border border-white/60 px-3 py-2">
+      <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Masuk</p>
+      <p class="text-gray-900 font-semibold tabular-nums">
+        {formatClock(status.firstMasukAt) ?? '—'}
+      </p>
+    </div>
+    <div class="rounded-lg bg-white/70 border border-white/60 px-3 py-2">
+      <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Pulang</p>
+      <p class="text-gray-900 font-semibold tabular-nums">
+        {formatClock(status.lastPulangAt) ?? '—'}
+      </p>
+    </div>
+    <div class="rounded-lg bg-white/70 border border-white/60 px-3 py-2">
+      <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Istirahat</p>
+      <p class="text-gray-900 font-semibold tabular-nums">
+        {status.totalBreakMinutes > 0 ? `${status.totalBreakMinutes}m` : '—'}
+      </p>
+    </div>
+    <div class="rounded-lg bg-white/70 border border-white/60 px-3 py-2">
+      <p class="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Durasi Kerja</p>
+      <p class="text-gray-900 font-semibold tabular-nums">
+        {status.workMinutes !== null ? `${Math.floor(status.workMinutes / 60)}j ${status.workMinutes % 60}m` : '—'}
+      </p>
+    </div>
+  </div>
+
+  <!-- Prior-day follow-up framing -->
+  {(status.phase === 'belum_pulang' || status.phase === 'tidak_hadir') && (
+    <p class="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+      Ada kejadian kemarin yang belum terselesaikan. Silakan cek rekap kehadiran untuk detail.
+    </p>
+  )}
+</section>
+
+<style>
+  /* Soft pulse for live-state indicator dots and timer card border. */
+  .portal-status-dot {
+    animation: portal-pulse 1.4s ease-in-out infinite;
+  }
+  .portal-live-timer {
+    box-shadow: inset 0 0 0 1px rgba(233, 30, 140, 0.05);
+    animation: portal-breathe 4s ease-in-out infinite;
+  }
+  @keyframes portal-pulse {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.85); }
+  }
+  @keyframes portal-breathe {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(233, 30, 140, 0.05); }
+    50%      { box-shadow: inset 0 0 0 1px rgba(233, 30, 140, 0.22); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .portal-status-dot,
+    .portal-live-timer {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // Lightweight inline timer — no polling, no imports. Re-renders every
+  // second using the anchor timestamp embedded in data-anchor. Reads the
+  // absolute instant from the server (+08:00 suffix) so the counter is
+  // correct regardless of the client's local timezone.
+  //
+  // Graceful fallback: if any parse fails the server-rendered initial
+  // value stays on the page untouched.
+  (function () {
+    const el = document.querySelector<HTMLElement>('.portal-live-timer');
+    if (!el) return;
+
+    const anchor = el.getAttribute('data-anchor');
+    const valueEl = el.querySelector<HTMLElement>('.portal-live-value');
+    if (!anchor || !valueEl) return;
+
+    const startMs = Date.parse(anchor);
+    if (Number.isNaN(startMs)) return;
+
+    function formatElapsed(ms: number): string {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (hours > 0) {
+        return `${hours}j ${String(minutes).padStart(2, '0')}m`;
+      }
+      return `${minutes}m ${String(seconds).padStart(2, '0')}d`;
+    }
+
+    function tick(): void {
+      if (!valueEl) return;
+      valueEl.textContent = formatElapsed(Date.now() - startMs);
+    }
+
+    tick();
+    const intervalMs = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 5000 : 1000;
+    window.setInterval(tick, intervalMs);
+  })();
+</script>
