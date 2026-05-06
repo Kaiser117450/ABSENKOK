@@ -70,7 +70,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // Admin portal: gate behind app_role ∈ {admin, kepala_gerai, area_supervisor}.
-  if (isAdminPortalRoute(pathname)) {
+  // Skip for public admin paths (login page, auth endpoints) to avoid redirect loops.
+  if (isAdminPortalRoute(pathname) && isProtectedPortalRoute(pathname)) {
     if (!user) {
       return appendRefreshedCookies(redirect('/portal/admin/login', 302));
     }

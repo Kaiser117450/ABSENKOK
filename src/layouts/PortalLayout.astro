@@ -5,6 +5,7 @@ import type { PortalEmployee } from '../lib/portal/employee';
 interface Props {
   title: string;
   employee: PortalEmployee;
+  activeSection?: string;
 }
 
 const { title, employee } = Astro.props;
