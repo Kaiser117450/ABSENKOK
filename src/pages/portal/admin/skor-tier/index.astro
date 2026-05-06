@@ -83,11 +83,40 @@ for (const r of rows) {
   if (r.tier in tierCounts) tierCounts[r.tier] += 1;
 }
 
-const COLUMN_META: Array<{ key: TierGroup; title: string; subtitle: string; accent: string }> = [
-  { key: 'top', title: 'Top Tier',          subtitle: 'SSS · SS · S · A',  accent: 'bg-emerald-500' },
-  { key: 'mid', title: 'Standard',          subtitle: 'B · C',             accent: 'bg-amber-500' },
-  { key: 'low', title: 'Needs Attention',   subtitle: 'D · F',             accent: 'bg-rose-500' },
+const COLUMN_META: Array<{
+  key: TierGroup;
+  title: string;
+  subtitle: string;
+  accent: string;
+  shell: string;
+}> = [
+  {
+    key: 'top',
+    title: 'Champion Bracket',
+    subtitle: 'SSS · SS · S · A',
+    accent: 'from-emerald-300 via-cyan-300 to-[#7C8DFF]',
+    shell: 'border-emerald-300/25 shadow-emerald-950/30',
+  },
+  {
+    key: 'mid',
+    title: 'Core Bracket',
+    subtitle: 'B · C',
+    accent: 'from-amber-300 via-orange-300 to-rose-300',
+    shell: 'border-amber-300/25 shadow-amber-950/30',
+  },
+  {
+    key: 'low',
+    title: 'Recovery Bracket',
+    subtitle: 'D · F',
+    accent: 'from-rose-300 via-pink-400 to-[#FF4DA0]',
+    shell: 'border-rose-300/25 shadow-rose-950/30',
+  },
 ];
+
+const highestTier = TIER_ORDER.find((t) => tierCounts[t] > 0) ?? null;
+const averageScore = rows.length
+  ? rows.reduce((sum, r) => sum + (r.total_score ?? 0), 0) / rows.length
+  : null;
 
 function buildHref(params: Record<string, string | null | undefined>): string {
   const u = new URL(Astro.request.url);
@@ -112,109 +141,168 @@ function initials(name: string): string {
 ---
 
 <PortalAdminLayout title={`Skor Tier — ${period}`} user={userSummary}>
-  <!-- Header + filter row -->
-  <section class="mb-6">
-    <div class="flex items-end justify-between gap-3 mb-4">
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Skor Tier
-          <span class="text-base font-medium text-slate-500 ml-2">{period}</span>
-        </h1>
-        <p class="text-sm text-slate-500 mt-1">
-          Hierarki real-time semua karyawan berdasarkan kehadiran, penilaian manual, dan QC.
-        </p>
+  <section class="mb-6 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 shadow-[0_28px_90px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <div class="relative px-4 py-5 sm:px-6 sm:py-6">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(255,77,160,0.18),transparent_30rem),radial-gradient(circle_at_78%_10%,rgba(124,141,255,0.2),transparent_28rem)]"></div>
+      <div class="relative grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div>
+          <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-cyan-100">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+              <path d="M7 16h10M8.5 12h7M10 8h4M12 3l6 3v5c0 4.2-2.5 7.4-6 9-3.5-1.6-6-4.8-6-9V6l6-3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Tier Arena
+          </div>
+          <h1 class="text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
+            Skor <span class="bg-gradient-to-r from-[#FF4DA0] via-[#7C8DFF] to-cyan-300 bg-clip-text text-transparent">Tier</span>
+          </h1>
+          <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+            Hierarki real-time semua karyawan berdasarkan kehadiran, penilaian manual, dan QC.
+          </p>
+        </div>
+        <div class="grid grid-cols-3 gap-2 sm:min-w-[25rem]">
+          <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Season</div>
+            <div class="mt-1 text-sm font-extrabold text-white">{period}</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Players</div>
+            <div class="mt-1 text-sm font-extrabold text-white">{filteredRows.length}/{rows.length}</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.06] p-3 text-center">
+            <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Avg Score</div>
+            <div class="mt-1 text-sm font-extrabold text-white">{formatScore(averageScore)}</div>
+          </div>
+        </div>
       </div>
-      <div class="text-xs text-slate-500 hidden sm:block">
-        {rows.length} karyawan total · {filteredRows.length} sesuai filter
+
+      <div class="relative mt-5 overflow-hidden rounded-[1.5rem] border border-amber-300/25 bg-gradient-to-br from-amber-300/15 via-white/[0.04] to-[#7C8DFF]/15 p-4">
+        <div class="grid gap-4 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+          <div class="relative rank-sheen grid min-h-28 min-w-36 place-items-center overflow-hidden rounded-[1.25rem] border border-white/10 bg-slate-950/70 px-6 py-4">
+            <span class="rank-display text-6xl leading-none text-amber-200 sm:text-7xl">{highestTier ?? '—'}</span>
+          </div>
+          <div>
+            <div class="text-xs font-black uppercase tracking-[0.24em] text-amber-100/80">Highest Active Tier</div>
+            <p class="mt-2 text-sm leading-6 text-slate-300">
+              Tampilan tier dibuat lebih besar dengan rasio kartu seperti tier list profesional agar ranking cepat terbaca.
+            </p>
+          </div>
+          <a
+            href={buildHref({ tier: highestTier })}
+            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.1] px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-white/[0.15]"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+              <path d="M12 5l7 7-7 7M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Fokus tier
+          </a>
+        </div>
       </div>
     </div>
 
     {error && (
-      <div class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+      <div class="mx-4 mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 sm:mx-6">
         Gagal memuat data: {error}
       </div>
     )}
 
-    <!-- Filter row -->
-    <form method="GET" class="flex flex-wrap items-center gap-2">
-      <input
-        type="text"
-        name="q"
-        value={searchParam}
-        placeholder="Cari nama / posisi / outlet"
-        class="min-w-[200px] flex-1 sm:flex-none sm:w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-      />
-      {role === 'admin' && (
+    <div class="border-t border-white/10 bg-slate-950/50 px-4 py-4 sm:px-6">
+      <form method="GET" class="grid gap-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
+        <label class="relative min-w-0">
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <input
+            type="text"
+            name="q"
+            value={searchParam}
+            placeholder="Cari nama / posisi / outlet"
+            class="w-full rounded-2xl border border-white/10 bg-white/[0.07] py-3 pl-10 pr-4 text-sm font-medium text-white placeholder-slate-500 transition focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+          />
+        </label>
+        {role === 'admin' && (
+          <select
+            name="outlet"
+            class="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition focus:border-[#7C8DFF]/60 focus:outline-none focus:ring-4 focus:ring-[#7C8DFF]/15"
+          >
+            <option value="">Semua outlet</option>
+            {outlets.map((o) => (
+              <option value={o.id ?? ''} selected={o.id === outletParam}>{o.name}</option>
+            ))}
+          </select>
+        )}
         <select
-          name="outlet"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          name="tier"
+          class="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition focus:border-[#FF4DA0]/60 focus:outline-none focus:ring-4 focus:ring-[#FF4DA0]/15"
         >
-          <option value="">Semua outlet</option>
-          {outlets.map((o) => (
-            <option value={o.id ?? ''} selected={o.id === outletParam}>{o.name}</option>
+          <option value="">Semua tier</option>
+          {TIER_ORDER.map((t) => (
+            <option value={t} selected={t === tierParam}>{t} ({tierCounts[t]})</option>
           ))}
         </select>
-      )}
-      <select
-        name="tier"
-        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-      >
-        <option value="">Semua tier</option>
-        {TIER_ORDER.map((t) => (
-          <option value={t} selected={t === tierParam}>{t} ({tierCounts[t]})</option>
-        ))}
-      </select>
-      <button
-        type="submit"
-        class="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 transition"
-      >
-        Terapkan
-      </button>
-      {(searchParam || tierParam || outletParam) && (
-        <a
-          href={Astro.url.pathname}
-          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+        <button
+          type="submit"
+          class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF4DA0] to-[#7C8DFF] px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-[0_14px_36px_rgba(124,141,255,0.28)] transition hover:scale-[1.01]"
         >
-          Reset
-        </a>
-      )}
-    </form>
-
-    <!-- Tier chip strip -->
-    <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
-      {TIER_ORDER.map((t) => {
-        const ts = tierStyle(t);
-        const isActive = t === tierParam;
-        return (
+          <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Terapkan
+        </button>
+        {(searchParam || tierParam || outletParam) && (
           <a
-            href={buildHref({ tier: isActive ? null : t })}
-            class:list={[
-              'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-bold transition',
-              ts.ribbon,
-              isActive ? 'ring-2 ring-offset-1 ring-slate-900' : 'opacity-90 hover:opacity-100',
-            ]}
-            aria-pressed={isActive ? 'true' : 'false'}
+            href={Astro.url.pathname}
+            class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 text-sm font-bold text-slate-200 transition hover:bg-white/[0.12]"
           >
-            <span class="font-tier-rank">{t}</span>
-            <span class="font-medium opacity-80">{tierCounts[t]}</span>
+            Reset
           </a>
-        );
-      })}
+        )}
+      </form>
+
+      <div class="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
+        {TIER_ORDER.map((t) => {
+          const ts = tierStyle(t);
+          const isActive = t === tierParam;
+          return (
+            <a
+              href={buildHref({ tier: isActive ? null : t })}
+              class:list={[
+                'group relative overflow-hidden rounded-2xl border p-2 text-center transition hover:-translate-y-0.5',
+                isActive
+                  ? 'border-white/40 bg-white/[0.14] shadow-[0_0_32px_rgba(124,141,255,0.18)]'
+                  : 'border-white/10 bg-white/[0.06] hover:bg-white/[0.1]',
+              ]}
+              aria-pressed={isActive ? 'true' : 'false'}
+            >
+              <div class:list={['mx-auto mb-1 grid h-11 place-items-center rounded-xl', ts.ribbon]}>
+                <span class="font-tier-rank text-2xl leading-none">{t}</span>
+              </div>
+              <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Count</div>
+              <div class="text-sm font-extrabold text-white">{tierCounts[t]}</div>
+            </a>
+          );
+        })}
+      </div>
     </div>
   </section>
 
-  <!-- 3-column game-style grid -->
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+  <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
     {COLUMN_META.map((col) => (
-      <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
-        <header class:list={['px-4 py-2.5 text-white text-sm font-bold flex items-center justify-between', col.accent]}>
-          <span>{col.title}</span>
-          <span class="text-xs font-medium opacity-90">{grouped[col.key].length}</span>
+      <div class:list={['overflow-hidden rounded-[1.75rem] border bg-slate-950/72 shadow-2xl backdrop-blur-xl', col.shell]}>
+        <header class="border-b border-white/10 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-black tracking-tight text-white">{col.title}</h2>
+              <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{col.subtitle}</p>
+            </div>
+            <div class:list={['grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br text-slate-950 shadow-lg', col.accent]}>
+              <span class="text-sm font-black tabular-nums">{grouped[col.key].length}</span>
+            </div>
+          </div>
+          <div class:list={['mt-4 h-1 rounded-full bg-gradient-to-r', col.accent]}></div>
         </header>
-        <div class="text-[10px] uppercase tracking-wider text-slate-400 px-4 pt-2">{col.subtitle}</div>
-        <ul class="p-2 sm:p-3 space-y-2 sm:space-y-3 max-h-[78vh] overflow-y-auto">
+        <ul class="max-h-[78vh] space-y-3 overflow-y-auto p-3">
           {grouped[col.key].length === 0 ? (
-            <li class="text-center text-xs text-slate-400 py-8">Tidak ada karyawan</li>
+            <li class="rounded-2xl border border-dashed border-white/10 py-10 text-center text-xs font-semibold text-slate-500">Tidak ada karyawan</li>
           ) : (
             grouped[col.key].map((r) => {
               const ts = tierStyle(r.tier);
@@ -225,25 +313,29 @@ function initials(name: string): string {
                     href={`/portal/admin/skor-tier/${r.employee_id}`}
                     data-employee-id={r.employee_id}
                     class:list={[
-                      'block group relative rounded-lg border bg-slate-900 text-white transition hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-amber-400',
-                      'border-slate-700',
+                      'tier-list-card block group relative overflow-hidden rounded-[1.35rem] border text-white transition hover:-translate-y-0.5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.34)] focus:outline-none focus:ring-2 focus:ring-amber-300',
+                      'border-white/10',
                       ts.glow,
                     ]}
                   >
-                    <!-- Tier ribbon -->
-                    <div class:list={['flex items-center justify-between rounded-t-lg px-3 py-1.5', ts.ribbon]}>
-                      <span class="font-tier-rank text-lg sm:text-xl leading-none">
-                        {r.tier}
-                      </span>
-                      <span class="text-[10px] font-bold uppercase tracking-widest">
-                        {ts.label}
-                      </span>
+                    <div class="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-white/[0.1] blur-2xl transition group-hover:bg-white/[0.15]"></div>
+                    <div class:list={['relative flex items-center justify-between gap-3 px-4 py-3', ts.ribbon]}>
+                      <div>
+                        <span class="font-tier-rank block text-4xl leading-none sm:text-5xl">
+                          {r.tier}
+                        </span>
+                        <span class="mt-1 block text-[10px] font-black uppercase tracking-[0.22em] opacity-80">
+                          {ts.label}
+                        </span>
+                      </div>
+                      <svg class="h-7 w-7 opacity-65" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+                        <path d="M12 3l2.35 5.05 5.52.7-4.08 3.72 1.08 5.46L12 15.16 7.13 17.93l1.08-5.46-4.08-3.72 5.52-.7L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                      </svg>
                     </div>
 
-                    <div class="px-3 py-2.5">
-                      <!-- Identity row -->
+                    <div class="relative px-4 py-3">
                       <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-800 text-sm font-black text-white">
                           {r.photo_url ? (
                             <img src={r.photo_url} alt={r.employee_name} class="w-full h-full object-cover" />
                           ) : (
@@ -251,39 +343,44 @@ function initials(name: string): string {
                           )}
                         </div>
                         <div class="min-w-0 flex-1">
-                          <div class="text-sm font-bold text-white truncate">{r.employee_name}</div>
+                          <div class="truncate text-base font-black text-white">{r.employee_name}</div>
                           <div class="text-[11px] text-slate-400 truncate">
                             {r.position ?? '—'} · {r.home_outlet_name ?? '—'}
                           </div>
                         </div>
                         <div class="text-right shrink-0">
-                          <div class="text-[10px] uppercase text-slate-400">Skor</div>
-                          <div class="text-base font-bold text-white tabular-nums">
+                          <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Skor</div>
+                          <div class="text-xl font-black text-white tabular-nums">
                             {formatScore(r.total_score)}
                           </div>
                         </div>
                       </div>
 
-                      <!-- Score breakdown row -->
-                      <div class="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-300">
-                        <span class="bg-slate-800 px-1.5 py-0.5 rounded tabular-nums">A: {formatScore(r.attendance_score)}</span>
-                        <span class="bg-slate-800 px-1.5 py-0.5 rounded tabular-nums">M: {formatScore(r.manual_score)}</span>
-                        <span class="bg-slate-800 px-1.5 py-0.5 rounded tabular-nums">QC: {formatScore(r.qc_score)}</span>
+                      <div class="mt-3 grid grid-cols-3 gap-1.5 text-[10px] text-slate-300">
+                        <span class="rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-center tabular-nums">ATT {formatScore(r.attendance_score)}</span>
+                        <span class="rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-center tabular-nums">MAN {formatScore(r.manual_score)}</span>
+                        <span class="rounded-xl border border-white/10 bg-white/[0.06] px-2 py-1 text-center tabular-nums">QC {formatScore(r.qc_score)}</span>
                       </div>
 
-                      <!-- Icons row -->
                       {r.icons.length > 0 && (
                         <div class="mt-2 flex flex-wrap gap-1">
                           {r.icons.slice(0, 4).map((i) => (
                             <span
                               class:list={[
-                                'inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium',
+                                'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold',
                                 i.kind === 'achievement'
                                   ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30'
                                   : 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/30',
                               ]}
                               title={i.label}
                             >
+                              <svg class="h-3 w-3 shrink-0" viewBox="0 0 24 24" aria-hidden="true" fill="none">
+                                {i.kind === 'achievement' ? (
+                                  <path d="M12 4l2.2 4.46 4.92.72-3.56 3.47.84 4.9L12 15.23l-4.4 2.32.84-4.9-3.56-3.47 4.92-.72L12 4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" />
+                                ) : (
+                                  <path d="M12 8v5M12 17h.01M10.3 4.3 2.9 18a1.5 1.5 0 0 0 1.32 2.2h15.56A1.5 1.5 0 0 0 21.1 18L13.7 4.3a1.95 1.95 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                )}
+                              </svg>
                               {i.label}
                             </span>
                           ))}
@@ -293,23 +390,22 @@ function initials(name: string): string {
                         </div>
                       )}
 
-                      <!-- Capped + new + parttime indicators -->
                       <div class="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400">
                         <div class="flex items-center gap-1.5">
                           {r.is_new && (
-                            <span class="bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40 rounded px-1.5 py-0.5 font-medium">BARU</span>
+                            <span class="rounded-full bg-blue-500/20 px-2 py-1 font-bold text-blue-300 ring-1 ring-blue-500/40">BARU</span>
                           )}
                           {r.employment_contract === 'PARTTIME' && (
-                            <span class="bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/40 rounded px-1.5 py-0.5 font-medium">PT</span>
+                            <span class="rounded-full bg-purple-500/20 px-2 py-1 font-bold text-purple-300 ring-1 ring-purple-500/40">PT</span>
                           )}
                         </div>
                         {r.rank_outlet && (
-                          <span class="tabular-nums">#{r.rank_outlet} di outlet</span>
+                          <span class="font-bold tabular-nums">#{r.rank_outlet} di outlet</span>
                         )}
                       </div>
 
                       {cap && (
-                        <div class="mt-1.5 text-[10px] text-amber-400/90 italic">{cap}</div>
+                        <div class="mt-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-[10px] font-semibold text-amber-200">{cap}</div>
                       )}
                     </div>
                   </a>
