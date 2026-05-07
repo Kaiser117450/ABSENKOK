@@ -44,6 +44,19 @@ class KioskScanAuthorityService {
     return parseRecordResult(result);
   }
 
+  Future<KioskRecordedLogRef> resolveAttendanceLogForLocalId(
+    String localId,
+  ) async {
+    _requireValue(localId, 'localId');
+
+    final result = await (_client ?? SupabaseClientFactory.kiosk).rpc(
+      'resolve_attendance_log_for_local_id',
+      params: {'p_local_id': localId},
+    );
+
+    return parseRecordedLogRef(result);
+  }
+
   static KioskScanContext parseContext(dynamic raw) {
     final row = _extractSingleRow(raw, 'get_kiosk_scan_context');
     return KioskScanContext.fromJson(row);
@@ -52,6 +65,11 @@ class KioskScanAuthorityService {
   static KioskScanRecordResult parseRecordResult(dynamic raw) {
     final row = _extractSingleRow(raw, 'record_kiosk_scan');
     return KioskScanRecordResult.fromJson(row);
+  }
+
+  static KioskRecordedLogRef parseRecordedLogRef(dynamic raw) {
+    final row = _extractSingleRow(raw, 'resolve_attendance_log_for_local_id');
+    return KioskRecordedLogRef.fromJson(row);
   }
 
   static Map<String, dynamic> _extractSingleRow(dynamic raw, String rpcName) {

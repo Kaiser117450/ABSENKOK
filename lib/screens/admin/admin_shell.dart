@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/admin_session_claims.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/app_provider.dart';
 import '../../services/biometric_service.dart';
@@ -19,7 +20,10 @@ class AdminShell extends ConsumerWidget {
     final loc = GoRouterState.of(context).uri.path;
     if (loc.startsWith('/admin/employees')) return 1;
     if (loc.startsWith('/admin/reports')) return 2;
-    if (loc.startsWith('/admin/outlets')) return 3;
+    if (loc.startsWith('/admin/grooming')) return 3;
+    if (loc.startsWith('/admin/outlets')) {
+      return AppConstants.attendancePhotoBetaEnabled ? 4 : 3;
+    }
     // /admin/dashboard and /admin/outlet-dashboard both keep Dashboard selected
     return 0;
   }
@@ -47,6 +51,7 @@ class AdminShell extends ConsumerWidget {
       body: child,
       bottomNavigationBar: _EnakkoBottomNav(
         currentIndex: idx,
+        showGrooming: AppConstants.attendancePhotoBetaEnabled,
         showOutlets: !isScopedAdmin,
         onTap: (i) {
           switch (i) {
@@ -60,6 +65,13 @@ class AdminShell extends ConsumerWidget {
               context.go('/admin/reports');
               break;
             case 3:
+              if (AppConstants.attendancePhotoBetaEnabled) {
+                context.go('/admin/grooming');
+              } else {
+                context.go('/admin/outlets');
+              }
+              break;
+            case 4:
               context.go('/admin/outlets');
               break;
           }
@@ -428,11 +440,13 @@ class _EnakkoAppBar extends StatelessWidget {
 class _EnakkoBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final bool showGrooming;
   final bool showOutlets;
 
   const _EnakkoBottomNav({
     required this.currentIndex,
     required this.onTap,
+    this.showGrooming = false,
     this.showOutlets = true,
   });
 
@@ -473,13 +487,21 @@ class _EnakkoBottomNav extends StatelessWidget {
                     selected: currentIndex == 2,
                     onTap: () => onTap(2),
                   ),
+                  if (showGrooming)
+                    _NavItem(
+                      icon: Icons.face_retouching_natural_outlined,
+                      activeIcon: Icons.face_retouching_natural_rounded,
+                      label: 'QC',
+                      selected: currentIndex == 3,
+                      onTap: () => onTap(3),
+                    ),
                   if (showOutlets)
                     _NavItem(
                       icon: Icons.store_outlined,
                       activeIcon: Icons.store_rounded,
                       label: 'Gerai',
-                      selected: currentIndex == 3,
-                      onTap: () => onTap(3),
+                      selected: currentIndex == (showGrooming ? 4 : 3),
+                      onTap: () => onTap(showGrooming ? 4 : 3),
                     ),
                 ],
               ),

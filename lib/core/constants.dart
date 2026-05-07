@@ -15,7 +15,7 @@ class AppConstants {
 
   // SQLite
   static const String dbName = 'absensi_enakko.db';
-  static const int dbVersion = 6; // v6: Phase 56 queue authority metadata
+  static const int dbVersion = 7; // v7: attendance photo beta local queue
 
   // NFC
   static const int nfcDebounceMs = 1500;
@@ -23,6 +23,19 @@ class AppConstants {
   // Sync settings
   static const int syncMaxRetries = 5;
   static const int syncBatchSize = 50;
+
+  // Attendance photo beta (disabled unless explicitly enabled at build/run).
+  static const bool attendancePhotoBetaEnabled =
+      bool.fromEnvironment('ATTENDANCE_PHOTO_BETA');
+  static const String attendancePhotoBucket = 'attendance-photos';
+  static const int attendancePhotoMaxDimensionPx = 640;
+  static const int attendancePhotoJpegQuality = 60;
+  static const int attendancePhotoStableFaceMs = 500;
+  static const int attendancePhotoPreviewMs = 300;
+  static const int attendancePhotoFaceThrottleMs = 140;
+  static const double attendancePhotoMaxHeadEulerY = 30;
+  static const double attendancePhotoMinFaceFrameRatio = 0.20;
+  static const int attendancePhotoUploadMaxRetries = 3;
 
   // UI timings
   static const int successScreenDurationMs = 3000;

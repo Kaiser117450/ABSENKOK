@@ -46,6 +46,8 @@ class SqliteService {
         retry_count          INTEGER NOT NULL DEFAULT 0,
         is_backup            INTEGER NOT NULL DEFAULT 0,
         notes                TEXT,
+        local_photo_path     TEXT,
+        photo_retry_count    INTEGER NOT NULL DEFAULT 0,
         created_at           TEXT NOT NULL DEFAULT (datetime('now'))
       )
     ''');
@@ -77,6 +79,34 @@ class SqliteService {
     if (oldVersion < 6) {
       await _migratePendingLogsToPhase56Schema(db, newVersion);
     }
+
+    if (oldVersion < 7) {
+      await _addColumnIfMissing(
+        db,
+        'pending_logs',
+        'local_photo_path',
+        'TEXT',
+      );
+      await _addColumnIfMissing(
+        db,
+        'pending_logs',
+        'photo_retry_count',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+  }
+
+  static Future<void> _addColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+    }
   }
 
   static Future<void> _migratePendingLogsToPhase56Schema(
@@ -99,7 +129,7 @@ class SqliteService {
       nextQueueOrder = max(nextQueueOrder, resolvedQueueOrder);
 
       await db.insert('pending_logs', {
-        'local_id': _readString(row['local_id']) ?? _generateLocalId(),
+        'local_id': _readString(row['local_id']) ?? generateLocalId(),
         'employee_id': _readString(row['employee_id']) ?? '',
         'scan_outlet_id': _readString(row['scan_outlet_id']) ?? '',
         'type': _readString(row['type']) ?? AttendanceType.masuk.value,
@@ -119,6 +149,8 @@ class SqliteService {
         'retry_count': _readInt(row['retry_count']) ?? 0,
         'is_backup': _readBoolAsInt(row['is_backup']),
         'notes': _readString(row['notes']),
+        'local_photo_path': _readString(row['local_photo_path']),
+        'photo_retry_count': _readInt(row['photo_retry_count']) ?? 0,
         'created_at': _readString(row['created_at']) ??
             _readString(row['scanned_at']) ??
             DateTime.now().toUtc().toIso8601String(),
@@ -143,14 +175,16 @@ class SqliteService {
     InitialScanIntent initialScanIntent = InitialScanIntent.none,
     bool isBackup = false,
     String? notes,
+    String? localPhotoPath,
+    String? localId,
   }) async {
     final db = await getDatabase();
 
     return db.transaction((txn) async {
-      final localId = _generateLocalId();
+      final resolvedLocalId = localId ?? generateLocalId();
       final resolvedQueueOrder = queueOrder ?? await _nextQueueOrder(txn);
       await txn.insert('pending_logs', {
-        'local_id': localId,
+        'local_id': resolvedLocalId,
         'employee_id': employeeId,
         'scan_outlet_id': scanOutletId,
         'type': type.value,
@@ -169,8 +203,10 @@ class SqliteService {
         'retry_count': 0,
         'is_backup': isBackup ? 1 : 0,
         'notes': notes,
+        'local_photo_path': localPhotoPath,
+        'photo_retry_count': 0,
       });
-      return localId;
+      return resolvedLocalId;
     });
   }
 
@@ -211,6 +247,14 @@ class SqliteService {
     await db.rawUpdate(
       'UPDATE pending_logs SET sync_status = ?, retry_count = retry_count + 1 WHERE local_id = ?',
       [SyncStatus.failed.value, localId],
+    );
+  }
+
+  static Future<void> markPhotoUploadFailed(String localId) async {
+    final db = await getDatabase();
+    await db.rawUpdate(
+      'UPDATE pending_logs SET photo_retry_count = photo_retry_count + 1 WHERE local_id = ?',
+      [localId],
     );
   }
 
@@ -265,7 +309,7 @@ class SqliteService {
     return value == 'true' || value == '1' ? 1 : 0;
   }
 
-  static String _generateLocalId() {
+  static String generateLocalId() {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final rand = Random().nextInt(99999999).toRadixString(36);
     return '$ts-$rand';

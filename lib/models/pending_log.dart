@@ -50,6 +50,8 @@ class PendingLog {
   final String createdAt;
   final bool isBackup;
   final String? notes;
+  final String? localPhotoPath;
+  final int photoRetryCount;
 
   const PendingLog({
     required this.localId,
@@ -69,6 +71,8 @@ class PendingLog {
     required this.createdAt,
     this.isBackup = false,
     this.notes,
+    this.localPhotoPath,
+    this.photoRetryCount = 0,
   });
 
   factory PendingLog.fromMap(Map<String, dynamic> map) => PendingLog(
@@ -93,6 +97,8 @@ class PendingLog {
         createdAt: map['created_at'] as String? ?? '',
         isBackup: (map['is_backup'] as int? ?? 0) == 1,
         notes: map['notes'] as String?,
+        localPhotoPath: map['local_photo_path'] as String?,
+        photoRetryCount: map['photo_retry_count'] as int? ?? 0,
       );
 
   Map<String, dynamic> toMap() => {
@@ -113,6 +119,8 @@ class PendingLog {
         'created_at': createdAt,
         'is_backup': isBackup ? 1 : 0,
         'notes': notes,
+        'local_photo_path': localPhotoPath,
+        'photo_retry_count': photoRetryCount,
       };
 
   static DateTime? _readDateTime(Object? raw) {

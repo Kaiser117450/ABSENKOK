@@ -10,6 +10,7 @@ import 'package:toastification/toastification.dart';
 import 'services/kiosk_background_service.dart';
 
 import 'core/admin_session_claims.dart';
+import 'core/constants.dart';
 import 'core/theme.dart';
 import 'main.dart' show supabaseReady;
 import 'providers/app_provider.dart';
@@ -17,6 +18,7 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/central_dashboard_screen.dart';
 import 'screens/admin/chart_dashboard_screen.dart';
 import 'screens/admin/admin_employees_screen.dart';
+import 'screens/admin/admin_grooming_report_screen.dart';
 import 'screens/admin/admin_login_screen.dart';
 import 'screens/admin/admin_outlets_screen.dart';
 import 'screens/admin/admin_reports_screen.dart';
@@ -92,10 +94,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isAdmin) {
         // Admin penuh → akses semua halaman admin
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/grooming') &&
+            !AppConstants.attendancePhotoBetaEnabled) {
+          return '/admin/reports';
+        }
       } else if (isScopedAdmin) {
         // Kepala gerai / area supervisor → akses dashboard/karyawan/laporan saja,
         // TIDAK bisa ke halaman admin khusus (outlet, CSV import)
         if (!loc.startsWith('/admin')) return '/admin/dashboard';
+        if (loc.startsWith('/admin/grooming') &&
+            !AppConstants.attendancePhotoBetaEnabled) {
+          return '/admin/reports';
+        }
         if (loc.startsWith('/admin/network-summary')) return '/admin/dashboard';
         if (loc.startsWith('/admin/outlets')) return '/admin/dashboard';
         if (loc.startsWith('/admin/csv-import')) return '/admin/dashboard';
@@ -171,6 +181,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/reports',
             builder: (_, __) => const AdminReportsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/grooming',
+            builder: (_, __) => const AdminGroomingReportScreen(),
           ),
           GoRoute(
             path: '/admin/outlets',

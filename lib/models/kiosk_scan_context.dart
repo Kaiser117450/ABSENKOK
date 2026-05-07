@@ -105,6 +105,8 @@ class KioskScanRecordRequest {
   final String? notes;
   final double? lat;
   final double? lng;
+  final bool photoRequired;
+  final String? selfieUrl;
 
   const KioskScanRecordRequest({
     required this.employeeId,
@@ -120,9 +122,11 @@ class KioskScanRecordRequest {
     this.notes,
     this.lat,
     this.lng,
+    this.photoRequired = false,
+    this.selfieUrl,
   });
 
-  Map<String, dynamic> toRpcParams() {
+  Map<String, dynamic> toRpcParams({bool includePhotoParams = false}) {
     return {
       'p_employee_id': employeeId,
       'p_outlet_id': outletId,
@@ -138,6 +142,9 @@ class KioskScanRecordRequest {
       if (_hasText(notes)) 'p_notes': notes!.trim(),
       if (lat != null) 'p_lat': lat,
       if (lng != null) 'p_lng': lng,
+      if (includePhotoParams && photoRequired) 'p_photo_required': true,
+      if (includePhotoParams && _hasText(selfieUrl))
+        'p_selfie_url': selfieUrl!.trim(),
     };
   }
 
@@ -146,6 +153,7 @@ class KioskScanRecordRequest {
 }
 
 class KioskScanRecordResult {
+  final String? logId;
   final KioskScanAuthorityState authorityState;
   final DateTime? scannedAtUtc;
   final String scannedAtWitaLabel;
@@ -154,6 +162,7 @@ class KioskScanRecordResult {
   final bool requiresAdminReview;
 
   const KioskScanRecordResult({
+    this.logId,
     required this.authorityState,
     required this.scannedAtUtc,
     required this.scannedAtWitaLabel,
@@ -164,6 +173,9 @@ class KioskScanRecordResult {
 
   factory KioskScanRecordResult.fromJson(Map<String, dynamic> json) {
     return KioskScanRecordResult(
+      logId: _readString(
+        json['log_id'] ?? json['attendance_log_id'] ?? json['id'],
+      ),
       authorityState: KioskScanAuthorityStateExt.fromString(
         json['authority_state']?.toString(),
       ),
@@ -181,6 +193,35 @@ class KioskScanRecordResult {
         json['initial_scan_intent']?.toString(),
       ),
       requiresAdminReview: _readBool(json['requires_admin_review']),
+    );
+  }
+}
+
+class KioskRecordedLogRef {
+  final String logId;
+  final DateTime scannedAtUtc;
+  final DateTime logicalDate;
+
+  const KioskRecordedLogRef({
+    required this.logId,
+    required this.scannedAtUtc,
+    required this.logicalDate,
+  });
+
+  factory KioskRecordedLogRef.fromJson(Map<String, dynamic> json) {
+    return KioskRecordedLogRef(
+      logId: _readRequiredString(
+        json['log_id'] ?? json['attendance_log_id'] ?? json['id'],
+        'log_id',
+      ),
+      scannedAtUtc: _readRequiredDateTime(
+        json['scanned_at_utc'] ?? json['scanned_at'],
+        'scanned_at_utc',
+      ),
+      logicalDate: _readRequiredDate(
+        json['logical_date'],
+        'logical_date',
+      ),
     );
   }
 }

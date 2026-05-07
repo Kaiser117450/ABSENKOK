@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
@@ -21,12 +22,15 @@ import '../../services/kiosk_background_service.dart';
 import '../../services/kiosk_scan_authority_service.dart';
 import '../../services/location_service.dart';
 import '../../services/pattern_detection_service.dart';
+import '../../services/photo_compression_service.dart';
+import '../../services/photo_upload_service.dart';
 import '../../services/sqlite_service.dart';
 import '../../services/streak_badge_service.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/badge_avatar.dart';
+import '../../widgets/camera_face_preview.dart';
 
-enum _ScanStep { selectAction, submitting, success, error }
+enum _ScanStep { selectAction, capturingPhoto, submitting, success, error }
 
 @visibleForTesting
 class KioskScanActionDebugState {
@@ -95,13 +99,12 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   KioskScanContext? _authorityContext;
   List<PendingLog> _pendingLogs = [];
   bool _loadingActionState = true;
+  Uint8List? _capturedPhotoBytes;
 
   AttendanceType? _submittedType;
   KioskScanAuthorityState _successAuthorityState =
       KioskScanAuthorityState.liveConfirmed;
   String _successScannedAtWitaLabel = '';
-  InitialScanIntent _submittedInitialIntent = InitialScanIntent.none;
-
   int _currentStreak = 0;
   int? _milestoneCelebration;
 
@@ -134,7 +137,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       _submittedType = debugSuccessState.submittedType;
       _successAuthorityState = debugSuccessState.authorityState;
       _successScannedAtWitaLabel = debugSuccessState.scannedAtWitaLabel;
-      _submittedInitialIntent = debugSuccessState.initialScanIntent;
       _currentStreak = debugSuccessState.currentStreak;
       _milestoneCelebration = debugSuccessState.milestoneCelebration;
       _loadingActionState = false;
@@ -228,18 +230,25 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       return;
     }
 
+    final nextLastType = pendingLogs.isNotEmpty
+        ? pendingLogs.last.type
+        : resolvedContext.lastAuthoritativeType;
+    final shouldCapturePhoto = _shouldCapturePhotoForLastType(nextLastType);
+
     setState(() {
       _authorityContext = resolvedContext;
       _pendingLogs = pendingLogs;
       _loadingActionState = false;
+      if (shouldCapturePhoto) {
+        _step = _ScanStep.capturingPhoto;
+      }
     });
 
     // Overnight debug logging
-    if (resolvedContext != null) {
-      final serverLocal = resolvedContext.serverNowUtc.toLocal();
-      if (serverLocal.hour >= 17 || serverLocal.hour < 6) {
-        debugPrint('[KioskScan] Overnight window: ${serverLocal.hour}h, band=${resolvedContext.shiftBand}, last=${resolvedContext.lastAuthoritativeType}');
-      }
+    final serverLocal = resolvedContext.serverNowUtc.toLocal();
+    if (serverLocal.hour >= 17 || serverLocal.hour < 6) {
+      debugPrint(
+          '[KioskScan] Overnight window: ${serverLocal.hour}h, band=${resolvedContext.shiftBand}, last=${resolvedContext.lastAuthoritativeType}');
     }
   }
 
@@ -248,6 +257,22 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       return _pendingLogs.last.type;
     }
     return _authorityContext?.lastAuthoritativeType;
+  }
+
+  bool _requiresPhoto(AttendanceType type) {
+    return AppConstants.attendancePhotoBetaEnabled &&
+        (type == AttendanceType.masuk || type == AttendanceType.pulang);
+  }
+
+  bool _shouldCapturePhotoForLastType(AttendanceType? lastType) {
+    if (!AppConstants.attendancePhotoBetaEnabled ||
+        _capturedPhotoBytes != null) {
+      return false;
+    }
+    return lastType == null ||
+        lastType == AttendanceType.pulang ||
+        lastType == AttendanceType.sakit ||
+        lastType == AttendanceType.izin;
   }
 
   Future<bool> _showLiburWarningDialog() async {
@@ -277,20 +302,24 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF6B7280),
               side: const BorderSide(color: Color(0xFFD1D5DB)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text('Batal',
+                style: TextStyle(fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Lanjutkan', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text('Lanjutkan',
+                style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -339,10 +368,18 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     final backupNotes = ref.read(appProvider).backupNotes;
     if (session == null || employee == null) return;
 
+    final requiresPhoto = _requiresPhoto(type);
+    final capturedPhotoBytes = requiresPhoto ? _capturedPhotoBytes : null;
+    if (requiresPhoto && capturedPhotoBytes == null) {
+      setState(() => _step = _ScanStep.capturingPhoto);
+      return;
+    }
+    final photoLocalId =
+        capturedPhotoBytes == null ? null : SqliteService.generateLocalId();
+
     setState(() {
       _step = _ScanStep.submitting;
       _submittedType = type;
-      _submittedInitialIntent = initialScanIntent;
     });
 
     LatLng? position;
@@ -360,6 +397,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           outletId: session.outletId,
           deviceId: session.deviceId,
           type: type,
+          localId: photoLocalId,
           captureMode: AttendanceCaptureMode.live,
           deviceCapturedAt: deviceCapturedAt,
           initialScanIntent: initialScanIntent,
@@ -386,8 +424,19 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
         _submittedType = liveResult.recordedType;
         _successAuthorityState = KioskScanAuthorityState.liveConfirmed;
         _successScannedAtWitaLabel = witaLabel;
-        _submittedInitialIntent = liveResult.initialScanIntent;
       });
+      if (capturedPhotoBytes != null && photoLocalId != null) {
+        unawaited(
+          _uploadCapturedPhotoAfterLiveSubmit(
+            photoBytes: capturedPhotoBytes,
+            localId: photoLocalId,
+            liveResult: liveResult,
+            outletId: session.outletId,
+            employeeId: employee.id,
+            deviceCapturedAt: deviceCapturedAt,
+          ),
+        );
+      }
       _confettiCtrl.play();
       _successScaleCtrl.forward(from: 0);
 
@@ -430,6 +479,25 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       }
 
       try {
+        final pendingLocalId = photoLocalId;
+        String? localPhotoPath;
+        if (capturedPhotoBytes != null && pendingLocalId != null) {
+          try {
+            final compressedPhoto =
+                PhotoCompressionService.compressAndResize(capturedPhotoBytes);
+            localPhotoPath =
+                await PhotoUploadService.instance.savePendingPhotoFile(
+              outletId: session.outletId,
+              employeeId: employee.id,
+              logDate: _dateOnly(deviceCapturedAt),
+              localId: pendingLocalId,
+              bytes: compressedPhoto,
+            );
+          } catch (photoError) {
+            debugPrint('[KioskScan] queue photo failed: $photoError');
+          }
+        }
+
         await SqliteService.insertPendingLog(
           employeeId: employee.id,
           scanOutletId: session.outletId,
@@ -443,6 +511,8 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           initialScanIntent: initialScanIntent,
           isBackup: isBackup,
           notes: backupNotes,
+          localPhotoPath: localPhotoPath,
+          localId: pendingLocalId,
         );
 
         await _refreshPendingCount();
@@ -471,6 +541,71 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           const Duration(milliseconds: AppConstants.errorResetDurationMs),
         );
       }
+    }
+  }
+
+  Future<void> _uploadCapturedPhotoAfterLiveSubmit({
+    required Uint8List photoBytes,
+    required String localId,
+    required KioskScanRecordResult liveResult,
+    required String outletId,
+    required String employeeId,
+    required DateTime deviceCapturedAt,
+  }) async {
+    try {
+      final compressedPhoto = PhotoCompressionService.compressAndResize(
+        photoBytes,
+      );
+      final logRef = await _resolveRecordedLogRef(
+        localId: localId,
+        liveResult: liveResult,
+        deviceCapturedAt: deviceCapturedAt,
+      );
+      if (logRef == null) return;
+
+      try {
+        await PhotoUploadService.instance.uploadAndAttachAttendancePhoto(
+          outletId: outletId,
+          employeeId: employeeId,
+          logDate: logRef.logicalDate,
+          logId: logRef.logId,
+          bytes: compressedPhoto,
+        );
+      } catch (uploadError) {
+        debugPrint('[KioskScan] photo upload failed: $uploadError');
+        await PhotoUploadService.instance.savePhotoForRetry(
+          outletId: outletId,
+          employeeId: employeeId,
+          logDate: logRef.logicalDate,
+          logId: logRef.logId,
+          bytes: compressedPhoto,
+        );
+      }
+    } catch (error) {
+      debugPrint('[KioskScan] post-submit photo handling failed: $error');
+    }
+  }
+
+  Future<KioskRecordedLogRef?> _resolveRecordedLogRef({
+    required String localId,
+    required KioskScanRecordResult liveResult,
+    required DateTime deviceCapturedAt,
+  }) async {
+    final logId = liveResult.logId;
+    if (logId != null && logId.trim().isNotEmpty) {
+      final scannedAtUtc = liveResult.scannedAtUtc ?? deviceCapturedAt.toUtc();
+      return KioskRecordedLogRef(
+        logId: logId,
+        scannedAtUtc: scannedAtUtc,
+        logicalDate: _dateOnly(_projectUtcToWita(scannedAtUtc)),
+      );
+    }
+
+    try {
+      return await _authorityService.resolveAttendanceLogForLocalId(localId);
+    } catch (error) {
+      debugPrint('[KioskScan] resolve photo log failed: $error');
+      return null;
     }
   }
 
@@ -515,6 +650,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     final h = projected.hour.toString().padLeft(2, '0');
     final m = projected.minute.toString().padLeft(2, '0');
     return '$h:$m WITA';
+  }
+
+  DateTime _dateOnly(DateTime value) {
+    return DateTime(value.year, value.month, value.day);
   }
 
   DateTime _projectUtcToWita(DateTime value) {
@@ -592,6 +731,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       body: SafeArea(
         child: switch (_step) {
           _ScanStep.selectAction => _buildActionSelection(employee),
+          _ScanStep.capturingPhoto => _buildActionSelection(employee),
           _ScanStep.submitting => _buildSubmitting(),
           _ScanStep.success => _buildSuccess(employee),
           _ScanStep.error => _buildError(),
@@ -604,6 +744,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     final name = employee?.name ?? '-';
     final badge =
         BadgeService.instance.getBadgeByIdSync(employee?.activeBadgeId);
+    final isCapturingPhoto = _step == _ScanStep.capturingPhoto;
 
     return Column(
       children: [
@@ -737,13 +878,13 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
           ),
         ),
         const SizedBox(height: 28),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 28),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'PILIH JENIS ABSENSI',
-              style: TextStyle(
+              isCapturingPhoto ? 'FOTO WAJAH' : 'PILIH JENIS ABSENSI',
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textMuted,
@@ -765,7 +906,17 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                     ),
                   ),
                 )
-              : _buildSmartButtons(),
+              : isCapturingPhoto
+                  ? CameraFacePreview(
+                      onPhotoCaptured: (bytes) {
+                        if (!mounted) return;
+                        setState(() {
+                          _capturedPhotoBytes = bytes;
+                          _step = _ScanStep.selectAction;
+                        });
+                      },
+                    )
+                  : _buildSmartButtons(),
         ),
         const Spacer(),
         TextButton.icon(
@@ -795,38 +946,47 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   Widget _buildSmartButtons() {
     final lastType = _resolveLastType();
     final buttons = <Widget>[];
+    var hiddenPhotoAction = false;
 
     void addButton(Widget button) {
       if (buttons.isNotEmpty) buttons.add(const SizedBox(height: 8));
       buttons.add(button);
     }
 
+    void addAttendanceButton(_AttendanceButton button) {
+      if (_requiresPhoto(button.type) && _capturedPhotoBytes == null) {
+        hiddenPhotoAction = true;
+        return;
+      }
+      addButton(button);
+    }
+
     switch (lastType) {
       case null:
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.masuk,
           onTap: () => _handleMasukWithLiburCheck(),
         ));
         break;
       case AttendanceType.masuk:
       case AttendanceType.kembali:
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.breakTime,
           onTap: () => _submitAttendance(AttendanceType.breakTime),
         ));
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.pulang,
           onTap: () => _submitAttendance(AttendanceType.pulang),
         ));
         break;
       case AttendanceType.breakTime:
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.kembali,
           customLabel: 'SELESAI ISTIRAHAT',
           customIcon: Icons.play_circle_outline_rounded,
           onTap: () => _submitAttendance(AttendanceType.kembali),
         ));
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.pulang,
           onTap: () => _submitAttendance(AttendanceType.pulang),
         ));
@@ -834,11 +994,17 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       case AttendanceType.pulang:
       case AttendanceType.sakit:
       case AttendanceType.izin:
-        addButton(_AttendanceButton(
+        addAttendanceButton(_AttendanceButton(
           type: AttendanceType.masuk,
           onTap: () => _handleMasukWithLiburCheck(),
         ));
         break;
+    }
+
+    if (hiddenPhotoAction) {
+      addButton(_PhotoRequiredPrompt(
+        onTap: () => setState(() => _step = _ScanStep.capturingPhoto),
+      ));
     }
 
     return Column(children: buttons);
@@ -1230,6 +1396,33 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoRequiredPrompt extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PhotoRequiredPrompt({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.photo_camera_front_rounded),
+        label: const Text('Ambil Foto Wajah'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );
