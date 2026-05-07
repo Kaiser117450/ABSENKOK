@@ -28,7 +28,7 @@ void main() {
         'attendance_photos_kiosk_insert',
         'attendance_photos_admin_select',
         'attendance_photos_admin_delete',
-        'array_length(storage.foldername(name), 1) = 4',
+        'array_length(storage.foldername(name), 1) = 3',
       ]) {
         expect(sql.contains(token), isTrue, reason: 'Missing token: $token');
       }

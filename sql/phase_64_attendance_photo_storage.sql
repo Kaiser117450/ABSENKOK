@@ -28,7 +28,7 @@ CREATE POLICY "attendance_photos_kiosk_insert"
   WITH CHECK (
     bucket_id = 'attendance-photos'
     AND lower(right(name, 4)) = '.jpg'
-    AND array_length(storage.foldername(name), 1) = 4
+    AND array_length(storage.foldername(name), 1) = 3
   );
 
 DROP POLICY IF EXISTS "attendance_photos_admin_select" ON storage.objects;
