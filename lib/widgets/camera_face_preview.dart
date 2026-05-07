@@ -43,7 +43,7 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
 
   @override
   void dispose() {
-    unawaited(CameraService.instance.stopImageStreamIfNeeded());
+    unawaited(CameraService.instance.dispose());
     super.dispose();
   }
 

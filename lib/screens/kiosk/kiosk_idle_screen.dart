@@ -57,6 +57,7 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   // NFC scan state
   _KioskState _kioskState = _KioskState.idle;
   Future<void> Function()? _nfcCleanup;
+  bool _nfcRestarting = false;
 
   // Pulse animation for NFC ring
   late final AnimationController _pulseController;
@@ -144,16 +145,11 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     final wasAvailable = _nfcAvailable;
     setState(() => _nfcAvailable = available);
 
-    if (available && !wasAvailable) {
-      // NFC just turned ON → start listener
+    if (available && _nfcCleanup == null && !_nfcRestarting) {
       _startNfcListener();
-    } else if (!available && wasAvailable) {
+    } else if (!available && (wasAvailable || _nfcCleanup != null)) {
       // NFC just turned OFF → stop listener
-      final cleanup = _nfcCleanup;
-      if (cleanup != null) {
-        await cleanup();
-        _nfcCleanup = null;
-      }
+      await _stopNfcListener();
     }
   }
 
@@ -222,11 +218,12 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
   void _startNfcListener() {
     // Don't start a second listener if one is already running
-    if (_nfcCleanup != null) return;
+    if (_nfcCleanup != null || _nfcRestarting) return;
 
     _nfcCleanup = NfcService.startListener(
       _onNfcTag,
       (err) {
+        debugPrint('[KioskIdle] NFC listener error: $err');
         if (mounted) {
           setState(() => _kioskState = _KioskState.nfcError);
           Future<void>.delayed(
@@ -235,9 +232,36 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
               if (mounted) setState(() => _kioskState = _KioskState.idle);
             },
           );
+          _restartNfcListenerAfterError();
         }
       },
     );
+  }
+
+  Future<void> _stopNfcListener() async {
+    final cleanup = _nfcCleanup;
+    _nfcCleanup = null;
+    if (cleanup != null) {
+      await cleanup();
+    }
+  }
+
+  void _restartNfcListenerAfterError() {
+    if (_nfcRestarting) return;
+    _nfcRestarting = true;
+    unawaited(() async {
+      try {
+        await _stopNfcListener();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      } catch (error) {
+        debugPrint('[KioskIdle] NFC listener restart cleanup failed: $error');
+      } finally {
+        _nfcRestarting = false;
+      }
+      if (mounted && _nfcAvailable) {
+        _startNfcListener();
+      }
+    }());
   }
 
   Future<void> _syncOnMount() async {

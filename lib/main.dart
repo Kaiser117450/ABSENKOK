@@ -11,13 +11,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
-import 'core/constants.dart';
 // overlay_task.dart diimport agar overlayMain() dikompilasi ke APK dan
 // tidak di-tree-shake meski pakai --obfuscate. @pragma("vm:entry-point")
 // saja tidak cukup jika file tidak termasuk dalam compilation graph.
 // ignore: unused_import
 import 'overlay_task.dart';
-import 'services/camera_service.dart';
 import 'services/nfc_service.dart';
 import 'services/sentry_service.dart';
 import 'services/sqlite_service.dart';
@@ -80,19 +78,6 @@ Future<void> main() async {
 
       // Initialize local SQLite database (creates tables if needed)
       await SqliteService.getDatabase();
-
-      if (AppConstants.attendancePhotoBetaEnabled) {
-        unawaited(
-          CameraService.instance.initialize().timeout(
-            const Duration(seconds: 3),
-            onTimeout: () {
-              debugPrint('[main] CameraService.init() timed out');
-            },
-          ).catchError((Object error) {
-            debugPrint('[main] CameraService.init() failed: $error');
-          }),
-        );
-      }
 
       // Warm NFC hardware — with 3s timeout so a disabled/missing NFC
       // never blocks the splash screen. Result is cached in NfcService.isAvailable.
