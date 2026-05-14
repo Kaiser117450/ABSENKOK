@@ -9,40 +9,56 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 import '../core/constants.dart';
 import '../core/theme.dart';
+import '../models/attendance_log.dart';
 import '../services/camera_service.dart';
 import '../services/face_detection_service.dart';
 
 class CameraFacePreview extends StatefulWidget {
   final ValueChanged<Uint8List> onPhotoCaptured;
+  final AttendanceType pendingAction;
 
   const CameraFacePreview({
     super.key,
     required this.onPhotoCaptured,
+    this.pendingAction = AttendanceType.masuk,
   });
 
   @override
   State<CameraFacePreview> createState() => _CameraFacePreviewState();
 }
 
-class _CameraFacePreviewState extends State<CameraFacePreview> {
+class _CameraFacePreviewState extends State<CameraFacePreview>
+    with SingleTickerProviderStateMixin {
   FaceDetectionResult _faceResult = const FaceDetectionResult.empty();
-  Size? _imageSize;
   Uint8List? _capturedBytes;
-  DateTime? _validFaceSince;
   DateTime _lastFrameProcessed = DateTime.fromMillisecondsSinceEpoch(0);
   bool _initializing = true;
   bool _processingFrame = false;
   bool _capturing = false;
   String? _error;
 
+  late final AnimationController _holdCtrl;
+
   @override
   void initState() {
     super.initState();
+    _holdCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        milliseconds: AppConstants.attendancePhotoStableFaceMs,
+      ),
+    );
+    _holdCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        unawaited(_capturePhoto());
+      }
+    });
     unawaited(_initialize());
   }
 
   @override
   void dispose() {
+    _holdCtrl.dispose();
     unawaited(CameraService.instance.dispose());
     super.dispose();
   }
@@ -91,26 +107,24 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
 
       final result =
           await FaceDetectionService.instance.processImage(inputImage);
-      final imageSize = inputImage.metadata?.size;
       if (!mounted || _capturing) return;
 
-      setState(() {
-        _faceResult = result;
-        _imageSize = imageSize;
-      });
+      setState(() => _faceResult = result);
 
       if (result.isValid) {
-        _validFaceSince ??= DateTime.now();
-        final stableMs =
-            DateTime.now().difference(_validFaceSince!).inMilliseconds;
-        if (stableMs >= AppConstants.attendancePhotoStableFaceMs) {
-          await _capturePhoto();
+        if (_holdCtrl.status != AnimationStatus.forward &&
+            _holdCtrl.status != AnimationStatus.completed) {
+          _holdCtrl.forward();
         }
       } else {
-        _validFaceSince = null;
+        if (_holdCtrl.status != AnimationStatus.dismissed) {
+          _holdCtrl.reset();
+        }
       }
     } catch (_) {
-      _validFaceSince = null;
+      if (_holdCtrl.status != AnimationStatus.dismissed) {
+        _holdCtrl.reset();
+      }
     } finally {
       _processingFrame = false;
     }
@@ -131,9 +145,9 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
       if (!mounted) return;
       setState(() {
         _capturing = false;
-        _validFaceSince = null;
         _error = 'Foto gagal diambil';
       });
+      _holdCtrl.reset();
       unawaited(_initialize());
     }
   }
@@ -207,6 +221,28 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
     return buffer.done().buffer.asUint8List();
   }
 
+  Color get _actionColor {
+    switch (widget.pendingAction) {
+      case AttendanceType.masuk:
+        return AppColors.success;
+      case AttendanceType.pulang:
+        return AppColors.danger;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String get _actionLabel {
+    switch (widget.pendingAction) {
+      case AttendanceType.masuk:
+        return 'VERIFIKASI MASUK';
+      case AttendanceType.pulang:
+        return 'VERIFIKASI PULANG';
+      default:
+        return 'VERIFIKASI WAJAH';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final captured = _capturedBytes;
@@ -224,11 +260,15 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
     if (_error != null) {
       return _CameraSurface(
         child: Center(
-          child: Text(
-            _error!,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
@@ -250,10 +290,26 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
                 child: CameraService.instance.getPreviewWidget(),
               ),
             ),
-          CustomPaint(
-            painter: _FaceOverlayPainter(
-              result: _faceResult,
-              imageSize: _imageSize,
+          AnimatedBuilder(
+            animation: _holdCtrl,
+            builder: (_, __) {
+              return CustomPaint(
+                painter: _OvalGuidePainter(
+                  valid: _faceResult.isValid,
+                  capturing: _capturing,
+                  progress: _holdCtrl.value,
+                  successColor: AppColors.success,
+                ),
+              );
+            },
+          ),
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: _ActionTitlePill(
+              label: _actionLabel,
+              color: _actionColor,
             ),
           ),
           Positioned(
@@ -297,6 +353,52 @@ class _CameraSurface extends StatelessWidget {
   }
 }
 
+class _ActionTitlePill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _ActionTitlePill({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.7), width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.verified_user_rounded,
+                color: color,
+                size: 14,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GuidancePill extends StatelessWidget {
   final bool valid;
   final bool capturing;
@@ -308,28 +410,28 @@ class _GuidancePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = valid ? AppColors.success : AppColors.danger;
+    final color = valid ? AppColors.success : Colors.white;
     final text = capturing
-        ? 'Mengambil foto'
+        ? 'Foto diambil...'
         : valid
-            ? 'Wajah terdeteksi'
-            : 'Arahkan wajah ke kamera';
+            ? 'Tahan posisi wajah'
+            : 'Posisikan wajah di dalam lingkaran';
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.68),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               valid
-                  ? Icons.face_retouching_natural_rounded
-                  : Icons.face_rounded,
+                  ? Icons.check_circle_rounded
+                  : Icons.face_retouching_natural_rounded,
               color: color,
               size: 18,
             ),
@@ -352,46 +454,81 @@ class _GuidancePill extends StatelessWidget {
   }
 }
 
-class _FaceOverlayPainter extends CustomPainter {
-  final FaceDetectionResult result;
-  final Size? imageSize;
+class _OvalGuidePainter extends CustomPainter {
+  final bool valid;
+  final bool capturing;
+  final double progress;
+  final Color successColor;
 
-  const _FaceOverlayPainter({
-    required this.result,
-    required this.imageSize,
+  const _OvalGuidePainter({
+    required this.valid,
+    required this.capturing,
+    required this.progress,
+    required this.successColor,
   });
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final box = result.boundingBox;
-    final sourceSize = imageSize;
-    if (box == null || sourceSize == null) return;
-
-    final scale = math.max(
-      size.width / sourceSize.width,
-      size.height / sourceSize.height,
-    );
-    final dx = (size.width - sourceSize.width * scale) / 2;
-    final dy = (size.height - sourceSize.height * scale) / 2;
-    final rect = Rect.fromLTRB(
-      box.left * scale + dx,
-      box.top * scale + dy,
-      box.right * scale + dx,
-      box.bottom * scale + dy,
-    );
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = result.isValid ? AppColors.success : AppColors.danger;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(12)),
-      paint,
-    );
+  Rect _ovalRect(Size size) {
+    final width = size.width * 0.72;
+    final height = size.height * 0.50;
+    final left = (size.width - width) / 2;
+    final top = size.height * 0.10;
+    return Rect.fromLTWH(left, top, width, height);
   }
 
   @override
-  bool shouldRepaint(covariant _FaceOverlayPainter oldDelegate) {
-    return oldDelegate.result != result || oldDelegate.imageSize != imageSize;
+  void paint(Canvas canvas, Size size) {
+    final oval = _ovalRect(size);
+
+    final maskPath = Path()
+      ..addRect(Offset.zero & size)
+      ..addOval(oval)
+      ..fillType = PathFillType.evenOdd;
+    canvas.drawPath(
+      maskPath,
+      Paint()..color = Colors.black.withValues(alpha: 0.55),
+    );
+
+    final borderColor = valid
+        ? successColor.withValues(alpha: 0.95)
+        : Colors.white.withValues(alpha: 0.85);
+    canvas.drawOval(
+      oval,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = valid ? 4.5 : 3.0
+        ..color = borderColor,
+    );
+
+    if (valid && progress > 0) {
+      canvas.drawArc(
+        oval.deflate(2),
+        -math.pi / 2,
+        2 * math.pi * progress.clamp(0.0, 1.0),
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..strokeCap = StrokeCap.round
+          ..color = successColor,
+      );
+    }
+
+    if (capturing) {
+      canvas.drawOval(
+        oval,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6
+          ..color = successColor,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OvalGuidePainter oldDelegate) {
+    return oldDelegate.valid != valid ||
+        oldDelegate.capturing != capturing ||
+        oldDelegate.progress != progress ||
+        oldDelegate.successColor != successColor;
   }
 }

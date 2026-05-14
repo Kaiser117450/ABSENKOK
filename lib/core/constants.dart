@@ -24,7 +24,9 @@ class AppConstants {
   static const int syncMaxRetries = 5;
   static const int syncBatchSize = 50;
 
-  // Attendance photo beta (disabled unless explicitly enabled at build/run).
+  // Attendance photo beta — enabled at build time via
+  // --dart-define=ATTENDANCE_PHOTO_BETA=true. Default stays false so older
+  // builds and tests keep the legacy non-photo flow.
   static const bool attendancePhotoBetaEnabled =
       bool.fromEnvironment('ATTENDANCE_PHOTO_BETA');
   static const String attendancePhotoBucket = 'attendance-photos';

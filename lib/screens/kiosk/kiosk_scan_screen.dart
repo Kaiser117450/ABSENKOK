@@ -100,6 +100,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   List<PendingLog> _pendingLogs = [];
   bool _loadingActionState = true;
   Uint8List? _capturedPhotoBytes;
+  AttendanceType? _pendingPhotoAction;
 
   AttendanceType? _submittedType;
   KioskScanAuthorityState _successAuthorityState =
@@ -239,9 +240,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       _authorityContext = resolvedContext;
       _pendingLogs = pendingLogs;
       _loadingActionState = false;
-      if (shouldCapturePhoto) {
-        _step = _ScanStep.capturingPhoto;
-      }
     });
 
     // Overnight debug logging
@@ -250,6 +248,30 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       debugPrint(
           '[KioskScan] Overnight window: ${serverLocal.hour}h, band=${resolvedContext.shiftBand}, last=${resolvedContext.lastAuthoritativeType}');
     }
+
+    if (shouldCapturePhoto) {
+      await _initiateAction(AttendanceType.masuk);
+    }
+  }
+
+  Future<void> _initiateAction(AttendanceType type) async {
+    if (_step != _ScanStep.selectAction) return;
+    if (type == AttendanceType.masuk) {
+      final isLibur = _authorityContext?.shiftBand == ShiftBand.libur;
+      if (isLibur) {
+        final confirmed = await _showLiburWarningDialog();
+        if (!confirmed) return;
+      }
+    }
+    if (!mounted) return;
+    if (_requiresPhoto(type) && _capturedPhotoBytes == null) {
+      setState(() {
+        _pendingPhotoAction = type;
+        _step = _ScanStep.capturingPhoto;
+      });
+      return;
+    }
+    await _submitAttendance(type);
   }
 
   AttendanceType? _resolveLastType() {
@@ -325,15 +347,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       ),
     );
     return result == true;
-  }
-
-  Future<void> _handleMasukWithLiburCheck() async {
-    final isLibur = _authorityContext?.shiftBand == ShiftBand.libur;
-    if (isLibur) {
-      final confirmed = await _showLiburWarningDialog();
-      if (!confirmed) return;
-    }
-    await _submitAttendance(AttendanceType.masuk);
   }
 
   Future<void> _refreshPendingCount() async {
@@ -908,12 +921,18 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
                 )
               : isCapturingPhoto
                   ? CameraFacePreview(
-                      onPhotoCaptured: (bytes) {
+                      pendingAction:
+                          _pendingPhotoAction ?? AttendanceType.masuk,
+                      onPhotoCaptured: (bytes) async {
                         if (!mounted) return;
+                        final action =
+                            _pendingPhotoAction ?? AttendanceType.masuk;
                         setState(() {
                           _capturedPhotoBytes = bytes;
                           _step = _ScanStep.selectAction;
+                          _pendingPhotoAction = null;
                         });
+                        await _submitAttendance(action);
                       },
                     )
                   : _buildSmartButtons(),
@@ -946,65 +965,50 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   Widget _buildSmartButtons() {
     final lastType = _resolveLastType();
     final buttons = <Widget>[];
-    var hiddenPhotoAction = false;
 
     void addButton(Widget button) {
       if (buttons.isNotEmpty) buttons.add(const SizedBox(height: 8));
       buttons.add(button);
     }
 
-    void addAttendanceButton(_AttendanceButton button) {
-      if (_requiresPhoto(button.type) && _capturedPhotoBytes == null) {
-        hiddenPhotoAction = true;
-        return;
-      }
-      addButton(button);
-    }
-
     switch (lastType) {
       case null:
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.masuk,
-          onTap: () => _handleMasukWithLiburCheck(),
+          onTap: () => _initiateAction(AttendanceType.masuk),
         ));
         break;
       case AttendanceType.masuk:
       case AttendanceType.kembali:
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.breakTime,
           onTap: () => _submitAttendance(AttendanceType.breakTime),
         ));
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.pulang,
-          onTap: () => _submitAttendance(AttendanceType.pulang),
+          onTap: () => _initiateAction(AttendanceType.pulang),
         ));
         break;
       case AttendanceType.breakTime:
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.kembali,
           customLabel: 'SELESAI ISTIRAHAT',
           customIcon: Icons.play_circle_outline_rounded,
           onTap: () => _submitAttendance(AttendanceType.kembali),
         ));
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.pulang,
-          onTap: () => _submitAttendance(AttendanceType.pulang),
+          onTap: () => _initiateAction(AttendanceType.pulang),
         ));
         break;
       case AttendanceType.pulang:
       case AttendanceType.sakit:
       case AttendanceType.izin:
-        addAttendanceButton(_AttendanceButton(
+        addButton(_AttendanceButton(
           type: AttendanceType.masuk,
-          onTap: () => _handleMasukWithLiburCheck(),
+          onTap: () => _initiateAction(AttendanceType.masuk),
         ));
         break;
-    }
-
-    if (hiddenPhotoAction) {
-      addButton(_PhotoRequiredPrompt(
-        onTap: () => setState(() => _step = _ScanStep.capturingPhoto),
-      ));
     }
 
     return Column(children: buttons);
@@ -1396,33 +1400,6 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PhotoRequiredPrompt extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _PhotoRequiredPrompt({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: const Icon(Icons.photo_camera_front_rounded),
-        label: const Text('Ambil Foto Wajah'),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-          ),
         ),
       ),
     );
