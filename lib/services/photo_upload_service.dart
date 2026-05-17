@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/constants.dart';
 import '../core/supabase_client.dart';
@@ -26,36 +26,76 @@ class PhotoUploadService {
 
   static final PhotoUploadService instance = PhotoUploadService._();
 
+  /// Phase 66: Upload attendance photo to Cloudflare R2 via a Supabase
+  /// Edge Function that mints a short-lived presigned PUT URL. The kiosk
+  /// uploads bytes directly to R2; only the public read URL is returned to
+  /// the caller for attachment to the attendance log.
   Future<AttendancePhotoUploadResult> uploadAttendancePhoto({
     required String outletId,
     required String employeeId,
     required DateTime logDate,
     required String logId,
     required Uint8List bytes,
+    http.Client? httpClient,
   }) async {
     _ensureSupabaseReady();
-    final storagePath = buildStoragePath(
+    final fallbackPath = buildStoragePath(
       outletId: outletId,
       employeeId: employeeId,
       logDate: logDate,
       logId: logId,
     );
-    final bucket = SupabaseClientFactory.kiosk.storage.from(
-      AppConstants.attendancePhotoBucket,
+
+    final signResponse = await SupabaseClientFactory.kiosk.functions.invoke(
+      'sign-r2-upload',
+      body: {
+        'outlet_id': outletId,
+        'employee_id': employeeId,
+        'log_date': _formatDate(logDate),
+        'log_id': logId,
+      },
     );
 
-    await bucket.uploadBinary(
-      storagePath,
-      bytes,
-      fileOptions: const FileOptions(
-        contentType: 'image/jpeg',
-        upsert: true,
-        cacheControl: '86400',
-      ),
-    );
+    if (signResponse.status >= 400 || signResponse.data is! Map) {
+      throw StateError(
+        'Failed to obtain R2 upload URL: status=${signResponse.status}',
+      );
+    }
+
+    final data = (signResponse.data as Map).cast<String, dynamic>();
+    final uploadUrl = (data['upload_url'] as String?)?.trim();
+    final publicUrl = (data['public_url'] as String?)?.trim();
+    final storagePath =
+        (data['storage_path'] as String?)?.trim() ?? fallbackPath;
+
+    if (uploadUrl == null ||
+        uploadUrl.isEmpty ||
+        publicUrl == null ||
+        publicUrl.isEmpty) {
+      throw StateError(
+        'R2 upload URL response missing upload_url or public_url',
+      );
+    }
+
+    final client = httpClient ?? http.Client();
+    try {
+      final putResponse = await client.put(
+        Uri.parse(uploadUrl),
+        headers: const {'Content-Type': 'image/jpeg'},
+        body: bytes,
+      );
+
+      if (putResponse.statusCode < 200 || putResponse.statusCode >= 300) {
+        throw StateError(
+          'R2 upload failed: ${putResponse.statusCode} ${putResponse.body}',
+        );
+      }
+    } finally {
+      if (httpClient == null) client.close();
+    }
 
     return AttendancePhotoUploadResult(
-      photoUrl: bucket.getPublicUrl(storagePath),
+      photoUrl: publicUrl,
       storagePath: storagePath,
     );
   }

@@ -54,8 +54,10 @@ void main() {
         'SECURITY DEFINER',
         "REVOKE ALL ON FUNCTION public.attach_attendance_photo(uuid, text, boolean) FROM PUBLIC;",
         'GRANT EXECUTE ON FUNCTION public.attach_attendance_photo(uuid, text, boolean) TO anon, authenticated;',
-        "v_selfie_url NOT LIKE '%/storage/v1/object/public/attendance-photos/%'",
-        "p_attendance_log_id::text || '.jpg%'",
+        "v_selfie_url NOT LIKE 'https://%'",
+        "v_selfie_url NOT LIKE '%.r2.dev/%'",
+        "v_selfie_url NOT LIKE '%.r2.cloudflarestorage.com/%'",
+        "p_attendance_log_id::text || '.jpg'",
         'GET DIAGNOSTICS v_updated_count = ROW_COUNT',
         "RAISE EXCEPTION 'attendance log not found'",
       ]) {

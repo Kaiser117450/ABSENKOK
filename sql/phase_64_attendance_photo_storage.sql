@@ -86,9 +86,12 @@ CREATE TABLE IF NOT EXISTS public.attendance_photo_analysis (
   created_at timestamptz DEFAULT now()
 );
 
+-- Phase 66: full unique index (no WHERE clause) so analyze-attendance-photo's
+-- upsert with ON CONFLICT (attendance_log_id) can resolve against this index.
+-- Postgres still treats multiple NULLs as distinct in unique indexes, so the
+-- semantic of allowing NULL attendance_log_id rows is preserved.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_photo_analysis_log_unique
-  ON public.attendance_photo_analysis (attendance_log_id)
-  WHERE attendance_log_id IS NOT NULL;
+  ON public.attendance_photo_analysis (attendance_log_id);
 
 CREATE INDEX IF NOT EXISTS idx_attendance_photo_analysis_score
   ON public.attendance_photo_analysis (grooming_score, analyzed_at DESC);
@@ -184,9 +187,18 @@ BEGIN
     RAISE EXCEPTION 'selfie_url is required';
   END IF;
 
-  IF v_selfie_url NOT LIKE '%/storage/v1/object/public/attendance-photos/%'
-     OR v_selfie_url NOT LIKE ('%/' || p_attendance_log_id::text || '.jpg%') THEN
-    RAISE EXCEPTION 'selfie_url does not match attendance photo storage path';
+  -- Phase 66: Photos now live on Cloudflare R2. Accept either the r2.dev
+  -- public domain or the S3-compatible endpoint, and require the URL to
+  -- end with the attendance log id so a kiosk anon key cannot point
+  -- selfie_url at an unrelated object. Update the host LIKE patterns if
+  -- the deployment migrates to a custom R2 domain.
+  IF v_selfie_url NOT LIKE 'https://%'
+     OR (
+       v_selfie_url NOT LIKE '%.r2.dev/%'
+       AND v_selfie_url NOT LIKE '%.r2.cloudflarestorage.com/%'
+     )
+     OR v_selfie_url NOT LIKE ('%/' || p_attendance_log_id::text || '.jpg') THEN
+    RAISE EXCEPTION 'selfie_url does not match attendance photo R2 path';
   END IF;
 
   UPDATE public.attendance_logs al

@@ -23,8 +23,6 @@ type GoogleVisionAuth =
   | { kind: "api_key"; apiKey: string }
   | { kind: "bearer"; accessToken: string };
 
-const bucketName = "attendance-photos";
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -52,19 +50,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const { data: fileBlob, error: downloadError } = await supabaseAdmin
-      .storage
-      .from(bucketName)
-      .download(photoPath);
-
-    if (downloadError || !fileBlob) {
+    // Phase 66: photos live on Cloudflare R2. The public_url returned from
+    // sign-r2-upload is readable without auth, so a plain fetch is enough.
+    const photoResponse = await fetch(photoUrl);
+    if (!photoResponse.ok) {
       return json(
-        { error: `Failed to download photo: ${downloadError?.message}` },
+        { error: `Failed to download photo: HTTP ${photoResponse.status}` },
         500,
       );
     }
 
-    const imageBytes = new Uint8Array(await fileBlob.arrayBuffer());
+    const imageBytes = new Uint8Array(await photoResponse.arrayBuffer());
     const googleAuth = await getGoogleVisionAuth();
     const visionResponse = await callVisionApi(imageBytes, googleAuth);
     const analysis = parseGroomingAnalysis(visionResponse);
