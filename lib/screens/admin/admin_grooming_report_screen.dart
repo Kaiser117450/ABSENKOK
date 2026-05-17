@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:absensi_enakko_flutter/core/supabase_client.dart';
@@ -251,31 +253,10 @@ class _GroomingReportCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: row.photoUrl.isEmpty
-                  ? const ColoredBox(
-                      color: AppColors.surface,
-                      child: SizedBox(
-                        width: 72,
-                        height: 96,
-                        child: Icon(Icons.broken_image_outlined),
-                      ),
-                    )
-                  : Image.network(
-                      row.photoUrl,
-                      width: 72,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: AppColors.surface,
-                        child: SizedBox(
-                          width: 72,
-                          height: 96,
-                          child: Icon(Icons.broken_image_outlined),
-                        ),
-                      ),
-                    ),
+            _GroomingThumbnail(
+              photoUrl: row.photoUrl,
+              employeeName: row.employeeName,
+              scannedAtLabel: row.scannedAtLabel,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -342,6 +323,185 @@ class _GroomingReportCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroomingThumbnail extends StatelessWidget {
+  final String photoUrl;
+  final String employeeName;
+  final String scannedAtLabel;
+
+  static const double _width = 96;
+  static const double _height = 128;
+
+  const _GroomingThumbnail({
+    required this.photoUrl,
+    required this.employeeName,
+    required this.scannedAtLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUrl = photoUrl.isNotEmpty;
+    return GestureDetector(
+      onTap: hasUrl
+          ? () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => _PhotoPreviewScreen(
+                    photoUrl: photoUrl,
+                    title: employeeName,
+                    subtitle: scannedAtLabel,
+                  ),
+                ),
+              )
+          : null,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: !hasUrl
+            ? _placeholder(Icons.no_photography_outlined, 'Tidak ada foto')
+            : CachedNetworkImage(
+                imageUrl: photoUrl,
+                width: _width,
+                height: _height,
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 180),
+                placeholder: (_, __) => const SizedBox(
+                  width: _width,
+                  height: _height,
+                  child: ColoredBox(
+                    color: AppColors.surface,
+                    child: Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, __, ___) =>
+                    _placeholder(Icons.broken_image_outlined, 'Gagal muat'),
+              ),
+      ),
+    );
+  }
+
+  Widget _placeholder(IconData icon, String label) {
+    return Container(
+      width: _width,
+      height: _height,
+      color: AppColors.surface,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppColors.textSecondary, size: 28),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhotoPreviewScreen extends StatelessWidget {
+  final String photoUrl;
+  final String title;
+  final String subtitle;
+
+  const _PhotoPreviewScreen({
+    required this.photoUrl,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: Colors.white70),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Salin URL',
+            icon: const Icon(Icons.link_rounded),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: photoUrl));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('URL foto disalin'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4.0,
+          child: CachedNetworkImage(
+            imageUrl: photoUrl,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => const CircularProgressIndicator(
+              color: Colors.white,
+            ),
+            errorWidget: (_, __, ___) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(
+                  Icons.broken_image_outlined,
+                  color: Colors.white54,
+                  size: 56,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Foto tidak bisa dimuat',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
