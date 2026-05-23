@@ -425,10 +425,10 @@ class _OvalGuidePainter extends CustomPainter {
   const _OvalGuidePainter({required this.borderColor, required this.state});
 
   Rect _ovalRect(Size size) {
-    final width = size.width * 0.72;
-    final height = size.height * 0.50;
+    final width = size.width * 0.68;
+    final height = size.height * 0.58;
     final left = (size.width - width) / 2;
-    final top = size.height * 0.10;
+    final top = size.height * 0.14;
     return Rect.fromLTWH(left, top, width, height);
   }
 

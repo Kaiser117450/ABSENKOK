@@ -38,10 +38,15 @@ class AppConstants {
   static const double attendancePhotoEyeOpenThreshold = 0.70;
   static const int attendancePhotoPreviewMs = 300;
   static const int attendancePhotoFaceThrottleMs = 140;
-  static const double attendancePhotoMaxHeadEulerY = 15;
-  static const double attendancePhotoMinFaceFrameRatio = 0.20;
-  static const double attendancePhotoOvalFillMin = 0.55;
-  static const double attendancePhotoOvalFillMax = 0.95;
+  static const double attendancePhotoMaxHeadEulerY = 18;
+  static const double attendancePhotoMinFaceFrameRatio = 0.15;
+  // ML Kit boundingBox excludes hair/forehead, so it is ~60-70% of the visible
+  // face. When the visible face fills the oval guide (oval ~0.68 of preview
+  // width), the bbox width is roughly 0.30-0.45 of frame width. These bounds
+  // let users hold the phone at a natural arm's length.
+  static const double attendancePhotoOvalFillMin = 0.30;
+  static const double attendancePhotoOvalFillMax = 0.80;
+  static const double attendancePhotoOffCenterMax = 0.22;
   static const int attendancePhotoMaxBlinkAttempts = 3;
   static const int attendancePhotoUploadMaxRetries = 3;
 

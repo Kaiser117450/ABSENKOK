@@ -29,23 +29,23 @@ void main() {
     );
   });
 
-  test('returns tilted when euler > 15', () {
+  test('returns tilted when euler > 18', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.7),
-        headEulerY: 20,
+        boundingBox: bbox(0.5),
+        headEulerY: 22,
         frameSize: frame,
       ),
       FaceAlignment.tilted,
     );
   });
 
-  test('returns tooSmall when width below 0.55', () {
+  test('returns tooSmall when width below 0.30', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.40),
+        boundingBox: bbox(0.22),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -53,11 +53,11 @@ void main() {
     );
   });
 
-  test('returns tooBig when width above 0.95', () {
+  test('returns tooBig when width above 0.80', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.97),
+        boundingBox: bbox(0.85),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -65,11 +65,11 @@ void main() {
     );
   });
 
-  test('returns offCenter when centre offset > 0.15', () {
+  test('returns offCenter when centre offset > 0.22', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.7, offsetRatio: 0.2),
+        boundingBox: bbox(0.5, offsetRatio: 0.25),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -81,8 +81,22 @@ void main() {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.7),
+        boundingBox: bbox(0.5),
         headEulerY: 5,
+        frameSize: frame,
+      ),
+      FaceAlignment.aligned,
+    );
+  });
+
+  test('accepts smaller face that visually fills the oval', () {
+    // ML Kit bbox is ~60-70% of visible face. When the visible face fills
+    // the oval guide, the bbox is ~0.35-0.45 of frame width.
+    expect(
+      service.debugResolveAlignment(
+        faceCount: 1,
+        boundingBox: bbox(0.35),
+        headEulerY: 3,
         frameSize: frame,
       ),
       FaceAlignment.aligned,

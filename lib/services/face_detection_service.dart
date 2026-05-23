@@ -95,7 +95,9 @@ class FaceDetectionService {
     final faceCenterX = face.boundingBox.center.dx;
     final frameCenterX = frame.width / 2;
     final centerOffset = (faceCenterX - frameCenterX).abs() / frame.width;
-    if (centerOffset > 0.15) return FaceAlignment.offCenter;
+    if (centerOffset > AppConstants.attendancePhotoOffCenterMax) {
+      return FaceAlignment.offCenter;
+    }
 
     return FaceAlignment.aligned;
   }
@@ -120,7 +122,9 @@ class FaceDetectionService {
     }
     final centerOffset =
         (boundingBox.center.dx - frameSize.width / 2).abs() / frameSize.width;
-    if (centerOffset > 0.15) return FaceAlignment.offCenter;
+    if (centerOffset > AppConstants.attendancePhotoOffCenterMax) {
+      return FaceAlignment.offCenter;
+    }
     return FaceAlignment.aligned;
   }
 
