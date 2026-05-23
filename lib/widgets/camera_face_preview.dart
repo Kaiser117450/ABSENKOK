@@ -12,14 +12,17 @@ import '../core/theme.dart';
 import '../models/attendance_log.dart';
 import '../services/camera_service.dart';
 import '../services/face_detection_service.dart';
+import 'face_capture_state_machine.dart';
 
 class CameraFacePreview extends StatefulWidget {
   final ValueChanged<Uint8List> onPhotoCaptured;
+  final VoidCallback? onCancel;
   final AttendanceType pendingAction;
 
   const CameraFacePreview({
     super.key,
     required this.onPhotoCaptured,
+    this.onCancel,
     this.pendingAction = AttendanceType.masuk,
   });
 
@@ -27,9 +30,9 @@ class CameraFacePreview extends StatefulWidget {
   State<CameraFacePreview> createState() => _CameraFacePreviewState();
 }
 
-class _CameraFacePreviewState extends State<CameraFacePreview>
-    with SingleTickerProviderStateMixin {
-  FaceDetectionResult _faceResult = const FaceDetectionResult.empty();
+class _CameraFacePreviewState extends State<CameraFacePreview> {
+  final FaceCaptureStateMachine _fsm = FaceCaptureStateMachine();
+  FaceDetectionResult _last = const FaceDetectionResult.empty();
   Uint8List? _capturedBytes;
   DateTime _lastFrameProcessed = DateTime.fromMillisecondsSinceEpoch(0);
   bool _initializing = true;
@@ -37,28 +40,14 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
   bool _capturing = false;
   String? _error;
 
-  late final AnimationController _holdCtrl;
-
   @override
   void initState() {
     super.initState();
-    _holdCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(
-        milliseconds: AppConstants.attendancePhotoStableFaceMs,
-      ),
-    );
-    _holdCtrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        unawaited(_capturePhoto());
-      }
-    });
     unawaited(_initialize());
   }
 
   @override
   void dispose() {
-    _holdCtrl.dispose();
     unawaited(CameraService.instance.dispose());
     super.dispose();
   }
@@ -79,7 +68,7 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
       await controller.startImageStream(_handleCameraImage);
       if (!mounted) return;
       setState(() => _initializing = false);
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _initializing = false;
@@ -97,40 +86,28 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
     }
     _lastFrameProcessed = now;
     _processingFrame = true;
-    unawaited(_processCameraImage(image));
+    unawaited(_processFrame(image, now));
   }
 
-  Future<void> _processCameraImage(CameraImage image) async {
+  Future<void> _processFrame(CameraImage image, DateTime now) async {
     try {
       final inputImage = _inputImageFromCameraImage(image);
       if (inputImage == null) return;
-
-      final result =
-          await FaceDetectionService.instance.processImage(inputImage);
+      final result = await FaceDetectionService.instance.processImage(inputImage);
       if (!mounted || _capturing) return;
-
-      setState(() => _faceResult = result);
-
-      if (result.isValid) {
-        if (_holdCtrl.status != AnimationStatus.forward &&
-            _holdCtrl.status != AnimationStatus.completed) {
-          _holdCtrl.forward();
-        }
-      } else {
-        if (_holdCtrl.status != AnimationStatus.dismissed) {
-          _holdCtrl.reset();
-        }
+      final newState = _fsm.onDetection(result, now);
+      setState(() => _last = result);
+      if (newState == CaptureState.capturing) {
+        unawaited(_capture());
       }
     } catch (_) {
-      if (_holdCtrl.status != AnimationStatus.dismissed) {
-        _holdCtrl.reset();
-      }
+      // swallow; state machine will re-prompt if needed
     } finally {
       _processingFrame = false;
     }
   }
 
-  Future<void> _capturePhoto() async {
+  Future<void> _capture() async {
     if (_capturing) return;
     _capturing = true;
     try {
@@ -140,6 +117,7 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
       await Future<void>.delayed(
         const Duration(milliseconds: AppConstants.attendancePhotoPreviewMs),
       );
+      _fsm.markDone();
       if (mounted) widget.onPhotoCaptured(bytes);
     } catch (_) {
       if (!mounted) return;
@@ -147,7 +125,7 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
         _capturing = false;
         _error = 'Foto gagal diambil';
       });
-      _holdCtrl.reset();
+      _fsm.reset();
       unawaited(_initialize());
     }
   }
@@ -156,17 +134,12 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
     final controller = CameraService.instance.controller;
     final camera = CameraService.instance.cameraDescription;
     if (controller == null || camera == null) return null;
-
-    final rotation =
-        _inputImageRotation(camera, controller.value.deviceOrientation);
+    final rotation = _inputImageRotation(camera, controller.value.deviceOrientation);
     if (rotation == null) return null;
-
     final format = _inputImageFormat(image.format);
     if (format == null) return null;
-
     final bytes = _cameraImageBytes(image);
     final size = Size(image.width.toDouble(), image.height.toDouble());
-
     return InputImage.fromBytes(
       bytes: bytes,
       metadata: InputImageMetadata(
@@ -221,6 +194,51 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
     return buffer.done().buffer.asUint8List();
   }
 
+  String get _pillText {
+    if (_fsm.state == CaptureState.searching) {
+      switch (_last.alignment) {
+        case FaceAlignment.tooSmall:
+          return 'Mendekat sedikit';
+        case FaceAlignment.tooBig:
+          return 'Mundur sedikit';
+        case FaceAlignment.offCenter:
+          return 'Geser ke tengah';
+        case FaceAlignment.tilted:
+          return 'Hadapkan wajah lurus';
+        default:
+          return 'Posisikan wajah di dalam lingkaran';
+      }
+    }
+    switch (_fsm.state) {
+      case CaptureState.aligning:
+        return 'Tahan posisi…';
+      case CaptureState.promptBlink:
+        return 'Kedipkan mata sekali 👁️';
+      case CaptureState.retry:
+        return 'Coba kedipkan lagi…';
+      case CaptureState.exhausted:
+        return 'Tekan Coba Lagi untuk mengulang';
+      case CaptureState.capturing:
+      case CaptureState.done:
+        return 'Berhasil ✓';
+      default:
+        return '';
+    }
+  }
+
+  Color get _ovalColor {
+    switch (_fsm.state) {
+      case CaptureState.promptBlink:
+      case CaptureState.capturing:
+      case CaptureState.done:
+        return AppColors.success;
+      case CaptureState.retry:
+        return Colors.amber;
+      default:
+        return Colors.white;
+    }
+  }
+
   Color get _actionColor {
     switch (widget.pendingAction) {
       case AttendanceType.masuk:
@@ -245,84 +263,81 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
 
   @override
   Widget build(BuildContext context) {
-    final captured = _capturedBytes;
     if (_initializing) {
       return const _CameraSurface(
         child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.primary,
-            strokeWidth: 2.5,
-          ),
+          child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
         ),
       );
     }
-
     if (_error != null) {
       return _CameraSurface(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: Text(_error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ),
       );
     }
 
+    final captured = _capturedBytes;
     return _CameraSurface(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (captured != null)
-            Image.memory(captured, fit: BoxFit.cover)
-          else
-            FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: _previewSize.width,
-                height: _previewSize.height,
-                child: CameraService.instance.getPreviewWidget(),
+      child: Stack(fit: StackFit.expand, children: [
+        if (captured != null)
+          Image.memory(captured, fit: BoxFit.cover)
+        else
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _previewSize.width,
+              height: _previewSize.height,
+              child: CameraService.instance.getPreviewWidget(),
+            ),
+          ),
+        CustomPaint(
+          painter: _OvalGuidePainter(
+            borderColor: _ovalColor,
+            state: _fsm.state,
+          ),
+        ),
+        Positioned(
+          top: 12,
+          left: 12,
+          right: 12,
+          child: _ActionTitlePill(label: _actionLabel, color: _actionColor),
+        ),
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 12,
+          child: _GuidancePill(text: _pillText, color: _ovalColor),
+        ),
+        if (widget.onCancel != null)
+          Positioned(
+            bottom: 12,
+            left: 12,
+            child: TextButton(
+              onPressed: widget.onCancel,
+              style: TextButton.styleFrom(foregroundColor: Colors.white70),
+              child: const Text('Batal'),
+            ),
+          ),
+        if (_fsm.state == CaptureState.exhausted)
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: FilledButton(
+                onPressed: () => setState(_fsm.reset),
+                child: const Text('Coba Lagi'),
               ),
             ),
-          AnimatedBuilder(
-            animation: _holdCtrl,
-            builder: (_, __) {
-              return CustomPaint(
-                painter: _OvalGuidePainter(
-                  valid: _faceResult.isValid,
-                  capturing: _capturing,
-                  progress: _holdCtrl.value,
-                  successColor: AppColors.success,
-                ),
-              );
-            },
           ),
-          Positioned(
-            top: 12,
-            left: 12,
-            right: 12,
-            child: _ActionTitlePill(
-              label: _actionLabel,
-              color: _actionColor,
-            ),
-          ),
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: _GuidancePill(
-              valid: _faceResult.isValid,
-              capturing: _capturing,
-            ),
-          ),
-        ],
-      ),
+      ]),
     );
   }
 
@@ -335,137 +350,79 @@ class _CameraFacePreviewState extends State<CameraFacePreview>
 
 class _CameraSurface extends StatelessWidget {
   final Widget child;
-
   const _CameraSurface({required this.child});
-
   @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: ColoredBox(
-        color: Colors.black,
-        child: AspectRatio(
-          aspectRatio: 3 / 4,
-          child: child,
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: ColoredBox(
+          color: Colors.black,
+          child: AspectRatio(aspectRatio: 3 / 4, child: child),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _ActionTitlePill extends StatelessWidget {
   final String label;
   final Color color;
-
-  const _ActionTitlePill({
-    required this.label,
-    required this.color,
-  });
-
+  const _ActionTitlePill({required this.label, required this.color});
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withValues(alpha: 0.7), width: 1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.verified_user_rounded,
-                color: color,
-                size: 14,
-              ),
+  Widget build(BuildContext context) => Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: color.withValues(alpha: 0.7)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.verified_user_rounded, color: color, size: 14),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2)),
+            ]),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _GuidancePill extends StatelessWidget {
-  final bool valid;
-  final bool capturing;
-
-  const _GuidancePill({
-    required this.valid,
-    required this.capturing,
-  });
-
+  final String text;
+  final Color color;
+  const _GuidancePill({required this.text, required this.color});
   @override
-  Widget build(BuildContext context) {
-    final color = valid ? AppColors.success : Colors.white;
-    final text = capturing
-        ? 'Foto diambil...'
-        : valid
-            ? 'Tahan posisi wajah'
-            : 'Posisikan wajah di dalam lingkaran';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.55)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              valid
-                  ? Icons.check_circle_rounded
-                  : Icons.face_retouching_natural_rounded,
-              color: color,
-              size: 18,
-            ),
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.55)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.face_retouching_natural_rounded, color: color, size: 18),
             const SizedBox(width: 8),
             Flexible(
-              child: Text(
-                text,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
+              child: Text(text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13)),
             ),
-          ],
+          ]),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _OvalGuidePainter extends CustomPainter {
-  final bool valid;
-  final bool capturing;
-  final double progress;
-  final Color successColor;
-
-  const _OvalGuidePainter({
-    required this.valid,
-    required this.capturing,
-    required this.progress,
-    required this.successColor,
-  });
+  final Color borderColor;
+  final CaptureState state;
+  const _OvalGuidePainter({required this.borderColor, required this.state});
 
   Rect _ovalRect(Size size) {
     final width = size.width * 0.72;
@@ -478,57 +435,42 @@ class _OvalGuidePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final oval = _ovalRect(size);
-
     final maskPath = Path()
       ..addRect(Offset.zero & size)
       ..addOval(oval)
       ..fillType = PathFillType.evenOdd;
     canvas.drawPath(
       maskPath,
-      Paint()..color = Colors.black.withValues(alpha: 0.55),
+      Paint()..color = Colors.black.withValues(alpha: 0.6),
     );
-
-    final borderColor = valid
-        ? successColor.withValues(alpha: 0.95)
-        : Colors.white.withValues(alpha: 0.85);
+    final stroke = state == CaptureState.promptBlink ||
+            state == CaptureState.capturing ||
+            state == CaptureState.done
+        ? 5.0
+        : 3.0;
     canvas.drawOval(
       oval,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = valid ? 4.5 : 3.0
+        ..strokeWidth = stroke
         ..color = borderColor,
     );
-
-    if (valid && progress > 0) {
+    if (state == CaptureState.aligning) {
       canvas.drawArc(
         oval.deflate(2),
         -math.pi / 2,
-        2 * math.pi * progress.clamp(0.0, 1.0),
+        2 * math.pi,
         false,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 6
+          ..strokeWidth = 4
           ..strokeCap = StrokeCap.round
-          ..color = successColor,
-      );
-    }
-
-    if (capturing) {
-      canvas.drawOval(
-        oval,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 6
-          ..color = successColor,
+          ..color = borderColor.withValues(alpha: 0.7),
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _OvalGuidePainter oldDelegate) {
-    return oldDelegate.valid != valid ||
-        oldDelegate.capturing != capturing ||
-        oldDelegate.progress != progress ||
-        oldDelegate.successColor != successColor;
-  }
+  bool shouldRepaint(covariant _OvalGuidePainter old) =>
+      old.borderColor != borderColor || old.state != state;
 }
