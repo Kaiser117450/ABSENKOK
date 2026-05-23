@@ -1,72 +1,132 @@
 // grooming_rules_test.ts
-// Type-shape tests for grooming_rules.ts — verifies the module compiles and
-// exports the right types. Logic tests are added in A5–A7.
-
-import { assertEquals, assertExists } from "https://deno.land/std@0.208.0/assert/mod.ts";
-import type {
-  GroomingResult,
-  FaceCleanShave,
-  HeadCovering,
-  UniformCompliant,
-  HairNeat,
-  VisionResponse,
+import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  matchAnyLabel,
+  extractFaceCleanShave,
+  extractHeadCovering,
+  extractUniformCompliant,
+  extractHairNeat,
+  extractPhotoQuality,
 } from "./grooming_rules.ts";
-import { parseGroomingAnalysis } from "./grooming_rules.ts";
+import type { VisionLabel } from "./grooming_rules.ts";
 
-Deno.test("parseGroomingAnalysis returns a GroomingResult with all required fields", () => {
-  const vision: VisionResponse = {
-    labelAnnotations: [],
-    faceAnnotations: [],
-  };
-  const result = parseGroomingAnalysis(vision);
+// --- test fixtures ---
+const beardLabels: VisionLabel[] = [
+  { description: "Beard", score: 0.92 },
+  { description: "Person", score: 0.95 },
+];
+const hijabLabels: VisionLabel[] = [
+  { description: "Hijab", score: 0.88 },
+  { description: "Person", score: 0.95 },
+];
+const capLabels: VisionLabel[] = [
+  { description: "Hat", score: 0.91 },
+  { description: "Cap", score: 0.85 },
+];
+const apronLabels: VisionLabel[] = [
+  { description: "Apron", score: 0.81 },
+  { description: "Person", score: 0.94 },
+];
+const lowConfBeardLabels: VisionLabel[] = [
+  { description: "Beard", score: 0.40 },
+];
 
-  assertExists(result.grooming_score, "grooming_score must be present");
-  assertExists(result.face_clean_shave, "face_clean_shave must be present");
-  assertExists(result.head_covering !== undefined, "head_covering must be present");
-  assertExists(result.uniform_compliant, "uniform_compliant must be present");
-  assertExists(result.hair_neat, "hair_neat must be present");
-  assertExists(result.reasoning, "reasoning must be present");
-  assertExists(result.model_name, "model_name must be present");
+// matchAnyLabel
+Deno.test("matchAnyLabel respects MIN_LABEL_SCORE", () => {
+  assertEquals(matchAnyLabel(beardLabels, ["beard"]), true);
+  assertEquals(matchAnyLabel(lowConfBeardLabels, ["beard"]), false);
 });
 
-Deno.test("grooming_score is a number between 0 and 10", () => {
-  const result = parseGroomingAnalysis({ labelAnnotations: [] });
-  assertEquals(typeof result.grooming_score, "number");
-  assertEquals(result.grooming_score >= 0 && result.grooming_score <= 10, true);
+// extractFaceCleanShave
+Deno.test("extractFaceCleanShave detects beard precedence", () => {
+  assertEquals(extractFaceCleanShave(beardLabels, true), "beard");
 });
 
-Deno.test("face_clean_shave is a valid enum value", () => {
-  const valid: FaceCleanShave[] = ["ok", "stubble", "mustache", "beard", "unclear"];
-  const result = parseGroomingAnalysis({});
-  assertEquals(valid.includes(result.face_clean_shave), true);
+Deno.test("extractFaceCleanShave returns ok when face detected and no facial hair", () => {
+  assertEquals(extractFaceCleanShave(apronLabels, true), "ok");
 });
 
-Deno.test("head_covering is a valid enum value", () => {
-  const valid: HeadCovering[] = ["none", "hijab", "cap", "other"];
-  const result = parseGroomingAnalysis({});
-  assertEquals(valid.includes(result.head_covering), true);
+Deno.test("extractFaceCleanShave returns unclear when face not detected", () => {
+  assertEquals(extractFaceCleanShave(apronLabels, false), "unclear");
 });
 
-Deno.test("uniform_compliant is a valid enum value", () => {
-  const valid: UniformCompliant[] = ["ok", "no_uniform", "wrong_attire", "unclear"];
-  const result = parseGroomingAnalysis({});
-  assertEquals(valid.includes(result.uniform_compliant), true);
+// extractHeadCovering
+Deno.test("extractHeadCovering tags hijab", () => {
+  assertEquals(extractHeadCovering(hijabLabels), "hijab");
 });
 
-Deno.test("hair_neat is a valid enum value", () => {
-  const valid: HairNeat[] = ["ok", "messy", "not_visible"];
-  const result = parseGroomingAnalysis({});
-  assertEquals(valid.includes(result.hair_neat), true);
+Deno.test("extractHeadCovering tags cap for Hat label", () => {
+  assertEquals(extractHeadCovering(capLabels), "cap");
 });
 
-Deno.test("reasoning is a non-empty string no longer than 200 chars", () => {
-  const result = parseGroomingAnalysis({});
-  assertEquals(typeof result.reasoning, "string");
-  assertEquals(result.reasoning.length <= 200, true);
-  assertEquals(result.reasoning.length > 0, true);
+Deno.test("extractHeadCovering tags cap for Cap label", () => {
+  assertEquals(extractHeadCovering([{ description: "Cap", score: 0.85 }]), "cap");
 });
 
-Deno.test("model_name is cloud-vision-rubric-v1", () => {
-  const result = parseGroomingAnalysis({});
-  assertEquals(result.model_name, "cloud-vision-rubric-v1");
+Deno.test("extractHeadCovering returns none when no head label", () => {
+  assertEquals(extractHeadCovering(apronLabels), "none");
+});
+
+Deno.test("extractHeadCovering hijab takes priority over cap", () => {
+  assertEquals(
+    extractHeadCovering([
+      { description: "Hijab", score: 0.88 },
+      { description: "Hat", score: 0.91 },
+    ]),
+    "hijab",
+  );
+});
+
+// extractUniformCompliant
+Deno.test("extractUniformCompliant ok when apron present", () => {
+  assertEquals(extractUniformCompliant(apronLabels, true), "ok");
+});
+
+Deno.test("extractUniformCompliant no_uniform when no match and face detected", () => {
+  assertEquals(
+    extractUniformCompliant([{ description: "Person", score: 0.94 }], true),
+    "no_uniform",
+  );
+});
+
+Deno.test("extractUniformCompliant wrong_attire on tank top", () => {
+  assertEquals(
+    extractUniformCompliant([{ description: "Tank top", score: 0.81 }], true),
+    "wrong_attire",
+  );
+});
+
+// extractHairNeat
+Deno.test("extractHairNeat returns not_visible when head covered with hijab", () => {
+  assertEquals(extractHairNeat(hijabLabels, "hijab"), "not_visible");
+});
+
+Deno.test("extractHairNeat returns not_visible when head covered with cap", () => {
+  assertEquals(extractHairNeat(capLabels, "cap"), "not_visible");
+});
+
+Deno.test("extractHairNeat returns messy on disheveled label", () => {
+  assertEquals(
+    extractHairNeat([{ description: "Messy hair", score: 0.7 }], "none"),
+    "messy",
+  );
+});
+
+Deno.test("extractHairNeat returns ok by default", () => {
+  assertEquals(extractHairNeat(apronLabels, "none"), "ok");
+});
+
+// extractPhotoQuality
+Deno.test("extractPhotoQuality detects blurry first", () => {
+  assertEquals(
+    extractPhotoQuality([
+      { description: "Blur", score: 0.81 },
+      { description: "Darkness", score: 0.88 },
+    ]),
+    "blurry",
+  );
+});
+
+Deno.test("extractPhotoQuality defaults clear", () => {
+  assertEquals(extractPhotoQuality(apronLabels), "clear");
 });
