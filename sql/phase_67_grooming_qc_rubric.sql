@@ -39,3 +39,60 @@ COMMENT ON COLUMN public.attendance_photo_analysis.reasoning         IS 'Indones
 COMMENT ON COLUMN public.attendance_photo_analysis.model_name        IS 'rubric/model identifier, e.g. cloud-vision-rubric-v1';
 
 COMMIT;
+
+-- apply_grooming_qc_override: admin-only score correction with required audit note.
+BEGIN;
+
+CREATE OR REPLACE FUNCTION public.apply_grooming_qc_override(
+  p_attendance_log_id uuid,
+  p_score             numeric,
+  p_note              text
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_role text;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'unauthorized' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT raw_app_meta_data->>'app_role'
+    INTO v_role
+    FROM auth.users
+   WHERE id = auth.uid();
+
+  IF v_role IS DISTINCT FROM 'admin' THEN
+    RAISE EXCEPTION 'forbidden: admin only' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_score IS NULL OR p_score < 0 OR p_score > 10 THEN
+    RAISE EXCEPTION 'score must be between 0 and 10' USING ERRCODE = '22023';
+  END IF;
+
+  IF length(coalesce(p_note, '')) < 10 THEN
+    RAISE EXCEPTION 'note must be at least 10 characters' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.attendance_photo_analysis
+     SET qc_override_score = p_score,
+         qc_override_note  = p_note,
+         qc_overridden_by  = auth.uid(),
+         qc_overridden_at  = now()
+   WHERE attendance_log_id = p_attendance_log_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'attendance_photo_analysis row not found' USING ERRCODE = 'P0002';
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.apply_grooming_qc_override(uuid, numeric, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.apply_grooming_qc_override(uuid, numeric, text) TO authenticated;
+
+COMMENT ON FUNCTION public.apply_grooming_qc_override(uuid, numeric, text)
+IS 'Admin-only override of grooming QC score with required note. Writes audit columns and rejects non-admin auth.uid.';
+
+COMMIT;
