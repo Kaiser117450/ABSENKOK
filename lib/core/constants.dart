@@ -32,11 +32,17 @@ class AppConstants {
   static const String attendancePhotoBucket = 'attendance-photos';
   static const int attendancePhotoMaxDimensionPx = 640;
   static const int attendancePhotoJpegQuality = 60;
-  static const int attendancePhotoStableFaceMs = 500;
+  static const int attendancePhotoStableFaceMs = 1000;
+  static const int attendancePhotoBlinkWindowMs = 3000;
+  static const double attendancePhotoEyeClosedThreshold = 0.30;
+  static const double attendancePhotoEyeOpenThreshold = 0.70;
   static const int attendancePhotoPreviewMs = 300;
   static const int attendancePhotoFaceThrottleMs = 140;
-  static const double attendancePhotoMaxHeadEulerY = 30;
+  static const double attendancePhotoMaxHeadEulerY = 15;
   static const double attendancePhotoMinFaceFrameRatio = 0.20;
+  static const double attendancePhotoOvalFillMin = 0.55;
+  static const double attendancePhotoOvalFillMax = 0.95;
+  static const int attendancePhotoMaxBlinkAttempts = 3;
   static const int attendancePhotoUploadMaxRetries = 3;
 
   // UI timings
