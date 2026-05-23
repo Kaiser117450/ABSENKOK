@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { parseGroomingAnalysis } from "./grooming_rules.ts";
 
 const USE_LEGACY_VISION_SCORING =
-  (Deno.env.get("USE_LEGACY_VISION_SCORING") ?? "false").toLowerCase() === "true";
+  (Deno.env.get("USE_LEGACY_VISION_SCORING") ?? "true").toLowerCase() === "true";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
