@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 import '../core/constants.dart';
@@ -96,6 +97,30 @@ class FaceDetectionService {
     final centerOffset = (faceCenterX - frameCenterX).abs() / frame.width;
     if (centerOffset > 0.15) return FaceAlignment.offCenter;
 
+    return FaceAlignment.aligned;
+  }
+
+  @visibleForTesting
+  FaceAlignment debugResolveAlignment({
+    required int faceCount,
+    required Rect boundingBox,
+    required double headEulerY,
+    required Size frameSize,
+  }) {
+    if (faceCount != 1) return FaceAlignment.absent;
+    if (headEulerY.abs() > AppConstants.attendancePhotoMaxHeadEulerY) {
+      return FaceAlignment.tilted;
+    }
+    final widthRatio = boundingBox.width / frameSize.width;
+    if (widthRatio < AppConstants.attendancePhotoOvalFillMin) {
+      return FaceAlignment.tooSmall;
+    }
+    if (widthRatio > AppConstants.attendancePhotoOvalFillMax) {
+      return FaceAlignment.tooBig;
+    }
+    final centerOffset =
+        (boundingBox.center.dx - frameSize.width / 2).abs() / frameSize.width;
+    if (centerOffset > 0.15) return FaceAlignment.offCenter;
     return FaceAlignment.aligned;
   }
 
