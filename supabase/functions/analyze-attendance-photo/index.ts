@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { parseGroomingAnalysis } from "./grooming_rules.ts";
+
+const USE_LEGACY_VISION_SCORING =
+  (Deno.env.get("USE_LEGACY_VISION_SCORING") ?? "false").toLowerCase() === "true";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,7 +67,9 @@ serve(async (req) => {
     const imageBytes = new Uint8Array(await photoResponse.arrayBuffer());
     const googleAuth = await getGoogleVisionAuth();
     const visionResponse = await callVisionApi(imageBytes, googleAuth);
-    const analysis = parseGroomingAnalysis(visionResponse);
+    const analysis = USE_LEGACY_VISION_SCORING
+      ? parseLegacyGroomingAnalysis(visionResponse)
+      : parseGroomingAnalysis(visionResponse);
 
     const { error: upsertError } = await supabaseAdmin
       .from("attendance_photo_analysis")
@@ -80,6 +86,13 @@ serve(async (req) => {
           safe_search_passed: analysis.safeSearchPassed,
           raw_vision_response: visionResponse,
           analyzed_at: new Date().toISOString(),
+          // Phase 67 rubric columns — null on legacy path
+          face_clean_shave: (analysis as any).faceCleanShave ?? null,
+          uniform_compliant: (analysis as any).uniformCompliant ?? null,
+          hair_neat: (analysis as any).hairNeat ?? null,
+          head_covering: (analysis as any).headCovering ?? null,
+          reasoning: (analysis as any).reasoning ?? null,
+          model_name: (analysis as any).modelName ?? "cloud-vision-legacy",
         },
         { onConflict: "attendance_log_id" },
       );
@@ -188,7 +201,7 @@ async function callVisionApi(
           {
             image: { content: base64(imageBytes) },
             features: [
-              { type: "LABEL_DETECTION", maxResults: 15 },
+              { type: "LABEL_DETECTION", maxResults: 30 },
               { type: "FACE_DETECTION", maxResults: 5 },
               { type: "SAFE_SEARCH_DETECTION", maxResults: 1 },
             ],
@@ -205,7 +218,7 @@ async function callVisionApi(
   return await response.json() as Record<string, unknown>;
 }
 
-function parseGroomingAnalysis(raw: Record<string, unknown>) {
+function parseLegacyGroomingAnalysis(raw: Record<string, unknown>) {
   const responses = Array.isArray(raw.responses) ? raw.responses : [];
   const first = (responses[0] ?? {}) as Record<string, unknown>;
   const labels = Array.isArray(first.labelAnnotations)
