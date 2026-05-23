@@ -1,0 +1,11 @@
+{
+  "responses": [{
+    "labelAnnotations": [
+      {"description": "Hijab", "score": 0.91},
+      {"description": "Apron", "score": 0.83},
+      {"description": "Person", "score": 0.96}
+    ],
+    "faceAnnotations": [{"detectionConfidence": 0.87}],
+    "safeSearchAnnotation": {"adult": "VERY_UNLIKELY", "violence": "VERY_UNLIKELY", "racy": "VERY_UNLIKELY"}
+  }]
+}

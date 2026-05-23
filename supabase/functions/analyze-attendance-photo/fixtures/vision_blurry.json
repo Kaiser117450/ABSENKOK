@@ -1,0 +1,11 @@
+{
+  "responses": [{
+    "labelAnnotations": [
+      {"description": "Blur", "score": 0.87},
+      {"description": "Out of focus", "score": 0.78},
+      {"description": "Person", "score": 0.91}
+    ],
+    "faceAnnotations": [{"detectionConfidence": 0.42}],
+    "safeSearchAnnotation": {"adult": "VERY_UNLIKELY", "violence": "VERY_UNLIKELY", "racy": "VERY_UNLIKELY"}
+  }]
+}

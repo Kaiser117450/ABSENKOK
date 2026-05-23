@@ -306,3 +306,42 @@ Deno.test("parseGroomingAnalysis handles empty responses", () => {
   assertEquals(r.faceCount, 0);
   assertEquals(r.faceCleanShave, "unclear");
 });
+
+// --- A9: fixture-driven regression tests ---
+
+async function loadFixture(name: string): Promise<Record<string, unknown>> {
+  const url = new URL(`./fixtures/${name}.json`, import.meta.url);
+  const text = await Deno.readTextFile(url);
+  return JSON.parse(text);
+}
+
+Deno.test("fixture: beard photo → face_clean_shave=beard, score<8", async () => {
+  const r = parseGroomingAnalysis(await loadFixture("vision_beard"));
+  assertEquals(r.faceCleanShave, "beard");
+  assertEquals(r.groomingScore < 8, true);
+});
+
+Deno.test("fixture: hijab photo → head_covering=hijab, hair=not_visible, score=10", async () => {
+  const r = parseGroomingAnalysis(await loadFixture("vision_hijab"));
+  assertEquals(r.headCovering, "hijab");
+  assertEquals(r.hairNeat, "not_visible");
+  assertEquals(r.groomingScore, 10);
+});
+
+Deno.test("fixture: clean photo → faceCleanShave=ok, uniform=ok, score>=9", async () => {
+  const r = parseGroomingAnalysis(await loadFixture("vision_clean"));
+  assertEquals(r.faceCleanShave, "ok");
+  assertEquals(r.uniformCompliant, "ok");
+  assertEquals(r.groomingScore >= 9, true);
+});
+
+Deno.test("fixture: tank top → uniform_compliant=wrong_attire", async () => {
+  const r = parseGroomingAnalysis(await loadFixture("vision_no_uniform"));
+  assertEquals(r.uniformCompliant, "wrong_attire");
+});
+
+Deno.test("fixture: blurry photo → photoQuality=blurry, faceDetected=false", async () => {
+  const r = parseGroomingAnalysis(await loadFixture("vision_blurry"));
+  assertEquals(r.photoQuality, "blurry");
+  assertEquals(r.faceDetected, false);
+});

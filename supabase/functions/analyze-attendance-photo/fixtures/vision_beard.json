@@ -1,0 +1,12 @@
+{
+  "responses": [{
+    "labelAnnotations": [
+      {"description": "Beard", "score": 0.93},
+      {"description": "Facial hair", "score": 0.88},
+      {"description": "Person", "score": 0.97},
+      {"description": "Apron", "score": 0.81}
+    ],
+    "faceAnnotations": [{"detectionConfidence": 0.94}],
+    "safeSearchAnnotation": {"adult": "VERY_UNLIKELY", "violence": "VERY_UNLIKELY", "racy": "VERY_UNLIKELY"}
+  }]
+}

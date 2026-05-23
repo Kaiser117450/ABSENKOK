@@ -1,0 +1,11 @@
+{
+  "responses": [{
+    "labelAnnotations": [
+      {"description": "Person", "score": 0.97},
+      {"description": "Polo shirt", "score": 0.85},
+      {"description": "Uniform", "score": 0.78}
+    ],
+    "faceAnnotations": [{"detectionConfidence": 0.95}],
+    "safeSearchAnnotation": {"adult": "VERY_UNLIKELY", "violence": "VERY_UNLIKELY", "racy": "VERY_UNLIKELY"}
+  }]
+}

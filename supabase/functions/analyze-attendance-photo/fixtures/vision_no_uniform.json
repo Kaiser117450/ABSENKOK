@@ -1,0 +1,10 @@
+{
+  "responses": [{
+    "labelAnnotations": [
+      {"description": "Tank top", "score": 0.84},
+      {"description": "Person", "score": 0.96}
+    ],
+    "faceAnnotations": [{"detectionConfidence": 0.92}],
+    "safeSearchAnnotation": {"adult": "VERY_UNLIKELY", "violence": "VERY_UNLIKELY", "racy": "VERY_UNLIKELY"}
+  }]
+}
