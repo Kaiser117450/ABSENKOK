@@ -9,6 +9,7 @@ import {
   extractPhotoQuality,
   computeScore,
   buildReasoning,
+  parseGroomingAnalysis,
 } from "./grooming_rules.ts";
 import type { VisionLabel } from "./grooming_rules.ts";
 
@@ -254,4 +255,54 @@ Deno.test("buildReasoning when face not detected leads", () => {
     faceDetected: false,
   });
   assertEquals(r.startsWith("Wajah tidak terdeteksi"), true);
+});
+
+// --- A7: parseGroomingAnalysis integration tests ---
+
+const cannedBeardResponse = {
+  responses: [{
+    labelAnnotations: [
+      { description: "Beard", score: 0.92 },
+      { description: "Person", score: 0.96 },
+      { description: "Shirt", score: 0.84 },
+    ],
+    faceAnnotations: [{ detectionConfidence: 0.93 }],
+    safeSearchAnnotation: { adult: "VERY_UNLIKELY", violence: "UNLIKELY", racy: "UNLIKELY" },
+  }],
+};
+
+Deno.test("parseGroomingAnalysis penalises beard", () => {
+  const r = parseGroomingAnalysis(cannedBeardResponse);
+  assertEquals(r.faceDetected, true);
+  assertEquals(r.faceCleanShave, "beard");
+  assertEquals(r.groomingScore < 8, true);
+  assertEquals(r.modelName, "cloud-vision-rubric-v1");
+  assertEquals(r.safeSearchPassed, true);
+});
+
+const cannedHijabResponse = {
+  responses: [{
+    labelAnnotations: [
+      { description: "Hijab", score: 0.89 },
+      { description: "Apron", score: 0.82 },
+      { description: "Person", score: 0.95 },
+    ],
+    faceAnnotations: [{ detectionConfidence: 0.86 }],
+    safeSearchAnnotation: { adult: "VERY_UNLIKELY", violence: "VERY_UNLIKELY", racy: "VERY_UNLIKELY" },
+  }],
+};
+
+Deno.test("parseGroomingAnalysis is hijab-neutral and rewards apron", () => {
+  const r = parseGroomingAnalysis(cannedHijabResponse);
+  assertEquals(r.headCovering, "hijab");
+  assertEquals(r.hairNeat, "not_visible");
+  assertEquals(r.uniformCompliant, "ok");
+  assertEquals(r.groomingScore, 10);
+});
+
+Deno.test("parseGroomingAnalysis handles empty responses", () => {
+  const r = parseGroomingAnalysis({ responses: [{}] });
+  assertEquals(r.faceDetected, false);
+  assertEquals(r.faceCount, 0);
+  assertEquals(r.faceCleanShave, "unclear");
 });

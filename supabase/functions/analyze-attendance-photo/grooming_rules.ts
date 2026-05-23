@@ -21,6 +21,22 @@ export interface GroomingResult {
   model_name: string;              // e.g. "cloud-vision-rubric-v1"
 }
 
+export interface GroomingAnalysis {
+  faceDetected: boolean;
+  faceConfidence: number;
+  faceCount: number;
+  photoQuality: PhotoQuality;
+  faceCleanShave: FaceCleanShave;
+  uniformCompliant: UniformCompliant;
+  hairNeat: HairNeat;
+  headCovering: HeadCovering;
+  groomingLabels: VisionLabel[];
+  groomingScore: number;
+  reasoning: string;
+  safeSearchPassed: boolean;
+  modelName: string;
+}
+
 // ---------------------------------------------------------------------------
 // Cloud Vision API response types (subset we actually use)
 // ---------------------------------------------------------------------------
@@ -30,6 +46,8 @@ export interface VisionLabel {
   score: number;        // 0.0–1.0 confidence
   topicality?: number;
 }
+
+export type Label = VisionLabel;
 
 export interface VisionFaceAnnotation {
   rollAngle?: number;
@@ -57,6 +75,7 @@ export interface VisionResponse {
 // ---------------------------------------------------------------------------
 
 const MIN_LABEL_SCORE = 0.65;
+export const MIN_FACE_CONFIDENCE = 0.5;
 
 const HIJAB_LABELS = ["hijab", "headscarf", "veil", "niqab", "khimar"];
 
@@ -153,19 +172,74 @@ export function extractPhotoQuality(labels: VisionLabel[]): PhotoQuality {
 }
 
 // ---------------------------------------------------------------------------
-// Main export — stub implementation (will be filled in A5–A7)
+// Main export — real implementation (A7)
 // ---------------------------------------------------------------------------
 
-export function parseGroomingAnalysis(vision: VisionResponse): GroomingResult {
-  // TODO: implement in A5–A7
+export function parseGroomingAnalysis(
+  raw: Record<string, unknown>,
+): GroomingAnalysis {
+  const responses = Array.isArray(raw.responses) ? raw.responses : [];
+  const first = (responses[0] ?? {}) as Record<string, unknown>;
+
+  const rawLabels = Array.isArray(first.labelAnnotations)
+    ? first.labelAnnotations as Array<Record<string, unknown>>
+    : [];
+  const faces = Array.isArray(first.faceAnnotations)
+    ? first.faceAnnotations as Array<Record<string, unknown>>
+    : [];
+  const safe = (first.safeSearchAnnotation ?? {}) as Record<string, string>;
+
+  const labels: VisionLabel[] = rawLabels
+    .map((l) => ({
+      description: String(l.description ?? ""),
+      score: Number(l.score ?? 0),
+    }))
+    .filter((l) => l.description.length > 0);
+
+  const faceConfidence = faces.length > 0
+    ? Number(faces[0].detectionConfidence ?? 0)
+    : 0;
+  const faceDetected = faces.length > 0 && faceConfidence >= MIN_FACE_CONFIDENCE;
+
+  const headCovering = extractHeadCovering(labels);
+  const faceCleanShave = extractFaceCleanShave(labels, faceDetected);
+  const uniformCompliant = extractUniformCompliant(labels, faceDetected);
+  const hairNeat = extractHairNeat(labels, headCovering);
+  const photoQuality = extractPhotoQuality(labels);
+
+  const groomingScore = computeScore({
+    faceCleanShave,
+    uniformCompliant,
+    hairNeat,
+    photoQuality,
+  });
+  const reasoning = buildReasoning({
+    faceCleanShave,
+    uniformCompliant,
+    hairNeat,
+    headCovering,
+    photoQuality,
+    faceDetected,
+  });
+
+  const safeSearchPassed = (["adult", "violence", "racy"] as const).every(
+    (k) => !["LIKELY", "VERY_LIKELY"].includes(String(safe[k] ?? "UNKNOWN")),
+  );
+
   return {
-    grooming_score: 5,
-    face_clean_shave: "unclear",
-    head_covering: "none",
-    uniform_compliant: "unclear",
-    hair_neat: "ok",
-    reasoning: "belum diimplementasi",
-    model_name: "cloud-vision-rubric-v1",
+    faceDetected,
+    faceConfidence: Number(faceConfidence.toFixed(2)),
+    faceCount: faces.length,
+    photoQuality,
+    faceCleanShave,
+    uniformCompliant,
+    hairNeat,
+    headCovering,
+    groomingLabels: labels,
+    groomingScore: Number(groomingScore.toFixed(1)),
+    reasoning,
+    safeSearchPassed,
+    modelName: "cloud-vision-rubric-v1",
   };
 }
 
