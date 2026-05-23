@@ -168,3 +168,71 @@ export function parseGroomingAnalysis(vision: VisionResponse): GroomingResult {
     model_name: "cloud-vision-rubric-v1",
   };
 }
+
+// ---------------------------------------------------------------------------
+// Scoring and reasoning
+// ---------------------------------------------------------------------------
+
+interface ScoreInput {
+  faceCleanShave: FaceCleanShave;
+  uniformCompliant: UniformCompliant;
+  hairNeat: HairNeat;
+  photoQuality: PhotoQuality;
+}
+
+export function computeScore(input: ScoreInput): number {
+  let score = 0;
+
+  if (input.faceCleanShave === "ok") score += 3;
+  else if (input.faceCleanShave === "unclear") score += 1;
+  // 'stubble' | 'mustache' | 'beard' → +0
+
+  if (input.uniformCompliant === "ok") score += 3;
+  else if (input.uniformCompliant === "unclear") score += 1;
+
+  if (input.hairNeat === "ok" || input.hairNeat === "not_visible") score += 3;
+  // 'messy' → +0
+
+  if (input.photoQuality === "clear") score += 1;
+
+  return Math.min(score, 10);
+}
+
+interface ReasoningInput extends ScoreInput {
+  headCovering: HeadCovering;
+  faceDetected: boolean;
+}
+
+export function buildReasoning(input: ReasoningInput): string {
+  const parts: string[] = [];
+
+  if (!input.faceDetected) {
+    parts.push("Wajah tidak terdeteksi jelas");
+  } else if (input.faceCleanShave === "beard") {
+    parts.push("Terdeteksi jenggot");
+  } else if (input.faceCleanShave === "mustache") {
+    parts.push("Terdeteksi kumis");
+  } else if (input.faceCleanShave === "stubble") {
+    parts.push("Terdeteksi bulu wajah");
+  } else if (input.faceCleanShave === "ok") {
+    parts.push("Wajah bersih");
+  }
+
+  if (input.uniformCompliant === "ok") parts.push("Seragam OK");
+  else if (input.uniformCompliant === "no_uniform") parts.push("Tidak pakai seragam");
+  else if (input.uniformCompliant === "wrong_attire") parts.push("Pakaian tidak pantas");
+
+  if (input.headCovering === "hijab") parts.push("Berhijab — rambut OK");
+  else if (input.headCovering === "cap") parts.push("Pakai topi — rambut OK");
+  else if (input.headCovering === "other") parts.push("Penutup kepala — rambut OK");
+  else if (input.hairNeat === "messy") parts.push("Rambut acak");
+  else if (input.hairNeat === "ok" && input.faceDetected) parts.push("Rambut OK");
+
+  if (input.photoQuality === "blurry") parts.push("Foto buram");
+  else if (input.photoQuality === "dark") parts.push("Foto gelap");
+  else if (input.photoQuality === "overexposed") parts.push("Foto terlalu terang");
+  else if (input.photoQuality === "clear") parts.push("Foto jelas");
+
+  const text = parts.join(". ") + ".";
+  return text.length > 200 ? text.slice(0, 197) + "..." : text;
+}

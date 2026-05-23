@@ -7,6 +7,8 @@ import {
   extractUniformCompliant,
   extractHairNeat,
   extractPhotoQuality,
+  computeScore,
+  buildReasoning,
 } from "./grooming_rules.ts";
 import type { VisionLabel } from "./grooming_rules.ts";
 
@@ -129,4 +131,127 @@ Deno.test("extractPhotoQuality detects blurry first", () => {
 
 Deno.test("extractPhotoQuality defaults clear", () => {
   assertEquals(extractPhotoQuality(apronLabels), "clear");
+});
+
+// --- A6: score formula + reasoning tests ---
+
+Deno.test("computeScore max when all OK", () => {
+  assertEquals(
+    computeScore({
+      faceCleanShave: "ok",
+      uniformCompliant: "ok",
+      hairNeat: "ok",
+      photoQuality: "clear",
+    }),
+    10,
+  );
+});
+
+Deno.test("computeScore hijab + apron + clean shave = 10", () => {
+  assertEquals(
+    computeScore({
+      faceCleanShave: "ok",
+      uniformCompliant: "ok",
+      hairNeat: "not_visible",
+      photoQuality: "clear",
+    }),
+    10,
+  );
+});
+
+Deno.test("computeScore beard penalty (beard = 0 for face)", () => {
+  assertEquals(
+    computeScore({
+      faceCleanShave: "beard",
+      uniformCompliant: "ok",
+      hairNeat: "ok",
+      photoQuality: "clear",
+    }),
+    7,
+  );
+});
+
+Deno.test("computeScore unclear gives partial credit", () => {
+  assertEquals(
+    computeScore({
+      faceCleanShave: "unclear",
+      uniformCompliant: "unclear",
+      hairNeat: "ok",
+      photoQuality: "clear",
+    }),
+    6,
+  );
+});
+
+Deno.test("computeScore caps at 10", () => {
+  const score = computeScore({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    photoQuality: "clear",
+  });
+  assertEquals(score <= 10, true);
+});
+
+Deno.test("buildReasoning lists issues then OKs in Indonesian", () => {
+  const r = buildReasoning({
+    faceCleanShave: "beard",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    headCovering: "none",
+    photoQuality: "clear",
+    faceDetected: true,
+  });
+  assertEquals(r.startsWith("Terdeteksi jenggot"), true);
+  assertEquals(r.includes("Seragam OK"), true);
+  assertEquals(r.length <= 200, true);
+});
+
+Deno.test("buildReasoning highlights hijab as positive", () => {
+  const r = buildReasoning({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "not_visible",
+    headCovering: "hijab",
+    photoQuality: "clear",
+    faceDetected: true,
+  });
+  assertEquals(r.includes("Berhijab"), true);
+  assertEquals(r.includes("rambut OK"), true);
+});
+
+Deno.test("buildReasoning highlights cap (topi)", () => {
+  const r = buildReasoning({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "not_visible",
+    headCovering: "cap",
+    photoQuality: "clear",
+    faceDetected: true,
+  });
+  assertEquals(r.includes("topi"), true);
+});
+
+Deno.test("buildReasoning notes blurry photo", () => {
+  const r = buildReasoning({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    headCovering: "none",
+    photoQuality: "blurry",
+    faceDetected: true,
+  });
+  assertEquals(r.includes("buram"), true);
+});
+
+Deno.test("buildReasoning when face not detected leads", () => {
+  const r = buildReasoning({
+    faceCleanShave: "unclear",
+    uniformCompliant: "unclear",
+    hairNeat: "ok",
+    headCovering: "none",
+    photoQuality: "blurry",
+    faceDetected: false,
+  });
+  assertEquals(r.startsWith("Wajah tidak terdeteksi"), true);
 });
