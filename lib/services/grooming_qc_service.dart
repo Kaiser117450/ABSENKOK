@@ -29,6 +29,9 @@ class GroomingRow {
   final String? hairNeat;
   final String? headCovering;
   final String? reasoning;
+  // Per-criterion admin corrections. Keys: face_clean_shave, uniform_compliant,
+  // hair_neat. Value of `true` means "admin marked AI's bad judgement as OK".
+  final Map<String, bool> qcCorrections;
 
   const GroomingRow({
     required this.attendanceLogId,
@@ -55,9 +58,31 @@ class GroomingRow {
     required this.hairNeat,
     required this.headCovering,
     required this.reasoning,
+    required this.qcCorrections,
   });
 
   double? get effectiveScore => qcOverrideScore ?? groomingScore;
+
+  // Per-criterion getters that fold in the admin's corrections.
+  bool get faceCleanShaveOk =>
+      qcCorrections['face_clean_shave'] == true || faceCleanShave == 'ok';
+  bool get uniformCompliantOk =>
+      qcCorrections['uniform_compliant'] == true || uniformCompliant == 'ok';
+  bool get hairNeatOk =>
+      qcCorrections['hair_neat'] == true ||
+      hairNeat == 'ok' ||
+      hairNeat == 'not_visible';
+
+  /// Recomputes a 0–10 score from corrected per-criterion judgements using
+  /// the same weights as the Cloud Vision rubric.
+  double get correctedScore {
+    double score = 0;
+    if (faceCleanShaveOk) score += 3;
+    if (uniformCompliantOk) score += 3;
+    if (hairNeatOk) score += 3;
+    if (photoQuality == 'clear') score += 1;
+    return score.clamp(0, 10).toDouble();
+  }
 
   bool get needsReview {
     final s = effectiveScore;
@@ -104,7 +129,18 @@ class GroomingRow {
       hairNeat: json['hair_neat']?.toString(),
       headCovering: json['head_covering']?.toString(),
       reasoning: json['reasoning']?.toString(),
+      qcCorrections: _parseCorrections(json['qc_corrections']),
     );
+  }
+
+  static Map<String, bool> _parseCorrections(dynamic raw) {
+    if (raw is Map) {
+      return {
+        for (final entry in raw.entries)
+          entry.key.toString(): entry.value == true,
+      };
+    }
+    return const {};
   }
 }
 
@@ -143,6 +179,7 @@ class GroomingQcService {
       'grooming_score, safe_search_passed, analyzed_at, face_clean_shave, '
       'uniform_compliant, hair_neat, head_covering, reasoning, model_name, '
       'qc_override_score, qc_override_note, qc_overridden_by, qc_overridden_at, '
+      'qc_corrections, '
       'attendance_logs!inner(id, type, scanned_at, scan_outlet_id, employee_id, '
       'employees(id, name, position), outlets(name))';
 
@@ -207,6 +244,7 @@ class GroomingQcService {
     required String attendanceLogId,
     required double score,
     required String note,
+    Map<String, bool>? corrections,
   }) async {
     await SupabaseClientFactory.admin.rpc(
       'apply_grooming_qc_override',
@@ -214,6 +252,7 @@ class GroomingQcService {
         'p_attendance_log_id': attendanceLogId,
         'p_score': score,
         'p_note': note,
+        if (corrections != null) 'p_corrections': corrections,
       },
     );
   }

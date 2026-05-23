@@ -28,6 +28,7 @@ GroomingRow _row() => GroomingRow(
       hairNeat: 'ok',
       headCovering: 'none',
       reasoning: null,
+      qcCorrections: const {},
     );
 
 void main() {

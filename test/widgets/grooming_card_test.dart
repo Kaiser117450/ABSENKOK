@@ -36,6 +36,7 @@ GroomingRow _row({
       hairNeat: hair,
       headCovering: head,
       reasoning: 'Wajah bersih. Seragam OK. Foto jelas.',
+      qcCorrections: const {},
     );
 
 Widget _wrap(Widget child) =>

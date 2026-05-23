@@ -29,23 +29,23 @@ void main() {
     );
   });
 
-  test('returns tilted when euler > 18', () {
+  test('returns tilted when euler > 25', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
         boundingBox: bbox(0.5),
-        headEulerY: 22,
+        headEulerY: 30,
         frameSize: frame,
       ),
       FaceAlignment.tilted,
     );
   });
 
-  test('returns tooSmall when width below 0.30', () {
+  test('returns tooSmall when width below 0.22', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.22),
+        boundingBox: bbox(0.15),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -53,11 +53,11 @@ void main() {
     );
   });
 
-  test('returns tooBig when width above 0.80', () {
+  test('returns tooBig when width above 0.85', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.85),
+        boundingBox: bbox(0.92),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -65,11 +65,11 @@ void main() {
     );
   });
 
-  test('returns offCenter when centre offset > 0.22', () {
+  test('returns offCenter when centre offset > 0.30', () {
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.5, offsetRatio: 0.25),
+        boundingBox: bbox(0.5, offsetRatio: 0.35),
         headEulerY: 0,
         frameSize: frame,
       ),
@@ -90,12 +90,12 @@ void main() {
   });
 
   test('accepts smaller face that visually fills the oval', () {
-    // ML Kit bbox is ~60-70% of visible face. When the visible face fills
-    // the oval guide, the bbox is ~0.35-0.45 of frame width.
+    // ML Kit bbox is ~60-70% of visible face. Even at 0.25 of frame width
+    // this counts as aligned now — users hold the phone naturally.
     expect(
       service.debugResolveAlignment(
         faceCount: 1,
-        boundingBox: bbox(0.35),
+        boundingBox: bbox(0.25),
         headEulerY: 3,
         frameSize: frame,
       ),

@@ -75,6 +75,9 @@ export interface VisionResponse {
 // ---------------------------------------------------------------------------
 
 const MIN_LABEL_SCORE = 0.65;
+// Slightly lenient threshold for uniform detection because Cloud Vision
+// often returns clothing labels in the 0.55-0.70 range.
+const MIN_UNIFORM_LABEL_SCORE = 0.55;
 export const MIN_FACE_CONFIDENCE = 0.5;
 
 const HIJAB_LABELS = ["hijab", "headscarf", "veil", "niqab", "khimar"];
@@ -94,13 +97,25 @@ const FACIAL_HAIR_LABELS = {
 };
 
 const UNIFORM_LABELS = [
-  "apron", "uniform", "shirt", "polo shirt", "polo", "vest",
-  "chef", "restaurant", "workwear", "work wear",
+  // Restaurant/work uniform pieces
+  "apron", "uniform", "workwear", "work wear", "work clothing",
+  // Shirt variants (Cloud Vision commonly returns these for crew tops)
+  "shirt", "t-shirt", "tshirt", "t shirt",
+  "polo shirt", "polo", "polo neck",
+  "dress shirt", "button-up", "button up", "buttoned",
+  "blouse", "tunic", "top",
+  // Detail labels (high-confidence indicators that someone is wearing a top)
+  "collar", "sleeve", "neckline", "crew neck", "v-neck",
+  // Categories Cloud Vision uses for tops
+  "active shirt", "sportswear", "athletic wear", "jersey",
+  "outerwear", "knitwear",
+  // Restaurant-specific
+  "vest", "waistcoat", "chef", "restaurant",
 ];
 
 const WRONG_ATTIRE_LABELS = [
   "tank top", "sleeveless", "singlet", "swimwear", "bikini",
-  "swimsuit", "underwear", "lingerie",
+  "swimsuit", "underwear", "lingerie", "bare chest", "shirtless",
 ];
 
 const MESSY_HAIR_LABELS = [
@@ -119,10 +134,14 @@ const POOR_QUALITY_LABELS = {
 // Core helpers
 // ---------------------------------------------------------------------------
 
-export function matchAnyLabel(labels: VisionLabel[], needles: string[]): boolean {
+export function matchAnyLabel(
+  labels: VisionLabel[],
+  needles: string[],
+  minScore: number = MIN_LABEL_SCORE,
+): boolean {
   return labels.some(
     (l) =>
-      l.score >= MIN_LABEL_SCORE &&
+      l.score >= minScore &&
       needles.some((n) => l.description.toLowerCase().includes(n)),
   );
 }
@@ -149,8 +168,12 @@ export function extractUniformCompliant(
   labels: VisionLabel[],
   faceDetected: boolean,
 ): UniformCompliant {
-  if (matchAnyLabel(labels, UNIFORM_LABELS)) return "ok";
+  // Wrong attire is checked first at the strict threshold so a strong
+  // "tank top" label isn't masked by a softer "shirt" hit.
   if (matchAnyLabel(labels, WRONG_ATTIRE_LABELS)) return "wrong_attire";
+  if (matchAnyLabel(labels, UNIFORM_LABELS, MIN_UNIFORM_LABEL_SCORE)) {
+    return "ok";
+  }
   if (faceDetected) return "no_uniform";
   return "unclear";
 }

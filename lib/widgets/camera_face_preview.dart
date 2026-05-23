@@ -301,6 +301,10 @@ class _CameraFacePreviewState extends State<CameraFacePreview> {
           painter: _OvalGuidePainter(
             borderColor: _ovalColor,
             state: _fsm.state,
+            faceBox: _last.hasFace ? _last.boundingBox : null,
+            frameSize: _previewSize,
+            mirrorX: CameraService.instance.cameraDescription?.lensDirection ==
+                CameraLensDirection.front,
           ),
         ),
         Positioned(
@@ -422,7 +426,17 @@ class _GuidancePill extends StatelessWidget {
 class _OvalGuidePainter extends CustomPainter {
   final Color borderColor;
   final CaptureState state;
-  const _OvalGuidePainter({required this.borderColor, required this.state});
+  final Rect? faceBox;
+  final Size? frameSize;
+  final bool mirrorX;
+
+  const _OvalGuidePainter({
+    required this.borderColor,
+    required this.state,
+    this.faceBox,
+    this.frameSize,
+    this.mirrorX = false,
+  });
 
   Rect _ovalRect(Size size) {
     final width = size.width * 0.68;
@@ -430,6 +444,38 @@ class _OvalGuidePainter extends CustomPainter {
     final left = (size.width - width) / 2;
     final top = size.height * 0.14;
     return Rect.fromLTWH(left, top, width, height);
+  }
+
+  /// Maps a Rect from camera-frame coords to screen coords assuming the
+  /// camera preview was rendered with BoxFit.cover. Returns null when the
+  /// frame size is unknown.
+  Rect? _faceBoxOnScreen(Size canvasSize) {
+    final box = faceBox;
+    final frame = frameSize;
+    if (box == null || frame == null || frame.width <= 0 || frame.height <= 0) {
+      return null;
+    }
+    final scale = math.max(
+      canvasSize.width / frame.width,
+      canvasSize.height / frame.height,
+    );
+    final scaledW = frame.width * scale;
+    final scaledH = frame.height * scale;
+    final xOffset = (canvasSize.width - scaledW) / 2;
+    final yOffset = (canvasSize.height - scaledH) / 2;
+
+    double left = box.left * scale + xOffset;
+    double top = box.top * scale + yOffset;
+    double right = box.right * scale + xOffset;
+    double bottom = box.bottom * scale + yOffset;
+
+    if (mirrorX) {
+      final l = canvasSize.width - right;
+      final r = canvasSize.width - left;
+      left = l;
+      right = r;
+    }
+    return Rect.fromLTRB(left, top, right, bottom);
   }
 
   @override
@@ -455,6 +501,24 @@ class _OvalGuidePainter extends CustomPainter {
         ..strokeWidth = stroke
         ..color = borderColor,
     );
+
+    // Face tracking ring — follows the detected face position.
+    final tracked = _faceBoxOnScreen(size);
+    if (tracked != null) {
+      // Draw a soft glow ring at the face position so users see the
+      // camera is actively tracking them.
+      canvas.drawOval(
+        tracked.inflate(4),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = borderColor.withValues(alpha: 0.85),
+      );
+      // Corner brackets give the "tracking lock" feel without obscuring
+      // the face.
+      _drawCornerBrackets(canvas, tracked, borderColor);
+    }
+
     if (state == CaptureState.aligning) {
       canvas.drawArc(
         oval.deflate(2),
@@ -470,7 +534,32 @@ class _OvalGuidePainter extends CustomPainter {
     }
   }
 
+  void _drawCornerBrackets(Canvas canvas, Rect r, Color color) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    final len = math.min(r.width, r.height) * 0.15;
+    // top-left
+    canvas.drawLine(r.topLeft, r.topLeft + Offset(len, 0), paint);
+    canvas.drawLine(r.topLeft, r.topLeft + Offset(0, len), paint);
+    // top-right
+    canvas.drawLine(r.topRight, r.topRight + Offset(-len, 0), paint);
+    canvas.drawLine(r.topRight, r.topRight + Offset(0, len), paint);
+    // bottom-left
+    canvas.drawLine(r.bottomLeft, r.bottomLeft + Offset(len, 0), paint);
+    canvas.drawLine(r.bottomLeft, r.bottomLeft + Offset(0, -len), paint);
+    // bottom-right
+    canvas.drawLine(r.bottomRight, r.bottomRight + Offset(-len, 0), paint);
+    canvas.drawLine(r.bottomRight, r.bottomRight + Offset(0, -len), paint);
+  }
+
   @override
   bool shouldRepaint(covariant _OvalGuidePainter old) =>
-      old.borderColor != borderColor || old.state != state;
+      old.borderColor != borderColor ||
+      old.state != state ||
+      old.faceBox != faceBox ||
+      old.mirrorX != mirrorX ||
+      old.frameSize != frameSize;
 }

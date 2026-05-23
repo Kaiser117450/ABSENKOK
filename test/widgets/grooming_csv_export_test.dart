@@ -27,6 +27,7 @@ GroomingRow _row() => GroomingRow(
       hairNeat: 'ok',
       headCovering: 'none',
       reasoning: 'Wajah bersih. Seragam OK. Foto jelas.',
+      qcCorrections: const {},
     );
 
 void main() {

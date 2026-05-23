@@ -32,21 +32,21 @@ class AppConstants {
   static const String attendancePhotoBucket = 'attendance-photos';
   static const int attendancePhotoMaxDimensionPx = 640;
   static const int attendancePhotoJpegQuality = 60;
-  static const int attendancePhotoStableFaceMs = 1000;
-  static const int attendancePhotoBlinkWindowMs = 3000;
-  static const double attendancePhotoEyeClosedThreshold = 0.30;
-  static const double attendancePhotoEyeOpenThreshold = 0.70;
+  static const int attendancePhotoStableFaceMs = 500;
+  static const int attendancePhotoBlinkWindowMs = 3500;
+  static const double attendancePhotoEyeClosedThreshold = 0.35;
+  static const double attendancePhotoEyeOpenThreshold = 0.60;
   static const int attendancePhotoPreviewMs = 300;
-  static const int attendancePhotoFaceThrottleMs = 140;
-  static const double attendancePhotoMaxHeadEulerY = 18;
-  static const double attendancePhotoMinFaceFrameRatio = 0.15;
+  static const int attendancePhotoFaceThrottleMs = 120;
+  static const double attendancePhotoMaxHeadEulerY = 25;
+  static const double attendancePhotoMinFaceFrameRatio = 0.12;
   // ML Kit boundingBox excludes hair/forehead, so it is ~60-70% of the visible
-  // face. When the visible face fills the oval guide (oval ~0.68 of preview
-  // width), the bbox width is roughly 0.30-0.45 of frame width. These bounds
-  // let users hold the phone at a natural arm's length.
-  static const double attendancePhotoOvalFillMin = 0.30;
-  static const double attendancePhotoOvalFillMax = 0.80;
-  static const double attendancePhotoOffCenterMax = 0.22;
+  // face. The lower bound is intentionally loose so users barely need to
+  // position themselves — once a face is detected with reasonable size and
+  // roughly centered, capture begins.
+  static const double attendancePhotoOvalFillMin = 0.22;
+  static const double attendancePhotoOvalFillMax = 0.85;
+  static const double attendancePhotoOffCenterMax = 0.30;
   static const int attendancePhotoMaxBlinkAttempts = 3;
   static const int attendancePhotoUploadMaxRetries = 3;
 
