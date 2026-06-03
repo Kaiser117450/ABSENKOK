@@ -18,16 +18,22 @@ class PhotoCompressionService {
       return rawBytes;
     }
 
+    // Bake EXIF orientation into the pixels so devices that store rotation as
+    // metadata (rather than rotating the buffer) don't yield sideways/upside
+    // down selfies. Front-camera mirroring is untouched. If the source had no
+    // orientation tag this is a no-op.
+    final oriented = img.bakeOrientation(decoded);
+
     final longestSide =
-        decoded.width > decoded.height ? decoded.width : decoded.height;
+        oriented.width > oriented.height ? oriented.width : oriented.height;
     final maxSide = AppConstants.attendancePhotoMaxDimensionPx;
     final output = longestSide > maxSide
         ? img.copyResize(
-            decoded,
-            width: decoded.width >= decoded.height ? maxSide : null,
-            height: decoded.height > decoded.width ? maxSide : null,
+            oriented,
+            width: oriented.width >= oriented.height ? maxSide : null,
+            height: oriented.height > oriented.width ? maxSide : null,
           )
-        : decoded;
+        : oriented;
 
     return Uint8List.fromList(
       img.encodeJpg(
