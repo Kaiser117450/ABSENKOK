@@ -6,12 +6,16 @@ import {
   extractHeadCovering,
   extractUniformCompliant,
   extractHairNeat,
+  extractHairLength,
   extractPhotoQuality,
   computeScore,
+  computeScoreBreakdown,
   buildReasoning,
   parseGroomingAnalysis,
+  normalizeGroomingConfig,
+  DEFAULT_GROOMING_CONFIG,
 } from "./grooming_rules.ts";
-import type { VisionLabel } from "./grooming_rules.ts";
+import type { VisionLabel, GroomingConfig } from "./grooming_rules.ts";
 
 // --- test fixtures ---
 const beardLabels: VisionLabel[] = [
@@ -344,4 +348,137 @@ Deno.test("fixture: blurry photo → photoQuality=blurry, faceDetected=false", a
   const r = parseGroomingAnalysis(await loadFixture("vision_blurry"));
   assertEquals(r.photoQuality, "blurry");
   assertEquals(r.faceDetected, false);
+});
+
+// --- Phase 72: hair length, score breakdown, config override, flagged labels ---
+
+const longHairLabels: VisionLabel[] = [
+  { description: "Long hair", score: 0.82 },
+  { description: "Person", score: 0.95 },
+];
+const crewCutLabels: VisionLabel[] = [
+  { description: "Crew cut", score: 0.71 },
+  { description: "Long hair", score: 0.80 },
+];
+
+Deno.test("extractHairLength flags long hair when uncovered", () => {
+  assertEquals(extractHairLength(longHairLabels, "none", true), "long");
+});
+
+Deno.test("extractHairLength: short-hair label vetoes long-hair guess", () => {
+  assertEquals(extractHairLength(crewCutLabels, "none", true), "ok");
+});
+
+Deno.test("extractHairLength not_visible when head covered", () => {
+  assertEquals(extractHairLength(longHairLabels, "hijab", true), "not_visible");
+});
+
+Deno.test("extractHairLength unclear when face not detected", () => {
+  assertEquals(extractHairLength(longHairLabels, "none", false), "unclear");
+});
+
+Deno.test("computeScore: long hair forfeits hair points", () => {
+  assertEquals(
+    computeScore({
+      faceCleanShave: "ok",
+      uniformCompliant: "ok",
+      hairNeat: "ok",
+      hairLength: "long",
+      photoQuality: "clear",
+    }),
+    7,
+  );
+});
+
+Deno.test("computeScoreBreakdown reports per-criterion points", () => {
+  const b = computeScoreBreakdown({
+    faceCleanShave: "beard",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    hairLength: "ok",
+    photoQuality: "clear",
+  });
+  assertEquals(b.face, 0);
+  assertEquals(b.uniform, 3);
+  assertEquals(b.hair, 3);
+  assertEquals(b.photo, 1);
+  assertEquals(b.total, 7);
+  assertEquals(b.max, 10);
+});
+
+Deno.test("buildReasoning mentions rambut panjang", () => {
+  const r = buildReasoning({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    hairLength: "long",
+    headCovering: "none",
+    photoQuality: "clear",
+    faceDetected: true,
+  });
+  assertEquals(r.includes("Rambut panjang"), true);
+});
+
+Deno.test("parseGroomingAnalysis emits scoreBreakdown + hairLength", () => {
+  const r = parseGroomingAnalysis(cannedBeardResponse);
+  assertEquals(typeof r.scoreBreakdown.total, "number");
+  assertEquals(r.scoreBreakdown.face, 0); // beard
+  assertEquals(r.scoreBreakdown.total, r.groomingScore);
+  assertEquals(typeof r.hairLength, "string");
+});
+
+// --- config override ---
+
+Deno.test("normalizeGroomingConfig merges partial config with defaults", () => {
+  const cfg = normalizeGroomingConfig({
+    weights: { uniform: 5 },
+    label_sets: { long_hair: ["mohawk"] },
+    thresholds: { min_label_score: 0.4 },
+  });
+  assertEquals(cfg.weights.uniform, 5);
+  assertEquals(cfg.weights.face, DEFAULT_GROOMING_CONFIG.weights.face); // default kept
+  assertEquals(cfg.labelSets.longHair, ["mohawk"]);
+  assertEquals(cfg.thresholds.minLabelScore, 0.4);
+  // untouched label sets fall back to defaults
+  assertEquals(cfg.labelSets.beard, DEFAULT_GROOMING_CONFIG.labelSets.beard);
+});
+
+Deno.test("config override: custom uniform weight changes score", () => {
+  const cfg: GroomingConfig = normalizeGroomingConfig({ weights: { uniform: 5 } });
+  const score = computeScore({
+    faceCleanShave: "ok",
+    uniformCompliant: "ok",
+    hairNeat: "ok",
+    photoQuality: "clear",
+  }, cfg);
+  // 3 + 5 + 3 + 1 = 12, capped at new max (12)
+  assertEquals(score, 12);
+});
+
+Deno.test("config override: custom long-hair label is detected", () => {
+  const cfg = normalizeGroomingConfig({ label_sets: { long_hair: ["mohawk"] } });
+  const labels: VisionLabel[] = [{ description: "Mohawk", score: 0.8 }];
+  assertEquals(extractHairLength(labels, "none", true, cfg), "long");
+});
+
+Deno.test("flagged label overlay forces criterion in parseGroomingAnalysis", () => {
+  const cfg = normalizeGroomingConfig({
+    flagged_labels: [
+      { label: "sunglasses", criterion: "uniform_compliant", verdict: "wrong_attire", message: "Pakai kacamata hitam" },
+    ],
+  });
+  const raw = {
+    responses: [{
+      labelAnnotations: [
+        { description: "Sunglasses", score: 0.9 },
+        { description: "Apron", score: 0.85 },
+        { description: "Person", score: 0.95 },
+      ],
+      faceAnnotations: [{ detectionConfidence: 0.9 }],
+      safeSearchAnnotation: { adult: "VERY_UNLIKELY", violence: "VERY_UNLIKELY", racy: "VERY_UNLIKELY" },
+    }],
+  };
+  const r = parseGroomingAnalysis(raw, cfg);
+  assertEquals(r.uniformCompliant, "wrong_attire"); // overridden despite apron
+  assertEquals(r.reasoning.includes("kacamata hitam"), true);
 });

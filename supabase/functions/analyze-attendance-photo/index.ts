@@ -1,9 +1,44 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { parseGroomingAnalysis } from "./grooming_rules.ts";
+import {
+  DEFAULT_GROOMING_CONFIG,
+  type GroomingConfig,
+  normalizeGroomingConfig,
+  parseGroomingAnalysis,
+} from "./grooming_rules.ts";
 
 const USE_LEGACY_VISION_SCORING =
   (Deno.env.get("USE_LEGACY_VISION_SCORING") ?? "false").toLowerCase() === "true";
+
+// Active grooming rule config is admin-editable (grooming_rules_config table).
+// Cache it briefly so we don't hit the DB on every analysis, and always fall
+// back to DEFAULT_GROOMING_CONFIG so a config issue can never block scoring.
+const CONFIG_TTL_MS = 60_000;
+let cachedConfig: { config: GroomingConfig; fetchedAt: number } | null = null;
+
+// deno-lint-ignore no-explicit-any
+async function loadGroomingConfig(supabaseAdmin: any): Promise<GroomingConfig> {
+  const now = Date.now();
+  if (cachedConfig && now - cachedConfig.fetchedAt < CONFIG_TTL_MS) {
+    return cachedConfig.config;
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("grooming_rules_config")
+      .select("config")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) throw error;
+    const row = data as { config?: unknown } | null;
+    const config = row?.config
+      ? normalizeGroomingConfig(row.config)
+      : DEFAULT_GROOMING_CONFIG;
+    cachedConfig = { config, fetchedAt: now };
+    return config;
+  } catch (_) {
+    return DEFAULT_GROOMING_CONFIG;
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,7 +104,10 @@ serve(async (req) => {
     const visionResponse = await callVisionApi(imageBytes, googleAuth);
     const analysis = USE_LEGACY_VISION_SCORING
       ? parseLegacyGroomingAnalysis(visionResponse)
-      : parseGroomingAnalysis(visionResponse);
+      : parseGroomingAnalysis(
+        visionResponse,
+        await loadGroomingConfig(supabaseAdmin),
+      );
 
     const { error: upsertError } = await supabaseAdmin
       .from("attendance_photo_analysis")
@@ -93,6 +131,9 @@ serve(async (req) => {
           head_covering: (analysis as any).headCovering ?? null,
           reasoning: (analysis as any).reasoning ?? null,
           model_name: (analysis as any).modelName ?? "cloud-vision-legacy",
+          // Phase 72 columns — null on legacy path
+          hair_length: (analysis as any).hairLength ?? null,
+          score_breakdown: (analysis as any).scoreBreakdown ?? null,
         },
         { onConflict: "attendance_log_id" },
       );
