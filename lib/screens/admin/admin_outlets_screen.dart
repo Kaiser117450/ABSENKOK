@@ -11,6 +11,7 @@ import 'package:absensi_enakko_flutter/widgets/app_empty_state.dart';
 import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
 import 'package:absensi_enakko_flutter/widgets/outlet_mode_badge.dart';
 import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
+import 'package:absensi_enakko_flutter/screens/admin/admin_outlet_managers_screen.dart';
 
 class AdminOutletsScreen extends ConsumerStatefulWidget {
   const AdminOutletsScreen({super.key});
@@ -199,6 +200,46 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // ── KEPALA GERAI & WILAYAH ENTRY ─────────────────────────────────
+          InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AdminOutletManagersScreen(),
+              ),
+            ),
+            child: Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.manage_accounts_rounded,
+                      size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Kepala Gerai & Wilayah',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 13)),
+                      Text('Pindahkan kepala gerai saat pindah tugas',
+                          style: TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textMuted),
+              ]),
             ),
           ),
 
