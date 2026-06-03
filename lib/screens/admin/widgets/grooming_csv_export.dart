@@ -9,7 +9,8 @@ import '../../../services/grooming_qc_service.dart';
 class GroomingCsvExport {
   static const csvHeader = 'tanggal,jam,outlet,employee_name,position,'
       'attendance_type,skor_ai,skor_override,override_note,override_by,'
-      'wajah_bersih,seragam,rambut,penutup_kepala,photo_quality,reasoning,photo_url';
+      'wajah_bersih,seragam,rambut,rambut_panjang,penutup_kepala,photo_quality,'
+      'reasoning,photo_url';
 
   static String buildCsv(List<GroomingRow> rows) {
     final buf = StringBuffer(csvHeader)..writeln();
@@ -33,6 +34,7 @@ class GroomingCsvExport {
         r.faceCleanShave ?? '',
         r.uniformCompliant ?? '',
         r.hairNeat ?? '',
+        r.hairLength ?? '',
         r.headCovering ?? '',
         r.photoQuality,
         _esc(r.reasoning ?? ''),

@@ -27,10 +27,14 @@ class GroomingRow {
   final String? faceCleanShave;
   final String? uniformCompliant;
   final String? hairNeat;
+  final String? hairLength;
   final String? headCovering;
   final String? reasoning;
+  // Per-criterion {face,uniform,hair,photo,total,max} points from the rubric.
+  final Map<String, dynamic>? scoreBreakdown;
   // Per-criterion admin corrections. Keys: face_clean_shave, uniform_compliant,
-  // hair_neat. Value of `true` means "admin marked AI's bad judgement as OK".
+  // hair_neat, hair_length. Value of `true` means "admin marked AI's bad
+  // judgement as OK".
   final Map<String, bool> qcCorrections;
 
   const GroomingRow({
@@ -59,9 +63,16 @@ class GroomingRow {
     required this.headCovering,
     required this.reasoning,
     required this.qcCorrections,
+    this.hairLength,
+    this.scoreBreakdown,
   });
 
   double? get effectiveScore => qcOverrideScore ?? groomingScore;
+
+  bool get isOverridden => qcOverriddenAt != null;
+
+  /// True when the admin has corrected at least one AI criterion verdict.
+  bool get hasCorrections => qcCorrections.values.any((v) => v == true);
 
   // Per-criterion getters that fold in the admin's corrections.
   bool get faceCleanShaveOk =>
@@ -71,15 +82,21 @@ class GroomingRow {
   bool get hairNeatOk =>
       qcCorrections['hair_neat'] == true ||
       hairNeat == 'ok' ||
-      hairNeat == 'not_visible';
+      hairNeat == 'not_visible' ||
+      hairNeat == null;
+  // Long hair is the only "bad" hair_length verdict; everything else is OK.
+  bool get hairLengthOk =>
+      qcCorrections['hair_length'] == true || hairLength != 'long';
+  // Hair points (3) require both neatness and acceptable length.
+  bool get hairOk => hairNeatOk && hairLengthOk;
 
   /// Recomputes a 0–10 score from corrected per-criterion judgements using
-  /// the same weights as the Cloud Vision rubric.
+  /// the same weights as the Cloud Vision rubric (face/uniform/hair + photo).
   double get correctedScore {
     double score = 0;
     if (faceCleanShaveOk) score += 3;
     if (uniformCompliantOk) score += 3;
-    if (hairNeatOk) score += 3;
+    if (hairOk) score += 3;
     if (photoQuality == 'clear') score += 1;
     return score.clamp(0, 10).toDouble();
   }
@@ -127,8 +144,12 @@ class GroomingRow {
       faceCleanShave: json['face_clean_shave']?.toString(),
       uniformCompliant: json['uniform_compliant']?.toString(),
       hairNeat: json['hair_neat']?.toString(),
+      hairLength: json['hair_length']?.toString(),
       headCovering: json['head_covering']?.toString(),
       reasoning: json['reasoning']?.toString(),
+      scoreBreakdown: json['score_breakdown'] is Map
+          ? Map<String, dynamic>.from(json['score_breakdown'] as Map)
+          : null,
       qcCorrections: _parseCorrections(json['qc_corrections']),
     );
   }
@@ -177,7 +198,8 @@ class GroomingQcService {
   static const _projection = 'attendance_log_id, photo_url, face_detected, '
       'face_confidence, face_count, photo_quality, grooming_labels, '
       'grooming_score, safe_search_passed, analyzed_at, face_clean_shave, '
-      'uniform_compliant, hair_neat, head_covering, reasoning, model_name, '
+      'uniform_compliant, hair_neat, hair_length, head_covering, reasoning, '
+      'score_breakdown, model_name, '
       'qc_override_score, qc_override_note, qc_overridden_by, qc_overridden_at, '
       'qc_corrections, '
       'attendance_logs!inner(id, type, scanned_at, scan_outlet_id, employee_id, '

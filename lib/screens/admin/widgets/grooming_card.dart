@@ -18,6 +18,7 @@ class GroomingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final breakdown = row.scoreBreakdown;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -37,7 +38,7 @@ class GroomingCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                   child: Text(
                     row.employeeName,
@@ -61,29 +62,36 @@ class GroomingCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Wrap(spacing: 6, runSpacing: 6, children: [
-                _CleanShaveChip(value: row.faceCleanShave),
-                _UniformChip(value: row.uniformCompliant),
-                _HairChip(value: row.hairNeat),
-                _HeadCoveringChip(value: row.headCovering),
+                _CriterionChip(spec: _faceSpec(row)),
+                _CriterionChip(spec: _uniformSpec(row)),
+                _CriterionChip(spec: _hairSpec(row)),
+                if (_hairLengthSpec(row) != null)
+                  _CriterionChip(spec: _hairLengthSpec(row)!),
+                _CriterionChip(spec: _headCoveringSpec(row)),
               ]),
+              if (breakdown != null) ...[
+                const SizedBox(height: 8),
+                _ScoreBreakdownRow(breakdown: breakdown),
+              ],
               if ((row.reasoning ?? '').isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(
-                  row.reasoning!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                      color: AppColors.textSecondary),
-                ),
+                _ExpandableReasoning(text: row.reasoning!),
               ],
-              const SizedBox(height: 8),
+              if (row.isOverridden) ...[
+                const SizedBox(height: 8),
+                _OverriddenBanner(row: row),
+              ],
+              const SizedBox(height: 6),
               Row(children: [
                 TextButton.icon(
                   onPressed: onTapOverride,
-                  icon: const Icon(Icons.edit_note_rounded, size: 18),
-                  label: const Text('Override skor'),
+                  icon: Icon(
+                    row.isOverridden
+                        ? Icons.fact_check_rounded
+                        : Icons.edit_note_rounded,
+                    size: 18,
+                  ),
+                  label: Text(row.isOverridden ? 'Ubah koreksi' : 'Koreksi AI'),
                 ),
               ]),
             ],
@@ -100,6 +108,262 @@ class GroomingCard extends StatelessWidget {
     final hh = d.hour.toString().padLeft(2, '0');
     final mi = d.minute.toString().padLeft(2, '0');
     return '$dd/$mm $hh:$mi';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Per-criterion chip spec (folds AI verdict with admin correction)
+// ---------------------------------------------------------------------------
+
+enum _ChipKind { ok, bad, neutral, corrected, info }
+
+class _ChipSpec {
+  final String label;
+  final _ChipKind kind;
+  const _ChipSpec(this.label, this.kind);
+}
+
+_ChipSpec _faceSpec(GroomingRow row) {
+  final corrected = row.qcCorrections['face_clean_shave'] == true;
+  switch (row.faceCleanShave) {
+    case 'ok':
+      return const _ChipSpec('Wajah OK', _ChipKind.ok);
+    case 'beard':
+      return corrected
+          ? const _ChipSpec('Wajah OK', _ChipKind.corrected)
+          : const _ChipSpec('Jenggot', _ChipKind.bad);
+    case 'mustache':
+      return corrected
+          ? const _ChipSpec('Wajah OK', _ChipKind.corrected)
+          : const _ChipSpec('Kumis', _ChipKind.bad);
+    case 'stubble':
+      return corrected
+          ? const _ChipSpec('Wajah OK', _ChipKind.corrected)
+          : const _ChipSpec('Bulu wajah', _ChipKind.bad);
+    default:
+      return const _ChipSpec('Wajah ?', _ChipKind.neutral);
+  }
+}
+
+_ChipSpec _uniformSpec(GroomingRow row) {
+  final corrected = row.qcCorrections['uniform_compliant'] == true;
+  switch (row.uniformCompliant) {
+    case 'ok':
+      return const _ChipSpec('Seragam OK', _ChipKind.ok);
+    case 'no_uniform':
+      return corrected
+          ? const _ChipSpec('Seragam OK', _ChipKind.corrected)
+          : const _ChipSpec('Tanpa seragam', _ChipKind.bad);
+    case 'wrong_attire':
+      return corrected
+          ? const _ChipSpec('Seragam OK', _ChipKind.corrected)
+          : const _ChipSpec('Pakaian salah', _ChipKind.bad);
+    default:
+      return const _ChipSpec('Seragam ?', _ChipKind.neutral);
+  }
+}
+
+_ChipSpec _hairSpec(GroomingRow row) {
+  final corrected = row.qcCorrections['hair_neat'] == true;
+  switch (row.hairNeat) {
+    case 'not_visible':
+      return const _ChipSpec('Rambut tertutup', _ChipKind.info);
+    case 'messy':
+      return corrected
+          ? const _ChipSpec('Rambut OK', _ChipKind.corrected)
+          : const _ChipSpec('Rambut acak', _ChipKind.bad);
+    case 'ok':
+      return const _ChipSpec('Rambut OK', _ChipKind.ok);
+    default:
+      return const _ChipSpec('Rambut OK', _ChipKind.ok);
+  }
+}
+
+/// Only shown when the AI flagged long hair (the actionable case).
+_ChipSpec? _hairLengthSpec(GroomingRow row) {
+  if (row.hairLength != 'long') return null;
+  final corrected = row.qcCorrections['hair_length'] == true;
+  return corrected
+      ? const _ChipSpec('Panjang → OK', _ChipKind.corrected)
+      : const _ChipSpec('Rambut panjang', _ChipKind.bad);
+}
+
+_ChipSpec _headCoveringSpec(GroomingRow row) {
+  switch (row.headCovering) {
+    case 'hijab':
+      return const _ChipSpec('Hijab', _ChipKind.info);
+    case 'cap':
+      return const _ChipSpec('Topi', _ChipKind.info);
+    case 'other':
+      return const _ChipSpec('Penutup lain', _ChipKind.info);
+    default:
+      return const _ChipSpec('Tanpa penutup', _ChipKind.neutral);
+  }
+}
+
+class _CriterionChip extends StatelessWidget {
+  final _ChipSpec spec;
+  const _CriterionChip({required this.spec});
+
+  @override
+  Widget build(BuildContext context) {
+    late Color bg;
+    late Color fg;
+    IconData? icon;
+    switch (spec.kind) {
+      case _ChipKind.ok:
+        bg = AppColors.successLight;
+        fg = AppColors.success;
+        break;
+      case _ChipKind.bad:
+        bg = AppColors.dangerLight;
+        fg = AppColors.danger;
+        break;
+      case _ChipKind.corrected:
+        bg = AppColors.successLight;
+        fg = AppColors.success;
+        icon = Icons.edit_rounded;
+        break;
+      case _ChipKind.info:
+        bg = const Color(0xFFDCEEFF);
+        fg = const Color(0xFF0B6BC2);
+        break;
+      case _ChipKind.neutral:
+        bg = AppColors.surface;
+        fg = AppColors.textSecondary;
+        break;
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: fg),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            spec.label,
+            style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700, color: fg),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Score breakdown — transparent rubric math (AI's view)
+// ---------------------------------------------------------------------------
+
+class _ScoreBreakdownRow extends StatelessWidget {
+  final Map<String, dynamic> breakdown;
+  const _ScoreBreakdownRow({required this.breakdown});
+
+  int _v(String k) => (breakdown[k] as num?)?.toInt() ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts =
+        'Wajah +${_v('face')} · Seragam +${_v('uniform')} · '
+        'Rambut +${_v('hair')} · Foto +${_v('photo')}';
+    final max = (breakdown['max'] as num?)?.toInt() ?? 10;
+    final total = (breakdown['total'] as num?)?.toInt() ?? _v('face') + _v('uniform') + _v('hair') + _v('photo');
+    return Row(children: [
+      const Icon(Icons.calculate_outlined,
+          size: 13, color: AppColors.textMuted),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Text(
+          '$parts = $total/$max',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w600),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _ExpandableReasoning extends StatefulWidget {
+  final String text;
+  const _ExpandableReasoning({required this.text});
+  @override
+  State<_ExpandableReasoning> createState() => _ExpandableReasoningState();
+}
+
+class _ExpandableReasoningState extends State<_ExpandableReasoning> {
+  bool _expanded = false;
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => setState(() => _expanded = !_expanded),
+      borderRadius: BorderRadius.circular(6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.psychology_outlined,
+            size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            widget.text,
+            maxLines: _expanded ? null : 2,
+            overflow: _expanded ? null : TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: AppColors.textSecondary),
+          ),
+        ),
+        Icon(_expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+            size: 16, color: AppColors.textMuted),
+      ]),
+    );
+  }
+}
+
+class _OverriddenBanner extends StatelessWidget {
+  final GroomingRow row;
+  const _OverriddenBanner({required this.row});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.accentLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.verified_user_outlined,
+            size: 14, color: AppColors.accentDark),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              'Dikoreksi admin${row.qcOverriddenAt != null ? ' · ${GroomingCard._fmtTime(row.qcOverriddenAt!)}' : ''}',
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.accentDark),
+            ),
+            if ((row.qcOverrideNote ?? '').isNotEmpty)
+              Text(
+                row.qcOverrideNote!,
+                style: const TextStyle(
+                    fontSize: 11, color: AppColors.accentDark),
+              ),
+          ]),
+        ),
+      ]),
+    );
   }
 }
 
@@ -165,165 +429,36 @@ class _ScorePill extends StatelessWidget {
       bg = AppColors.dangerLight;
       fg = AppColors.danger;
     }
-    final overridden = row.qcOverrideScore != null;
-    final label = value == null
-        ? '-'
-        : overridden
-            ? '${row.groomingScore?.toStringAsFixed(1) ?? '-'}→${value.toStringAsFixed(1)} ✏'
-            : value.toStringAsFixed(1);
-    return DecoratedBox(
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w900, color: fg)),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color background;
-  final Color foreground;
-  const _Chip(
-      {required this.label,
-      required this.background,
-      required this.foreground});
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-            color: background, borderRadius: BorderRadius.circular(8)),
+    final overridden = row.isOverridden;
+    return Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      DecoratedBox(
+        decoration:
+            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          child: Text(label,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (overridden) ...[
+              const Icon(Icons.edit_rounded, size: 12),
+              const SizedBox(width: 3),
+            ],
+            Text(
+              value == null ? '-' : value.toStringAsFixed(1),
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: foreground)),
+                  fontSize: 14, fontWeight: FontWeight.w900, color: fg),
+            ),
+          ]),
         ),
-      );
-}
-
-class _CleanShaveChip extends StatelessWidget {
-  final String? value;
-  const _CleanShaveChip({required this.value});
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    bool bad = false;
-    switch (value) {
-      case 'ok':
-        label = 'Wajah OK';
-        break;
-      case 'stubble':
-        label = 'Bulu wajah';
-        bad = true;
-        break;
-      case 'mustache':
-        label = 'Kumis';
-        bad = true;
-        break;
-      case 'beard':
-        label = 'Jenggot';
-        bad = true;
-        break;
-      default:
-        label = 'Wajah ?';
-    }
-    return _Chip(
-      label: label,
-      background: bad ? AppColors.dangerLight : AppColors.surface,
-      foreground: bad ? AppColors.danger : AppColors.textSecondary,
-    );
-  }
-}
-
-class _UniformChip extends StatelessWidget {
-  final String? value;
-  const _UniformChip({required this.value});
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    bool bad = false;
-    switch (value) {
-      case 'ok':
-        label = 'Seragam OK';
-        break;
-      case 'no_uniform':
-        label = 'Tanpa seragam';
-        bad = true;
-        break;
-      case 'wrong_attire':
-        label = 'Pakaian salah';
-        bad = true;
-        break;
-      default:
-        label = 'Seragam ?';
-    }
-    return _Chip(
-      label: label,
-      background: bad ? AppColors.dangerLight : AppColors.surface,
-      foreground: bad ? AppColors.danger : AppColors.textSecondary,
-    );
-  }
-}
-
-class _HairChip extends StatelessWidget {
-  final String? value;
-  const _HairChip({required this.value});
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    bool bad = false;
-    switch (value) {
-      case 'ok':
-        label = 'Rambut OK';
-        break;
-      case 'not_visible':
-        label = 'Rambut tertutup';
-        break;
-      case 'messy':
-        label = 'Rambut acak';
-        bad = true;
-        break;
-      default:
-        label = 'Rambut ?';
-    }
-    return _Chip(
-      label: label,
-      background: bad ? AppColors.dangerLight : AppColors.surface,
-      foreground: bad ? AppColors.danger : AppColors.textSecondary,
-    );
-  }
-}
-
-class _HeadCoveringChip extends StatelessWidget {
-  final String? value;
-  const _HeadCoveringChip({required this.value});
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    switch (value) {
-      case 'hijab':
-        label = 'Hijab';
-        break;
-      case 'cap':
-        label = 'Topi';
-        break;
-      case 'other':
-        label = 'Penutup lain';
-        break;
-      default:
-        label = 'Tanpa penutup';
-    }
-    final blue = value == 'hijab';
-    return _Chip(
-      label: label,
-      background: blue ? const Color(0xFFDCEEFF) : AppColors.surface,
-      foreground: blue ? const Color(0xFF0B6BC2) : AppColors.textSecondary,
-    );
+      ),
+      if (overridden && row.groomingScore != null) ...[
+        const SizedBox(height: 2),
+        Text(
+          'AI: ${row.groomingScore!.toStringAsFixed(1)}',
+          style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMuted),
+        ),
+      ],
+    ]);
   }
 }

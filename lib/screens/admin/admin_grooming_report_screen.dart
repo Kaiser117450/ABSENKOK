@@ -6,6 +6,7 @@ import '../../providers/app_provider.dart';
 import '../../providers/grooming_filter_provider.dart';
 import '../../services/grooming_qc_service.dart';
 import '../../widgets/app_empty_state.dart';
+import 'admin_grooming_rules_screen.dart';
 import 'widgets/grooming_analytics_charts.dart';
 import 'widgets/grooming_card.dart';
 import 'widgets/grooming_csv_export.dart';
@@ -58,6 +59,7 @@ class _AdminGroomingReportScreenState
   @override
   Widget build(BuildContext context) {
     final rowsAsync = ref.watch(groomingRowsProvider);
+    final isAdmin = ref.watch(appProvider).isAdmin;
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -77,7 +79,18 @@ class _AdminGroomingReportScreenState
           ],
         ),
         actions: [
+          if (isAdmin)
+            IconButton(
+              tooltip: 'Aturan AI',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AdminGroomingRulesScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.auto_fix_high_rounded),
+            ),
           IconButton(
+            tooltip: 'Filter',
             onPressed: () => rowsAsync.maybeWhen(
               data: _openFilter,
               orElse: () => _openFilter(const []),

@@ -29,6 +29,7 @@ class _GroomingOverrideDialogState extends State<GroomingOverrideDialog> {
       'uniform_compliant':
           widget.row.qcCorrections['uniform_compliant'] ?? false,
       'hair_neat': widget.row.qcCorrections['hair_neat'] ?? false,
+      'hair_length': widget.row.qcCorrections['hair_length'] ?? false,
     };
   }
 
@@ -42,19 +43,19 @@ class _GroomingOverrideDialogState extends State<GroomingOverrideDialog> {
 
   double get _previewScore {
     double score = 0;
-    if (_corrections['face_clean_shave'] == true ||
-        widget.row.faceCleanShave == 'ok') {
-      score += 3;
-    }
-    if (_corrections['uniform_compliant'] == true ||
-        widget.row.uniformCompliant == 'ok') {
-      score += 3;
-    }
-    if (_corrections['hair_neat'] == true ||
+    final faceOk = _corrections['face_clean_shave'] == true ||
+        widget.row.faceCleanShave == 'ok';
+    final uniformOk = _corrections['uniform_compliant'] == true ||
+        widget.row.uniformCompliant == 'ok';
+    final hairNeatOk = _corrections['hair_neat'] == true ||
         widget.row.hairNeat == 'ok' ||
-        widget.row.hairNeat == 'not_visible') {
-      score += 3;
-    }
+        widget.row.hairNeat == 'not_visible' ||
+        widget.row.hairNeat == null;
+    final hairLengthOk =
+        _corrections['hair_length'] == true || widget.row.hairLength != 'long';
+    if (faceOk) score += 3;
+    if (uniformOk) score += 3;
+    if (hairNeatOk && hairLengthOk) score += 3; // hair: neat AND not long
     if (widget.row.photoQuality == 'clear') score += 1;
     return score.clamp(0, 10).toDouble();
   }
@@ -93,8 +94,9 @@ class _GroomingOverrideDialogState extends State<GroomingOverrideDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Centang penilaian yang menurut anda salah dari AI '
-              '— skor akan otomatis dihitung ulang.',
+              'Centang penilaian yang salah dari AI — skor dihitung ulang '
+              'otomatis. Koreksi Anda disimpan sebagai masukan untuk '
+              'memperbaiki AI.',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -132,7 +134,7 @@ class _GroomingOverrideDialogState extends State<GroomingOverrideDialog> {
               }),
             ),
             _CriterionRow(
-              label: 'Rambut',
+              label: 'Rambut rapi',
               aiValue: row.hairNeat,
               aiBadValues: const {'messy'},
               aiBadLabels: const {'messy': 'AI menilai: Rambut acak'},
@@ -142,6 +144,19 @@ class _GroomingOverrideDialogState extends State<GroomingOverrideDialog> {
                 _corrections['hair_neat'] = v;
               }),
             ),
+            if (row.hairLength == 'long' ||
+                _corrections['hair_length'] == true)
+              _CriterionRow(
+                label: 'Panjang rambut',
+                aiValue: row.hairLength,
+                aiBadValues: const {'long'},
+                aiBadLabels: const {'long': 'AI menilai: Rambut panjang'},
+                correctionKey: 'hair_length',
+                corrections: _corrections,
+                onChanged: (v) => setState(() {
+                  _corrections['hair_length'] = v;
+                }),
+              ),
             const SizedBox(height: 12),
             _ScorePreview(
               aiScore: row.groomingScore,
