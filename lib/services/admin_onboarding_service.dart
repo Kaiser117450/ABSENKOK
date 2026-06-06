@@ -3,19 +3,32 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 enum CreateAdminAccountRole {
   kepalaGerai,
   areaSupervisor,
+  qc,
 }
 
 extension CreateAdminAccountRoleX on CreateAdminAccountRole {
   String get value => switch (this) {
         CreateAdminAccountRole.kepalaGerai => 'kepala_gerai',
         CreateAdminAccountRole.areaSupervisor => 'area_supervisor',
+        CreateAdminAccountRole.qc => 'qc',
       };
 
   String get label => switch (this) {
         CreateAdminAccountRole.kepalaGerai => 'Kepala Gerai',
         CreateAdminAccountRole.areaSupervisor => 'Area Supervisor',
+        CreateAdminAccountRole.qc => 'QC Grooming',
       };
+
+  /// QC and area supervisors may cover more than one outlet; a kepala gerai
+  /// is bound to exactly one.
+  bool get allowsMultipleOutlets => this != CreateAdminAccountRole.kepalaGerai;
 }
+
+CreateAdminAccountRole _roleFromValue(String? value) => switch (value) {
+      'area_supervisor' => CreateAdminAccountRole.areaSupervisor,
+      'qc' => CreateAdminAccountRole.qc,
+      _ => CreateAdminAccountRole.kepalaGerai,
+    };
 
 /// Result model for admin user creation
 class CreateUserResult {
@@ -52,9 +65,7 @@ class CreateUserResult {
       userId: json['user_id'] as String,
       email: json['email'] as String,
       name: json['name'] as String,
-      role: roleValue == CreateAdminAccountRole.areaSupervisor.value
-          ? CreateAdminAccountRole.areaSupervisor
-          : CreateAdminAccountRole.kepalaGerai,
+      role: _roleFromValue(roleValue),
       outletId: outletId,
       outletIds: outletIds.isEmpty ? <String>[outletId] : outletIds,
       password: json['password'] as String,

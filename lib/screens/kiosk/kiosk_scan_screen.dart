@@ -115,6 +115,10 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
   late final ConfettiController _confettiCtrl;
   late final AnimationController _successScaleCtrl;
   late final Animation<double> _successScaleAnim;
+  // Secondary settle: tiny damped nudge after elasticOut lands, making the
+  // spring feel physically grounded rather than abruptly done.
+  late final AnimationController _successSettleCtrl;
+  late final Animation<double> _successSettleAnim;
 
   @override
   void initState() {
@@ -131,6 +135,30 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
       parent: _successScaleCtrl,
       curve: Curves.elasticOut,
     );
+    // Secondary settle: plays after elasticOut lands; a gentle 1.0→1.015→1.0
+    // micro-bounce that reads as a real spring coming to rest.
+    _successSettleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _successSettleAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.015)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.015, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 60,
+      ),
+    ]).animate(_successSettleCtrl);
+    // Chain: when primary elasticOut finishes, trigger the micro-settle.
+    _successScaleCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        _successSettleCtrl.forward(from: 0);
+      }
+    });
 
     final debugSuccessState = widget.debugSuccessState;
     if (debugSuccessState != null) {
@@ -176,6 +204,7 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
     _resetTimer?.cancel();
     _confettiCtrl.dispose();
     _successScaleCtrl.dispose();
+    _successSettleCtrl.dispose();
     super.dispose();
   }
 
@@ -1099,8 +1128,14 @@ class _KioskScanScreenState extends ConsumerState<KioskScanScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ScaleTransition(
-                  scale: _successScaleAnim,
+                AnimatedBuilder(
+                  animation: Listenable.merge(
+                      [_successScaleAnim, _successSettleAnim]),
+                  builder: (context, child) {
+                    final scale =
+                        _successScaleAnim.value * _successSettleAnim.value;
+                    return Transform.scale(scale: scale, child: child);
+                  },
                   child: Container(
                     width: 100,
                     height: 100,

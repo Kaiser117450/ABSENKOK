@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme.dart';
 import '../../providers/app_provider.dart';
@@ -56,14 +57,29 @@ class _AdminGroomingReportScreenState
     );
   }
 
+  Future<void> _logoutQc() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {
+      // Even if sign-out fails, drop the local session below.
+    }
+    ref.read(appProvider.notifier).clearAdminSessionMode();
+    // GoRouter redirect handles navigation away from /qc/grooming.
+  }
+
   @override
   Widget build(BuildContext context) {
     final rowsAsync = ref.watch(groomingRowsProvider);
-    final isAdmin = ref.watch(appProvider).isAdmin;
+    final appState = ref.watch(appProvider);
+    final isAdmin = appState.isAdmin;
+    final isQc = appState.isQc;
+    // Only a full admin may correct AI verdicts (the override RPC is
+    // admin-only server-side). QC and scoped roles are strictly read-only.
+    final readOnly = !isAdmin;
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Grooming QC'),
+        title: Text(isQc ? 'Grooming QC (Lihat)' : 'Grooming QC'),
         bottom: TabBar(
           controller: _tabs,
           labelColor: Colors.white,
@@ -97,10 +113,16 @@ class _AdminGroomingReportScreenState
             ),
             icon: const Icon(Icons.tune_rounded),
           ),
+          if (isQc)
+            IconButton(
+              tooltip: 'Keluar',
+              onPressed: _logoutQc,
+              icon: const Icon(Icons.logout_rounded),
+            ),
         ],
       ),
       body: rowsAsync.when(
-        data: (rows) => _Tabs(controller: _tabs, rows: rows),
+        data: (rows) => _Tabs(controller: _tabs, rows: rows, readOnly: readOnly),
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
         error: (e, _) => const AppEmptyState(
@@ -120,12 +142,17 @@ class _AdminGroomingReportScreenState
 class _Tabs extends ConsumerWidget {
   final TabController controller;
   final List<GroomingRow> rows;
-  const _Tabs({required this.controller, required this.rows});
+  final bool readOnly;
+  const _Tabs({
+    required this.controller,
+    required this.rows,
+    this.readOnly = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return TabBarView(controller: controller, children: [
-      _ListTab(rows: rows),
+      _ListTab(rows: rows, readOnly: readOnly),
       _PerEmployeeTab(
         rows: rows,
         onSelect: (employeeId) {
@@ -144,7 +171,8 @@ class _Tabs extends ConsumerWidget {
 
 class _ListTab extends StatelessWidget {
   final List<GroomingRow> rows;
-  const _ListTab({required this.rows});
+  final bool readOnly;
+  const _ListTab({required this.rows, this.readOnly = false});
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
@@ -160,7 +188,8 @@ class _ListTab extends StatelessWidget {
       itemBuilder: (_, i) => GroomingCard(
         row: rows[i],
         onTapPhoto: () => _openPreview(context, rows[i]),
-        onTapOverride: () => _openOverride(context, rows[i]),
+        // Read-only roles (QC, scoped admins) get no override affordance.
+        onTapOverride: readOnly ? null : () => _openOverride(context, rows[i]),
       ),
     );
   }

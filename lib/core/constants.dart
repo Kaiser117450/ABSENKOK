@@ -29,6 +29,13 @@ class AppConstants {
   // builds and tests keep the legacy non-photo flow.
   static const bool attendancePhotoBetaEnabled =
       bool.fromEnvironment('ATTENDANCE_PHOTO_BETA');
+
+  // Master beta-features gate. All Phase-74 features (admin password reset,
+  // read-only QC viewer role) ship behind the SAME beta flag so a single beta
+  // build — `flutter build apk --dart-define=ATTENDANCE_PHOTO_BETA=true` —
+  // turns everything on. Kept as a semantic alias so feature guards read
+  // clearly without re-deciding the flag at every call site.
+  static const bool betaFeaturesEnabled = attendancePhotoBetaEnabled;
   static const String attendancePhotoBucket = 'attendance-photos';
   static const int attendancePhotoMaxDimensionPx = 640;
   static const int attendancePhotoJpegQuality = 60;

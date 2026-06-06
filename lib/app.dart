@@ -67,26 +67,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAdmin = appState.isAdmin;
       final isScopedAdmin = appState.isScopedOutletAdmin;
       final isAnyAdmin = appState.isAnyAdmin;
+      final isQc = appState.isQc;
       final hasKiosk = appState.kioskSession != null;
       final mustChangePassword = appState.mustChangePassword;
 
-      // Force password change: if flagged, only allow /admin/change-password
-      if (mustChangePassword && isAnyAdmin) {
+      // Force password change: if flagged, only allow /admin/change-password.
+      // Applies to every privileged session including the read-only QC role
+      // (admin-reset accounts land here on first login).
+      if (mustChangePassword && (isAnyAdmin || isQc)) {
         if (loc == '/admin/change-password') return null;
         return '/admin/change-password';
       }
 
       // /admin/login: allow unauthenticated users (kiosk operators can tap
       // "Admin" button anytime), but redirect already-authenticated users
-      // to dashboard (e.g. after biometric login sets admin mode).
+      // to their home screen (e.g. after biometric login sets admin mode).
       if (loc == '/admin/login') {
+        if (isQc) return '/qc/grooming';
         if (isAnyAdmin) return '/admin/dashboard';
         return null;
       }
 
       // /admin/change-password: only accessible when mustChangePassword is true.
-      // If user navigates here without the flag, redirect to dashboard or login.
+      // If user navigates here without the flag, redirect home or to login.
       if (loc == '/admin/change-password') {
+        if (isQc) return '/qc/grooming';
         if (isAnyAdmin) return '/admin/dashboard';
         return '/admin/login';
       }
@@ -119,6 +124,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             return '/admin/dashboard';
           }
         }
+      } else if (isQc) {
+        // Read-only QC reviewer — ONLY the grooming screen is reachable.
+        // Everything else (incl. all /admin/* management pages) is blocked.
+        if (!AppConstants.betaFeaturesEnabled) return '/admin/login';
+        if (loc == '/qc/grooming') return null;
+        return '/qc/grooming';
       } else if (hasKiosk) {
         // Kiosk session exists → stay on kiosk screens
         if (!loc.startsWith('/kiosk')) return '/kiosk';
@@ -155,6 +166,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/change-password',
         builder: (_, __) => const ChangePasswordScreen(isFirstLogin: true),
+      ),
+      // Read-only QC reviewer home — the grooming screen renders standalone
+      // (outside AdminShell) since QC has no other navigation. Beta feature.
+      GoRoute(
+        path: '/qc/grooming',
+        builder: (_, __) => const AdminGroomingReportScreen(),
       ),
       ShellRoute(
         builder: (_, __, child) => AdminShell(child: child),

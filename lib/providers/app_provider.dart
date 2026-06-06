@@ -20,6 +20,11 @@ class AppState {
   /// true jika user login dengan role 'area_supervisor'
   final bool isAreaSupervisor;
 
+  /// true jika user login dengan role 'qc' (read-only grooming reviewer).
+  /// QC is NOT an admin — it only sees the grooming QC screen for its
+  /// scoped outlet(s) and cannot change anything. Beta feature (Phase 74).
+  final bool isQc;
+
   /// true when the user must change their password before accessing dashboard.
   /// Set from app_metadata.must_change_password on first login.
   final bool mustChangePassword;
@@ -45,6 +50,7 @@ class AppState {
     this.isAdmin = false,
     this.isKepalaGerai = false,
     this.isAreaSupervisor = false,
+    this.isQc = false,
     this.mustChangePassword = false,
     this.managedOutletId,
     this.managedOutletIds = const <String>[],
@@ -63,6 +69,11 @@ class AppState {
   bool get isAnyAdmin => isAdmin || isKepalaGerai || isAreaSupervisor;
 
   bool get isScopedOutletAdmin => isKepalaGerai || isAreaSupervisor;
+
+  /// true for any authenticated management/QC session — used to gate the
+  /// login / first-login-password-change flows that apply to every privileged
+  /// account (admin, kepala gerai, area supervisor, and read-only QC).
+  bool get hasManagementSession => isAnyAdmin || isQc;
 
   List<String> get scopedOutletIds {
     if (managedOutletIds.isNotEmpty) {
@@ -99,6 +110,7 @@ class AppState {
     bool? isAdmin,
     bool? isKepalaGerai,
     bool? isAreaSupervisor,
+    bool? isQc,
     bool? mustChangePassword,
     String? managedOutletId,
     List<String>? managedOutletIds,
@@ -121,6 +133,7 @@ class AppState {
         isAdmin: isAdmin ?? this.isAdmin,
         isKepalaGerai: isKepalaGerai ?? this.isKepalaGerai,
         isAreaSupervisor: isAreaSupervisor ?? this.isAreaSupervisor,
+        isQc: isQc ?? this.isQc,
         mustChangePassword: mustChangePassword ?? this.mustChangePassword,
         managedOutletId: clearManagedOutlet
             ? null
@@ -217,6 +230,7 @@ class AppNotifier extends StateNotifier<AppState> {
       isAdmin: false,
       isKepalaGerai: false,
       isAreaSupervisor: false,
+      isQc: false,
       mustChangePassword: false,
       clearManagedOutlet: true,
       clearManagedOutlets: true,
@@ -230,11 +244,19 @@ class AppNotifier extends StateNotifier<AppState> {
       return;
     }
 
+    // QC is a beta-only role. In a non-beta build there is no QC surface, so
+    // refuse to enter QC mode (prevents a logged-in-but-stuck session).
+    if (claims.isQc && !AppConstants.betaFeaturesEnabled) {
+      clearAdminSessionMode();
+      return;
+    }
+
     if (claims.isAdmin) {
       state = state.copyWith(
         isAdmin: true,
         isKepalaGerai: false,
         isAreaSupervisor: false,
+        isQc: false,
         mustChangePassword: mustChangePassword,
         clearManagedOutlet: true,
         clearManagedOutlets: true,
@@ -246,6 +268,7 @@ class AppNotifier extends StateNotifier<AppState> {
       isAdmin: false,
       isKepalaGerai: claims.isKepalaGerai,
       isAreaSupervisor: claims.isAreaSupervisor,
+      isQc: claims.isQc,
       mustChangePassword: mustChangePassword,
       managedOutletId: claims.managedOutletId,
       managedOutletIds: claims.effectiveManagedOutletIds,

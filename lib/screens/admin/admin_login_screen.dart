@@ -140,12 +140,24 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
       final user = res.session?.user;
       final claims = AdminSessionClaims.fromUser(user);
 
-      // Hanya admin, kepala_gerai, dan area_supervisor yang boleh masuk dashboard
+      // Hanya admin, kepala_gerai, area_supervisor, dan QC yang boleh masuk
       if (claims == null) {
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
           setState(() {
             _error = 'Akun ini tidak memiliki akses dashboard';
+            _loading = false;
+          });
+        }
+        return;
+      }
+
+      // QC is a beta-only role; reject cleanly on non-beta builds.
+      if (claims.isQc && !AppConstants.betaFeaturesEnabled) {
+        await Supabase.instance.client.auth.signOut();
+        if (mounted) {
+          setState(() {
+            _error = 'Akun QC hanya tersedia di aplikasi versi beta.';
             _loading = false;
           });
         }

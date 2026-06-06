@@ -64,7 +64,7 @@ serve(async (req) => {
     // Parse request body
     const { email, name, outlet_id, outlet_ids, role } = await req.json();
     const requestedRole = role ?? "kepala_gerai";
-    const allowedRoles = ["kepala_gerai", "area_supervisor"];
+    const allowedRoles = ["kepala_gerai", "area_supervisor", "qc"];
     if (!allowedRoles.includes(requestedRole)) {
       return new Response(
         JSON.stringify({ error: "Role tidak valid" }),

@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../services/admin_onboarding_service.dart';
 
@@ -339,8 +340,7 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
   void _changeRole(CreateAdminAccountRole role) {
     setState(() {
       _selectedRole = role;
-      if (role == CreateAdminAccountRole.kepalaGerai &&
-          _selectedOutletIds.length > 1) {
+      if (!role.allowsMultipleOutlets && _selectedOutletIds.length > 1) {
         final firstOutletId = _selectedOutletIds.first;
         _selectedOutletIds
           ..clear()
@@ -412,17 +412,25 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
 
   Widget _buildRoleSelector() {
     return SegmentedButton<CreateAdminAccountRole>(
-      segments: const [
-        ButtonSegment<CreateAdminAccountRole>(
+      showSelectedIcon: false,
+      segments: [
+        const ButtonSegment<CreateAdminAccountRole>(
           value: CreateAdminAccountRole.kepalaGerai,
           icon: Icon(Icons.storefront_outlined),
           label: Text('Kepala Gerai'),
         ),
-        ButtonSegment<CreateAdminAccountRole>(
+        const ButtonSegment<CreateAdminAccountRole>(
           value: CreateAdminAccountRole.areaSupervisor,
           icon: Icon(Icons.manage_accounts_outlined),
-          label: Text('Area Supervisor'),
+          label: Text('Supervisor'),
         ),
+        // QC reviewer is a beta-only role.
+        if (AppConstants.betaFeaturesEnabled)
+          const ButtonSegment<CreateAdminAccountRole>(
+            value: CreateAdminAccountRole.qc,
+            icon: Icon(Icons.fact_check_outlined),
+            label: Text('QC'),
+          ),
       ],
       selected: {_selectedRole},
       onSelectionChanged: (roles) => _changeRole(roles.first),
@@ -439,7 +447,7 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
       );
     }
 
-    if (_selectedRole == CreateAdminAccountRole.kepalaGerai) {
+    if (!_selectedRole.allowsMultipleOutlets) {
       return DropdownButtonFormField<String>(
         initialValue:
             _selectedOutletIds.isEmpty ? null : _selectedOutletIds.first,
@@ -479,7 +487,9 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
           children: [
             InputDecorator(
               decoration: InputDecoration(
-                labelText: 'Gerai Area Supervisor',
+                labelText: _selectedRole == CreateAdminAccountRole.qc
+                    ? 'Gerai untuk QC'
+                    : 'Gerai Area Supervisor',
                 prefixIcon: const Icon(Icons.store_mall_directory_outlined),
                 errorText: field.errorText,
                 contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
@@ -507,7 +517,9 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
             ),
             const SizedBox(height: 6),
             Text(
-              'Supervisor hanya bisa membuka dashboard, karyawan, laporan, dan jadwal untuk gerai yang dipilih.',
+              _selectedRole == CreateAdminAccountRole.qc
+                  ? 'QC hanya bisa melihat (read-only) hasil grooming untuk gerai yang dipilih — tidak bisa mengubah apa pun.'
+                  : 'Supervisor hanya bisa membuka dashboard, karyawan, laporan, dan jadwal untuk gerai yang dipilih.',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -550,10 +562,12 @@ class _CreateAdminScreenState extends State<CreateAdminScreen>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Buat akun Kepala Gerai atau Area Supervisor. Password akan digenerate otomatis.',
+                    Text(
+                      AppConstants.betaFeaturesEnabled
+                          ? 'Buat akun Kepala Gerai, Area Supervisor, atau QC. Password akan digenerate otomatis.'
+                          : 'Buat akun Kepala Gerai atau Area Supervisor. Password akan digenerate otomatis.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
                       ),

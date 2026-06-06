@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:absensi_enakko_flutter/core/constants.dart';
 import 'package:absensi_enakko_flutter/core/supabase_client.dart';
 import 'package:absensi_enakko_flutter/core/theme.dart';
 import 'package:absensi_enakko_flutter/models/outlet.dart';
@@ -12,6 +13,7 @@ import 'package:absensi_enakko_flutter/widgets/app_toast.dart';
 import 'package:absensi_enakko_flutter/widgets/outlet_mode_badge.dart';
 import 'package:absensi_enakko_flutter/widgets/shimmer_skeleton.dart';
 import 'package:absensi_enakko_flutter/screens/admin/admin_outlet_managers_screen.dart';
+import 'package:absensi_enakko_flutter/screens/admin/admin_reset_password_screen.dart';
 
 class AdminOutletsScreen extends ConsumerStatefulWidget {
   const AdminOutletsScreen({super.key});
@@ -242,6 +244,47 @@ class _AdminOutletsScreenState extends ConsumerState<AdminOutletsScreen> {
               ]),
             ),
           ),
+
+          // ── RESET PASSWORD AKUN (beta) ───────────────────────────────────
+          if (AppConstants.betaFeaturesEnabled)
+            InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AdminResetPasswordScreen(),
+                ),
+              ),
+              child: Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.lock_reset_rounded,
+                        size: 18, color: AppColors.accentDark),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Reset Password Akun',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 13)),
+                        Text('Buat password sementara saat user lupa password',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.textMuted),
+                ]),
+              ),
+            ),
 
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
 

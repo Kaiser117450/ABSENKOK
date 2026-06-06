@@ -74,6 +74,14 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
   late final AnimationController _syncSlideController;
   late final Animation<Offset> _syncSlideAnim;
 
+  // NFC ring tap scale animation (brief 0.97 press bounce)
+  late final AnimationController _nfcTapController;
+  late final Animation<double> _nfcTapAnim;
+
+  // Header brand press scale animation
+  late final AnimationController _headerPressController;
+  late final Animation<double> _headerPressAnim;
+
   // Periodic pending count refresh timer
   Timer? _pendingRefreshTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -207,13 +215,31 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
 
     _syncSlideController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 180),
     );
     _syncSlideAnim = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
     ).animate(
-        CurvedAnimation(parent: _syncSlideController, curve: Curves.easeOut));
+        CurvedAnimation(parent: _syncSlideController, curve: Curves.easeOutCubic));
+
+    // NFC ring tap: quick scale-down to 0.97 then spring back
+    _nfcTapController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _nfcTapAnim = Tween<double>(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _nfcTapController, curve: Curves.easeOut),
+    );
+
+    // Header brand press: scale to 0.96 on press-down
+    _headerPressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 96),
+    );
+    _headerPressAnim = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _headerPressController, curve: Curves.easeOut),
+    );
   }
 
   void _startNfcListener() {
@@ -720,6 +746,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     _fadeController.dispose();
     _glowController.dispose();
     _syncSlideController.dispose();
+    _nfcTapController.dispose();
+    _headerPressController.dispose();
     _connectivitySubscription?.cancel();
     _pendingRefreshTimer?.cancel();
     _nfcCheckTimer?.cancel();
@@ -850,64 +878,70 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       child: Row(
         children: [
-          // Brand (long-press opens diagnostics screen)
+          // Brand (long-press opens diagnostics screen, tap-down/up gives subtle press scale)
           GestureDetector(
             onLongPress: () {
               HapticFeedback.mediumImpact();
               context.push('/kiosk/diagnostics');
             },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        'assets/images/logo_enakko.png',
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Container(
+            onTapDown: (_) => _headerPressController.forward(),
+            onTapUp: (_) => _headerPressController.reverse(),
+            onTapCancel: () => _headerPressController.reverse(),
+            child: ScaleTransition(
+              scale: _headerPressAnim,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/images/logo_enakko.png',
                           width: 32,
                           height: 32,
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(8),
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 32,
+                            height: 32,
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.restaurant,
+                                color: AppColors.primary, size: 16),
                           ),
-                          child: const Icon(Icons.restaurant,
-                              color: AppColors.primary, size: 16),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Absensi Enakko',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (outletName != null) ...[
+                    const SizedBox(height: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 30),
+                      child: Text(
+                        outletName,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Absensi Enakko',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
                   ],
-                ),
-                if (outletName != null) ...[
-                  const SizedBox(height: 2),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 30),
-                    child: Text(
-                      outletName,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
           ), // end GestureDetector
 
@@ -1113,8 +1147,15 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Animated NFC rings
-        SizedBox(
+        // Animated NFC rings — tap gives haptic + brief scale press
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _nfcTapController.forward().then((_) => _nfcTapController.reverse());
+          },
+          child: ScaleTransition(
+            scale: _nfcTapAnim,
+            child: SizedBox(
           width: 220,
           height: 220,
           child: Stack(
@@ -1186,6 +1227,8 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
             ],
           ),
         ),
+          ), // end ScaleTransition
+        ), // end GestureDetector
 
         const SizedBox(height: 28),
 
@@ -1334,20 +1377,29 @@ class _KioskIdleScreenState extends ConsumerState<KioskIdleScreen>
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
           child: Row(
             children: [
-              // Status dot
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: dotColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: dotColor.withValues(alpha: 0.5),
-                      blurRadius: 6,
+              // Status dot — glow pulses when NFC is idle/ready
+              AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, _) {
+                  final isReady = _nfcAvailable && _kioskState == _KioskState.idle;
+                  final t = isReady ? _pulseController.value : 0.0;
+                  final blurRadius = 4.0 + 6.0 * t;
+                  final glowAlpha = 0.35 + 0.35 * t;
+                  return Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: dotColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: dotColor.withValues(alpha: glowAlpha),
+                          blurRadius: blurRadius,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(width: 8),
               Text(

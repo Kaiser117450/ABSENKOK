@@ -7,13 +7,16 @@ import '../../../services/grooming_qc_service.dart';
 class GroomingCard extends StatelessWidget {
   final GroomingRow row;
   final VoidCallback onTapPhoto;
-  final VoidCallback onTapOverride;
+
+  /// When null the card is read-only and the "Koreksi AI" button is hidden
+  /// (e.g. for the QC reviewer role or scoped admins).
+  final VoidCallback? onTapOverride;
 
   const GroomingCard({
     super.key,
     required this.row,
     required this.onTapPhoto,
-    required this.onTapOverride,
+    this.onTapOverride,
   });
 
   @override
@@ -81,19 +84,22 @@ class GroomingCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 _OverriddenBanner(row: row),
               ],
-              const SizedBox(height: 6),
-              Row(children: [
-                TextButton.icon(
-                  onPressed: onTapOverride,
-                  icon: Icon(
-                    row.isOverridden
-                        ? Icons.fact_check_rounded
-                        : Icons.edit_note_rounded,
-                    size: 18,
+              if (onTapOverride != null) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  TextButton.icon(
+                    onPressed: onTapOverride,
+                    icon: Icon(
+                      row.isOverridden
+                          ? Icons.fact_check_rounded
+                          : Icons.edit_note_rounded,
+                      size: 18,
+                    ),
+                    label:
+                        Text(row.isOverridden ? 'Ubah koreksi' : 'Koreksi AI'),
                   ),
-                  label: Text(row.isOverridden ? 'Ubah koreksi' : 'Koreksi AI'),
-                ),
-              ]),
+                ]),
+              ],
             ],
           ),
         ),
